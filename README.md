@@ -1,1 +1,1 @@
-# esn-poland-finances
+# ESN Poland Finances app
