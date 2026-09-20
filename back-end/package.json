@@ -1,0 +1,44 @@
+{
+  "name": "esn-poland-finances-backend",
+  "version": "1.0.0",
+  "description": "Serverless AWS CDK backend for ESN Poland Finances",
+  "scripts": {
+    "lint": "eslint --ext .ts",
+    "clean": "find src deploy -name '*.js' -o -name '*.js.map' -delete",
+    "compile": "tsc --build",
+    "deploy": "cdk deploy",
+    "logs": "aws logs tail /aws/lambda/esn-poland-finances-dev-api-Fn_auth --follow --profile esn-finances",
+    "cdk": "cdk"
+  },
+  "dependencies": {
+    "@react-pdf/renderer": "^4.9.0",
+    "@types/react": "^19.3.0",
+    "axios": "^1.7.0",
+    "date-fns": "^3.6.0",
+    "idea-aws": "4.3.4",
+    "idea-toolbox": "7.0.1",
+    "jsonwebtoken": "^9.0.2",
+    "react": "^19.3.0",
+    "xml2js": "^0.6.2"
+  },
+  "devDependencies": {
+    "@apidevtools/swagger-parser": "^10.1.0",
+    "@aws-cdk/aws-apigatewayv2-alpha": "^2.102.0-alpha.0",
+    "@aws-cdk/aws-apigatewayv2-authorizers-alpha": "^2.102.0-alpha.0",
+    "@aws-cdk/aws-apigatewayv2-integrations-alpha": "^2.102.0-alpha.0",
+    "@aws-sdk/client-dynamodb": "^3.650.0",
+    "@aws-sdk/client-s3": "^3.650.0",
+    "@aws-sdk/client-ses": "^3.650.0",
+    "@aws-sdk/lib-dynamodb": "^3.650.0",
+    "@iter-idea/ses-verify-identities": "^1.0.2",
+    "@types/aws-lambda": "^8.10.145",
+    "@types/jsonwebtoken": "^9.0.6",
+    "@types/node": "^20.14.0",
+    "@types/xml2js": "^0.4.14",
+    "aws-cdk": "^2.158.0",
+    "aws-cdk-lib": "^2.158.0",
+    "constructs": "^10.3.0",
+    "esbuild": "^0.23.0",
+    "typescript": "^5.5.0"
+  }
+}

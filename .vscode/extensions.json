@@ -1,0 +1,11 @@
+{
+  "recommendations": [
+    "github.vscode-pull-request-github",
+    "github.github-vscode-theme",
+    "esbenp.prettier-vscode",
+    "dbaeumer.vscode-eslint",
+    "amazonwebservices.aws-toolkit-vscode",
+    "bradlc.vscode-tailwindcss"
+  ],
+  "unwantedRecommendations": []
+}
