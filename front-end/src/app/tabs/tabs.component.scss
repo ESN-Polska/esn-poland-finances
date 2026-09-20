@@ -1,0 +1,224 @@
+:host {
+  display: block;
+  height: 100%;
+}
+
+ion-tabs ion-tab-bar {
+  --border: 0;
+
+  ion-tab-button {
+    border-bottom: 2px solid transparent;
+  }
+
+  ion-tab-button.tab-selected {
+    border-bottom-color: white;
+
+    ion-label {
+      font-weight: bold;
+    }
+  }
+}
+
+ion-tabs.desktopTabs {
+  ion-tab-bar {
+    justify-content: start;
+    align-items: center;
+  }
+
+  ion-tab-button {
+    flex: none;
+    min-width: 100px;
+  }
+
+  ion-img {
+    height: 35px;
+    max-width: 60px;
+  }
+
+  .themeSwitcherDesktop {
+    margin-inline-start: auto;
+    display: flex;
+    align-items: center;
+    padding-inline: 12px;
+    gap: 12px;
+
+    .themeToggleBtn {
+      --color: #ffffff;
+      --color-hover: #ffffff;
+      --background-hover: rgba(255, 255, 255, 0.15);
+      --border-radius: 50%;
+      --padding-start: 0;
+      --padding-end: 0;
+      width: 36px;
+      height: 36px;
+      margin: 0;
+      transition: transform 0.15s ease-in-out;
+
+      &:hover {
+        transform: scale(1.1);
+      }
+
+      ion-icon {
+        font-size: 20px;
+      }
+    }
+
+    .langSelector {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: rgba(255, 255, 255, 0.12);
+      border-radius: 6px;
+      padding: 2px 8px;
+
+      .langBtn {
+        background: transparent;
+        border: none;
+        outline: none !important;
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.7);
+        cursor: pointer;
+        padding: 2px 4px;
+        transition: all 0.15s ease;
+
+        &:hover {
+          color: #ffffff;
+        }
+
+        &.active {
+          color: #ffffff;
+          font-weight: 700;
+        }
+      }
+
+      .langDivider {
+        color: rgba(255, 255, 255, 0.35);
+        font-size: 0.75rem;
+      }
+    }
+
+    .userChip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.12);
+      border-radius: 20px;
+      padding: 4px 12px;
+      cursor: pointer;
+      transition: background 0.15s ease;
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.2);
+      }
+
+      .userName {
+        color: #ffffff;
+        font-size: 0.85rem;
+        font-weight: 600;
+      }
+
+      .sectionBadge {
+        background: rgba(255, 255, 255, 0.25);
+        color: #ffffff;
+        font-size: 0.7rem;
+        font-weight: 700;
+        padding: 1px 6px;
+        border-radius: 10px;
+      }
+    }
+
+    .logoutBtn {
+      --color: #ffffff;
+      --color-hover: #ffffff;
+      --background-hover: rgba(255, 255, 255, 0.15);
+      font-size: 0.85rem;
+      font-weight: 500;
+      margin: 0;
+      height: 32px;
+      --padding-start: 10px;
+      --padding-end: 10px;
+      border-radius: 6px;
+      text-transform: none;
+
+      ion-label {
+        font-size: 0.85rem;
+        font-weight: 500;
+      }
+    }
+  }
+}
+
+/* Mobile Tabs */
+ion-tabs.mobileTabs {
+  ion-toolbar {
+    --color: #ffffff;
+    padding: 0 8px;
+
+    ion-img {
+      height: 30px;
+      max-width: 50px;
+    }
+
+    ion-title {
+      font-size: 1rem;
+      font-weight: 700;
+    }
+
+    .themeToggleBtn {
+      --color: #ffffff;
+      width: 34px;
+      height: 34px;
+      margin: 0;
+
+      ion-icon {
+        font-size: 18px;
+      }
+    }
+
+    .langSelector {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      background: rgba(255, 255, 255, 0.12);
+      border-radius: 6px;
+      padding: 2px 6px;
+      margin-left: 6px;
+
+      .langBtn {
+        background: transparent;
+        border: none;
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 0.75rem;
+        font-weight: 600;
+        padding: 1px 3px;
+
+        &.active {
+          color: #ffffff;
+          font-weight: 700;
+        }
+      }
+
+      .langDivider {
+        color: rgba(255, 255, 255, 0.35);
+        font-size: 0.7rem;
+      }
+    }
+  }
+
+  ion-tab-bar {
+    --border: 0;
+
+    ion-tab-button {
+      border-bottom: 2px solid transparent;
+
+      &.tab-selected {
+        border-bottom-color: white;
+
+        ion-label {
+          font-weight: bold;
+        }
+      }
+    }
+  }
+}

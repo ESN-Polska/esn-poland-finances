@@ -3,13 +3,13 @@
 # Dependencies
 node_modules/
 
-# Front-End Build Outputs (Vite + React)
+# Front-End Build Outputs (Ionic + Angular)
+www/
+front-end/www/
+front-end/.angular/
+.angular/
 dist/
 front-end/dist/
-front-end/.vite/
-.vite/
-vite.config.ts.timestamp-*
-vite.config.js.timestamp-*
 
 # AWS CDK & Infrastructure Outputs
 back-end/.cdk.staging/

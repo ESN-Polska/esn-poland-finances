@@ -1,0 +1,36 @@
+import { NgModule } from '@angular/core';
+import { RouterModule, Routes } from '@angular/router';
+
+import { RequestsPage } from './requests.page';
+import { RequestFormPage } from './submit/request-form.page';
+import { RequestViewPage } from './view/request-view.page';
+
+const routes: Routes = [
+  {
+    path: '',
+    redirectTo: 'my-requests',
+    pathMatch: 'full'
+  },
+  {
+    path: 'my-requests',
+    component: RequestsPage
+  },
+  {
+    path: 'submit',
+    component: RequestFormPage
+  },
+  {
+    path: 'edit/:id',
+    component: RequestFormPage
+  },
+  {
+    path: 'view/:id',
+    component: RequestViewPage
+  }
+];
+
+@NgModule({
+  imports: [RouterModule.forChild(routes)],
+  exports: [RouterModule]
+})
+export class RequestsRoutingModule {}

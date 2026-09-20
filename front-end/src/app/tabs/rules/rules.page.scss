@@ -1,0 +1,112 @@
+.rulesContent {
+  --background: var(--bg-body);
+}
+
+.rulesContainer {
+  max-width: 760px;
+  margin: 36px auto;
+  padding: 0 16px;
+}
+
+.rulesCard {
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 40px 32px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+  text-align: center;
+
+  .rulesHeader {
+    margin-bottom: 24px;
+
+    .rulesTitle {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: var(--text-dark);
+      margin: 0;
+      letter-spacing: -0.01em;
+    }
+  }
+
+  .warningBanner {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    background: #fffbeb;
+    border-left: 4px solid #f59e0b;
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-bottom: 32px;
+    text-align: left;
+
+    .warningIcon {
+      font-size: 1.4rem;
+      color: #b45309;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .warningText {
+      font-size: 0.95rem;
+      line-height: 1.5;
+      color: #92400e;
+      margin: 0;
+      font-weight: 500;
+    }
+  }
+
+  .downloadSection {
+    margin-bottom: 28px;
+
+    .downloadBtn {
+      --background: #00aeef;
+      --background-hover: #0099d2;
+      --background-activated: #0087ba;
+      --color: #ffffff;
+      --border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      height: 48px;
+      min-width: 260px;
+      text-transform: none;
+      --box-shadow: none !important;
+      box-shadow: none !important;
+      outline: none !important;
+      margin: 0;
+
+      ion-icon {
+        font-size: 1.25rem;
+        margin-right: 8px;
+      }
+    }
+  }
+
+  .revisionFooter {
+    border-top: 1px solid var(--border-color);
+    padding-top: 18px;
+
+    .revisionText {
+      font-size: 0.85rem;
+      color: var(--text-medium);
+      margin: 0;
+
+      em {
+        font-style: italic;
+      }
+    }
+  }
+}
+
+body.dark {
+  .warningBanner {
+    background: rgba(245, 158, 11, 0.12);
+    border-left-color: #f59e0b;
+
+    .warningIcon {
+      color: #fbbf24;
+    }
+
+    .warningText {
+      color: #fde68a;
+    }
+  }
+}

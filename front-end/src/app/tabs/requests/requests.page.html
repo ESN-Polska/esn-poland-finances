@@ -1,0 +1,195 @@
+<ion-content class="requestsContent ion-padding">
+  <div class="requestsContainer">
+    <!-- Header with Title and Submit Action -->
+    <div class="pageHeader">
+      <div>
+        <h1 class="pageTitle">{{ 'REQUESTS.MY_REQUESTS_TITLE' | translate }}</h1>
+        <p class="pageSubtitle">{{ 'REQUESTS.MY_REQUESTS_SUBTITLE' | translate }}</p>
+      </div>
+
+      <ion-button class="submitBtn" (click)="goToSubmit()">
+        <ion-icon slot="start" name="add-circle-outline"></ion-icon>
+        {{ 'HOME.SUBMIT_REQUEST' | translate }}
+      </ion-button>
+    </div>
+
+    <!-- Search and Status Filter Bar -->
+    <div class="filterBar">
+      <div class="searchWrapper">
+        <ion-icon name="search-outline" class="searchIcon"></ion-icon>
+        <input
+          type="text"
+          class="searchInput"
+          [(ngModel)]="searchQuery"
+          (input)="applyFilters()"
+          [placeholder]="'REQUESTS.SEARCH_PLACEHOLDER' | translate"
+        />
+        <button *ngIf="searchQuery" class="clearSearchBtn" (click)="clearSearch()">
+          <ion-icon name="close-circle"></ion-icon>
+        </button>
+      </div>
+
+      <div class="statusFilterPills">
+        <button
+          type="button"
+          class="filterPill"
+          [class.active]="selectedStatus === 'ALL'"
+          (click)="setStatusFilter('ALL')"
+        >
+          {{ 'COMMON.ALL' | translate }} ({{ allRequests.length }})
+        </button>
+        <button
+          type="button"
+          class="filterPill"
+          [class.active]="selectedStatus === 'DRAFT'"
+          (click)="setStatusFilter('DRAFT')"
+        >
+          {{ 'REQUESTS.STATUSES.DRAFT' | translate }} ({{ countByStatus('DRAFT') }})
+        </button>
+        <button
+          type="button"
+          class="filterPill"
+          [class.active]="selectedStatus === 'SUBMITTED'"
+          (click)="setStatusFilter('SUBMITTED')"
+        >
+          {{ 'REQUESTS.STATUSES.SUBMITTED' | translate }} ({{ countByStatus('SUBMITTED') }})
+        </button>
+        <button
+          type="button"
+          class="filterPill"
+          [class.active]="selectedStatus === 'IN_REVIEW'"
+          (click)="setStatusFilter('IN_REVIEW')"
+        >
+          {{ 'REQUESTS.STATUSES.IN_REVIEW' | translate }} ({{ countByStatus('IN_REVIEW') }})
+        </button>
+        <button
+          type="button"
+          class="filterPill alertPill"
+          [class.active]="selectedStatus === 'CHANGES_REQUESTED'"
+          (click)="setStatusFilter('CHANGES_REQUESTED')"
+        >
+          {{ 'REQUESTS.STATUSES.CHANGES_REQUESTED' | translate }} ({{ countByStatus('CHANGES_REQUESTED') }})
+        </button>
+        <button
+          type="button"
+          class="filterPill"
+          [class.active]="selectedStatus === 'APPROVED'"
+          (click)="setStatusFilter('APPROVED')"
+        >
+          {{ 'REQUESTS.STATUSES.APPROVED' | translate }} ({{ countByStatus('APPROVED') }})
+        </button>
+        <button
+          type="button"
+          class="filterPill"
+          [class.active]="selectedStatus === 'PAID'"
+          (click)="setStatusFilter('PAID')"
+        >
+          {{ 'REQUESTS.STATUSES.PAID' | translate }} ({{ countByStatus('PAID') }})
+        </button>
+      </div>
+    </div>
+
+    <!-- Requests List -->
+    <div class="requestsList" *ngIf="filteredRequests.length > 0; else noRequests">
+      <div
+        class="requestCard"
+        *ngFor="let req of filteredRequests"
+        (click)="viewRequest(req.requestId)"
+      >
+        <div class="cardTop">
+          <div class="idGroup">
+            <span class="requestId">{{ req.requestId }}</span>
+            <span class="requestTypeBadge">
+              {{ ('REQUESTS.TYPES.' + req.requestType) | translate }}
+            </span>
+            <span class="docCountBadge" *ngIf="req.documents && req.documents.length > 0">
+              {{ req.documents.length }} {{ 'REQUESTS.DOCUMENTS_COUNT' | translate }}
+            </span>
+          </div>
+
+          <span class="statusBadge" [ngClass]="'status-' + req.status.toLowerCase()">
+            {{ ('REQUESTS.STATUSES.' + req.status) | translate }}
+          </span>
+        </div>
+
+        <!-- Admin remarks banner if changes requested -->
+        <div class="changesBanner" *ngIf="req.status === 'CHANGES_REQUESTED' && req.adminRemarks">
+          <ion-icon name="alert-circle-outline"></ion-icon>
+          <div class="bannerText">
+            <strong>{{ 'REQUESTS.CHANGES_REQUESTED_NOTE' | translate }}:</strong>
+            <span>{{ req.adminRemarks }}</span>
+          </div>
+        </div>
+
+        <div class="cardMiddle">
+          <div class="metaItem">
+            <span class="metaLabel">{{ 'REQUESTS.FIELDS.POSITION' | translate }}:</span>
+            <span class="metaValue">{{ req.position || '—' }}</span>
+          </div>
+
+          <div class="metaItem">
+            <span class="metaLabel">{{ 'REQUESTS.FIELDS.FUNDING_SOURCE' | translate }}:</span>
+            <span class="metaValue">{{ req.sourceOfFunding || '—' }}</span>
+          </div>
+
+          <div class="metaItem">
+            <span class="metaLabel">{{ 'REQUESTS.CREATED_AT' | translate }}:</span>
+            <span class="metaValue">{{ req.createdAt | date:'mediumDate' }}</span>
+          </div>
+        </div>
+
+        <div class="cardBottom">
+          <div class="amountContainer">
+            <span class="amountLabel">{{ 'REQUESTS.TOTAL_AMOUNT' | translate }}:</span>
+            <span class="amountNumber">
+              {{ req.totalGrossAmount | number:'1.2-2' }} {{ req.currency }}
+            </span>
+          </div>
+
+          <!-- Actions -->
+          <div class="cardActions" (click)="$event.stopPropagation()">
+            <ion-button
+              fill="clear"
+              size="small"
+              class="actionBtn viewBtn"
+              (click)="viewRequest(req.requestId)"
+            >
+              {{ 'COMMON.VIEW' | translate }}
+            </ion-button>
+
+            <ion-button
+              *ngIf="req.canEdit()"
+              fill="outline"
+              size="small"
+              class="actionBtn editBtn"
+              (click)="editRequest(req.requestId)"
+            >
+              <ion-icon slot="start" name="create-outline"></ion-icon>
+              {{ (req.status === 'CHANGES_REQUESTED' ? 'REQUESTS.CORRECT_REQUEST' : 'COMMON.EDIT') | translate }}
+            </ion-button>
+
+            <ion-button
+              *ngIf="req.status === 'DRAFT'"
+              fill="clear"
+              color="danger"
+              size="small"
+              class="actionBtn deleteBtn"
+              (click)="confirmDelete(req.requestId)"
+            >
+              <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
+            </ion-button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <ng-template #noRequests>
+      <div class="emptyStateCard">
+        <ion-icon name="file-tray-outline" class="emptyIcon"></ion-icon>
+        <h3 class="emptyTitle">{{ 'REQUESTS.NO_REQUESTS_FOUND' | translate }}</h3>
+        <p class="emptyDesc">{{ 'REQUESTS.NO_REQUESTS_DESC' | translate }}</p>
+      </div>
+    </ng-template>
+  </div>
+</ion-content>

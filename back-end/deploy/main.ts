@@ -14,13 +14,39 @@ import { parameters, stages, Stage, DOMAIN, PROD_CUSTOM_DOMAIN } from './environ
 // API RESOURCES & CONTROLLER DEFINITIONS
 //
 
-const apiResources: ResourceController[] = [];
+const apiResources: ResourceController[] = [
+  { name: 'auth', isAuthFunction: true },
+  { name: 'login', paths: ['/login'] },
+  { name: 'requests', paths: ['/requests', '/requests/{id}'] }
+];
 
 //
 // DYNAMODB TABLES SPECIFICATION
 //
 
-const tables: { [tableName: string]: DDBTable } = {};
+const tables: { [tableName: string]: DDBTable } = {
+  configurations: {
+    PK: { name: 'PK', type: DDB.AttributeType.STRING }
+  },
+  users: {
+    PK: { name: 'userId', type: DDB.AttributeType.STRING }
+  },
+  financial_requests: {
+    PK: { name: 'requestId', type: DDB.AttributeType.STRING },
+    indexes: [
+      {
+        indexName: 'byUser',
+        partitionKey: { name: 'userId', type: DDB.AttributeType.STRING },
+        sortKey: { name: 'createdAt', type: DDB.AttributeType.STRING }
+      },
+      {
+        indexName: 'byStatus',
+        partitionKey: { name: 'status', type: DDB.AttributeType.STRING },
+        sortKey: { name: 'createdAt', type: DDB.AttributeType.STRING }
+      }
+    ]
+  }
+};
 
 //
 // CDK APP SYNTHESIS

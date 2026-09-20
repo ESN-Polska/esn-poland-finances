@@ -1,0 +1,189 @@
+.profileContent {
+  --background: var(--bg-body);
+}
+
+.profileContainer {
+  max-width: 800px;
+  margin: 28px auto;
+  padding: 0 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.profileCard {
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 32px 28px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+
+  .cardHeader {
+    margin-bottom: 20px;
+
+    .cardTitle {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--text-dark);
+      margin: 0;
+      letter-spacing: -0.01em;
+    }
+
+    .cardSubtitle {
+      font-size: 0.9rem;
+      color: var(--text-medium);
+      margin: 4px 0 0 0;
+    }
+  }
+}
+
+.profileGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+
+  .infoField {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    .fieldLabel {
+      font-size: 0.8rem;
+      color: var(--text-medium);
+      font-weight: 500;
+    }
+
+    .fieldValue {
+      font-size: 0.95rem;
+      color: var(--text-dark);
+
+      &.font-mono {
+        font-family: monospace;
+      }
+
+      &.font-bold {
+        font-weight: 600;
+      }
+
+      .sectionTag {
+        color: var(--esn-cyan);
+        font-weight: 500;
+        margin-left: 4px;
+      }
+    }
+  }
+}
+
+.rolesSection {
+  border-top: 1px solid var(--border-color);
+  padding-top: 18px;
+
+  .fieldLabel {
+    font-size: 0.8rem;
+    color: var(--text-medium);
+    font-weight: 500;
+    display: block;
+    margin-bottom: 10px;
+  }
+
+  .rolesList {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+
+    .roleBadge {
+      background: rgba(0, 174, 239, 0.1);
+      color: var(--esn-cyan);
+      border: 1px solid rgba(0, 174, 239, 0.25);
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+  }
+
+  .emptyRoles {
+    color: var(--text-medium);
+    font-size: 0.85rem;
+    margin: 0;
+    font-style: italic;
+  }
+}
+
+/* Bank Details Form */
+.bankForm {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  .formGrid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 16px;
+
+    @media (max-width: 600px) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .formGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+
+    .inputLabel {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-dark);
+    }
+
+    .formInput {
+      width: 100%;
+      height: 42px;
+      background: var(--bg-body);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0 14px;
+      font-size: 0.95rem;
+      color: var(--text-dark);
+      outline: none !important;
+      transition: border-color 0.15s ease;
+
+      &:focus {
+        border-color: var(--esn-cyan);
+      }
+
+      &.font-mono {
+        font-family: monospace;
+      }
+    }
+  }
+
+  .formActions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 8px;
+
+    .saveBtn {
+      --background: #00aeef;
+      --background-hover: #0099d2;
+      --background-activated: #0087ba;
+      --color: #ffffff;
+      --border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      height: 44px;
+      min-width: 160px;
+      text-transform: none;
+      --box-shadow: none !important;
+      box-shadow: none !important;
+      outline: none !important;
+      margin: 0;
+
+      ion-icon {
+        font-size: 1.15rem;
+        margin-right: 6px;
+      }
+    }
+  }
+}

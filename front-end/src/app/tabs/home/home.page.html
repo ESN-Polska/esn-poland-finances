@@ -1,0 +1,52 @@
+<ion-content class="homeContent ion-padding">
+  <div class="homeContainer">
+    <!-- Welcome Hero -->
+    <div class="welcomeHero">
+      <h1 class="welcomeTitle">{{ 'HOME.WELCOME_TITLE' | translate }}</h1>
+      <p class="welcomeSubtitle">{{ 'HOME.WELCOME_SUBTITLE' | translate }}</p>
+
+      <!-- Primary Action: Submit Request -->
+      <div class="primaryActionWrapper">
+        <ion-button class="submitRequestBtn" (click)="goToSubmit()">
+          <ion-icon slot="start" name="add-circle-outline"></ion-icon>
+          {{ 'HOME.SUBMIT_REQUEST' | translate }}
+        </ion-button>
+      </div>
+    </div>
+
+    <!-- Recent Activity Widget -->
+    <div *ngIf="latestRequest" class="recentActivitySection">
+      <h2 class="sectionTitle">{{ 'HOME.RECENT_ACTIVITY' | translate }}</h2>
+
+      <div class="latestRequestCard" (click)="viewRequest(latestRequest.requestId)">
+        <div class="cardHeader">
+          <div class="requestIdent">
+            <span class="requestId">{{ latestRequest.requestId }}</span>
+            <span class="requestTypeBadge">{{ ('REQUESTS.TYPES.' + latestRequest.requestType) | translate }}</span>
+          </div>
+          <span class="statusBadge" [ngClass]="'status-' + latestRequest.status.toLowerCase()">
+            {{ ('REQUESTS.STATUSES.' + latestRequest.status) | translate }}
+          </span>
+        </div>
+
+        <div class="cardBody">
+          <div class="amountRow">
+            <span class="amountLabel">{{ 'REQUESTS.TOTAL_AMOUNT' | translate }}:</span>
+            <span class="amountValue">{{ latestRequest.totalGrossAmount | number:'1.2-2' }} {{ latestRequest.currency }}</span>
+          </div>
+
+          <div class="dateRow">
+            <span class="dateLabel">{{ 'REQUESTS.SUBMITTED_ON' | translate }}:</span>
+            <span class="dateValue">{{ latestRequest.createdAt | date:'mediumDate' }}</span>
+          </div>
+        </div>
+
+        <div class="cardFooter">
+          <span class="viewDetailsLink">
+            {{ 'COMMON.VIEW_DETAILS' | translate }} &rarr;
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+</ion-content>

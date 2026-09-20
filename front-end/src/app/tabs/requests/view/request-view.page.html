@@ -1,0 +1,353 @@
+<ion-content class="request-view-content ion-padding">
+  <div class="view-container" *ngIf="request && !isLoading">
+    <!-- Top Action Bar -->
+    <div class="top-nav-bar">
+      <button class="back-link-btn" (click)="goBack()">
+        <ion-icon name="arrow-back-outline"></ion-icon>
+        <span>{{ 'COMMON.BACK' | translate }}</span>
+      </button>
+
+      <div class="top-actions">
+        <button
+          *ngIf="request.status === 'DRAFT'"
+          class="btn-danger-outline"
+          (click)="confirmDeleteDraft()"
+        >
+          <ion-icon name="trash-outline"></ion-icon>
+          <span>{{ 'COMMON.DELETE_DRAFT' | translate }}</span>
+        </button>
+
+        <button
+          *ngIf="canEdit()"
+          class="btn-primary"
+          (click)="editRequest()"
+        >
+          <ion-icon name="create-outline"></ion-icon>
+          <span>{{ (request.status === 'CHANGES_REQUESTED' ? 'REQUESTS.EDIT_AND_RESUBMIT' : 'REQUESTS.EDIT_DRAFT') | translate }}</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Alert Banner: CHANGES_REQUESTED -->
+    <div class="alert-box alert-changes-requested" *ngIf="request.status === 'CHANGES_REQUESTED'">
+      <div class="alert-icon">
+        <ion-icon name="alert-circle-outline"></ion-icon>
+      </div>
+      <div class="alert-body">
+        <h3 class="alert-title">{{ 'REQUESTS.CHANGES_REQUESTED_TITLE' | translate }}</h3>
+        <p class="alert-message">
+          {{ 'REQUESTS.CHANGES_REQUESTED_DESC' | translate }}
+        </p>
+        <div class="remarks-quote" *ngIf="request.adminRemarks">
+          <strong>{{ 'REQUESTS.ADMIN_REMARKS' | translate }}:</strong>
+          <p>{{ request.adminRemarks }}</p>
+        </div>
+        <button class="btn-warning mt-3" (click)="editRequest()">
+          <ion-icon name="create-outline"></ion-icon>
+          <span>{{ 'REQUESTS.MODIFY_REQUEST_BTN' | translate }}</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Alert Banner: REJECTED -->
+    <div class="alert-box alert-rejected" *ngIf="request.status === 'REJECTED'">
+      <div class="alert-icon">
+        <ion-icon name="close-circle-outline"></ion-icon>
+      </div>
+      <div class="alert-body">
+        <h3 class="alert-title">{{ 'REQUESTS.STATUSES.REJECTED' | translate }}</h3>
+        <p class="alert-message">{{ 'REQUESTS.REJECTED_NOTICE' | translate }}</p>
+        <div class="remarks-quote" *ngIf="request.adminRemarks">
+          <strong>{{ 'REQUESTS.REJECTION_REASON' | translate }}:</strong>
+          <p>{{ request.adminRemarks }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Header Card -->
+    <div class="header-card">
+      <div class="header-top">
+        <div class="title-group">
+          <div class="request-id-badge">#{{ request.requestId }}</div>
+          <span class="status-badge status-{{ request.status | lowercase }}">
+            {{ 'REQUESTS.STATUSES.' + request.status | translate }}
+          </span>
+        </div>
+
+        <div class="amount-hero">
+          <span class="amount-label">{{ 'REQUESTS.TOTAL_GROSS' | translate }}</span>
+          <span class="amount-value">{{ request.totalGrossAmount | number:'1.2-2' }} {{ request.currency }}</span>
+          <span class="vat-sub" *ngIf="request.totalVatAmount > 0">
+            {{ 'REQUESTS.TOTAL_VAT' | translate }}: {{ request.totalVatAmount | number:'1.2-2' }} {{ request.currency }}
+          </span>
+        </div>
+      </div>
+
+      <div class="request-type-heading">
+        <h2>{{ 'REQUESTS.TYPES.' + request.requestType | translate }}</h2>
+      </div>
+
+      <div class="meta-row">
+        <div class="meta-item">
+          <span class="meta-lbl">{{ 'REQUESTS.SUBMITTED_ON' | translate }}:</span>
+          <span class="meta-val">{{ (request.submittedAt || request.createdAt) | date:'medium' }}</span>
+        </div>
+        <div class="meta-item" *ngIf="request.updatedAt && request.updatedAt !== request.createdAt">
+          <span class="meta-lbl">{{ 'REQUESTS.LAST_UPDATED' | translate }}:</span>
+          <span class="meta-val">{{ request.updatedAt | date:'medium' }}</span>
+        </div>
+      </div>
+
+      <!-- Progression Stepper (for submitted/active requests) -->
+      <div class="stepper-wrapper" *ngIf="request.status !== 'DRAFT'">
+        <div class="stepper">
+          <div
+            *ngFor="let step of statusSteps; let i = index"
+            class="step-item"
+            [ngClass]="getStepStatus(step.key)"
+          >
+            <div class="step-circle">
+              <ion-icon *ngIf="getStepStatus(step.key) === 'completed'" name="checkmark-outline"></ion-icon>
+              <ion-icon *ngIf="getStepStatus(step.key) === 'active'" name="radio-button-on-outline"></ion-icon>
+              <span *ngIf="getStepStatus(step.key) === 'pending'">{{ i + 1 }}</span>
+              <ion-icon *ngIf="getStepStatus(step.key) === 'rejected'" name="close-outline"></ion-icon>
+            </div>
+            <span class="step-label">{{ step.label | translate }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Grid -->
+    <div class="details-grid">
+      <!-- Left Column: Request Details & Documents -->
+      <div class="details-main">
+        <!-- General Info Section -->
+        <div class="section-card">
+          <div class="section-header">
+            <h3>{{ 'REQUESTS.GENERAL_INFO' | translate }}</h3>
+          </div>
+          <div class="info-grid">
+            <div class="info-cell">
+              <span class="cell-lbl">{{ 'REQUESTS.POSITION' | translate }}</span>
+              <span class="cell-val">{{ request.position }}</span>
+            </div>
+            <div class="info-cell">
+              <span class="cell-lbl">{{ 'REQUESTS.SOURCE_OF_FUNDING' | translate }}</span>
+              <span class="cell-val">{{ request.sourceOfFunding }}</span>
+            </div>
+            <div class="info-cell" *ngIf="request.additionalRemarks">
+              <span class="cell-lbl">{{ 'REQUESTS.ADDITIONAL_REMARKS' | translate }}</span>
+              <span class="cell-val preserve-text">{{ request.additionalRemarks }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Documents Section (Type A & B) -->
+        <div
+          class="section-card"
+          *ngIf="request.requestType === 'INVOICE_TO_PAY' || request.requestType === 'INVOICE_REIMBURSEMENT'"
+        >
+          <div class="section-header">
+            <h3>{{ 'REQUESTS.DOCUMENTS_LIST' | translate }} ({{ request.documents?.length || 0 }})</h3>
+          </div>
+
+          <div class="doc-list">
+            <div class="doc-card" *ngFor="let doc of request.documents; let idx = index">
+              <div class="doc-card-header">
+                <span class="doc-idx">{{ 'REQUESTS.DOCUMENT_ITEM' | translate }} #{{ idx + 1 }}</span>
+                <span class="doc-gross-badge">{{ doc.grossAmount | number:'1.2-2' }} {{ doc.currency }}</span>
+              </div>
+
+              <div class="doc-details-grid">
+                <div class="info-cell">
+                  <span class="cell-lbl">{{ 'REQUESTS.DOC_INVOICE_NUMBER' | translate }}</span>
+                  <span class="cell-val font-semibold">{{ doc.invoiceNumber }}</span>
+                </div>
+                <div class="info-cell" *ngIf="doc.ksefNumber">
+                  <span class="cell-lbl">{{ 'REQUESTS.DOC_KSEF_NUMBER' | translate }}</span>
+                  <span class="cell-val font-mono">{{ doc.ksefNumber }}</span>
+                </div>
+                <div class="info-cell">
+                  <span class="cell-lbl">{{ 'REQUESTS.DOC_ISSUED_BY' | translate }}</span>
+                  <span class="cell-val">{{ doc.issuedBy }}</span>
+                </div>
+                <div class="info-cell">
+                  <span class="cell-lbl">{{ 'REQUESTS.DOC_ISSUED_ON' | translate }}</span>
+                  <span class="cell-val">{{ doc.issuedOn }}</span>
+                </div>
+                <div class="info-cell" *ngIf="doc.paymentDeadline">
+                  <span class="cell-lbl">{{ 'REQUESTS.DOC_PAYMENT_DEADLINE' | translate }}</span>
+                  <span class="cell-val">{{ doc.paymentDeadline }}</span>
+                </div>
+                <div class="info-cell" *ngIf="doc.paidOn">
+                  <span class="cell-lbl">{{ 'REQUESTS.DOC_PAID_ON' | translate }}</span>
+                  <span class="cell-val">{{ doc.paidOn }}</span>
+                </div>
+                <div class="info-cell" *ngIf="doc.vatAmount > 0">
+                  <span class="cell-lbl">{{ 'REQUESTS.DOC_VAT_AMOUNT' | translate }}</span>
+                  <span class="cell-val">{{ doc.vatAmount | number:'1.2-2' }} {{ doc.currency }}</span>
+                </div>
+                <div class="info-cell full-width" *ngIf="doc.bankAccountDetails">
+                  <span class="cell-lbl">{{ 'REQUESTS.DOC_BANK_ACCOUNT' | translate }}</span>
+                  <span class="cell-val font-mono">{{ doc.bankAccountDetails }}</span>
+                </div>
+                <div class="info-cell full-width" *ngIf="doc.explanation">
+                  <span class="cell-lbl">{{ 'REQUESTS.DOC_EXPLANATION' | translate }}</span>
+                  <span class="cell-val">{{ doc.explanation }}</span>
+                </div>
+              </div>
+
+              <!-- Attachments for this document -->
+              <div class="attachments-list" *ngIf="doc.attachment || doc.proofOfPaymentAttachment">
+                <div class="attachment-item" *ngIf="doc.attachment">
+                  <ion-icon name="document-attach-outline"></ion-icon>
+                  <div class="att-meta">
+                    <span class="att-name">{{ doc.attachment.fileName }}</span>
+                    <span class="att-sub">{{ (doc.attachment.fileSize / 1024) | number:'1.0-1' }} KB</span>
+                  </div>
+                </div>
+
+                <div class="attachment-item" *ngIf="doc.proofOfPaymentAttachment">
+                  <ion-icon name="checkmark-done-circle-outline"></ion-icon>
+                  <div class="att-meta">
+                    <span class="att-name">{{ 'REQUESTS.PROOF_OF_PAYMENT' | translate }}: {{ doc.proofOfPaymentAttachment.fileName }}</span>
+                    <span class="att-sub">{{ (doc.proofOfPaymentAttachment.fileSize / 1024) | number:'1.0-1' }} KB</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Advance Payment Details (Type C) -->
+        <div class="section-card" *ngIf="request.requestType === 'ADVANCE_PAYMENT'">
+          <div class="section-header">
+            <h3>{{ 'REQUESTS.ADVANCE_DETAILS' | translate }}</h3>
+          </div>
+          <div class="info-grid">
+            <div class="info-cell">
+              <span class="cell-lbl">{{ 'REQUESTS.REQUESTED_AMOUNT' | translate }}</span>
+              <span class="cell-val font-semibold">{{ request.requestedAmountPLN | number:'1.2-2' }} PLN</span>
+            </div>
+            <div class="info-cell full-width" *ngIf="request.explanationAndBudget">
+              <span class="cell-lbl">{{ 'REQUESTS.EXPLANATION_BUDGET' | translate }}</span>
+              <span class="cell-val preserve-text">{{ request.explanationAndBudget }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Delegation Settlement Details (Type D) -->
+        <div class="section-card" *ngIf="request.requestType === 'DELEGATION_SETTLEMENT'">
+          <div class="section-header">
+            <h3>{{ 'REQUESTS.DELEGATION_DETAILS' | translate }}</h3>
+          </div>
+          <div class="info-grid">
+            <div class="info-cell">
+              <span class="cell-lbl">{{ 'REQUESTS.DELEGATION_TOTAL_SETTLEMENT' | translate }}</span>
+              <span class="cell-val font-semibold">{{ request.totalGrossAmount | number:'1.2-2' }} PLN</span>
+            </div>
+            <div class="info-cell full-width" *ngIf="request.delegationFormAttachment">
+              <span class="cell-lbl">{{ 'REQUESTS.DELEGATION_SIGNED_FORM' | translate }}</span>
+              <div class="attachment-item mt-1">
+                <ion-icon name="document-text-outline"></ion-icon>
+                <div class="att-meta">
+                  <span class="att-name">{{ request.delegationFormAttachment.fileName }}</span>
+                  <span class="att-sub">{{ (request.delegationFormAttachment.fileSize / 1024) | number:'1.0-1' }} KB</span>
+                </div>
+              </div>
+            </div>
+            <div class="info-cell full-width" *ngIf="request.ticketAttachments && request.ticketAttachments.length > 0">
+              <span class="cell-lbl">{{ 'REQUESTS.TICKETS_ATTACHMENTS' | translate }} ({{ request.ticketAttachments.length }})</span>
+              <div class="attachments-list mt-1">
+                <div class="attachment-item" *ngFor="let t of request.ticketAttachments">
+                  <ion-icon name="ticket-outline"></ion-icon>
+                  <div class="att-meta">
+                    <span class="att-name">{{ t.fileName }}</span>
+                    <span class="att-sub">{{ (t.fileSize / 1024) | number:'1.0-1' }} KB</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Payout Bank Details & Submitter Profile -->
+      <div class="details-sidebar">
+        <!-- Submitter Box -->
+        <div class="section-card">
+          <div class="section-header">
+            <h3>{{ 'REQUESTS.SUBMITTER_PROFILE' | translate }}</h3>
+          </div>
+          <div class="user-summary">
+            <div class="user-avatar-circle">
+              {{ request.userDisplayName?.charAt(0) || 'U' }}
+            </div>
+            <div class="user-meta">
+              <span class="user-name">{{ request.userDisplayName }}</span>
+              <span class="user-email">{{ request.userEmail }}</span>
+              <span class="user-section" *ngIf="request.section">{{ request.section }}</span>
+            </div>
+          </div>
+          <div class="roles-pills" *ngIf="request.extendedRoles && request.extendedRoles.length > 0">
+            <span class="role-pill" *ngFor="let role of request.extendedRoles">{{ role }}</span>
+          </div>
+        </div>
+
+        <!-- Payout Bank Account Details -->
+        <div class="section-card">
+          <div class="section-header">
+            <h3>{{ 'REQUESTS.PAYOUT_BANK_ACCOUNT' | translate }}</h3>
+          </div>
+          <div class="info-grid single-col">
+            <div class="info-cell">
+              <span class="cell-lbl">{{ 'REQUESTS.ACCOUNT_HOLDER_NAME' | translate }}</span>
+              <span class="cell-val font-semibold">{{ request.accountHolderName }}</span>
+            </div>
+            <div class="info-cell">
+              <span class="cell-lbl">{{ 'REQUESTS.ACCOUNT_HOLDER_ADDRESS' | translate }}</span>
+              <span class="cell-val">{{ request.accountHolderAddress }}</span>
+            </div>
+            <div class="info-cell">
+              <span class="cell-lbl">{{ 'REQUESTS.IBAN' | translate }}</span>
+              <span class="cell-val font-mono">{{ request.iban }}</span>
+            </div>
+            <div class="info-cell" *ngIf="request.swiftBic">
+              <span class="cell-lbl">{{ 'REQUESTS.SWIFT_BIC' | translate }}</span>
+              <span class="cell-val font-mono">{{ request.swiftBic }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Status History Timeline -->
+        <div class="section-card" *ngIf="request.statusHistory && request.statusHistory.length > 0">
+          <div class="section-header">
+            <h3>{{ 'REQUESTS.STATUS_HISTORY' | translate }}</h3>
+          </div>
+          <div class="history-timeline">
+            <div class="history-item" *ngFor="let h of request.statusHistory">
+              <div class="history-bullet"></div>
+              <div class="history-content">
+                <div class="history-header">
+                  <span class="history-status status-{{ h.status | lowercase }}">
+                    {{ 'REQUESTS.STATUSES.' + h.status | translate }}
+                  </span>
+                  <span class="history-date">{{ h.timestamp | date:'short' }}</span>
+                </div>
+                <span class="history-user">{{ h.updatedBy }}</span>
+                <p class="history-note" *ngIf="h.comment">{{ h.comment }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div class="loading-state" *ngIf="isLoading">
+    <ion-spinner name="crescent" color="primary"></ion-spinner>
+    <p>{{ 'COMMON.LOADING' | translate }}</p>
+  </div>
+</ion-content>

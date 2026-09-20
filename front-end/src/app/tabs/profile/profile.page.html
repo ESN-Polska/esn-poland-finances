@@ -1,0 +1,121 @@
+<ion-content class="profileContent ion-padding">
+  <div class="profileContainer" *ngIf="user">
+    <!-- Profile Info Card -->
+    <div class="profileCard">
+      <div class="cardHeader">
+        <h2 class="cardTitle">{{ 'PROFILE.USER_PROFILE' | translate }}</h2>
+      </div>
+
+      <div class="profileGrid">
+        <div class="infoField">
+          <span class="fieldLabel">{{ 'USER.USERNAME' | translate }}</span>
+          <span class="fieldValue font-mono">{{ user.userId }}</span>
+        </div>
+
+        <div class="infoField" *ngIf="user.email">
+          <span class="fieldLabel">{{ 'USER.EMAIL' | translate }}</span>
+          <span class="fieldValue">{{ user.email }}</span>
+        </div>
+
+        <div class="infoField" *ngIf="user.getDisplayName()">
+          <span class="fieldLabel">{{ 'USER.NAME' | translate }}</span>
+          <span class="fieldValue font-bold">{{ user.getDisplayName() }}</span>
+        </div>
+
+        <div class="infoField" *ngIf="user.section || user.sectionCode">
+          <span class="fieldLabel">{{ 'USER.SECTION' | translate }}</span>
+          <span class="fieldValue font-bold">
+            {{ user.section || user.sectionCode }}
+            <span class="sectionTag" *ngIf="user.sectionCode && user.section">({{ user.sectionCode }})</span>
+          </span>
+        </div>
+
+        <div class="infoField">
+          <span class="fieldLabel">{{ 'USER.COUNTRY' | translate }}</span>
+          <span class="fieldValue">{{ user.country || 'Poland' }}</span>
+        </div>
+      </div>
+
+      <!-- Extended Roles Badges -->
+      <div class="rolesSection">
+        <span class="fieldLabel">{{ 'USER.EXTENDED_ROLES' | translate }}</span>
+        <div class="rolesList" *ngIf="user.extendedRoles && user.extendedRoles.length > 0; else noRoles">
+          <span class="roleBadge" *ngFor="let role of user.extendedRoles">
+            {{ role }}
+          </span>
+        </div>
+        <ng-template #noRoles>
+          <p class="emptyRoles">{{ 'USER.NO_EXTENDED_ROLES' | translate }}</p>
+        </ng-template>
+      </div>
+    </div>
+
+    <!-- Default Payout Bank Details Card -->
+    <div class="profileCard">
+      <div class="cardHeader">
+        <div>
+          <h2 class="cardTitle">{{ 'PROFILE.DEFAULT_BANK_TITLE' | translate }}</h2>
+          <p class="cardSubtitle">{{ 'PROFILE.DEFAULT_BANK_DESC' | translate }}</p>
+        </div>
+      </div>
+
+      <form (ngSubmit)="saveBankDetails()" class="bankForm">
+        <div class="formGroup">
+          <label class="inputLabel">{{ 'REQUESTS.FIELDS.ACCOUNT_HOLDER_NAME' | translate }} *</label>
+          <input
+            type="text"
+            class="formInput"
+            [(ngModel)]="bankDetails.accountHolderName"
+            name="accountHolderName"
+            required
+            [placeholder]="'REQUESTS.FIELDS.ACCOUNT_HOLDER_NAME' | translate"
+          />
+        </div>
+
+        <div class="formGroup">
+          <label class="inputLabel">{{ 'REQUESTS.FIELDS.ACCOUNT_HOLDER_ADDRESS' | translate }} *</label>
+          <input
+            type="text"
+            class="formInput"
+            [(ngModel)]="bankDetails.accountHolderAddress"
+            name="accountHolderAddress"
+            required
+            [placeholder]="'REQUESTS.FIELDS.ACCOUNT_HOLDER_ADDRESS' | translate"
+          />
+        </div>
+
+        <div class="formGrid">
+          <div class="formGroup">
+            <label class="inputLabel">{{ 'REQUESTS.FIELDS.IBAN' | translate }} *</label>
+            <input
+              type="text"
+              class="formInput font-mono"
+              [(ngModel)]="bankDetails.iban"
+              name="iban"
+              required
+              placeholder="PL00 0000 0000 0000 0000 0000 0000"
+            />
+          </div>
+
+          <div class="formGroup">
+            <label class="inputLabel">{{ 'REQUESTS.FIELDS.SWIFT_BIC' | translate }} ({{ 'COMMON.OPTIONAL' | translate }})</label>
+            <input
+              type="text"
+              class="formInput font-mono"
+              [(ngModel)]="bankDetails.swiftBic"
+              name="swiftBic"
+              placeholder="PKOPPLPW"
+            />
+          </div>
+        </div>
+
+        <div class="formActions">
+          <ion-button type="submit" class="saveBtn" [disabled]="isSaving">
+            <ion-icon slot="start" name="save-outline"></ion-icon>
+            {{ 'COMMON.SAVE' | translate }}
+          </ion-button>
+        </div>
+      </form>
+    </div>
+  </div>
+</ion-content>

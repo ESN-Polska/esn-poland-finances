@@ -1,0 +1,69 @@
+<ion-content class="auth-content ion-padding">
+  <div class="auth-wrapper">
+    <div class="top-controls">
+      <ion-button
+        fill="clear"
+        class="theme-toggle-btn"
+        (click)="appService.cycleThemePreference()"
+        [title]="('COMMON.THEME' | translate) + ': ' + appService.getThemeLabel()"
+      >
+        <ion-icon slot="icon-only" [name]="appService.getThemeIcon()"></ion-icon>
+      </ion-button>
+
+      <div class="lang-selector">
+        <button
+          type="button"
+          class="lang-btn"
+          [class.active]="currentLang === 'en'"
+          (click)="setLang('en')"
+        >
+          EN
+        </button>
+        <span class="lang-divider">|</span>
+        <button
+          type="button"
+          class="lang-btn"
+          [class.active]="currentLang === 'pl'"
+          (click)="setLang('pl')"
+        >
+          PL
+        </button>
+      </div>
+    </div>
+
+    <ion-card class="auth-card">
+      <ion-card-content class="ion-text-center">
+        <div class="logo-container">
+          <img
+            src="assets/icons/icon.svg"
+            alt="ESN Poland"
+            class="app-logo"
+          />
+        </div>
+
+        <p class="app-subtitle">{{ 'APP.SUBTITLE' | translate }}</p>
+        <h1 class="app-title">{{ 'APP.TITLE' | translate }}</h1>
+
+        <div class="divider"></div>
+
+        <div *ngIf="isProcessing" class="loading-state">
+          <ion-spinner name="crescent" color="primary"></ion-spinner>
+          <p class="loading-text">{{ 'AUTH.LOGGING_IN' | translate }}</p>
+        </div>
+
+        <div *ngIf="!isProcessing" class="action-section">
+          <ion-button
+            expand="block"
+            class="login-button"
+            (click)="login()"
+          >
+            <ion-icon slot="start" name="log-in-outline"></ion-icon>
+            {{ 'AUTH.LOGIN_BUTTON' | translate }}
+          </ion-button>
+        </div>
+
+        <p class="version">v{{ version }}</p>
+      </ion-card-content>
+    </ion-card>
+  </div>
+</ion-content>
