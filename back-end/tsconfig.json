@@ -4,6 +4,7 @@
     "module": "commonjs",
     "moduleResolution": "node",
     "lib": ["ES2022"],
+    "useDefineForClassFields": false,
     "declaration": false,
     "strict": true,
     "noImplicitAny": false,

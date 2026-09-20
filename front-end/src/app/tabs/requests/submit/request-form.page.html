@@ -1,0 +1,573 @@
+<ion-content class="formContent ion-padding">
+  <div class="formContainer">
+    <!-- Header -->
+    <div class="formHeader">
+      <div class="headerLeft">
+        <ion-button fill="clear" class="backBtn" (click)="goBack()">
+          <ion-icon slot="icon-only" name="arrow-back-outline"></ion-icon>
+        </ion-button>
+        <div>
+          <h1 class="pageTitle">
+            {{ (isEditMode ? 'REQUESTS.EDIT_TITLE' : 'REQUESTS.NEW_TITLE') | translate }}
+            <span *ngIf="isEditMode" class="idBadge">{{ request.requestId }}</span>
+          </h1>
+          <p class="pageSubtitle">{{ 'REQUESTS.FORM_SUBTITLE' | translate }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Admin Changes Requested Banner -->
+    <div class="changesAlert" *ngIf="isChangesRequested && request.adminRemarks">
+      <ion-icon name="warning-outline" class="alertIcon"></ion-icon>
+      <div class="alertContent">
+        <h3 class="alertTitle">{{ 'REQUESTS.CHANGES_REQUESTED_TITLE' | translate }}</h3>
+        <p class="alertText">{{ request.adminRemarks }}</p>
+      </div>
+    </div>
+
+    <form (ngSubmit)="save('SUBMITTED')" class="mainForm">
+      <!-- Section 1: General Info -->
+      <div class="formCard">
+        <h2 class="cardTitle">1. {{ 'REQUESTS.SECTIONS.GENERAL_INFO' | translate }}</h2>
+
+        <div class="formGrid">
+          <div class="formGroup">
+            <label class="inputLabel">{{ 'REQUESTS.FIELDS.POSITION' | translate }} *</label>
+            <input
+              type="text"
+              class="formInput"
+              [(ngModel)]="request.position"
+              name="position"
+              required
+              [placeholder]="'REQUESTS.PLACEHOLDERS.POSITION' | translate"
+            />
+          </div>
+
+          <div class="formGroup">
+            <label class="inputLabel">{{ 'REQUESTS.FIELDS.FUNDING_SOURCE' | translate }} *</label>
+            <input
+              type="text"
+              class="formInput"
+              [(ngModel)]="request.sourceOfFunding"
+              name="sourceOfFunding"
+              required
+              [placeholder]="'REQUESTS.PLACEHOLDERS.FUNDING_SOURCE' | translate"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 2: Type of Request Selection -->
+      <div class="formCard">
+        <h2 class="cardTitle">2. {{ 'REQUESTS.SECTIONS.TYPE_SELECTION' | translate }}</h2>
+        <p class="sectionHelp">{{ 'REQUESTS.TYPE_QUESTION' | translate }}</p>
+
+        <div class="typeSelectionGrid">
+          <div
+            class="typeCard"
+            [class.active]="request.requestType === 'INVOICE_TO_PAY'"
+            (click)="selectType('INVOICE_TO_PAY')"
+          >
+            <div class="radioCircle"><div class="innerDot"></div></div>
+            <div class="typeInfo">
+              <span class="typeName">{{ 'REQUESTS.TYPES.INVOICE_TO_PAY' | translate }}</span>
+              <span class="typeDesc">{{ 'REQUESTS.TYPES_DESC.INVOICE_TO_PAY' | translate }}</span>
+            </div>
+          </div>
+
+          <div
+            class="typeCard"
+            [class.active]="request.requestType === 'INVOICE_REIMBURSEMENT'"
+            (click)="selectType('INVOICE_REIMBURSEMENT')"
+          >
+            <div class="radioCircle"><div class="innerDot"></div></div>
+            <div class="typeInfo">
+              <span class="typeName">{{ 'REQUESTS.TYPES.INVOICE_REIMBURSEMENT' | translate }}</span>
+              <span class="typeDesc">{{ 'REQUESTS.TYPES_DESC.INVOICE_REIMBURSEMENT' | translate }}</span>
+            </div>
+          </div>
+
+          <div
+            class="typeCard"
+            [class.active]="request.requestType === 'ADVANCE_PAYMENT'"
+            (click)="selectType('ADVANCE_PAYMENT')"
+          >
+            <div class="radioCircle"><div class="innerDot"></div></div>
+            <div class="typeInfo">
+              <span class="typeName">{{ 'REQUESTS.TYPES.ADVANCE_PAYMENT' | translate }}</span>
+              <span class="typeDesc">{{ 'REQUESTS.TYPES_DESC.ADVANCE_PAYMENT' | translate }}</span>
+            </div>
+          </div>
+
+          <div
+            class="typeCard"
+            [class.active]="request.requestType === 'DELEGATION_SETTLEMENT'"
+            (click)="selectType('DELEGATION_SETTLEMENT')"
+          >
+            <div class="radioCircle"><div class="innerDot"></div></div>
+            <div class="typeInfo">
+              <span class="typeName">{{ 'REQUESTS.TYPES.DELEGATION_SETTLEMENT' | translate }}</span>
+              <span class="typeDesc">{{ 'REQUESTS.TYPES_DESC.DELEGATION_SETTLEMENT' | translate }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 3: Conditional Details -->
+
+      <!-- Type A & B: Invoices (Multi-Document Supported) -->
+      <div class="formCard" *ngIf="request.requestType === 'INVOICE_TO_PAY' || request.requestType === 'INVOICE_REIMBURSEMENT'">
+        <div class="cardHeaderRow">
+          <div>
+            <h2 class="cardTitle">3. {{ 'REQUESTS.SECTIONS.DOCUMENTS_BREAKDOWN' | translate }}</h2>
+            <p class="sectionHelp">{{ 'REQUESTS.MULTI_DOC_HELP' | translate }}</p>
+          </div>
+
+          <ion-button fill="outline" size="small" class="addDocBtn" (click)="addDocumentItem()">
+            <ion-icon slot="start" name="add-outline"></ion-icon>
+            {{ 'REQUESTS.ADD_ANOTHER_DOCUMENT' | translate }}
+          </ion-button>
+        </div>
+
+        <!-- Document Cards List -->
+        <div class="documentsList">
+          <div class="documentItemCard" *ngFor="let doc of request.documents; let i = index">
+            <div class="docCardHeader">
+              <span class="docIndex">{{ 'REQUESTS.DOCUMENT' | translate }} #{{ i + 1 }}</span>
+              <button
+                *ngIf="request.documents.length > 1"
+                type="button"
+                class="removeDocBtn"
+                (click)="removeDocumentItem(i)"
+              >
+                <ion-icon name="trash-outline"></ion-icon>
+                {{ 'COMMON.REMOVE' | translate }}
+              </button>
+            </div>
+
+            <div class="docGrid">
+              <!-- Invoice Number -->
+              <div class="formGroup">
+                <label class="inputLabel">{{ 'REQUESTS.FIELDS.INVOICE_NUMBER' | translate }} *</label>
+                <input
+                  type="text"
+                  class="formInput"
+                  [(ngModel)]="doc.invoiceNumber"
+                  [name]="'invoiceNumber_' + i"
+                  required
+                  placeholder="FV/2026/01"
+                />
+              </div>
+
+              <!-- KSeF Number -->
+              <div class="formGroup">
+                <label class="inputLabel">
+                  {{ 'REQUESTS.FIELDS.KSEF_NUMBER' | translate }}
+                  <span *ngIf="request.requestType === 'INVOICE_REIMBURSEMENT'" class="optionalLabel">({{ 'COMMON.OPTIONAL' | translate }})</span>
+                  <span *ngIf="request.requestType === 'INVOICE_TO_PAY'">*</span>
+                </label>
+                <input
+                  type="text"
+                  class="formInput font-mono"
+                  [(ngModel)]="doc.ksefNumber"
+                  [name]="'ksefNumber_' + i"
+                  placeholder="1234567890-20260101-XXXXXXXXXXXX-XX"
+                />
+              </div>
+
+              <!-- Issued By -->
+              <div class="formGroup">
+                <label class="inputLabel">{{ 'REQUESTS.FIELDS.ISSUED_BY' | translate }} *</label>
+                <input
+                  type="text"
+                  class="formInput"
+                  [(ngModel)]="doc.issuedBy"
+                  [name]="'issuedBy_' + i"
+                  required
+                  [placeholder]="'REQUESTS.PLACEHOLDERS.ISSUED_BY' | translate"
+                />
+              </div>
+
+              <!-- Issued On -->
+              <div class="formGroup">
+                <label class="inputLabel">{{ 'REQUESTS.FIELDS.ISSUED_ON' | translate }} *</label>
+                <input
+                  type="date"
+                  class="formInput"
+                  [(ngModel)]="doc.issuedOn"
+                  [name]="'issuedOn_' + i"
+                  required
+                />
+              </div>
+
+              <!-- Type A: Payment Deadline -->
+              <div class="formGroup" *ngIf="request.requestType === 'INVOICE_TO_PAY'">
+                <label class="inputLabel">{{ 'REQUESTS.FIELDS.PAYMENT_DEADLINE' | translate }} *</label>
+                <input
+                  type="date"
+                  class="formInput"
+                  [(ngModel)]="doc.paymentDeadline"
+                  [name]="'paymentDeadline_' + i"
+                  required
+                />
+              </div>
+
+              <!-- Type B: Paid On -->
+              <div class="formGroup" *ngIf="request.requestType === 'INVOICE_REIMBURSEMENT'">
+                <label class="inputLabel">{{ 'REQUESTS.FIELDS.PAID_ON' | translate }} *</label>
+                <input
+                  type="date"
+                  class="formInput"
+                  [(ngModel)]="doc.paidOn"
+                  [name]="'paidOn_' + i"
+                  required
+                />
+              </div>
+
+              <!-- Type A: Seller Bank Details -->
+              <div class="formGroup fullWidth" *ngIf="request.requestType === 'INVOICE_TO_PAY'">
+                <label class="inputLabel">{{ 'REQUESTS.FIELDS.SELLER_BANK_DETAILS' | translate }} *</label>
+                <input
+                  type="text"
+                  class="formInput font-mono"
+                  [(ngModel)]="doc.bankAccountDetails"
+                  [name]="'bankAccountDetails_' + i"
+                  required
+                  placeholder="PL00 0000 0000 0000 0000 0000 0000"
+                />
+              </div>
+
+              <!-- Currency -->
+              <div class="formGroup">
+                <label class="inputLabel">{{ 'REQUESTS.FIELDS.CURRENCY' | translate }} *</label>
+                <select
+                  class="formInput"
+                  [(ngModel)]="doc.currency"
+                  [name]="'currency_' + i"
+                  (change)="recalculateTotals()"
+                >
+                  <option value="PLN">PLN</option>
+                  <option value="EUR">EUR</option>
+                </select>
+              </div>
+
+              <!-- Gross Amount -->
+              <div class="formGroup">
+                <label class="inputLabel">
+                  {{ (request.requestType === 'INVOICE_TO_PAY' ? 'REQUESTS.FIELDS.AMOUNT_TO_BE_PAID_GROSS' : 'REQUESTS.FIELDS.AMOUNT_TO_BE_REIMBURSED_GROSS') | translate }} *
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  class="formInput font-bold"
+                  [(ngModel)]="doc.grossAmount"
+                  [name]="'grossAmount_' + i"
+                  (input)="recalculateTotals()"
+                  required
+                  placeholder="0.00"
+                />
+              </div>
+
+              <!-- VAT Amount -->
+              <div class="formGroup">
+                <label class="inputLabel">{{ 'REQUESTS.FIELDS.VAT_AMOUNT' | translate }} *</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  class="formInput"
+                  [(ngModel)]="doc.vatAmount"
+                  [name]="'vatAmount_' + i"
+                  (input)="recalculateTotals()"
+                  required
+                  placeholder="0.00"
+                />
+              </div>
+
+              <!-- Explanation -->
+              <div class="formGroup fullWidth">
+                <label class="inputLabel">{{ 'REQUESTS.FIELDS.EXPLANATION' | translate }}</label>
+                <textarea
+                  class="formTextarea"
+                  rows="2"
+                  [(ngModel)]="doc.explanation"
+                  [name]="'explanation_' + i"
+                  [placeholder]="'REQUESTS.PLACEHOLDERS.EXPLANATION' | translate"
+                ></textarea>
+              </div>
+
+              <!-- File Upload for Invoice/Receipt -->
+              <div class="formGroup fullWidth">
+                <label class="inputLabel">{{ 'REQUESTS.FIELDS.INVOICE_FILE' | translate }} *</label>
+                <div class="fileUploadBox">
+                  <input
+                    type="file"
+                    class="hiddenFileInput"
+                    #invoiceFileInput
+                    (change)="onFileSelected($event, doc, 'attachment')"
+                    accept=".pdf,image/png,image/jpeg"
+                  />
+                  <div *ngIf="!doc.attachment" class="uploadPlaceholder" (click)="invoiceFileInput.click()">
+                    <ion-icon name="cloud-upload-outline"></ion-icon>
+                    <span>{{ 'REQUESTS.CLICK_TO_UPLOAD' | translate }}</span>
+                    <span class="fileHints">(PDF, PNG, JPG &le; 20MB)</span>
+                  </div>
+                  <div *ngIf="doc.attachment" class="fileAttachedRow">
+                    <ion-icon name="document-text-outline" class="docIcon"></ion-icon>
+                    <span class="attachedName">{{ doc.attachment.fileName }}</span>
+                    <button type="button" class="removeFileBtn" (click)="removeAttachment(doc, 'attachment')">
+                      <ion-icon name="close-circle"></ion-icon>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Type B: Proof of Payment Attachment -->
+              <div class="formGroup fullWidth" *ngIf="request.requestType === 'INVOICE_REIMBURSEMENT'">
+                <label class="inputLabel">
+                  {{ 'REQUESTS.FIELDS.PROOF_OF_PAYMENT' | translate }}
+                  <span class="optionalLabel">({{ 'COMMON.OPTIONAL' | translate }})</span>
+                </label>
+                <div class="fileUploadBox">
+                  <input
+                    type="file"
+                    class="hiddenFileInput"
+                    #proofFileInput
+                    (change)="onFileSelected($event, doc, 'proofOfPaymentAttachment')"
+                    accept=".pdf,image/png,image/jpeg"
+                  />
+                  <div *ngIf="!doc.proofOfPaymentAttachment" class="uploadPlaceholder" (click)="proofFileInput.click()">
+                    <ion-icon name="cloud-upload-outline"></ion-icon>
+                    <span>{{ 'REQUESTS.ATTACH_PROOF_PAYMENT' | translate }}</span>
+                  </div>
+                  <div *ngIf="doc.proofOfPaymentAttachment" class="fileAttachedRow">
+                    <ion-icon name="checkmark-circle-outline" class="docIcon success"></ion-icon>
+                    <span class="attachedName">{{ doc.proofOfPaymentAttachment.fileName }}</span>
+                    <button type="button" class="removeFileBtn" (click)="removeAttachment(doc, 'proofOfPaymentAttachment')">
+                      <ion-icon name="close-circle"></ion-icon>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Totals Summary Bar -->
+        <div class="totalsSummaryBar">
+          <div class="totalItem">
+            <span class="totalLabel">{{ 'REQUESTS.TOTAL_GROSS_AMOUNT' | translate }}:</span>
+            <span class="totalValue font-bold">{{ request.totalGrossAmount | number:'1.2-2' }} {{ request.currency }}</span>
+          </div>
+          <div class="totalItem">
+            <span class="totalLabel">{{ 'REQUESTS.TOTAL_VAT_AMOUNT' | translate }}:</span>
+            <span class="totalValue">{{ request.totalVatAmount | number:'1.2-2' }} {{ request.currency }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Type C: Advance Payment -->
+      <div class="formCard" *ngIf="request.requestType === 'ADVANCE_PAYMENT'">
+        <h2 class="cardTitle">3. {{ 'REQUESTS.SECTIONS.ADVANCE_PAYMENT_DETAILS' | translate }}</h2>
+
+        <div class="formGroup">
+          <label class="inputLabel">{{ 'REQUESTS.FIELDS.REQUESTED_AMOUNT_PLN' | translate }} *</label>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            class="formInput font-bold"
+            [(ngModel)]="request.requestedAmountPLN"
+            name="requestedAmountPLN"
+            (input)="onAdvanceAmountChange()"
+            required
+            placeholder="0.00"
+          />
+        </div>
+
+        <div class="formGroup mt-4">
+          <label class="inputLabel">{{ 'REQUESTS.FIELDS.EXPLANATION_BUDGET' | translate }} *</label>
+          <textarea
+            class="formTextarea"
+            rows="5"
+            [(ngModel)]="request.explanationAndBudget"
+            name="explanationAndBudget"
+            required
+            [placeholder]="'REQUESTS.PLACEHOLDERS.EXPLANATION_BUDGET' | translate"
+          ></textarea>
+        </div>
+      </div>
+
+      <!-- Type D: Delegation Settlement -->
+      <div class="formCard" *ngIf="request.requestType === 'DELEGATION_SETTLEMENT'">
+        <h2 class="cardTitle">3. {{ 'REQUESTS.SECTIONS.DELEGATION_DETAILS' | translate }}</h2>
+
+        <!-- Filled Delegation Template -->
+        <div class="formGroup">
+          <label class="inputLabel">{{ 'REQUESTS.FIELDS.DELEGATION_TEMPLATE_FILE' | translate }} *</label>
+          <div class="fileUploadBox">
+            <input
+              type="file"
+              class="hiddenFileInput"
+              #delegationFileInput
+              (change)="onSingleFileSelected($event, 'delegationFormAttachment')"
+              accept=".pdf,.doc,.docx"
+            />
+            <div *ngIf="!request.delegationFormAttachment" class="uploadPlaceholder" (click)="delegationFileInput.click()">
+              <ion-icon name="cloud-upload-outline"></ion-icon>
+              <span>{{ 'REQUESTS.UPLOAD_DELEGATION_TEMPLATE' | translate }}</span>
+            </div>
+            <div *ngIf="request.delegationFormAttachment" class="fileAttachedRow">
+              <ion-icon name="document-text-outline" class="docIcon"></ion-icon>
+              <span class="attachedName">{{ request.delegationFormAttachment.fileName }}</span>
+              <button type="button" class="removeFileBtn" (click)="request.delegationFormAttachment = undefined">
+                <ion-icon name="close-circle"></ion-icon>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tickets (Multiple Supported) -->
+        <div class="formGroup mt-4">
+          <div class="cardHeaderRow">
+            <label class="inputLabel">{{ 'REQUESTS.FIELDS.TICKETS_FILES' | translate }} *</label>
+            <button type="button" class="inlineAddBtn" (click)="ticketsFileInput.click()">
+              <ion-icon name="add-circle-outline"></ion-icon>
+              {{ 'REQUESTS.ADD_TICKET_FILE' | translate }}
+            </button>
+          </div>
+          <input
+            type="file"
+            multiple
+            class="hiddenFileInput"
+            #ticketsFileInput
+            (change)="onMultipleFilesSelected($event, 'ticketAttachments')"
+            accept=".pdf,image/png,image/jpeg"
+          />
+          <div class="multiFilesList" *ngIf="request.ticketAttachments && request.ticketAttachments.length > 0">
+            <div class="fileAttachedRow" *ngFor="let ticket of request.ticketAttachments; let ti = index">
+              <ion-icon name="airplane-outline" class="docIcon"></ion-icon>
+              <span class="attachedName">{{ ticket.fileName }}</span>
+              <button type="button" class="removeFileBtn" (click)="removeMultipleFile('ticketAttachments', ti)">
+                <ion-icon name="close-circle"></ion-icon>
+              </button>
+            </div>
+          </div>
+          <div *ngIf="!request.ticketAttachments || request.ticketAttachments.length === 0" class="uploadPlaceholder" (click)="ticketsFileInput.click()">
+            <ion-icon name="cloud-upload-outline"></ion-icon>
+            <span>{{ 'REQUESTS.UPLOAD_TICKETS' | translate }}</span>
+          </div>
+        </div>
+
+        <!-- Total Delegation Amount -->
+        <div class="formGroup mt-4">
+          <label class="inputLabel">{{ 'REQUESTS.FIELDS.TOTAL_DELEGATION_AMOUNT' | translate }} (PLN) *</label>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            class="formInput font-bold"
+            [(ngModel)]="request.totalGrossAmount"
+            name="delegationTotalAmount"
+            required
+            placeholder="0.00"
+          />
+        </div>
+      </div>
+
+      <!-- Section 4: Financial Information (Payout Bank Details) -->
+      <div class="formCard">
+        <h2 class="cardTitle">4. {{ 'REQUESTS.SECTIONS.FINANCIAL_INFO' | translate }}</h2>
+        <p class="sectionHelp">{{ 'REQUESTS.PAYOUT_BANK_HELP' | translate }}</p>
+
+        <div class="formGroup">
+          <label class="inputLabel">{{ 'REQUESTS.FIELDS.ACCOUNT_HOLDER_NAME' | translate }} *</label>
+          <input
+            type="text"
+            class="formInput"
+            [(ngModel)]="request.accountHolderName"
+            name="accountHolderName"
+            required
+            [placeholder]="'REQUESTS.FIELDS.ACCOUNT_HOLDER_NAME' | translate"
+          />
+        </div>
+
+        <div class="formGroup">
+          <label class="inputLabel">{{ 'REQUESTS.FIELDS.ACCOUNT_HOLDER_ADDRESS' | translate }} *</label>
+          <input
+            type="text"
+            class="formInput"
+            [(ngModel)]="request.accountHolderAddress"
+            name="accountHolderAddress"
+            required
+            [placeholder]="'REQUESTS.FIELDS.ACCOUNT_HOLDER_ADDRESS' | translate"
+          />
+        </div>
+
+        <div class="formGrid">
+          <div class="formGroup">
+            <label class="inputLabel">{{ 'REQUESTS.FIELDS.IBAN' | translate }} *</label>
+            <input
+              type="text"
+              class="formInput font-mono"
+              [(ngModel)]="request.iban"
+              name="iban"
+              required
+              placeholder="PL00 0000 0000 0000 0000 0000 0000"
+            />
+          </div>
+
+          <div class="formGroup">
+            <label class="inputLabel">
+              {{ 'REQUESTS.FIELDS.SWIFT_BIC' | translate }}
+              <span class="optionalLabel">({{ 'COMMON.OPTIONAL' | translate }})</span>
+            </label>
+            <input
+              type="text"
+              class="formInput font-mono"
+              [(ngModel)]="request.swiftBic"
+              name="swiftBic"
+              placeholder="PKOPPLPW"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 5: Additional Information -->
+      <div class="formCard">
+        <h2 class="cardTitle">5. {{ 'REQUESTS.SECTIONS.ADDITIONAL_INFO' | translate }}</h2>
+
+        <div class="formGroup">
+          <label class="inputLabel">{{ 'REQUESTS.FIELDS.ADDITIONAL_REMARKS' | translate }}</label>
+          <textarea
+            class="formTextarea"
+            rows="3"
+            [(ngModel)]="request.additionalRemarks"
+            name="additionalRemarks"
+            [placeholder]="'REQUESTS.PLACEHOLDERS.ADDITIONAL_REMARKS' | translate"
+          ></textarea>
+        </div>
+      </div>
+
+      <!-- Bottom Actions -->
+      <div class="bottomActions">
+        <ion-button fill="clear" color="medium" class="cancelBtn" (click)="goBack()">
+          {{ 'COMMON.CANCEL' | translate }}
+        </ion-button>
+
+        <div class="actionGroup">
+          <ion-button fill="outline" class="draftBtn" (click)="save('DRAFT')" [disabled]="isSubmitting">
+            <ion-icon slot="start" name="save-outline"></ion-icon>
+            {{ 'REQUESTS.SAVE_DRAFT' | translate }}
+          </ion-button>
+
+          <ion-button class="submitBtn" (click)="save('SUBMITTED')" [disabled]="isSubmitting">
+            <ion-icon slot="start" name="checkmark-circle-outline"></ion-icon>
+            {{ (isChangesRequested ? 'REQUESTS.RESUBMIT_REQUEST' : 'REQUESTS.SUBMIT_REQUEST') | translate }}
+          </ion-button>
+        </div>
+      </div>
+    </form>
+  </div>
+</ion-content>

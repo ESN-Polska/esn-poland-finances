@@ -1,0 +1,142 @@
+<!-- Desktop Tabs (>= 768px) -->
+<ion-tabs class="desktopTabs" *ngIf="!app.isInMobileMode()">
+  <ion-tab-bar color="ideaToolbar" slot="top">
+    <!-- Brand Logo Button (matching esn-assembly-app) -->
+    <ion-tab-button (click)="app.goTo(['/t/home'])">
+      <ion-img src="assets/icons/icon.svg"></ion-img>
+    </ion-tab-button>
+
+    <!-- Text-Only Navigation Tabs (No icons) -->
+    <ion-tab-button tab="home">
+      <ion-label>{{ 'TABS.HOME' | translate }}</ion-label>
+    </ion-tab-button>
+
+    <ion-tab-button tab="rules">
+      <ion-label>{{ 'TABS.RULES' | translate }}</ion-label>
+    </ion-tab-button>
+
+    <ion-tab-button tab="requests">
+      <ion-label>{{ 'TABS.REQUESTS' | translate }}</ion-label>
+    </ion-tab-button>
+
+    <ion-tab-button tab="profile">
+      <ion-label>{{ 'TABS.PROFILE' | translate }}</ion-label>
+    </ion-tab-button>
+
+    <!-- Controls on Right (matching esn-assembly-app themeSwitcherDesktop) -->
+    <div class="themeSwitcherDesktop">
+      <!-- Theme Switcher -->
+      <ion-button
+        fill="clear"
+        class="themeToggleBtn"
+        (click)="app.cycleThemePreference()"
+        [title]="('COMMON.THEME' | translate) + ': ' + app.getThemeLabel()"
+      >
+        <ion-icon slot="icon-only" [name]="app.getThemeIcon()"></ion-icon>
+      </ion-button>
+
+      <!-- Language Selector -->
+      <div class="langSelector">
+        <button
+          type="button"
+          class="langBtn"
+          [class.active]="app.currentLanguage === 'en'"
+          (click)="app.setLanguage('en')"
+        >
+          EN
+        </button>
+        <span class="langDivider">|</span>
+        <button
+          type="button"
+          class="langBtn"
+          [class.active]="app.currentLanguage === 'pl'"
+          (click)="app.setLanguage('pl')"
+        >
+          PL
+        </button>
+      </div>
+
+      <!-- User Chip -->
+      <div class="userChip" *ngIf="app.currentUser as user" (click)="app.goTo(['/t/profile'])">
+        <span class="userName">{{ user.getDisplayName() }}</span>
+        <span class="sectionBadge" *ngIf="user.section || user.sectionCode">
+          {{ user.sectionCode || user.section }}
+        </span>
+      </div>
+
+      <!-- Log Out Button -->
+      <ion-button
+        fill="clear"
+        class="logoutBtn"
+        (click)="logout()"
+        [title]="'TABS.LOGOUT' | translate"
+      >
+        <ion-label>{{ 'TABS.LOGOUT' | translate }}</ion-label>
+      </ion-button>
+    </div>
+  </ion-tab-bar>
+</ion-tabs>
+
+<!-- Mobile Mode (< 768px) -->
+<ion-tabs class="mobileTabs" *ngIf="app.isInMobileMode()">
+  <ion-header class="ion-no-border">
+    <ion-toolbar color="ideaToolbar">
+      <ion-buttons slot="start">
+        <ion-tab-button (click)="app.goTo(['/t/home'])">
+          <ion-img src="assets/icons/icon.svg"></ion-img>
+        </ion-tab-button>
+      </ion-buttons>
+
+      <ion-title>{{ 'APP.TITLE' | translate }}</ion-title>
+
+      <ion-buttons slot="end">
+        <ion-button fill="clear" class="themeToggleBtn" (click)="app.cycleThemePreference()">
+          <ion-icon slot="icon-only" [name]="app.getThemeIcon()"></ion-icon>
+        </ion-button>
+
+        <div class="langSelector">
+          <button
+            type="button"
+            class="langBtn"
+            [class.active]="app.currentLanguage === 'en'"
+            (click)="app.setLanguage('en')"
+          >
+            EN
+          </button>
+          <span class="langDivider">|</span>
+          <button
+            type="button"
+            class="langBtn"
+            [class.active]="app.currentLanguage === 'pl'"
+            (click)="app.setLanguage('pl')"
+          >
+            PL
+          </button>
+        </div>
+      </ion-buttons>
+    </ion-toolbar>
+  </ion-header>
+
+  <!-- Bottom Tabs (Text-Only) -->
+  <ion-tab-bar color="ideaToolbar" slot="bottom">
+    <ion-tab-button tab="home">
+      <ion-label>{{ 'TABS.HOME' | translate }}</ion-label>
+    </ion-tab-button>
+
+    <ion-tab-button tab="rules">
+      <ion-label>{{ 'TABS.RULES' | translate }}</ion-label>
+    </ion-tab-button>
+
+    <ion-tab-button tab="requests">
+      <ion-label>{{ 'TABS.REQUESTS' | translate }}</ion-label>
+    </ion-tab-button>
+
+    <ion-tab-button tab="profile">
+      <ion-label>{{ 'TABS.PROFILE' | translate }}</ion-label>
+    </ion-tab-button>
+
+    <ion-tab-button (click)="logout()">
+      <ion-label>{{ 'TABS.LOGOUT' | translate }}</ion-label>
+    </ion-tab-button>
+  </ion-tab-bar>
+</ion-tabs>

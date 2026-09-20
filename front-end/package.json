@@ -1,29 +1,45 @@
 {
-  "name": "esn-poland-finances-frontend",
+  "name": "esn-poland-finances",
   "version": "1.0.0",
-  "type": "module",
+  "description": "ESN Poland Finances front-end",
   "scripts": {
-    "dev": "vite",
-    "start": "vite",
-    "build": "tsc && vite build",
-    "lint": "tsc --noEmit",
-    "preview": "vite preview"
+    "ng": "ng",
+    "start": "ionic serve --no-open",
+    "build": "ionic build --prod",
+    "lint": "eslint --ext .ts"
   },
+  "private": true,
   "dependencies": {
-    "axios": "^1.7.0",
-    "clsx": "^2.1.1",
-    "date-fns": "^3.6.0",
-    "lucide-react": "^0.441.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "@angular/animations": "^16.1.8",
+    "@angular/common": "^16.1.8",
+    "@angular/core": "^16.1.8",
+    "@angular/forms": "^16.1.8",
+    "@angular/platform-browser": "^16.1.8",
+    "@angular/platform-browser-dynamic": "^16.1.8",
+    "@angular/router": "^16.1.8",
+    "@capacitor/app": "5.0.6",
+    "@capacitor/browser": "^5.0.6",
+    "@capacitor/core": "^5.2.2",
+    "@fontsource/poppins": "^5.3.0",
+    "@idea-ionic/common": "7.1.4",
+    "@ionic/angular": "^7.4.1",
+    "@ionic/storage-angular": "^4.0.0",
+    "@ngx-translate/core": "^15.0.0",
+    "@ngx-translate/http-loader": "^8.0.0",
+    "date-fns": "^2.30.0",
+    "idea-toolbox": "7.0.1",
+    "ionicons": "^7.0.0",
+    "rxjs": "~7.8.0",
+    "tslib": "^2.4.1",
+    "zone.js": "~0.13.0"
   },
   "devDependencies": {
-    "@types/node": "^20.14.0",
-    "@types/react": "^18.3.5",
-    "@types/react-dom": "^18.3.0",
-    "@vitejs/plugin-react": "^4.3.1",
-    "sass": "^1.78.0",
-    "typescript": "^5.5.3",
-    "vite": "^5.4.5"
+    "@angular-devkit/build-angular": "^16.1.8",
+    "@angular/cli": "^16.1.8",
+    "@angular/compiler": "^16.1.8",
+    "@angular/compiler-cli": "^16.1.8",
+    "@capacitor/cli": "5.2.2",
+    "@types/node": "^16.18.40",
+    "typescript": "5.1.6"
   }
 }

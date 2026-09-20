@@ -1,0 +1,80 @@
+/* Core CSS required for Ionic components to work properly */
+@import "@ionic/angular/css/core.css";
+
+/* Basic CSS for apps built with Ionic */
+@import "@ionic/angular/css/normalize.css";
+@import "@ionic/angular/css/structure.css";
+@import "@ionic/angular/css/typography.css";
+@import "@ionic/angular/css/display.css";
+
+/* Optional CSS that can be commented out */
+@import "@ionic/angular/css/padding.css";
+@import "@ionic/angular/css/float-elements.css";
+@import "@ionic/angular/css/text-alignment.css";
+@import "@ionic/angular/css/text-transformation.css";
+@import "@ionic/angular/css/flex-utils.css";
+
+@import "@fontsource/poppins/300.css";
+@import "@fontsource/poppins/400.css";
+@import "@fontsource/poppins/500.css";
+@import "@fontsource/poppins/600.css";
+@import "@fontsource/poppins/700.css";
+
+/* Institutional ESN Styling Defaults */
+* {
+  font-family: var(--ion-font-family);
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--bg-body);
+  color: var(--text-dark);
+}
+
+ion-content {
+  --background: var(--bg-body);
+}
+
+/* Reset any browser focus outlines (cyan/blue focus rings) */
+button:focus,
+button:focus-visible,
+button:active,
+ion-button:focus,
+ion-button:focus-visible,
+ion-button:active {
+  outline: none !important;
+}
+
+*:focus-visible {
+  outline: none;
+}
+
+ion-toolbar {
+  --background: var(--bg-toolbar);
+  --color: #ffffff;
+
+  ion-title {
+    font-weight: 600;
+    font-size: 1.15rem;
+  }
+}
+
+.text-cyan {
+  color: var(--esn-cyan);
+}
+
+.text-dark-blue {
+  color: var(--esn-dark-blue);
+}
+
+.text-pink {
+  color: var(--esn-pink);
+}
+
+.text-green {
+  color: var(--esn-green);
+}
+
+.text-orange {
+  color: var(--esn-orange);
+}

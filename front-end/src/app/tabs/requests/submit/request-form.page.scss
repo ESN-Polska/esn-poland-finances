@@ -1,0 +1,549 @@
+.formContent {
+  --background: var(--bg-body);
+}
+
+.formContainer {
+  max-width: 860px;
+  margin: 28px auto;
+  padding: 0 16px 40px 16px;
+}
+
+.formHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+
+  .headerLeft {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    .backBtn {
+      --color: var(--text-dark);
+      --padding-start: 0;
+      --padding-end: 8px;
+      margin: 0;
+      height: 36px;
+    }
+
+    .pageTitle {
+      font-size: 1.45rem;
+      font-weight: 700;
+      color: var(--text-dark);
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+
+      .idBadge {
+        font-family: monospace;
+        background: rgba(0, 174, 239, 0.12);
+        color: var(--esn-cyan);
+        padding: 2px 8px;
+        border-radius: 6px;
+        font-size: 0.95rem;
+      }
+    }
+
+    .pageSubtitle {
+      font-size: 0.85rem;
+      color: var(--text-medium);
+      margin: 2px 0 0 0;
+    }
+  }
+
+  .headerActions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+}
+
+.draftBtn {
+  --color: var(--text-dark);
+  --border-color: var(--border-color);
+  font-weight: 600;
+  text-transform: none;
+  height: 40px;
+  margin: 0;
+}
+
+.submitBtn {
+  --background: #00aeef;
+  --background-hover: #0099d2;
+  --color: #ffffff;
+  --border-radius: 8px;
+  font-weight: 600;
+  height: 40px;
+  text-transform: none;
+  --box-shadow: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  margin: 0;
+}
+
+/* Changes Requested Alert */
+.changesAlert {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-left: 4px solid #ea580c;
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin-bottom: 24px;
+
+  .alertIcon {
+    font-size: 1.6rem;
+    color: #ea580c;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .alertContent {
+    .alertTitle {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #9a3412;
+      margin: 0 0 4px 0;
+    }
+
+    .alertText {
+      font-size: 0.95rem;
+      color: #7c2d12;
+      margin: 0;
+      line-height: 1.45;
+    }
+  }
+}
+
+/* Form Cards */
+.mainForm {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.formCard {
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 28px 24px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+
+  .cardTitle {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--text-dark);
+    margin: 0 0 4px 0;
+  }
+
+  .cardHeaderRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 12px;
+
+    .cardTitle {
+      margin-bottom: 2px;
+    }
+  }
+
+  .sectionHelp {
+    font-size: 0.85rem;
+    color: var(--text-medium);
+    margin: 0 0 16px 0;
+  }
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  &.fullWidth {
+    grid-column: 1 / -1;
+  }
+
+  &.mt-4 {
+    margin-top: 16px;
+  }
+
+  .inputLabel {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-dark);
+
+    .optionalLabel {
+      color: var(--text-medium);
+      font-weight: normal;
+    }
+  }
+
+  .formInput,
+  .formTextarea {
+    width: 100%;
+    background: var(--bg-body);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 0 14px;
+    font-size: 0.95rem;
+    color: var(--text-dark);
+    outline: none !important;
+    transition: border-color 0.15s ease;
+
+    &:focus {
+      border-color: var(--esn-cyan);
+    }
+
+    &.font-mono {
+      font-family: monospace;
+    }
+
+    &.font-bold {
+      font-weight: 700;
+    }
+  }
+
+  .formInput {
+    height: 42px;
+  }
+
+  .formTextarea {
+    padding: 10px 14px;
+    resize: vertical;
+    font-family: inherit;
+  }
+}
+
+/* Type Selection Grid */
+.typeSelectionGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+
+  .typeCard {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    background: var(--bg-body);
+    border: 2px solid var(--border-color);
+    border-radius: 10px;
+    padding: 16px 18px;
+    cursor: pointer;
+    transition: all 0.15s ease-in-out;
+
+    &:hover {
+      border-color: rgba(0, 174, 239, 0.4);
+    }
+
+    &.active {
+      border-color: var(--esn-cyan);
+      background: rgba(0, 174, 239, 0.04);
+
+      .radioCircle {
+        border-color: var(--esn-cyan);
+
+        .innerDot {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+    }
+
+    .radioCircle {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border: 2px solid var(--text-medium);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 2px;
+      transition: all 0.15s ease;
+
+      .innerDot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--esn-cyan);
+        opacity: 0;
+        transform: scale(0.4);
+        transition: all 0.15s ease;
+      }
+    }
+
+    .typeInfo {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+
+      .typeName {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: var(--text-dark);
+      }
+
+      .typeDesc {
+        font-size: 0.8rem;
+        color: var(--text-medium);
+        line-height: 1.35;
+      }
+    }
+  }
+}
+
+/* Documents Breakdown (Multi-Document) */
+.documentsList {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin-bottom: 20px;
+
+  .documentItemCard {
+    background: var(--bg-body);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 20px 18px;
+
+    .docCardHeader {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+      padding-bottom: 10px;
+      border-bottom: 1px dashed var(--border-color);
+
+      .docIndex {
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: var(--text-dark);
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+      }
+
+      .removeDocBtn {
+        background: transparent;
+        border: none;
+        color: #ef4444;
+        font-size: 0.8rem;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 8px;
+        border-radius: 4px;
+
+        &:hover {
+          background: rgba(239, 68, 68, 0.1);
+        }
+      }
+    }
+
+    .docGrid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 14px;
+    }
+  }
+}
+
+.addDocBtn {
+  --color: var(--esn-cyan);
+  --border-color: var(--esn-cyan);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: none;
+  height: 36px;
+  margin: 0;
+}
+
+.totalsSummaryBar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 28px;
+  background: var(--bg-body);
+  border-radius: 8px;
+  padding: 14px 20px;
+  flex-wrap: wrap;
+
+  .totalItem {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1rem;
+
+    .totalLabel {
+      color: var(--text-medium);
+      font-size: 0.9rem;
+    }
+
+    .totalValue {
+      color: var(--text-dark);
+      font-size: 1.15rem;
+
+      &.font-bold {
+        font-weight: 700;
+      }
+    }
+  }
+}
+
+/* File Upload Boxes */
+.fileUploadBox {
+  .hiddenFileInput {
+    display: none;
+  }
+
+  .uploadPlaceholder {
+    border: 2px dashed var(--border-color);
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s ease;
+
+    ion-icon {
+      font-size: 1.8rem;
+      color: var(--esn-cyan);
+    }
+
+    span {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-dark);
+    }
+
+    .fileHints {
+      font-size: 0.75rem;
+      color: var(--text-medium);
+      font-weight: normal;
+    }
+
+    &:hover {
+      border-color: var(--esn-cyan);
+      background: rgba(0, 174, 239, 0.03);
+    }
+  }
+
+  .fileAttachedRow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 8px 12px;
+
+    .docIcon {
+      font-size: 1.3rem;
+      color: var(--esn-cyan);
+
+      &.success {
+        color: #10b981;
+      }
+    }
+
+    .attachedName {
+      font-size: 0.85rem;
+      color: var(--text-dark);
+      font-weight: 500;
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .removeFileBtn {
+      background: transparent;
+      border: none;
+      color: var(--text-medium);
+      cursor: pointer;
+      font-size: 1.2rem;
+      padding: 0;
+      display: flex;
+      align-items: center;
+
+      &:hover {
+        color: #ef4444;
+      }
+    }
+  }
+}
+
+.inlineAddBtn {
+  background: transparent;
+  border: none;
+  color: var(--esn-cyan);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.multiFilesList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Bottom Actions */
+.bottomActions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+  flex-wrap: wrap;
+  gap: 16px;
+
+  .actionGroup {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+}
+
+body.dark {
+  .changesAlert {
+    background: rgba(234, 88, 12, 0.15);
+    border-color: rgba(234, 88, 12, 0.3);
+    border-left-color: #ea580c;
+
+    .alertIcon {
+      color: #fb923c;
+    }
+
+    .alertContent {
+      .alertTitle {
+        color: #fed7aa;
+      }
+
+      .alertText {
+        color: #ffedd5;
+      }
+    }
+  }
+}

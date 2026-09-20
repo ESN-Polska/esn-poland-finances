@@ -178,6 +178,39 @@ export class ApiStack extends cdk.Stack {
       }
     }
 
+    // 6. Common IAM Policies (Systems Manager / SSM parameter access for JWT secrets)
+    const accessSystemsManagerPolicy = new IAM.Policy(this, 'AccessSystemsManager', {
+      statements: [
+        new IAM.PolicyStatement({
+          effect: IAM.Effect.ALLOW,
+          actions: ['ssm:GetParameter', 'ssm:GetParameters'],
+          resources: ['*']
+        })
+      ]
+    });
+
+    // Grant SSM & DDB to auth function if present
+    if (authController && this.functions[authController.name]) {
+      const authFn = this.functions[authController.name];
+      if (authFn.role) authFn.role.attachInlinePolicy(accessSystemsManagerPolicy);
+      for (const table of Object.values(this.ddbTables)) {
+        table.grantReadData(authFn);
+      }
+    }
+
+    // Attach SSM policy to all functions
+    for (const fn of Object.values(this.functions)) {
+      if (fn.role) fn.role.attachInlinePolicy(accessSystemsManagerPolicy);
+    }
+
+    // 7. Custom Domain API Mapping
+    new ApiGw.CfnApiMapping(this, 'HttpApiMapping', {
+      domainName: props.apiDomain,
+      apiId: this.httpApi.httpApiId,
+      apiMappingKey: props.stage,
+      stage: '$default'
+    });
+
     new cdk.CfnOutput(this, 'HttpApiUrl', { value: this.httpApi.apiEndpoint });
   }
 }

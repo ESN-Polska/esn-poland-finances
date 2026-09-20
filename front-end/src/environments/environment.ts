@@ -1,26 +1,10 @@
-import { parameters, stages } from '../../../back-end/deploy/environments';
+// This file can be replaced during build by using the `fileReplacements` array.
+// `ng build --configuration production` replaces `environment.ts` with `environment.prod.ts`.
+// The list of file replacements can be found in `angular.json`.
 
-/**
- * The stage to use for API requests ('dev' | 'prod').
- * Can be configured manually here or automatically via release.sh (VITE_STAGE).
- */
-const DEFAULT_STAGE: 'dev' | 'prod' = 'dev';
-const STAGE: 'dev' | 'prod' = (import.meta.env.VITE_STAGE as 'dev' | 'prod') || DEFAULT_STAGE;
+import { environment as defaultEnv } from './environment.idea';
 
-/**
- * Variables to configure ESN Poland Finances cloud app.
- */
-export const environment = {
-  app: {
-    version: '1.0.0',
-    mediaUrl: 'https://'.concat(parameters.mediaDomain),
-    maxFileUploadSizeMB: 50
-  },
-  api: {
-    url: parameters.apiDomain,
-    stage: STAGE
-  },
-  stage: STAGE,
-  parameters,
-  stages
-};
+// @idea: we load the default env variables from another file so we don't have to repeat the values for dev and prod
+export const environment = Object.assign({}, defaultEnv, {
+  debug: true
+});

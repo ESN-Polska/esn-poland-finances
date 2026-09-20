@@ -1,0 +1,180 @@
+// Official ESN Brand Colors (matching esn-poland-assembly)
+$esn-cyan: #00aeef;
+$esn-dark-blue: #002b49;
+$esn-pink: #ec008c;
+$esn-green: #7ac143;
+$esn-orange: #f47b20;
+
+// Portal Neutrals & Surfaces
+$bg-body: #f4f5f8;
+$bg-card: #ffffff;
+$bg-toolbar: $esn-dark-blue;
+
+$border-color: #e2e8f0;
+$border-light: #edf2f7;
+
+$text-dark: #222428;
+$text-medium: #64748b;
+$text-light: #94a3b8;
+$text-white: #ffffff;
+
+:root {
+  --ion-font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+
+  /** primary: ESN Cyan #00aeef **/
+  --ion-color-primary: #00aeef;
+  --ion-color-primary-rgb: 0, 174, 239;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #0099d2;
+  --ion-color-primary-tint: #1ab6f1;
+
+  /** secondary: ESN Dark Blue #002b49 **/
+  --ion-color-secondary: #002b49;
+  --ion-color-secondary-rgb: 0, 43, 73;
+  --ion-color-secondary-contrast: #ffffff;
+  --ion-color-secondary-contrast-rgb: 255, 255, 255;
+  --ion-color-secondary-shade: #002640;
+  --ion-color-secondary-tint: #1a405b;
+
+  /** tertiary: ESN Pink #ec008c **/
+  --ion-color-tertiary: #ec008c;
+  --ion-color-tertiary-rgb: 236, 0, 140;
+  --ion-color-tertiary-contrast: #ffffff;
+  --ion-color-tertiary-contrast-rgb: 255, 255, 255;
+  --ion-color-tertiary-shade: #d0007b;
+  --ion-color-tertiary-tint: #ee1a98;
+
+  /** success: ESN Green #7ac143 **/
+  --ion-color-success: #7ac143;
+  --ion-color-success-rgb: 122, 193, 67;
+  --ion-color-success-contrast: #ffffff;
+  --ion-color-success-contrast-rgb: 255, 255, 255;
+  --ion-color-success-shade: #6baa3b;
+  --ion-color-success-tint: #87c756;
+
+  /** warning: ESN Orange #f47b20 **/
+  --ion-color-warning: #f47b20;
+  --ion-color-warning-rgb: 244, 123, 32;
+  --ion-color-warning-contrast: #ffffff;
+  --ion-color-warning-contrast-rgb: 255, 255, 255;
+  --ion-color-warning-shade: #d76c1c;
+  --ion-color-warning-tint: #f58836;
+
+  /** danger **/
+  --ion-color-danger: #eb445a;
+  --ion-color-danger-rgb: 235, 68, 90;
+  --ion-color-danger-contrast: #ffffff;
+  --ion-color-danger-contrast-rgb: 255, 255, 255;
+  --ion-color-danger-shade: #cf3c4f;
+  --ion-color-danger-tint: #ed576b;
+
+  /** dark **/
+  --ion-color-dark: #222428;
+  --ion-color-dark-rgb: 34, 36, 40;
+  --ion-color-dark-contrast: #ffffff;
+  --ion-color-dark-contrast-rgb: 255, 255, 255;
+  --ion-color-dark-shade: #1e2023;
+  --ion-color-dark-tint: #383a3e;
+
+  /** medium **/
+  --ion-color-medium: #64748b;
+  --ion-color-medium-rgb: 100, 116, 139;
+  --ion-color-medium-contrast: #ffffff;
+  --ion-color-medium-contrast-rgb: 255, 255, 255;
+  --ion-color-medium-shade: #58667a;
+  --ion-color-medium-tint: #748297;
+
+  /** light **/
+  --ion-color-light: #f4f5f8;
+  --ion-color-light-rgb: 244, 245, 248;
+  --ion-color-light-contrast: #000000;
+  --ion-color-light-contrast-rgb: 0, 0, 0;
+  --ion-color-light-shade: #d7d8da;
+  --ion-color-light-tint: #f5f6f9;
+
+  /** ideaToolbar (matching esn-poland-assembly) **/
+  --ion-color-ideaToolbar: #222428;
+  --ion-color-ideaToolbar-rgb: 34, 36, 40;
+  --ion-color-ideaToolbar-contrast: #ffffff;
+  --ion-color-ideaToolbar-contrast-rgb: 255, 255, 255;
+  --ion-color-ideaToolbar-shade: #202226;
+  --ion-color-ideaToolbar-tint: #2d2f33;
+
+  --esn-cyan: #{$esn-cyan};
+  --esn-dark-blue: #{$esn-dark-blue};
+  --esn-pink: #{$esn-pink};
+  --esn-green: #{$esn-green};
+  --esn-orange: #{$esn-orange};
+
+  --bg-body: #{$bg-body};
+  --bg-card: #{$bg-card};
+  --bg-toolbar: #{$bg-toolbar};
+
+  --border-color: #{$border-color};
+  --border-light: #{$border-light};
+
+  --text-dark: #{$text-dark};
+  --text-medium: #{$text-medium};
+  --text-light: #{$text-light};
+}
+
+.ion-color-ideaToolbar {
+  --ion-color-base: var(--ion-color-ideaToolbar) !important;
+  --ion-color-base-rgb: var(--ion-color-ideaToolbar-rgb) !important;
+  --ion-color-contrast: var(--ion-color-ideaToolbar-contrast) !important;
+  --ion-color-contrast-rgb: var(--ion-color-ideaToolbar-contrast-rgb) !important;
+  --ion-color-shade: var(--ion-color-ideaToolbar-shade) !important;
+  --ion-color-tint: var(--ion-color-ideaToolbar-tint) !important;
+}
+
+/* Dark Theme (matching esn-poland-assembly) */
+body.dark {
+  --bg-body: #121212;
+  --bg-card: #1e1e1e;
+  --bg-toolbar: #121212;
+
+  --ion-color-ideaToolbar: #121212;
+  --ion-color-ideaToolbar-rgb: 18, 18, 18;
+  --ion-color-ideaToolbar-contrast: #ffffff;
+  --ion-color-ideaToolbar-contrast-rgb: 255, 255, 255;
+  --ion-color-ideaToolbar-shade: #080808;
+  --ion-color-ideaToolbar-tint: #222;
+
+  --border-color: #334155;
+  --border-light: #1e293b;
+
+  --text-dark: #f8fafc;
+  --text-medium: #94a3b8;
+  --text-light: #64748b;
+
+  --ion-background-color: #121212;
+  --ion-background-color-rgb: 18, 18, 18;
+  --ion-text-color: #f8fafc;
+  --ion-text-color-rgb: 248, 250, 252;
+
+  --ion-item-background: #1e1e1e;
+  --ion-card-background: #1e1e1e;
+  --ion-border-color: #334155;
+
+  --ion-color-step-50: #1e1e1e;
+  --ion-color-step-100: #2a2a2a;
+  --ion-color-step-150: #363636;
+  --ion-color-step-200: #414141;
+  --ion-color-step-250: #4d4d4d;
+  --ion-color-step-300: #595959;
+  --ion-color-step-350: #656565;
+  --ion-color-step-400: #717171;
+  --ion-color-step-450: #7d7d7d;
+  --ion-color-step-500: #898989;
+  --ion-color-step-550: #949494;
+  --ion-color-step-600: #a0a0a0;
+  --ion-color-step-650: #acacac;
+  --ion-color-step-700: #b8b8b8;
+  --ion-color-step-750: #c4c4c4;
+  --ion-color-step-800: #d0d0d0;
+  --ion-color-step-850: #dbdbdb;
+  --ion-color-step-900: #e7e7e7;
+  --ion-color-step-950: #f3f3f3;
+}

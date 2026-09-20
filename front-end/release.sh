@@ -40,7 +40,7 @@ echo -e "${C}Installing npm modules...${NC}"
 npm i --silent 1>/dev/null
 
 echo -e "${C}Compiling...${NC}"
-VITE_STAGE=${ACTION} npm run build 1>/dev/null
+ionic build --prod 1>/dev/null
 
 # get the target CloudFront distribution and S3 bucket (from the domain)
 DISTRIBUTION=`aws cloudfront list-distributions --query "DistributionList.Items[*].{Id: Id, Aliases: Aliases.Items[?(@ == '${DOMAIN}')]} | [?Aliases].[Id]" --profile ${AWS_PROFILE} --output text`
@@ -49,12 +49,12 @@ BUCKET=`aws cloudfront get-distribution --id ${DISTRIBUTION} --profile ${AWS_PRO
 
 # upload the project's files to the S3 bucket
 echo -e "${C}Uploading...${NC}"
-aws s3 sync ./dist s3://${BUCKET} --profile ${AWS_PROFILE} --delete --exclude ".well-known/*" 1>/dev/null
+aws s3 sync ./www s3://${BUCKET} --profile ${AWS_PROFILE} --delete --exclude ".well-known/*" 1>/dev/null
 
 # invalidate old common files from the CloudFront distribution
 echo -e "${C}Cleaning...${NC}"
 aws cloudfront create-invalidation --profile ${AWS_PROFILE} --distribution-id ${DISTRIBUTION} \
-  --paths "/index.html" "/assets/*" \
+  --paths "/index.html" "/assets/i18n*" \
   1>/dev/null
 
 echo -e "${C}Done!${NC}"

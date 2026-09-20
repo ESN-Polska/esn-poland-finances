@@ -1,0 +1,31 @@
+<ion-content class="rulesContent ion-padding">
+  <div class="rulesContainer">
+    <div class="rulesCard">
+      <!-- Card Header -->
+      <div class="rulesHeader">
+        <h1 class="rulesTitle">{{ 'RULES.HEADER' | translate }}</h1>
+      </div>
+
+      <!-- Warning Banner -->
+      <div class="warningBanner">
+        <ion-icon name="warning-outline" class="warningIcon"></ion-icon>
+        <p class="warningText">{{ 'RULES.WARNING_TEXT' | translate }}</p>
+      </div>
+
+      <!-- Download Button Action -->
+      <div class="downloadSection">
+        <ion-button class="downloadBtn" (click)="downloadRules()">
+          <ion-icon slot="start" name="document-text-outline"></ion-icon>
+          {{ 'RULES.DOWNLOAD_BUTTON' | translate }}
+        </ion-button>
+      </div>
+
+      <!-- Italic Revision Notice -->
+      <div class="revisionFooter">
+        <p class="revisionText">
+          <em>{{ 'RULES.REVISION_NOTICE' | translate }}</em>
+        </p>
+      </div>
+    </div>
+  </div>
+</ion-content>
