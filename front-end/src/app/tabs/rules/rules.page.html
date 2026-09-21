@@ -1,13 +1,21 @@
 <ion-content class="rulesContent ion-padding">
   <div class="rulesContainer">
     <div class="rulesCard">
-      <!-- Card Header -->
+      <!-- Card Header (Permanent) -->
       <div class="rulesHeader">
         <h1 class="rulesTitle">{{ 'RULES.HEADER' | translate }}</h1>
       </div>
 
       <!-- Notice Text -->
-      <p class="rulesNotice">{{ 'RULES.WARNING_TEXT' | translate }}</p>
+      <div class="noticeContainer">
+        <p class="rulesNotice">{{ warningText }}</p>
+        <div class="actionButtons" *ngIf="canEditWarningText()">
+          <ion-button fill="clear" size="small" class="editBtn" (click)="editWarningText()">
+            <ion-icon name="create-outline" slot="start"></ion-icon>
+            {{ 'COMMON.EDIT' | translate }}
+          </ion-button>
+        </div>
+      </div>
 
       <!-- Download Button Action -->
       <div class="downloadSection">
@@ -15,12 +23,19 @@
           <ion-icon slot="start" name="document-text-outline"></ion-icon>
           {{ 'RULES.DOWNLOAD_BUTTON' | translate }}
         </ion-button>
+
+        <div class="updateAction" *ngIf="canUpdateDocument()">
+          <ion-button fill="outline" size="small" class="updateBtn" (click)="updateDocumentRevision()">
+            <ion-icon name="cloud-upload-outline" slot="start"></ion-icon>
+            {{ 'COMMON.UPDATE' | translate }}
+          </ion-button>
+        </div>
       </div>
 
       <!-- Italic Revision Notice -->
       <div class="revisionFooter">
         <p class="revisionText">
-          <em>{{ 'RULES.REVISION_NOTICE' | translate }}</em>
+          <em>{{ revisionNoticeText }}</em>
         </p>
       </div>
     </div>

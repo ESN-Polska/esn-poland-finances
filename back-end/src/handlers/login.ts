@@ -164,7 +164,8 @@ class Login extends ResourceController {
       if (String(err).includes('Not found') || err?.name === 'ResourceNotFoundException') {
         const configurations = new Configurations({
           PK: Configurations.PK,
-          administratorsIds: [firstAdminId]
+          administratorsIds: [firstAdminId],
+          updatedAt: new Date().toISOString()
         });
         try {
           await ddb.put({

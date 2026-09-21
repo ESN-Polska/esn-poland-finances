@@ -22,16 +22,29 @@ class MediaRC extends ResourceController {
   }
 
   protected async checkAuthBeforeRequest(): Promise<void> {
-    if (!this.user || (!this.user.isAdministrator && !this.user.hasPermission('configurations.options'))) {
+    if (
+      !this.user ||
+      (!this.user.isAdministrator &&
+        !this.user.hasPermission('configurations.options') &&
+        !this.user.hasPermission('rules.update'))
+    ) {
       throw new HandledError('Unauthorized');
     }
   }
 
   protected async postResources(): Promise<SignedURL> {
-    const imageURI = await ddb.IUNID(`${PROJECT}-media`);
-    const key = `${S3_IMAGES_FOLDER}/${imageURI}.png`;
+    const isDocument = this.body?.type === 'document';
+    const ext = this.body?.extension?.replace(/[^a-zA-Z0-9]/g, '').toLowerCase() || (isDocument ? 'pdf' : 'png');
+    if (isDocument && ext !== 'pdf') {
+      throw new HandledError('Only PDF files are allowed for documents');
+    }
+    const folder = isDocument ? `documents/${process.env.STAGE || 'dev'}` : S3_IMAGES_FOLDER;
+    const mediaId = await ddb.IUNID(`${PROJECT}-media`);
+    const key = `${folder}/${mediaId}.${ext}`;
     const signedURL = await s3.signedURLPut(S3_BUCKET_MEDIA, key);
-    signedURL.id = imageURI;
+    signedURL.id = mediaId;
+    (signedURL as any).key = key;
+    (signedURL as any).cdnUrl = `https://${process.env.MEDIA_DOMAIN || 'media.finances.esn-poland.link'}/${key}`;
     return signedURL;
   }
 }

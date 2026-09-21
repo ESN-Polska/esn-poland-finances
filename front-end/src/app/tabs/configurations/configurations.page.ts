@@ -23,10 +23,14 @@ import {
   styleUrls: ['./configurations.page.scss']
 })
 export class ConfigurationsPage implements OnInit {
-  configurations!: Configurations;
+  configurations: Configurations =
+    this.app?.configurations || new Configurations({ PK: Configurations.PK });
 
   pageSection: ConfigurationPageSection = 'OPTIONS';
-  pageSections: ConfigurationPageSection[] = [...DEFAULT_CONFIGURATION_PAGE_SECTIONS_ORDER];
+  pageSections: ConfigurationPageSection[] =
+    this.configurations?.configurationPageSectionsOrder?.length
+      ? [...this.configurations.configurationPageSectionsOrder]
+      : [...DEFAULT_CONFIGURATION_PAGE_SECTIONS_ORDER];
 
   timezones: string[] = (Intl as any).supportedValuesOf
     ? (Intl as any).supportedValuesOf('timeZone')
@@ -43,15 +47,11 @@ export class ConfigurationsPage implements OnInit {
   ) {}
 
   async ngOnInit(): Promise<void> {
-    await this.loadData();
-  }
-
-  async loadData(): Promise<void> {
-    this.configurations = await this.configurationsService.get();
-    this.app.configurations = this.configurations;
-
-    if (this.configurations.configurationPageSectionsOrder?.length) {
-      this.pageSections = this.configurations.configurationPageSectionsOrder;
+    if (this.app?.configurations) {
+      this.configurations = this.app.configurations;
+      if (this.configurations.configurationPageSectionsOrder?.length) {
+        this.pageSections = this.configurations.configurationPageSectionsOrder;
+      }
     }
 
     if (!this.canAccessPageSection(this.pageSection)) {
@@ -59,8 +59,33 @@ export class ConfigurationsPage implements OnInit {
       if (accessible) {
         this.pageSection = accessible;
       } else {
-        this.app.goTo(['/t/requests']);
+        this.app.goTo(['/t/home']);
+        return;
       }
+    }
+
+    await this.loadData();
+  }
+
+  async loadData(): Promise<void> {
+    try {
+      this.configurations = await this.configurationsService.get();
+      this.app.configurations = this.configurations;
+
+      if (this.configurations.configurationPageSectionsOrder?.length) {
+        this.pageSections = this.configurations.configurationPageSectionsOrder;
+      }
+
+      if (!this.canAccessPageSection(this.pageSection)) {
+        const accessible = this.pageSections.find(s => this.canAccessPageSection(s));
+        if (accessible) {
+          this.pageSection = accessible;
+        } else {
+          this.app.goTo(['/t/home']);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load configurations', e);
     }
   }
 
@@ -96,6 +121,25 @@ export class ConfigurationsPage implements OnInit {
       this.configurations = await this.configurationsService.update(newConfigurations);
       this.app.configurations = this.configurations;
       this.app.updateTitle();
+    } catch (err: any) {
+      const isConflict =
+        err?.status === 409 ||
+        err?.statusCode === 409 ||
+        err?.error?.message?.includes('CONFIGURATIONS_CONFLICT') ||
+        err?.message?.includes('CONFIGURATIONS_CONFLICT') ||
+        String(err).includes('CONFIGURATIONS_CONFLICT');
+
+      if (isConflict) {
+        await this.loadData();
+        const alert = await this.alertCtrl.create({
+          header: this.translate.instant('COMMON.OPERATION_FAILED'),
+          message: this.translate.instant('CONFIGURATIONS.CONFLICT_ALERT'),
+          buttons: [{ text: this.translate.instant('COMMON.CONFIRM'), role: 'cancel' }]
+        });
+        await alert.present();
+      } else {
+        throw err;
+      }
     } finally {
       await loading.dismiss();
     }
@@ -285,8 +329,21 @@ export class ConfigurationsPage implements OnInit {
     await alert.present();
   }
 
+  hasAdminGroup(): boolean {
+    const assignment = (this.configurations?.automaticRoleAssignments || []).find(
+      a => a.roleId === 'ADMINISTRATOR'
+    );
+    return !!assignment && (assignment.extendedRolePatterns?.length || 0) > 0;
+  }
+
+  canRemoveAdministrator(): boolean {
+    if (!this.configurations?.administratorsIds?.length) return false;
+    if (this.configurations.administratorsIds.length > 1) return true;
+    return this.configurations.administratorsIds.length === 1 && this.hasAdminGroup();
+  }
+
   async removeAdministratorById(userId: string): Promise<void> {
-    if (this.configurations.administratorsIds.length <= 1) return;
+    if (!this.canRemoveAdministrator()) return;
     const alert = await this.alertCtrl.create({
       header: this.translate.instant('COMMON.CONFIRM'),
       message: this.translate.instant('CONFIGURATIONS.REMOVE_ADMINISTRATOR_CONFIRM', { userId }),
@@ -362,17 +419,36 @@ export class ConfigurationsPage implements OnInit {
 
   async manageAutomaticRole(roleId: BuiltInRole): Promise<void> {
     const existing = (this.configurations?.automaticRoleAssignments || []).find(a => a.roleId === roleId);
+    const requirePatterns =
+      roleId === 'ADMINISTRATOR' &&
+      (!this.configurations?.administratorsIds || !this.configurations.administratorsIds.length);
+
     const modal = await this.modalCtrl.create({
       component: RoleEditorComponent,
       componentProps: {
         mode: 'automatic',
         roleId,
-        assignment: existing || { roleId, extendedRolePatterns: [] }
+        assignment: existing || { roleId, extendedRolePatterns: [] },
+        requirePatterns
       }
     });
     await modal.present();
     const { data } = await modal.onDidDismiss();
     if (!data?.extendedRolePatterns) return;
+
+    if (
+      roleId === 'ADMINISTRATOR' &&
+      !data.extendedRolePatterns.length &&
+      (!this.configurations?.administratorsIds || !this.configurations.administratorsIds.length)
+    ) {
+      const alert = await this.alertCtrl.create({
+        header: this.translate.instant('COMMON.OPERATION_FAILED'),
+        message: this.translate.instant('CONFIGURATIONS.CANNOT_REMOVE_LAST_ADMIN_GROUP'),
+        buttons: [{ text: this.translate.instant('COMMON.CONFIRM'), role: 'cancel' }]
+      });
+      await alert.present();
+      return;
+    }
 
     const updated = new Configurations(this.configurations);
     const filtered = (updated.automaticRoleAssignments || []).filter(a => a.roleId !== roleId);

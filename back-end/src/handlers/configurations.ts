@@ -53,23 +53,56 @@ class ConfigurationsRC extends ResourceController {
 
     this.checkConfigurationUpdatePermissions();
 
-    this.configurations = new Configurations({
+    const existingUpdatedAt = this.configurations?.updatedAt;
+    const clientUpdatedAt = this.body?.updatedAt;
+
+    // Optimistic Concurrency Control (OCC):
+    // If the database already has an updatedAt, ensure client has provided matching updatedAt.
+    if (existingUpdatedAt && (!clientUpdatedAt || clientUpdatedAt !== existingUpdatedAt)) {
+      this.returnStatusCode = 409;
+      throw new HandledError('CONFIGURATIONS_CONFLICT');
+    }
+
+    const newUpdatedAt = new Date().toISOString();
+    const newConfigurations = new Configurations({
       ...this.body,
-      PK: Configurations.PK
+      PK: Configurations.PK,
+      updatedAt: newUpdatedAt
     });
 
-    const errors = this.configurations.validate();
+    const errors = newConfigurations.validate();
     if (errors.length) {
       throw new HandledError(`Invalid fields: ${errors.join(', ')}`);
     }
 
     if (DDB_TABLES.configurations) {
-      await ddb.put({
+      const putParams: any = {
         TableName: DDB_TABLES.configurations,
-        Item: JSON.parse(JSON.stringify(this.configurations))
-      });
+        Item: JSON.parse(JSON.stringify(newConfigurations))
+      };
+
+      if (existingUpdatedAt) {
+        putParams.ConditionExpression = '#u = :expectedUpdatedAt';
+        putParams.ExpressionAttributeNames = { '#u': 'updatedAt' };
+        putParams.ExpressionAttributeValues = { ':expectedUpdatedAt': existingUpdatedAt };
+      } else {
+        putParams.ConditionExpression = 'attribute_not_exists(#u) OR #u = :expectedUpdatedAt';
+        putParams.ExpressionAttributeNames = { '#u': 'updatedAt' };
+        putParams.ExpressionAttributeValues = { ':expectedUpdatedAt': clientUpdatedAt || '' };
+      }
+
+      try {
+        await ddb.put(putParams);
+      } catch (err: any) {
+        if (err?.name === 'ConditionalCheckFailedException' || String(err).includes('ConditionalCheckFailed')) {
+          this.returnStatusCode = 409;
+          throw new HandledError('CONFIGURATIONS_CONFLICT');
+        }
+        throw err;
+      }
     }
 
+    this.configurations = newConfigurations;
     return this.configurations;
   }
 
@@ -89,7 +122,11 @@ class ConfigurationsRC extends ResourceController {
       'administratorsIds',
       'financialManagersIds',
       'customRoles',
-      'automaticRoleAssignments'
+      'automaticRoleAssignments',
+      'rulesWarningText',
+      'rulesFileURL',
+      'rulesResolutionNumber',
+      'rulesRevisionDate'
     ].filter(field => JSON.stringify(this.body[field]) !== JSON.stringify((this.configurations as any)[field]));
 
     if (!changedFields.length) return;
@@ -124,10 +161,15 @@ class ConfigurationsRC extends ResourceController {
       'automaticRoleAssignments'
     ];
 
+    const rulesTextFields = ['rulesWarningText'];
+    const rulesDocumentFields = ['rulesFileURL', 'rulesResolutionNumber', 'rulesRevisionDate'];
+
     const allowedFields = [
-      ...(this.user.hasPermission('configurations.options') ? optionFields : []),
-      ...(this.user.hasPermission('configurations.users') ? userFields : []),
-      ...(hasFullConfigurationsRights ? ['configurationPageSectionsOrder'] : [])
+      ...(this.user.hasPermission(AppPermission.CONFIGURATIONS.OPTIONS) ? optionFields : []),
+      ...(this.user.hasPermission(AppPermission.CONFIGURATIONS.USERS) ? userFields : []),
+      ...(hasFullConfigurationsRights ? ['configurationPageSectionsOrder'] : []),
+      ...(this.user.hasPermission(AppPermission.RULES.TEXT) ? rulesTextFields : []),
+      ...(this.user.hasPermission(AppPermission.RULES.UPDATE) ? rulesDocumentFields : [])
     ];
 
     if (changedFields.some(field => !allowedFields.includes(field))) {

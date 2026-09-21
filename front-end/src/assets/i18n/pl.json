@@ -24,8 +24,26 @@
   "RULES": {
     "HEADER": "Zasady Finansowe ESN Polska",
     "WARNING_TEXT": "Prosimy o upewnienie się, że zapoznałeś(-aś) się z nimi przed złożeniem wniosku. Niedotrzymanie terminów określonych w regulaminie może skutkować odrzuceniem zgłoszenia.",
-    "DOWNLOAD_BUTTON": "Pobierz dokument zasad (PDF)",
-    "REVISION_NOTICE": "Ostatnia zmiana dokumentu: Uchwała Zarządu Krajowego XX/XX"
+    "DOWNLOAD_BUTTON": "Pobierz zasady (PDF)",
+    "REVISION_NOTICE": "Ostatnia zmiana dokumentu: Uchwała Zarządu nr {{number}} z dnia {{date}}",
+    "EDIT_WARNING_TEXT": "Edytuj tekst ostrzeżenia",
+    "WARNING_TEXT_SECTION": "Treść ostrzeżenia",
+    "WARNING_TEXT_SECTION_I": "To ostrzeżenie wyświetla się na stronie Zasad nad przyciskiem pobierania.",
+    "WARNING_TEXT_EN": "Tekst ostrzeżenia (angielski)",
+    "WARNING_TEXT_PL": "Tekst ostrzeżenia (polski)",
+    "WARNING_TEXT_PLACEHOLDER": "Wpisz treść ostrzeżenia...",
+    "UPDATE_DOCUMENT_REVISION": "Aktualizacja wersji dokumentu",
+    "DOCUMENT_FILE": "Plik dokumentu",
+    "DOCUMENT_FILE_I": "Prześlij nową wersję dokumentu zasad finansowych.",
+    "CHOOSE_NEW_DOCUMENT": "Wybierz nowy dokument (PDF)",
+    "SUPPORTED_FORMATS": "Obsługiwany format: PDF",
+    "ONLY_PDF_ALLOWED": "Dozwolone są wyłącznie pliki w formacie PDF.",
+    "REVISION_DETAILS": "Szczegóły uchwały",
+    "REVISION_DETAILS_I": "Podaj numer uchwały oraz datę przyjęcia nowej wersji dokumentu.",
+    "RESOLUTION_NUMBER": "Numer uchwały",
+    "RESOLUTION_NUMBER_PLACEHOLDER": "np. 17/26",
+    "RESOLUTION_DATE": "Data uchwały",
+    "PREVIEW": "Podgląd"
   },
   "PROFILE": {
     "USER_PROFILE": "Profil użytkownika",
@@ -256,7 +274,10 @@
     "RESET": "Zresetuj",
     "CONFIRM": "Zatwierdź",
     "ADD": "Dodaj",
-    "OPEN": "Otwórz"
+    "OPEN": "Otwórz",
+    "UPDATE": "Aktualizuj",
+    "OPERATION_FAILED": "Operacja nie powiodła się",
+    "OPERATION_SUCCESSFUL": "Operacja powiodła się"
   },
   "MENU": {
     "NAVIGATION": "Nawigacja",
@@ -290,6 +311,8 @@
     "TIMEZONE_OF_REFERENCE_I": "Strefa czasowa używana do wyświetlania dat i terminów.",
     "USERNAME_PLACEHOLDER": "nazwa użytkownika (ESN Accounts)",
     "REMOVE_ADMINISTRATOR_CONFIRM": "Usunąć {{userId}} z listy administratorów?",
+    "CANNOT_REMOVE_LAST_ADMIN_GROUP": "Nie można usunąć grupy administratorów, ponieważ nie przypisano żadnego administratora imiennego. Wymagany jest przynajmniej jeden administrator lub grupa z uprawnieniami administratora.",
+    "CONFLICT_ALERT": "Konfiguracja została zmodyfikowana w innej sesji. Załadowano najnowszą wersję konfiguracji. Sprawdź zmiany i spróbuj ponownie.",
     "REMOVE_FINANCIAL_MANAGER_CONFIRM": "Usunąć {{userId}} z listy koordynatorów finansowych?",
     "PAGE_SECTIONS": {
       "OPTIONS": "Opcje",

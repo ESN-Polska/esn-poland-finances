@@ -24,8 +24,26 @@
   "RULES": {
     "HEADER": "ESN Poland Financial Rules",
     "WARNING_TEXT": "Please, make sure you have read and understood them before submitting a request. Not complying with the defined deadlines in the rules document might cause your submission being rejected.",
-    "DOWNLOAD_BUTTON": "Download Rules Document (PDF)",
-    "REVISION_NOTICE": "Last revision of the document: National Board Resolution XX/XX"
+    "DOWNLOAD_BUTTON": "Download Rules (PDF)",
+    "REVISION_NOTICE": "Last revision of the document: National Board Resolution {{number}} of {{date}}",
+    "EDIT_WARNING_TEXT": "Edit Warning Text",
+    "WARNING_TEXT_SECTION": "Warning Notice Text",
+    "WARNING_TEXT_SECTION_I": "This warning notice is displayed on the Rules page above the download button.",
+    "WARNING_TEXT_EN": "Warning text (English)",
+    "WARNING_TEXT_PL": "Warning text (Polish)",
+    "WARNING_TEXT_PLACEHOLDER": "Enter warning text...",
+    "UPDATE_DOCUMENT_REVISION": "Update Document Revision",
+    "DOCUMENT_FILE": "Document File",
+    "DOCUMENT_FILE_I": "Upload a new version of the financial regulations document.",
+    "CHOOSE_NEW_DOCUMENT": "Choose new document (PDF)",
+    "SUPPORTED_FORMATS": "Supported format: PDF",
+    "ONLY_PDF_ALLOWED": "Only PDF files are allowed.",
+    "REVISION_DETAILS": "Resolution Details",
+    "REVISION_DETAILS_I": "Specify the resolution number and date of adopting the new document revision.",
+    "RESOLUTION_NUMBER": "Resolution number",
+    "RESOLUTION_NUMBER_PLACEHOLDER": "e.g. 17/26",
+    "RESOLUTION_DATE": "Resolution date",
+    "PREVIEW": "Preview"
   },
   "PROFILE": {
     "USER_PROFILE": "User Profile",
@@ -256,7 +274,10 @@
     "RESET": "Reset",
     "CONFIRM": "Confirm",
     "ADD": "Add",
-    "OPEN": "Open"
+    "OPEN": "Open",
+    "UPDATE": "Update",
+    "OPERATION_FAILED": "Operation failed",
+    "OPERATION_SUCCESSFUL": "Operation successful"
   },
   "MENU": {
     "NAVIGATION": "Navigation",
@@ -290,6 +311,8 @@
     "TIMEZONE_OF_REFERENCE_I": "This timezone will be used to display dates and deadlines.",
     "USERNAME_PLACEHOLDER": "username (ESN Accounts)",
     "REMOVE_ADMINISTRATOR_CONFIRM": "Remove {{userId}} from administrators?",
+    "CANNOT_REMOVE_LAST_ADMIN_GROUP": "Cannot remove the administrator role group because there are no individual administrators assigned. At least one administrator or an administrator role group is required.",
+    "CONFLICT_ALERT": "Configurations were modified in another session. The latest configuration has been loaded. Please review and try again.",
     "REMOVE_FINANCIAL_MANAGER_CONFIRM": "Remove {{userId}} from financial managers?",
     "PAGE_SECTIONS": {
       "OPTIONS": "Options",
