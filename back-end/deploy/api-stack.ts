@@ -184,11 +184,24 @@ export class ApiStack extends cdk.Stack {
               integration,
               authorizer: httpAuthorizer
             });
-          } else {
-            const isPublic = path === '/login' || path === '/public-info';
+          } else if (path === '/login') {
             this.httpApi.addRoutes({
               path,
-              methods: [ApiGwAlpha.HttpMethod.ANY],
+              methods: [ApiGwAlpha.HttpMethod.POST],
+              integration,
+              authorizer: undefined
+            });
+          } else {
+            const isPublic = path === '/public-info';
+            this.httpApi.addRoutes({
+              path,
+              methods: [
+                ApiGwAlpha.HttpMethod.GET,
+                ApiGwAlpha.HttpMethod.POST,
+                ApiGwAlpha.HttpMethod.PUT,
+                ApiGwAlpha.HttpMethod.PATCH,
+                ApiGwAlpha.HttpMethod.DELETE
+              ],
               integration,
               authorizer: isPublic ? undefined : httpAuthorizer
             });
