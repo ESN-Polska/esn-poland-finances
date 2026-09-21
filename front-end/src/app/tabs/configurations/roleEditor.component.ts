@@ -1,5 +1,6 @@
 import { Component, Input, OnInit } from '@angular/core';
-import { ModalController } from '@ionic/angular';
+import { AlertController, ModalController } from '@ionic/angular';
+import { TranslateService } from '@ngx-translate/core';
 import {
   APP_PERMISSION_TREE,
   AppPermission,
@@ -104,6 +105,7 @@ export class RoleEditorComponent implements OnInit {
   @Input() role?: CustomRole;
   @Input() assignment?: AutomaticRoleAssignment;
   @Input() roleId = '';
+  @Input() requirePatterns = false;
 
   readonly permissionTree = APP_PERMISSION_TREE;
   readonly casPermissionOptions = CAS_PERMISSION_OPTIONS;
@@ -120,7 +122,11 @@ export class RoleEditorComponent implements OnInit {
     return `Automatic ${this.roleId.toLowerCase().replace(/_/g, ' ')} Assignment`;
   }
 
-  constructor(private modalCtrl: ModalController) {}
+  constructor(
+    private modalCtrl: ModalController,
+    private alertCtrl: AlertController,
+    private translate: TranslateService
+  ) {}
 
   ngOnInit(): void {
     this.name = this.role?.name || '';
@@ -183,6 +189,14 @@ export class RoleEditorComponent implements OnInit {
     ].filter((permission, index, permissions) => permissions.indexOf(permission) === index);
 
     if (this.mode === 'automatic') {
+      if (this.requirePatterns && !extendedRolePatterns.length) {
+        this.alertCtrl.create({
+          header: this.translate.instant('COMMON.OPERATION_FAILED'),
+          message: this.translate.instant('CONFIGURATIONS.CANNOT_REMOVE_LAST_ADMIN_GROUP'),
+          buttons: [{ text: this.translate.instant('COMMON.CONFIRM'), role: 'cancel' }]
+        }).then(alert => alert.present());
+        return;
+      }
       this.modalCtrl.dismiss({ extendedRolePatterns });
       return;
     }

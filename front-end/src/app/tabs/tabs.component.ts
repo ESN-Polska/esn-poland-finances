@@ -1,6 +1,7 @@
 import { Component, HostListener } from '@angular/core';
 import { Router } from '@angular/router';
 import { MenuController } from '@ionic/angular';
+import { AppPermission } from '@models/configurations.model';
 import { AppService } from '../app.service';
 
 @Component({
@@ -64,7 +65,12 @@ export class TabsComponent {
   public canAccessConfigurations(): boolean {
     const user = this.app.currentUser;
     if (!user) return false;
-    return user.isAdministrator || user.hasPermission('configurations');
+    return (
+      user.isAdministrator ||
+      user.hasPermission(AppPermission.CONFIGURATIONS.PARENT) ||
+      user.hasPermission(AppPermission.CONFIGURATIONS.OPTIONS) ||
+      user.hasPermission(AppPermission.CONFIGURATIONS.USERS)
+    );
   }
 
   public async logout(): Promise<void> {

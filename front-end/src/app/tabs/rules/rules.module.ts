@@ -6,6 +6,8 @@ import { RouterModule, Routes } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 
 import { RulesPage } from './rules.page';
+import { RulesWarningModalComponent } from './rulesWarningModal.component';
+import { RulesDocumentModalComponent } from './rulesDocumentModal.component';
 
 const routes: Routes = [
   {
@@ -22,6 +24,10 @@ const routes: Routes = [
     TranslateModule,
     RouterModule.forChild(routes)
   ],
-  declarations: [RulesPage]
+  declarations: [
+    RulesPage,
+    RulesWarningModalComponent,
+    RulesDocumentModalComponent
+  ]
 })
 export class RulesModule {}

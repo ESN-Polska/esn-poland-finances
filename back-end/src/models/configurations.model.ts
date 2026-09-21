@@ -18,7 +18,8 @@ export const AppPermission = {
   },
   RULES: {
     PARENT: 'rules',
-    MANAGE: 'rules.manage'
+    TEXT: 'rules.text',
+    UPDATE: 'rules.update'
   },
   CONFIGURATIONS: {
     PARENT: 'configurations',
@@ -120,7 +121,14 @@ export const DEFAULT_CONFIGURATIONS = {
   administratorsIds: [] as string[],
   financialManagersIds: [] as string[],
   customRoles: [] as CustomRole[],
-  automaticRoleAssignments: [] as AutomaticRoleAssignment[]
+  automaticRoleAssignments: [] as AutomaticRoleAssignment[],
+  rulesWarningText: {
+    en: 'Please, make sure you have read and understood them before submitting a request. Not complying with the defined deadlines in the rules document might cause your submission being rejected.',
+    pl: 'Prosimy o zapoznanie się z zasadami przed złożeniem wniosku. Niedopełnienie terminów określonych w dokumencie może skutkować odrzuceniem wniosku.'
+  },
+  rulesFileURL: 'https://media.finances.esn-poland.link/rules/finances-rules.pdf',
+  rulesResolutionNumber: 'XX/XX',
+  rulesRevisionDate: ''
 };
 
 /**
@@ -153,6 +161,17 @@ export class Configurations extends Resource {
   timezone: string;
   /** Order of configuration subtabs. */
   configurationPageSectionsOrder: ConfigurationPageSection[];
+  /** Last update timestamp (ISO string), used for optimistic concurrency control. */
+  updatedAt?: string;
+
+  /** Rules warning notice text in supported languages. */
+  rulesWarningText: LocalizedText;
+  /** Rules document URL to download. */
+  rulesFileURL: string;
+  /** Resolution number governing this rules revision (e.g. "XX/XX" or "04/2026"). */
+  rulesResolutionNumber: string;
+  /** Date of the rules revision (YYYY-MM-DD). */
+  rulesRevisionDate: string;
 
   constructor(data?: any) {
     super();
@@ -163,6 +182,7 @@ export class Configurations extends Resource {
 
   load(x: any): void {
     super.load(x);
+    this.updatedAt = this.clean(x.updatedAt, String);
     this.administratorsIds = this.cleanArray(x.administratorsIds, String).map(id => id.toLowerCase());
     this.financialManagersIds = this.cleanArray(x.financialManagersIds, String).map(id => id.toLowerCase());
     this.customRoles = this.cleanArray(x.customRoles, Object).map((role: any) => ({
@@ -209,6 +229,24 @@ export class Configurations extends Resource {
       ),
       ...DEFAULT_CONFIGURATION_PAGE_SECTIONS_ORDER.filter(section => !configuredSections.includes(section))
     ];
+
+    const defaultWarning = DEFAULT_CONFIGURATIONS.rulesWarningText;
+    if (typeof x.rulesWarningText === 'string') {
+      this.rulesWarningText = { en: x.rulesWarningText, pl: x.rulesWarningText };
+    } else {
+      this.rulesWarningText = {
+        en: this.clean(x.rulesWarningText?.en, String, defaultWarning.en),
+        pl: this.clean(x.rulesWarningText?.pl, String, defaultWarning.pl)
+      };
+    }
+
+    this.rulesFileURL = this.clean(x.rulesFileURL, String, DEFAULT_CONFIGURATIONS.rulesFileURL);
+    this.rulesResolutionNumber = this.clean(
+      x.rulesResolutionNumber || (typeof x.rulesRevisionNotice === 'object' ? x.rulesRevisionNotice?.pl || x.rulesRevisionNotice?.en : x.rulesRevisionNotice),
+      String,
+      DEFAULT_CONFIGURATIONS.rulesResolutionNumber
+    );
+    this.rulesRevisionDate = this.clean(x.rulesRevisionDate, String, DEFAULT_CONFIGURATIONS.rulesRevisionDate);
   }
 
   getAppTitle(lang: string = 'en'): string {
@@ -221,14 +259,29 @@ export class Configurations extends Resource {
     return (this.appSubtitle as any)?.[lang] || this.appSubtitle?.en || this.appSubtitle?.pl || '';
   }
 
+  getRulesWarningText(lang: string = 'en'): string {
+    if (typeof this.rulesWarningText === 'string') return this.rulesWarningText;
+    return (this.rulesWarningText as any)?.[lang] || this.rulesWarningText?.en || this.rulesWarningText?.pl || '';
+  }
+
   safeLoad(newData: any, safeData: any): void {
     super.safeLoad(newData, safeData);
     this.PK = Configurations.PK;
+    this.updatedAt = this.clean(safeData.updatedAt, String);
+    this.rulesWarningText = safeData.rulesWarningText;
+    this.rulesFileURL = safeData.rulesFileURL;
+    this.rulesResolutionNumber = safeData.rulesResolutionNumber;
+    this.rulesRevisionDate = safeData.rulesRevisionDate;
+  }
+
+  hasAdminGroup(): boolean {
+    const adminAssignment = (this.automaticRoleAssignments || []).find(a => a.roleId === 'ADMINISTRATOR');
+    return !!adminAssignment && (adminAssignment.extendedRolePatterns || []).length > 0;
   }
 
   validate(): string[] {
     const errors = super.validate();
-    if (this.iE(this.administratorsIds)) errors.push('administratorsIds');
+    if (this.iE(this.administratorsIds) && !this.hasAdminGroup()) errors.push('administratorsIds');
     if (typeof this.appTitle === 'object') {
       if (!this.appTitle?.en?.trim() && !this.appTitle?.pl?.trim()) errors.push('appTitle');
     } else if (this.iE(this.appTitle)) {
