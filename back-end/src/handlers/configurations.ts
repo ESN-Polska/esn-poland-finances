@@ -143,6 +143,9 @@ class ConfigurationsRC extends ResourceController {
     const changedFields = [
       'appTitle',
       'appSubtitle',
+      'homeWelcomeTitle',
+      'homeWelcomeSubtitle',
+      'homeNotice',
       'supportEmail',
       'appLogoURL',
       'appLogoURLDarkMode',
@@ -178,6 +181,9 @@ class ConfigurationsRC extends ResourceController {
     const optionFields = [
       'appTitle',
       'appSubtitle',
+      'homeWelcomeTitle',
+      'homeWelcomeSubtitle',
+      'homeNotice',
       'supportEmail',
       'appLogoURL',
       'appLogoURLDarkMode',
@@ -193,6 +199,8 @@ class ConfigurationsRC extends ResourceController {
       'automaticRoleAssignments'
     ];
 
+    const homeTextFields = ['homeWelcomeTitle', 'homeWelcomeSubtitle'];
+    const homeNoticeFields = ['homeNotice'];
     const rulesTextFields = ['rulesWarningText'];
     const rulesDocumentFields = ['rulesFileURL', 'rulesResolutionNumber', 'rulesRevisionDate'];
 
@@ -201,7 +209,9 @@ class ConfigurationsRC extends ResourceController {
       ...(this.user.hasPermission(AppPermission.CONFIGURATIONS.USERS) ? userFields : []),
       ...(hasFullConfigurationsRights ? ['configurationPageSectionsOrder'] : []),
       ...(this.user.hasPermission(AppPermission.RULES.TEXT) ? rulesTextFields : []),
-      ...(this.user.hasPermission(AppPermission.RULES.UPDATE) ? rulesDocumentFields : [])
+      ...(this.user.hasPermission(AppPermission.RULES.UPDATE) ? rulesDocumentFields : []),
+      ...(this.user.hasPermission(AppPermission.HOME.TEXT) ? homeTextFields : []),
+      ...(this.user.hasPermission(AppPermission.HOME.NOTICE) ? homeNoticeFields : [])
     ];
 
     if (changedFields.some(field => !allowedFields.includes(field))) {

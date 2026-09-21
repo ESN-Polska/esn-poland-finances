@@ -6,6 +6,8 @@ import { RouterModule, Routes } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 
 import { HomePage } from './home.page';
+import { HomeTextModalComponent } from './homeTextModal.component';
+import { HomeNoticeModalComponent } from './homeNoticeModal.component';
 
 const routes: Routes = [
   {
@@ -22,6 +24,6 @@ const routes: Routes = [
     TranslateModule,
     RouterModule.forChild(routes)
   ],
-  declarations: [HomePage]
+  declarations: [HomePage, HomeTextModalComponent, HomeNoticeModalComponent]
 })
 export class HomeModule {}

@@ -332,7 +332,9 @@ export class AppService {
 
   public exitPreview(navigate = true): void {
     if (this.originalUser) {
-      this.userSubject.next(new User(this.originalUser));
+      const restoredUser = new User(this.originalUser);
+      User.applyConfigurationPermissions(restoredUser, this.configurations);
+      this.userSubject.next(restoredUser);
       this.originalUser = null;
     }
     this.isImpersonating = false;

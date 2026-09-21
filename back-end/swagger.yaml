@@ -307,6 +307,20 @@ components:
           type: string
           example: Internetowy System Finansowy
 
+    HomeNotice:
+      type: object
+      description: Announcement notice banner configuration for Home page
+      properties:
+        active:
+          type: boolean
+          example: false
+        type:
+          type: string
+          enum: [info, warning, success]
+          example: info
+        text:
+          $ref: '#/components/schemas/LocalizedText'
+
     CustomRole:
       type: object
       required:
@@ -363,6 +377,12 @@ components:
           $ref: '#/components/schemas/LocalizedText'
         appSubtitle:
           $ref: '#/components/schemas/LocalizedText'
+        homeWelcomeTitle:
+          $ref: '#/components/schemas/LocalizedText'
+        homeWelcomeSubtitle:
+          $ref: '#/components/schemas/LocalizedText'
+        homeNotice:
+          $ref: '#/components/schemas/HomeNotice'
         supportEmail:
           type: string
           example: finances@esn.pl
