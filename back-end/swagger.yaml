@@ -79,7 +79,7 @@ paths:
           $ref: '#/components/responses/Configurations'
     put:
       summary: Edit the platform's configurations
-      description: Requires Administrator or granular configuration permissions (configurations.options, configurations.users)
+      description: Requires Administrator or granular configuration permissions (configurations.options, configurations.users, rules.text, rules.update)
       tags: [Configurations]
       security:
         - AuthFunction: []
@@ -252,14 +252,36 @@ paths:
 
   /media:
     post:
-      summary: Get presigned S3 URL to upload an image
-      description: Generate a presigned S3 PUT URL for image upload. Requires Administrator or configurations.options permission.
+      summary: Get presigned S3 URL to upload an image or document
+      description: Generate a presigned S3 PUT URL for image or PDF document upload. Requires Administrator, configurations.options, or rules.update permission.
       tags: [Media]
       security:
         - AuthFunction: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                type:
+                  type: string
+                  enum: [image, document]
+                  default: image
+                  description: Type of media to upload. For document, only PDF files are allowed.
+                extension:
+                  type: string
+                  example: pdf
+                  description: File extension (e.g. pdf, png, jpg)
+                filename:
+                  type: string
+                  example: Regulamin_Finansowy_2026.pdf
+                  description: Original filename (used to retain a sanitized, human-readable S3 key)
       responses:
         200:
           $ref: '#/components/responses/SignedURL'
+        400:
+          $ref: '#/components/responses/BadParameters'
         401:
           $ref: '#/components/responses/Unauthorized'
         403:
@@ -379,6 +401,25 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/AutomaticRoleAssignment'
+        updatedAt:
+          type: string
+          format: date-time
+          description: ISO timestamp of last update, used for optimistic concurrency control
+          example: "2026-09-21T18:00:00.000Z"
+        rulesWarningText:
+          $ref: '#/components/schemas/LocalizedText'
+        rulesFileURL:
+          type: string
+          description: Public CDN URL to download the financial rules PDF
+          example: https://media.finances.esn-poland.link/documents/dev/Regulamin_Finansowy_2026_c8542f27.pdf
+        rulesResolutionNumber:
+          type: string
+          description: Resolution number adopting this revision (e.g. 17/26)
+          example: "17/26"
+        rulesRevisionDate:
+          type: string
+          description: Date of the resolution adopting this document revision (YYYY-MM-DD)
+          example: "2026-09-21"
 
     RoleAssignmentSource:
       type: object
@@ -455,7 +496,8 @@ components:
             - financial_requests.manage
             - financial_requests.export
             - rules
-            - rules.manage
+            - rules.text
+            - rules.update
         customRoleIds:
           type: array
           items:
@@ -865,6 +907,14 @@ components:
           type: string
           description: Presigned S3 PUT URL
           example: https://esn-poland-finances-media.s3.eu-central-1.amazonaws.com/images/dev/01J8K3M4N5P6Q7R8S9T0.png?...
+        key:
+          type: string
+          description: S3 object key
+          example: documents/dev/Regulamin_Finansowy_2026_c8542f27.pdf
+        cdnUrl:
+          type: string
+          description: Public CDN URL for accessing the uploaded asset
+          example: https://media.finances.esn-poland.link/documents/dev/Regulamin_Finansowy_2026_c8542f27.pdf
 
     LoginResponse:
       type: object
