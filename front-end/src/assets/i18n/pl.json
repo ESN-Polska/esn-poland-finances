@@ -35,7 +35,7 @@
     "UPDATE_DOCUMENT_REVISION": "Aktualizacja wersji dokumentu",
     "DOCUMENT_FILE": "Plik dokumentu",
     "DOCUMENT_FILE_I": "Prześlij nową wersję dokumentu zasad finansowych.",
-    "CHOOSE_NEW_DOCUMENT": "Wybierz nowy dokument (PDF)",
+    "CHOOSE_NEW_DOCUMENT": "Wybierz nowy dokument",
     "SUPPORTED_FORMATS": "Obsługiwany format: PDF",
     "ONLY_PDF_ALLOWED": "Dozwolone są wyłącznie pliki w formacie PDF.",
     "REVISION_DETAILS": "Szczegóły uchwały",

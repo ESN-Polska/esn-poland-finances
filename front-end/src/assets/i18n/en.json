@@ -35,7 +35,7 @@
     "UPDATE_DOCUMENT_REVISION": "Update Document Revision",
     "DOCUMENT_FILE": "Document File",
     "DOCUMENT_FILE_I": "Upload a new version of the financial regulations document.",
-    "CHOOSE_NEW_DOCUMENT": "Choose new document (PDF)",
+    "CHOOSE_NEW_DOCUMENT": "Choose new document",
     "SUPPORTED_FORMATS": "Supported format: PDF",
     "ONLY_PDF_ALLOWED": "Only PDF files are allowed.",
     "REVISION_DETAILS": "Resolution Details",
