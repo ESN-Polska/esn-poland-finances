@@ -1,7 +1,7 @@
 {
   "name": "esn-poland-finances",
   "version": "1.0.0",
-  "description": "ESN Poland Finances front-end",
+  "description": "ESN Poland Finances app",
   "scripts": {
     "ng": "ng",
     "start": "ionic serve --no-open --external",

@@ -37,6 +37,10 @@ export class User extends Resource {
   lastLoginAt: string;
   /** Administrator flag */
   isAdministrator: boolean;
+  /** Manager flag */
+  isManager: boolean;
+  /** Auditor flag */
+  isAuditor: boolean;
   /** Whether the user can manage finances (full rights except user management) */
   canManageFinances: boolean;
   /** Effective application permissions */
@@ -71,7 +75,8 @@ export class User extends Resource {
   /**
    * Evaluates permissions based on current Configurations:
    * - First user / config admin gets Administrator role (ALL_APP_PERMISSIONS).
-   * - Financial Manager gets all permissions EXCEPT configurations.users.
+   * - Manager gets all permissions EXCEPT configurations.users.
+   * - Auditor gets read-only access (view all requests, export).
    * - Custom roles add explicit permissions.
    */
   static applyConfigurationPermissions(user: User, configurations: Configurations): void {
@@ -85,26 +90,37 @@ export class User extends Resource {
       (configurations.administratorsIds || []).includes(user.userId) ||
       automaticRoleIds.includes('ADMINISTRATOR');
 
-    // 2. Evaluate Financial Manager status
-    user.canManageFinances =
-      user.isAdministrator ||
-      (configurations.financialManagersIds || []).includes(user.userId) ||
-      automaticRoleIds.includes('FINANCIAL_MANAGER');
+    // 2. Evaluate Manager status
+    user.isManager =
+      (configurations.managersIds || []).includes(user.userId) ||
+      automaticRoleIds.includes('MANAGER');
+    user.canManageFinances = user.isAdministrator || user.isManager;
 
-    // 3. Evaluate Custom Roles
+    // 3. Evaluate Auditor status
+    user.isAuditor =
+      (configurations.auditorsIds || []).includes(user.userId) ||
+      automaticRoleIds.includes('AUDITOR');
+
+    // 4. Evaluate Custom Roles
     user.customRoleIds = (configurations.customRoles || [])
       .filter(role => role.userIds.includes(user.userId) || User.hasAnyCASPermission(user, role.extendedRolePatterns))
       .map(role => role.id);
 
-    // 4. Calculate effective permissions
+    // 5. Calculate effective permissions
     if (user.isAdministrator) {
       user.permissions = [...ALL_APP_PERMISSIONS];
-    } else if (user.canManageFinances) {
-      // Financial Manager has all permissions except configurations
+    } else if (user.isManager) {
+      // Manager has all permissions except configurations
       const configurationsPrefix = AppPermission.CONFIGURATIONS.PARENT;
       user.permissions = ALL_APP_PERMISSIONS.filter(
         perm => perm !== configurationsPrefix && !perm.startsWith(`${configurationsPrefix}.`)
       );
+    } else if (user.isAuditor) {
+      // Auditor has read-only access across requests (view all, export)
+      user.permissions = [
+        AppPermission.FINANCIAL_REQUESTS.VIEW_ALL,
+        AppPermission.FINANCIAL_REQUESTS.EXPORT
+      ];
     } else {
       const assignedCustomRoles = (configurations.customRoles || []).filter(r => user.customRoleIds.includes(r.id));
       const customPerms = assignedCustomRoles.reduce(
@@ -118,8 +134,8 @@ export class User extends Resource {
   hasPermission(permission: AppPermission | string): boolean {
     if (this.isAdministrator) return true;
 
-    // Financial Manager has all current and future permissions except configurations
-    if (this.canManageFinances) {
+    // Manager has all current and future permissions except configurations
+    if (this.isManager) {
       const configurationsPrefix = AppPermission.CONFIGURATIONS.PARENT;
       if (permission === configurationsPrefix || permission.startsWith(`${configurationsPrefix}.`)) {
         return false;
@@ -146,6 +162,8 @@ export class User extends Resource {
     this.extendedRoles = this.cleanArray(x.extendedRoles, String);
     this.lastLoginAt = this.clean(x.lastLoginAt, String);
     this.isAdministrator = this.clean(x.isAdministrator, Boolean, false);
+    this.isManager = this.clean(x.isManager, Boolean, false);
+    this.isAuditor = this.clean(x.isAuditor, Boolean, false);
     this.canManageFinances = this.clean(x.canManageFinances, Boolean, false);
     this.permissions = this.cleanArray(x.permissions, String) as AppPermission[];
     this.customRoleIds = this.cleanArray(x.customRoleIds, String);

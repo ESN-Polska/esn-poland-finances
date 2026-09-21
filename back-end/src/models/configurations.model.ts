@@ -83,7 +83,7 @@ export interface CustomRole {
   extendedRolePatterns: string[];
 }
 
-export type BuiltInRole = 'ADMINISTRATOR' | 'FINANCIAL_MANAGER';
+export type BuiltInRole = 'ADMINISTRATOR' | 'MANAGER' | 'AUDITOR';
 
 export interface AutomaticRoleAssignment {
   roleId: BuiltInRole | string;
@@ -119,7 +119,8 @@ export const DEFAULT_CONFIGURATIONS = {
   timezone: DEFAULT_TIMEZONE,
   configurationPageSectionsOrder: DEFAULT_CONFIGURATION_PAGE_SECTIONS_ORDER,
   administratorsIds: [] as string[],
-  financialManagersIds: [] as string[],
+  managersIds: [] as string[],
+  auditorsIds: [] as string[],
   customRoles: [] as CustomRole[],
   automaticRoleAssignments: [] as AutomaticRoleAssignment[],
   rulesWarningText: {
@@ -140,8 +141,10 @@ export class Configurations extends Resource {
 
   /** The IDs of the platform's administrators. */
   administratorsIds: string[];
-  /** The IDs of the users who can manage financial requests. */
-  financialManagersIds: string[];
+  /** The IDs of the platform's managers. */
+  managersIds: string[];
+  /** The IDs of the platform's auditors. */
+  auditorsIds: string[];
   /** Configured custom roles with arbitrary permissions. */
   customRoles: CustomRole[];
   /** Automatic role assignments matched against CAS extended roles. */
@@ -184,7 +187,8 @@ export class Configurations extends Resource {
     super.load(x);
     this.updatedAt = this.clean(x.updatedAt, String);
     this.administratorsIds = this.cleanArray(x.administratorsIds, String).map(id => id.toLowerCase());
-    this.financialManagersIds = this.cleanArray(x.financialManagersIds, String).map(id => id.toLowerCase());
+    this.managersIds = this.cleanArray(x.managersIds, String).map(id => id.toLowerCase());
+    this.auditorsIds = this.cleanArray(x.auditorsIds, String).map(id => id.toLowerCase());
     this.customRoles = this.cleanArray(x.customRoles, Object).map((role: any) => ({
       id: this.clean(role.id, String),
       name: this.clean(role.name, String),
@@ -300,6 +304,9 @@ export class Configurations extends Resource {
     const knownPermissions = new Set(ALL_APP_PERMISSIONS);
     const validExtendedRolePattern = /^[A-Za-z][A-Za-z0-9]*(?:\.[A-Za-z][A-Za-z0-9]*)*:[A-Za-z0-9*]+(?:-[A-Za-z0-9*]+)*$/;
     for (const role of this.customRoles || []) {
+      if (!role.name || !role.name.trim()) {
+        errors.push('customRoles.name');
+      }
       if ((role.permissions || []).some(permission => !knownPermissions.has(permission))) {
         errors.push('customRoles.permissions');
       }

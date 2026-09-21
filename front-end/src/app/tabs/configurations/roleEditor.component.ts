@@ -20,8 +20,8 @@ import {
           </ion-button>
         </ion-buttons>
         <ion-title>{{ title }}</ion-title>
-        <ion-buttons slot="end">
-          <ion-button [title]="'COMMON.SAVE' | translate" (click)="save()">
+        <ion-buttons slot="end" *ngIf="!readOnly">
+          <ion-button [title]="'COMMON.SAVE' | translate" (click)="save()" [disabled]="mode === 'custom' && !name?.trim()">
             <ion-icon name="checkmark-circle-outline" slot="icon-only"></ion-icon>
           </ion-button>
         </ion-buttons>
@@ -37,11 +37,12 @@ import {
           </ion-list-header>
           <ion-item *ngIf="mode === 'custom'">
             <ion-label position="stacked">{{ 'CONFIGURATIONS.ROLE_NAME' | translate }}</ion-label>
-            <ion-input [(ngModel)]="name"></ion-input>
+            <ion-input [readonly]="readOnly" [(ngModel)]="name"></ion-input>
           </ion-item>
           <ion-item *ngIf="mode === 'custom'">
             <ion-label position="stacked">{{ 'CONFIGURATIONS.ROLE_USERS' | translate }}</ion-label>
             <ion-textarea
+              [readonly]="readOnly"
               [(ngModel)]="userIds"
               [autoGrow]="true"
               [placeholder]="'CONFIGURATIONS.ROLE_USERS_PLACEHOLDER' | translate"
@@ -55,12 +56,13 @@ import {
             </ion-label>
           </ion-list-header>
           <ion-item *ngFor="let permission of casPermissionOptions">
-            <ion-checkbox slot="start" [(ngModel)]="selectedCASPermissions[permission]"></ion-checkbox>
+            <ion-checkbox slot="start" [disabled]="readOnly" [(ngModel)]="selectedCASPermissions[permission]"></ion-checkbox>
             <ion-label class="ion-text-wrap">{{ permission }}</ion-label>
           </ion-item>
           <ion-item>
             <ion-label position="stacked">{{ 'CONFIGURATIONS.CUSTOM_CAS_PATTERNS' | translate }}</ion-label>
             <ion-textarea
+              [readonly]="readOnly"
               [(ngModel)]="customExtendedRolePatterns"
               [autoGrow]="true"
               [placeholder]="'CONFIGURATIONS.CUSTOM_CAS_PATTERNS_PLACEHOLDER' | translate"
@@ -78,17 +80,19 @@ import {
               <ion-item>
                 <ion-checkbox
                   slot="start"
+                  [disabled]="readOnly"
                   [checked]="isPermissionChecked(group.permission)"
                   [indeterminate]="isPermissionIndeterminate(group)"
-                  (ionChange)="setPermissionGroup(group, $event.detail.checked)"
+                  (ionChange)="!readOnly && setPermissionGroup(group, $event.detail.checked)"
                 ></ion-checkbox>
                 <ion-label class="ion-text-wrap">{{ group.permission }}</ion-label>
               </ion-item>
               <ion-item class="permissionChild" *ngFor="let child of group.children">
                 <ion-checkbox
                   slot="start"
+                  [disabled]="readOnly"
                   [checked]="isPermissionChecked(child)"
-                  (ionChange)="setPermission(child, $event.detail.checked)"
+                  (ionChange)="!readOnly && setPermission(child, $event.detail.checked)"
                 ></ion-checkbox>
                 <ion-label class="ion-text-wrap">{{ child }}</ion-label>
               </ion-item>
@@ -106,6 +110,7 @@ export class RoleEditorComponent implements OnInit {
   @Input() assignment?: AutomaticRoleAssignment;
   @Input() roleId = '';
   @Input() requirePatterns = false;
+  @Input() readOnly = false;
 
   readonly permissionTree = APP_PERMISSION_TREE;
   readonly casPermissionOptions = CAS_PERMISSION_OPTIONS;
@@ -117,6 +122,7 @@ export class RoleEditorComponent implements OnInit {
 
   get title(): string {
     if (this.mode === 'custom') {
+      if (this.readOnly) return this.role ? this.role.name : 'Custom Role Details';
       return this.role ? 'Edit Custom Role' : 'Create Custom Role';
     }
     return `Automatic ${this.roleId.toLowerCase().replace(/_/g, ' ')} Assignment`;
@@ -180,6 +186,7 @@ export class RoleEditorComponent implements OnInit {
   }
 
   save(): void {
+    if (this.readOnly) return;
     const extendedRolePatterns = [
       ...this.casPermissionOptions.filter(permission => this.selectedCASPermissions[permission]),
       ...this.customExtendedRolePatterns
@@ -198,6 +205,10 @@ export class RoleEditorComponent implements OnInit {
         return;
       }
       this.modalCtrl.dismiss({ extendedRolePatterns });
+      return;
+    }
+
+    if (this.mode === 'custom' && !this.name?.trim()) {
       return;
     }
 

@@ -3,42 +3,129 @@
   height: 100%;
 }
 
-.previewBanner {
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+.impersonationBanner {
+  background: linear-gradient(90deg, #d97706, #b45309);
   color: #ffffff;
-  padding: 8px 16px;
+  padding: 8px 20px;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
   position: relative;
   z-index: 1000;
-  box-shadow: 0 2px 8px rgba(217, 119, 6, 0.3);
 
-  .previewBannerContent {
-    max-width: 1200px;
-    margin: 0 auto;
+  .impersonationInfo {
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 12px;
-    font-size: 0.9rem;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+    gap: 10px;
+    font-size: 14px;
+    letter-spacing: 0.2px;
 
-    .previewBannerIcon {
-      font-size: 1.2rem;
+    ion-icon {
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    span {
+      white-space: nowrap;
+      font-weight: 500;
+      flex-shrink: 0;
+    }
+
+    .personaSelect {
+      --placeholder-color: #ffffff;
+      --placeholder-opacity: 1;
+      --padding-top: 0;
+      --padding-bottom: 0;
+      --padding-start: 8px;
+      --padding-end: 6px;
+      padding: 0;
+      width: fit-content;
+      max-width: fit-content;
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 13px;
+      background: rgba(255, 255, 255, 0.22);
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      border-radius: 6px;
+      min-height: 28px;
+      height: 28px;
+      cursor: pointer;
+      transition: all 0.15s ease-in-out;
+      flex-shrink: 0;
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.35);
+      }
+
+      &::part(icon) {
+        color: #ffffff;
+        opacity: 0.9;
+        font-size: 13px;
+        margin-inline-start: 4px;
+        margin-inline-end: 0;
+      }
+
+      &::part(text) {
+        font-weight: 700;
+      }
+    }
+  }
+
+  .exitPreviewBtn {
+    --color: #78350f;
+    --background: #ffffff;
+    --background-hover: #f3f4f6;
+    font-weight: 600;
+    font-size: 13px;
+    text-transform: none;
+    margin: 0;
+    flex-shrink: 0;
+    white-space: nowrap;
+    height: 32px;
+
+    ion-icon {
+      font-size: 16px;
+    }
+  }
+}
+
+@media (max-width: 600px) {
+  .impersonationBanner {
+    padding: 6px 12px;
+    gap: 8px;
+
+    .impersonationInfo {
+      font-size: 13px;
+      gap: 6px;
+
+      ion-icon {
+        font-size: 18px;
+      }
+
+      span {
+        white-space: nowrap;
+      }
+
+      .personaSelect {
+        --padding-start: 6px;
+        --padding-end: 4px;
+        font-size: 11px;
+        min-height: 24px;
+        height: 24px;
+      }
     }
 
     .exitPreviewBtn {
-      background: #ffffff;
-      color: #b45309;
-      border: none;
-      padding: 4px 12px;
-      border-radius: 20px;
-      font-weight: 700;
-      font-size: 0.8rem;
-      cursor: pointer;
-      transition: all 0.15s ease;
-
-      &:hover {
-        background: #fef3c7;
-        transform: translateY(-1px);
-      }
+      font-size: 12px;
+      --padding-start: 10px;
+      --padding-end: 10px;
+      height: 28px;
     }
   }
 }

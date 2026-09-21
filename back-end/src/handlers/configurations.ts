@@ -150,7 +150,8 @@ class ConfigurationsRC extends ResourceController {
       'usersOriginDisplay',
       'configurationPageSectionsOrder',
       'administratorsIds',
-      'financialManagersIds',
+      'managersIds',
+      'auditorsIds',
       'customRoles',
       'automaticRoleAssignments',
       'rulesWarningText',
@@ -186,7 +187,8 @@ class ConfigurationsRC extends ResourceController {
 
     const userFields = [
       'administratorsIds',
-      'financialManagersIds',
+      'managersIds',
+      'auditorsIds',
       'customRoles',
       'automaticRoleAssignments'
     ];
