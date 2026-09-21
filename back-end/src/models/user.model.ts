@@ -92,14 +92,16 @@ export class User extends Resource {
 
     // 2. Evaluate Manager status
     user.isManager =
-      (configurations.managersIds || []).includes(user.userId) ||
-      automaticRoleIds.includes('MANAGER');
+      !user.isAdministrator &&
+      ((configurations.managersIds || []).includes(user.userId) ||
+        automaticRoleIds.includes('MANAGER'));
     user.canManageFinances = user.isAdministrator || user.isManager;
 
     // 3. Evaluate Auditor status
     user.isAuditor =
-      (configurations.auditorsIds || []).includes(user.userId) ||
-      automaticRoleIds.includes('AUDITOR');
+      !user.isAdministrator &&
+      ((configurations.auditorsIds || []).includes(user.userId) ||
+        automaticRoleIds.includes('AUDITOR'));
 
     // 4. Evaluate Custom Roles
     user.customRoleIds = (configurations.customRoles || [])
@@ -116,10 +118,11 @@ export class User extends Resource {
         perm => perm !== configurationsPrefix && !perm.startsWith(`${configurationsPrefix}.`)
       );
     } else if (user.isAuditor) {
-      // Auditor has read-only access across requests (view all, export)
+      // Auditor has read-only access across requests (view all, export) and home statistics
       user.permissions = [
         AppPermission.FINANCIAL_REQUESTS.VIEW_ALL,
-        AppPermission.FINANCIAL_REQUESTS.EXPORT
+        AppPermission.FINANCIAL_REQUESTS.EXPORT,
+        AppPermission.HOME.STATISTICS
       ];
     } else {
       const assignedCustomRoles = (configurations.customRoles || []).filter(r => user.customRoleIds.includes(r.id));

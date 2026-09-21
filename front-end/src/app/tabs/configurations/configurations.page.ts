@@ -16,6 +16,7 @@ import {
   DEFAULT_CONFIGURATION_PAGE_SECTIONS_ORDER,
   BuiltInRole
 } from '@models/configurations.model';
+import { User } from '@models/user.model';
 
 @Component({
   selector: 'app-configurations',
@@ -74,6 +75,9 @@ export class ConfigurationsPage implements OnInit {
     try {
       this.configurations = await this.configurationsService.get();
       this.app.configurations = this.configurations;
+      if (this.app.currentUser && !this.app.isImpersonating) {
+        User.applyConfigurationPermissions(this.app.currentUser, this.configurations);
+      }
 
       if (this.configurations.configurationPageSectionsOrder?.length) {
         this.pageSections = this.configurations.configurationPageSectionsOrder;
@@ -109,29 +113,32 @@ export class ConfigurationsPage implements OnInit {
   canModifyOptions(): boolean {
     const user = this.app.currentUser;
     if (!user) return false;
+    if (user.isAdministrator) return true;
     if (user.isAuditor) return false;
-    return user.isAdministrator || user.hasPermission(AppPermission.CONFIGURATIONS.OPTIONS);
+    return user.hasPermission(AppPermission.CONFIGURATIONS.OPTIONS);
   }
 
   canModifyUsers(): boolean {
     const user = this.app.currentUser;
     if (!user) return false;
+    if (user.isAdministrator) return true;
     if (user.isAuditor) return false;
-    return user.isAdministrator || user.hasPermission(AppPermission.CONFIGURATIONS.USERS);
+    return user.hasPermission(AppPermission.CONFIGURATIONS.USERS);
   }
 
   canUsePreview(): boolean {
     const user = this.app.currentUser;
     if (!user) return false;
+    if (user.isAdministrator) return true;
     if (user.isAuditor) return false;
-    return user.isAdministrator || user.hasPermission(AppPermission.CONFIGURATIONS.USERS);
+    return user.hasPermission(AppPermission.CONFIGURATIONS.USERS);
   }
 
   canReorderPageSections(): boolean {
     const user = this.app.currentUser;
     if (!user) return false;
-    if (user.isAuditor) return false;
     if (user.isAdministrator) return true;
+    if (user.isAuditor) return false;
 
     return (
       DEFAULT_CONFIGURATION_PAGE_SECTIONS_ORDER.every(section => this.canAccessPageSection(section)) &&
@@ -145,6 +152,9 @@ export class ConfigurationsPage implements OnInit {
     try {
       this.configurations = await this.configurationsService.update(newConfigurations);
       this.app.configurations = this.configurations;
+      if (this.app.currentUser && !this.app.isImpersonating) {
+        User.applyConfigurationPermissions(this.app.currentUser, this.configurations);
+      }
       this.app.updateTitle();
     } catch (err: any) {
       const isConflict =

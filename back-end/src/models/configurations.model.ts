@@ -10,6 +10,12 @@ export const DEFAULT_CONFIGURATION_PAGE_SECTIONS_ORDER = [
 export type ConfigurationPageSection = (typeof DEFAULT_CONFIGURATION_PAGE_SECTIONS_ORDER)[number];
 
 export const AppPermission = {
+  HOME: {
+    PARENT: 'home',
+    TEXT: 'home.text',
+    NOTICE: 'home.notice',
+    STATISTICS: 'home.statistics'
+  },
   FINANCIAL_REQUESTS: {
     PARENT: 'financial_requests',
     VIEW_ALL: 'financial_requests.view_all',
@@ -104,6 +110,12 @@ export interface LocalizedText {
   pl: string;
 }
 
+export interface HomeNotice {
+  active: boolean;
+  type: 'info' | 'warning' | 'success';
+  text: LocalizedText;
+}
+
 export const DEFAULT_CONFIGURATIONS = {
   appTitle: {
     en: 'Online Financial System',
@@ -112,6 +124,22 @@ export const DEFAULT_CONFIGURATIONS = {
   appSubtitle: {
     en: 'ESN Poland Federation',
     pl: 'Związek stowarzyszeń ESN Polska'
+  },
+  homeWelcomeTitle: {
+    en: 'Welcome to the Online Financial System',
+    pl: 'Witaj w Internetowym Systemie Finansowym'
+  },
+  homeWelcomeSubtitle: {
+    en: 'This is the Online Financial System of the ESN Poland Federation.',
+    pl: 'To jest Internetowy System Finansowy Związku stowarzyszeń ESN Polska.'
+  },
+  homeNotice: {
+    active: false,
+    type: 'info' as const,
+    text: {
+      en: '',
+      pl: ''
+    }
   },
   supportEmail: '',
   appLogoURL: '',
@@ -154,6 +182,12 @@ export class Configurations extends Resource {
   appTitle: LocalizedText;
   /** The subtitle of the platform in supported languages. */
   appSubtitle: LocalizedText;
+  /** Home page welcome title in supported languages. */
+  homeWelcomeTitle: LocalizedText;
+  /** Home page welcome subtitle in supported languages. */
+  homeWelcomeSubtitle: LocalizedText;
+  /** Home page announcement notice banner. */
+  homeNotice: HomeNotice;
   /** Contact email for support. */
   supportEmail: string;
   /** The logo of the platform in light mode (CDN URL). */
@@ -221,6 +255,37 @@ export class Configurations extends Resource {
       };
     }
 
+    const defaultWelcomeTitle = DEFAULT_CONFIGURATIONS.homeWelcomeTitle;
+    if (typeof x.homeWelcomeTitle === 'string') {
+      this.homeWelcomeTitle = { en: x.homeWelcomeTitle, pl: x.homeWelcomeTitle };
+    } else {
+      this.homeWelcomeTitle = {
+        en: this.clean(x.homeWelcomeTitle?.en, String, defaultWelcomeTitle.en),
+        pl: this.clean(x.homeWelcomeTitle?.pl, String, defaultWelcomeTitle.pl)
+      };
+    }
+
+    const defaultWelcomeSubtitle = DEFAULT_CONFIGURATIONS.homeWelcomeSubtitle;
+    if (typeof x.homeWelcomeSubtitle === 'string') {
+      this.homeWelcomeSubtitle = { en: x.homeWelcomeSubtitle, pl: x.homeWelcomeSubtitle };
+    } else {
+      this.homeWelcomeSubtitle = {
+        en: this.clean(x.homeWelcomeSubtitle?.en, String, defaultWelcomeSubtitle.en),
+        pl: this.clean(x.homeWelcomeSubtitle?.pl, String, defaultWelcomeSubtitle.pl)
+      };
+    }
+
+    const defaultNotice = DEFAULT_CONFIGURATIONS.homeNotice;
+    const noticeType = ['info', 'warning', 'success'].includes(x.homeNotice?.type) ? x.homeNotice.type : 'info';
+    this.homeNotice = {
+      active: this.clean(x.homeNotice?.active, Boolean, defaultNotice.active),
+      type: noticeType,
+      text: {
+        en: this.clean(x.homeNotice?.text?.en, String, defaultNotice.text.en),
+        pl: this.clean(x.homeNotice?.text?.pl, String, defaultNotice.text.pl)
+      }
+    };
+
     this.supportEmail = this.clean(x.supportEmail, String, DEFAULT_CONFIGURATIONS.supportEmail);
     this.appLogoURL = this.clean(x.appLogoURL, String);
     this.appLogoURLDarkMode = this.clean(x.appLogoURLDarkMode, String);
@@ -268,10 +333,33 @@ export class Configurations extends Resource {
     return (this.rulesWarningText as any)?.[lang] || this.rulesWarningText?.en || this.rulesWarningText?.pl || '';
   }
 
+  getHomeWelcomeTitle(lang: string = 'en'): string {
+    if (typeof this.homeWelcomeTitle === 'string') return this.homeWelcomeTitle;
+    return (this.homeWelcomeTitle as any)?.[lang] || this.homeWelcomeTitle?.en || this.homeWelcomeTitle?.pl || '';
+  }
+
+  getHomeWelcomeSubtitle(lang: string = 'en'): string {
+    if (typeof this.homeWelcomeSubtitle === 'string') return this.homeWelcomeSubtitle;
+    return (this.homeWelcomeSubtitle as any)?.[lang] || this.homeWelcomeSubtitle?.en || this.homeWelcomeSubtitle?.pl || '';
+  }
+
+  getHomeNoticeText(lang: string = 'en'): string {
+    if (!this.homeNotice?.text) return '';
+    if (typeof this.homeNotice.text === 'string') return this.homeNotice.text;
+    return (this.homeNotice.text as any)?.[lang] || this.homeNotice.text?.en || this.homeNotice.text?.pl || '';
+  }
+
+  isHomeNoticeActive(): boolean {
+    return !!this.homeNotice?.active && !!(this.homeNotice?.text?.en?.trim() || this.homeNotice?.text?.pl?.trim());
+  }
+
   safeLoad(newData: any, safeData: any): void {
     super.safeLoad(newData, safeData);
     this.PK = Configurations.PK;
     this.updatedAt = this.clean(safeData.updatedAt, String);
+    this.homeWelcomeTitle = safeData.homeWelcomeTitle;
+    this.homeWelcomeSubtitle = safeData.homeWelcomeSubtitle;
+    this.homeNotice = safeData.homeNotice;
     this.rulesWarningText = safeData.rulesWarningText;
     this.rulesFileURL = safeData.rulesFileURL;
     this.rulesResolutionNumber = safeData.rulesResolutionNumber;

@@ -1,9 +1,39 @@
 <ion-content class="homeContent ion-padding">
   <div class="homeContainer">
+
+    <!-- Announcement Notice Banner (When Active) -->
+    <div *ngIf="isNoticeActive" class="homeNoticeBanner" [ngClass]="'notice-' + noticeType">
+      <div class="noticeContent">
+        <div class="noticeIcon">
+          <ion-icon [name]="noticeType === 'warning' ? 'warning-outline' : (noticeType === 'success' ? 'checkmark-circle-outline' : 'information-circle-outline')"></ion-icon>
+        </div>
+        <div class="noticeText">
+          <p>{{ noticeText }}</p>
+        </div>
+      </div>
+      <div class="noticeActions" *ngIf="canEditHomeNotice()">
+        <ion-button fill="clear" size="small" class="noticeEditBtn" (click)="editHomeNotice()">
+          <ion-icon name="create-outline" slot="start"></ion-icon>
+          {{ 'COMMON.EDIT' | translate }}
+        </ion-button>
+      </div>
+    </div>
+
     <!-- Welcome Hero -->
     <div class="welcomeHero">
-      <h1 class="welcomeTitle">{{ 'HOME.WELCOME_TITLE' | translate }}</h1>
-      <p class="welcomeSubtitle">{{ 'HOME.WELCOME_SUBTITLE' | translate }}</p>
+      <div class="heroHeaderActions" *ngIf="canEditHomeText() || (canEditHomeNotice() && !isNoticeActive)">
+        <ion-button fill="clear" size="small" class="heroActionBtn" *ngIf="canEditHomeText()" (click)="editHomeText()">
+          <ion-icon name="create-outline" slot="start"></ion-icon>
+          {{ 'HOME.EDIT_WELCOME_TEXT' | translate }}
+        </ion-button>
+        <ion-button fill="clear" size="small" class="heroActionBtn" *ngIf="canEditHomeNotice() && !isNoticeActive" (click)="editHomeNotice()">
+          <ion-icon name="megaphone-outline" slot="start"></ion-icon>
+          {{ 'HOME.ADD_NOTICE' | translate }}
+        </ion-button>
+      </div>
+
+      <h1 class="welcomeTitle">{{ welcomeTitle }}</h1>
+      <p class="welcomeSubtitle">{{ welcomeSubtitle }}</p>
 
       <!-- Primary Action: Submit Request -->
       <div class="primaryActionWrapper">
@@ -14,7 +44,7 @@
       </div>
     </div>
 
-    <!-- Recent Activity Widget -->
+    <!-- Recent Activity Widget (Applicant) -->
     <div *ngIf="latestRequest" class="recentActivitySection">
       <h2 class="sectionTitle">{{ 'HOME.RECENT_ACTIVITY' | translate }}</h2>
 
@@ -48,5 +78,60 @@
         </div>
       </div>
     </div>
+
+    <!-- Access Statistics (esn-poland-assembly dashboard style) -->
+    <div *ngIf="canViewStatistics()" class="statisticsSection">
+      <div class="sectionHeader">
+        <div class="sectionTitleWrap">
+          <h2 class="sectionTitle">{{ 'HOME.STATISTICS_TITLE' | translate }}</h2>
+          <span class="userCountBadge" *ngIf="!isLoadingUsers">
+            {{ accessedUsers.length }} {{ (accessedUsers.length === 1 ? 'HOME.USER_ACCESSED' : 'HOME.USERS_ACCESSED') | translate }}
+          </span>
+        </div>
+      </div>
+
+      <div class="statisticsCard">
+        <!-- Search Bar -->
+        <ion-searchbar
+          [(ngModel)]="usersSearchQuery"
+          (ionInput)="applyUsersFilter()"
+          [placeholder]="'HOME.SEARCH_USERS_PLACEHOLDER' | translate"
+          class="usersSearchBar"
+          [debounce]="150"
+        ></ion-searchbar>
+
+        <!-- Loading State -->
+        <div *ngIf="isLoadingUsers" class="loadingState">
+          <ion-spinner name="crescent"></ion-spinner>
+        </div>
+
+        <!-- Empty State -->
+        <div *ngIf="!isLoadingUsers && filteredAccessedUsers.length === 0" class="emptyUsersState">
+          <ion-icon name="people-outline"></ion-icon>
+          <p>{{ 'HOME.NO_USERS_FOUND' | translate }}</p>
+        </div>
+
+        <!-- Users List -->
+        <ion-list *ngIf="!isLoadingUsers && filteredAccessedUsers.length > 0" class="accessedUsersList" lines="full">
+          <ion-item *ngFor="let u of filteredAccessedUsers" class="userItem">
+            <ion-avatar slot="start" class="userAvatar">
+              <img *ngIf="u.avatarURL" [src]="u.avatarURL" alt="" />
+              <div *ngIf="!u.avatarURL" class="avatarInitials">
+                {{ (u.firstName?.[0] || u.userId?.[0] || '').toUpperCase() }}{{ (u.lastName?.[0] || '').toUpperCase() }}
+              </div>
+            </ion-avatar>
+            <ion-label>
+              <h3 class="userName">{{ u.getDisplayName() }}</h3>
+              <p class="userOrigin">{{ getUserOrigin(u) }}</p>
+            </ion-label>
+            <div slot="end" class="loginTime">
+              <span class="timeLabel">{{ 'HOME.LAST_ACCESS' | translate }}:</span>
+              <span class="timeValue">{{ formatLoginDate(u.lastLoginAt) }}</span>
+            </div>
+          </ion-item>
+        </ion-list>
+      </div>
+    </div>
+
   </div>
 </ion-content>
