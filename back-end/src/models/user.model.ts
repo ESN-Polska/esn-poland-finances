@@ -1,5 +1,16 @@
 import { Resource } from 'idea-toolbox';
-import { Configurations } from './configurations.model';
+import {
+  ALL_APP_PERMISSIONS,
+  AppPermission,
+  Configurations,
+  UsersOriginDisplayOptions
+} from './configurations.model';
+
+export interface RoleAssignmentSource {
+  roleId: string;
+  roleName: string;
+  matchedExtendedRole: string;
+}
 
 export class User extends Resource {
   /** Username in ESN Accounts (lowercase) */
@@ -26,6 +37,14 @@ export class User extends Resource {
   lastLoginAt: string;
   /** Administrator flag */
   isAdministrator: boolean;
+  /** Whether the user can manage finances (full rights except user management) */
+  canManageFinances: boolean;
+  /** Effective application permissions */
+  permissions: AppPermission[];
+  /** IDs of custom roles granted to this user */
+  customRoleIds: string[];
+  /** Source breakdown for inherited/automatic roles */
+  roleAssignmentSources: RoleAssignmentSource[];
 
   constructor(data?: any) {
     super();
@@ -34,12 +53,83 @@ export class User extends Resource {
     }
   }
 
-  static applyConfigurationPermissions(user: User, configurations: Configurations): void {
-    const isConfigAdmin = (configurations.administratorsIds || []).includes(user.userId);
-    const hasNationalTreasurerRole = (user.extendedRoles || []).some(role =>
-      role.toLowerCase().startsWith('national.treasurer')
+  /** Match scoped CAS pattern (supporting * wildcard) against user's extendedRoles */
+  static matchesExtendedCASPermission(user: User, permission: string): boolean {
+    const roles = user.extendedRoles || [];
+    const normalizedPermission = permission.toLowerCase().trim();
+    return roles.some(userRole =>
+      new RegExp(`^${normalizedPermission.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*')}$`).test(
+        String(userRole).toLowerCase().trim()
+      )
     );
-    user.isAdministrator = isConfigAdmin || hasNationalTreasurerRole;
+  }
+
+  static hasAnyCASPermission(user: User, permissions: string[]): boolean {
+    return (permissions || []).some(p => User.matchesExtendedCASPermission(user, p));
+  }
+
+  /**
+   * Evaluates permissions based on current Configurations:
+   * - First user / config admin gets Administrator role (ALL_APP_PERMISSIONS).
+   * - Financial Manager gets all permissions EXCEPT configurations.users.
+   * - Custom roles add explicit permissions.
+   */
+  static applyConfigurationPermissions(user: User, configurations: Configurations): void {
+    const autoRoleAssignments = configurations.automaticRoleAssignments || [];
+    const automaticRoleIds = autoRoleAssignments
+      .filter(assignment => User.hasAnyCASPermission(user, assignment.extendedRolePatterns))
+      .map(assignment => assignment.roleId);
+
+    // 1. Evaluate Administrator status
+    user.isAdministrator =
+      (configurations.administratorsIds || []).includes(user.userId) ||
+      automaticRoleIds.includes('ADMINISTRATOR');
+
+    // 2. Evaluate Financial Manager status
+    user.canManageFinances =
+      user.isAdministrator ||
+      (configurations.financialManagersIds || []).includes(user.userId) ||
+      automaticRoleIds.includes('FINANCIAL_MANAGER');
+
+    // 3. Evaluate Custom Roles
+    user.customRoleIds = (configurations.customRoles || [])
+      .filter(role => role.userIds.includes(user.userId) || User.hasAnyCASPermission(user, role.extendedRolePatterns))
+      .map(role => role.id);
+
+    // 4. Calculate effective permissions
+    if (user.isAdministrator) {
+      user.permissions = [...ALL_APP_PERMISSIONS];
+    } else if (user.canManageFinances) {
+      // Financial Manager has all permissions except configurations
+      const configurationsPrefix = AppPermission.CONFIGURATIONS.PARENT;
+      user.permissions = ALL_APP_PERMISSIONS.filter(
+        perm => perm !== configurationsPrefix && !perm.startsWith(`${configurationsPrefix}.`)
+      );
+    } else {
+      const assignedCustomRoles = (configurations.customRoles || []).filter(r => user.customRoleIds.includes(r.id));
+      const customPerms = assignedCustomRoles.reduce(
+        (acc, role) => [...acc, ...(role.permissions || [])],
+        [] as AppPermission[]
+      );
+      user.permissions = Array.from(new Set(customPerms));
+    }
+  }
+
+  hasPermission(permission: AppPermission | string): boolean {
+    if (this.isAdministrator) return true;
+
+    // Financial Manager has all current and future permissions except configurations
+    if (this.canManageFinances) {
+      const configurationsPrefix = AppPermission.CONFIGURATIONS.PARENT;
+      if (permission === configurationsPrefix || permission.startsWith(`${configurationsPrefix}.`)) {
+        return false;
+      }
+      return true;
+    }
+
+    return (this.permissions || []).some(
+      granted => permission === granted || permission.startsWith(`${granted}.`)
+    );
   }
 
   load(x: any): void {
@@ -56,10 +146,54 @@ export class User extends Resource {
     this.extendedRoles = this.cleanArray(x.extendedRoles, String);
     this.lastLoginAt = this.clean(x.lastLoginAt, String);
     this.isAdministrator = this.clean(x.isAdministrator, Boolean, false);
+    this.canManageFinances = this.clean(x.canManageFinances, Boolean, false);
+    this.permissions = this.cleanArray(x.permissions, String) as AppPermission[];
+    this.customRoleIds = this.cleanArray(x.customRoleIds, String);
+    this.roleAssignmentSources = this.cleanArray(x.roleAssignmentSources, Object) as RoleAssignmentSource[];
   }
 
   getDisplayName(): string {
     const parts = [this.firstName, this.lastName].filter(Boolean);
     return parts.length > 0 ? parts.join(' ') : this.userId;
   }
+
+  getAccountsProfileURL(): string {
+    return this.userId ? `https://accounts.esn.org/user/${encodeURIComponent(this.userId)}` : 'https://accounts.esn.org';
+  }
+
+  getSectionOrCountry(): string {
+    const section = (this.section || this.sectionCode || '').trim();
+    if (section && section !== 'undefined') {
+      return section;
+    }
+    const country = (this.country || '').trim();
+    if (country && country !== 'undefined') {
+      return `ESN ${country}`;
+    }
+    return '';
+  }
+
+  getOrigin(displayOption: UsersOriginDisplayOptions = UsersOriginDisplayOptions.BOTH): string | null {
+    return getUserOrigin(this, displayOption);
+  }
 }
+
+export const getUserOrigin = (
+  user: { country?: string; section?: string },
+  displayOption: UsersOriginDisplayOptions
+): string | null => {
+  const isUnknown = (val?: string) => !val || val.trim().toLowerCase() === 'unknown';
+  const cleanCountry = isUnknown(user?.country) ? null : user.country?.trim();
+  const cleanSection = isUnknown(user?.section) ? null : user.section?.trim();
+
+  if (displayOption === UsersOriginDisplayOptions.COUNTRY) return cleanCountry || null;
+  if (displayOption === UsersOriginDisplayOptions.SECTION) return cleanSection || null;
+  if (displayOption === UsersOriginDisplayOptions.BOTH) {
+    if (cleanCountry && cleanSection) {
+      if (cleanCountry === cleanSection) return cleanSection;
+      return `${cleanCountry} - ${cleanSection}`;
+    }
+    return cleanSection || cleanCountry || null;
+  }
+  return null;
+};

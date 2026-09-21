@@ -36,11 +36,15 @@
             <input
               type="text"
               class="formInput"
+              [class.is-invalid]="isFieldInvalid('position')"
               [(ngModel)]="request.position"
               name="position"
               required
               [placeholder]="'REQUESTS.PLACEHOLDERS.POSITION' | translate"
             />
+            <span class="errorText" *ngIf="isFieldInvalid('position')">
+              {{ 'REQUESTS.VALIDATION.POSITION_REQUIRED' | translate }}
+            </span>
           </div>
 
           <div class="formGroup">
@@ -48,11 +52,15 @@
             <input
               type="text"
               class="formInput"
+              [class.is-invalid]="isFieldInvalid('sourceOfFunding')"
               [(ngModel)]="request.sourceOfFunding"
               name="sourceOfFunding"
               required
               [placeholder]="'REQUESTS.PLACEHOLDERS.FUNDING_SOURCE' | translate"
             />
+            <span class="errorText" *ngIf="isFieldInvalid('sourceOfFunding')">
+              {{ 'REQUESTS.VALIDATION.FUNDING_REQUIRED' | translate }}
+            </span>
           </div>
         </div>
       </div>
@@ -152,11 +160,15 @@
                 <input
                   type="text"
                   class="formInput"
+                  [class.is-invalid]="isDocFieldInvalid(doc, 'invoiceNumber')"
                   [(ngModel)]="doc.invoiceNumber"
                   [name]="'invoiceNumber_' + i"
                   required
                   placeholder="FV/2026/01"
                 />
+                <span class="errorText" *ngIf="isDocFieldInvalid(doc, 'invoiceNumber')">
+                  {{ 'REQUESTS.VALIDATION.DOC_NUMBER_REQUIRED' | translate }}
+                </span>
               </div>
 
               <!-- KSeF Number -->
@@ -181,11 +193,15 @@
                 <input
                   type="text"
                   class="formInput"
+                  [class.is-invalid]="isDocFieldInvalid(doc, 'issuedBy')"
                   [(ngModel)]="doc.issuedBy"
                   [name]="'issuedBy_' + i"
                   required
                   [placeholder]="'REQUESTS.PLACEHOLDERS.ISSUED_BY' | translate"
                 />
+                <span class="errorText" *ngIf="isDocFieldInvalid(doc, 'issuedBy')">
+                  {{ 'REQUESTS.VALIDATION.ISSUER_REQUIRED' | translate }}
+                </span>
               </div>
 
               <!-- Issued On -->
@@ -194,10 +210,14 @@
                 <input
                   type="date"
                   class="formInput"
+                  [class.is-invalid]="isDocFieldInvalid(doc, 'issuedOn')"
                   [(ngModel)]="doc.issuedOn"
                   [name]="'issuedOn_' + i"
                   required
                 />
+                <span class="errorText" *ngIf="isDocFieldInvalid(doc, 'issuedOn')">
+                  {{ 'REQUESTS.VALIDATION.ISSUE_DATE_REQUIRED' | translate }}
+                </span>
               </div>
 
               <!-- Type A: Payment Deadline -->
@@ -206,10 +226,14 @@
                 <input
                   type="date"
                   class="formInput"
+                  [class.is-invalid]="isDocFieldInvalid(doc, 'paymentDeadline')"
                   [(ngModel)]="doc.paymentDeadline"
                   [name]="'paymentDeadline_' + i"
                   required
                 />
+                <span class="errorText" *ngIf="isDocFieldInvalid(doc, 'paymentDeadline')">
+                  {{ 'REQUESTS.VALIDATION.DEADLINE_REQUIRED' | translate }}
+                </span>
               </div>
 
               <!-- Type B: Paid On -->
@@ -218,10 +242,14 @@
                 <input
                   type="date"
                   class="formInput"
+                  [class.is-invalid]="isDocFieldInvalid(doc, 'paidOn')"
                   [(ngModel)]="doc.paidOn"
                   [name]="'paidOn_' + i"
                   required
                 />
+                <span class="errorText" *ngIf="isDocFieldInvalid(doc, 'paidOn')">
+                  {{ 'REQUESTS.VALIDATION.PAID_ON_REQUIRED' | translate }}
+                </span>
               </div>
 
               <!-- Type A: Seller Bank Details -->
@@ -230,11 +258,16 @@
                 <input
                   type="text"
                   class="formInput font-mono"
+                  [class.is-invalid]="isDocFieldInvalid(doc, 'bankAccountDetails')"
                   [(ngModel)]="doc.bankAccountDetails"
+                  (input)="onSellerIbanInput($event, doc)"
                   [name]="'bankAccountDetails_' + i"
                   required
-                  placeholder="PL00 0000 0000 0000 0000 0000 0000"
+                  placeholder="00 0000 0000 0000 0000 0000 0000 (lub PL...)"
                 />
+                <span class="errorText" *ngIf="isDocFieldInvalid(doc, 'bankAccountDetails')">
+                  {{ (!doc.bankAccountDetails?.trim() ? 'REQUESTS.VALIDATION.SELLER_BANK_REQUIRED' : 'REQUESTS.VALIDATION.INVALID_DOMESTIC_ACCOUNT') | translate }}
+                </span>
               </div>
 
               <!-- Currency -->
@@ -244,7 +277,7 @@
                   class="formInput"
                   [(ngModel)]="doc.currency"
                   [name]="'currency_' + i"
-                  (change)="recalculateTotals()"
+                  (change)="onCurrencyChange(doc.currency)"
                 >
                   <option value="PLN">PLN</option>
                   <option value="EUR">EUR</option>
@@ -261,12 +294,16 @@
                   step="0.01"
                   min="0"
                   class="formInput font-bold"
+                  [class.is-invalid]="isDocFieldInvalid(doc, 'grossAmount')"
                   [(ngModel)]="doc.grossAmount"
                   [name]="'grossAmount_' + i"
                   (input)="recalculateTotals()"
                   required
                   placeholder="0.00"
                 />
+                <span class="errorText" *ngIf="isDocFieldInvalid(doc, 'grossAmount')">
+                  {{ 'REQUESTS.VALIDATION.AMOUNT_GREATER_ZERO' | translate }}
+                </span>
               </div>
 
               <!-- VAT Amount -->
@@ -277,11 +314,27 @@
                   step="0.01"
                   min="0"
                   class="formInput"
+                  [class.is-invalid]="isDocFieldInvalid(doc, 'vatAmount')"
                   [(ngModel)]="doc.vatAmount"
                   [name]="'vatAmount_' + i"
                   (input)="recalculateTotals()"
                   required
                   placeholder="0.00"
+                />
+                <span class="errorText" *ngIf="isDocFieldInvalid(doc, 'vatAmount')">
+                  {{ 'REQUESTS.VALIDATION.VAT_EXCEEDS_GROSS' | translate }}
+                </span>
+              </div>
+
+              <!-- Net Amount (Calculated Display) -->
+              <div class="formGroup">
+                <label class="inputLabel">{{ 'REQUESTS.FIELDS.NET_AMOUNT' | translate }}</label>
+                <input
+                  type="text"
+                  readonly
+                  tabindex="-1"
+                  class="formInput font-mono readOnlyInput"
+                  [value]="(getDocNet(doc) | number:'1.2-2') + ' ' + doc.currency"
                 />
               </div>
 
@@ -300,7 +353,7 @@
               <!-- File Upload for Invoice/Receipt -->
               <div class="formGroup fullWidth">
                 <label class="inputLabel">{{ 'REQUESTS.FIELDS.INVOICE_FILE' | translate }} *</label>
-                <div class="fileUploadBox">
+                <div class="fileUploadBox" [class.is-invalid]="isDocFieldInvalid(doc, 'attachment')">
                   <input
                     type="file"
                     class="hiddenFileInput"
@@ -311,7 +364,7 @@
                   <div *ngIf="!doc.attachment" class="uploadPlaceholder" (click)="invoiceFileInput.click()">
                     <ion-icon name="cloud-upload-outline"></ion-icon>
                     <span>{{ 'REQUESTS.CLICK_TO_UPLOAD' | translate }}</span>
-                    <span class="fileHints">(PDF, PNG, JPG &le; 20MB)</span>
+                    <span class="fileHints">(PDF, PNG, JPG &le; {{ MAX_FILE_SIZE_MB }}MB)</span>
                   </div>
                   <div *ngIf="doc.attachment" class="fileAttachedRow">
                     <ion-icon name="document-text-outline" class="docIcon"></ion-icon>
@@ -321,6 +374,9 @@
                     </button>
                   </div>
                 </div>
+                <span class="errorText" *ngIf="isDocFieldInvalid(doc, 'attachment')">
+                  {{ 'REQUESTS.VALIDATION.INVOICE_FILE_REQUIRED' | translate }}
+                </span>
               </div>
 
               <!-- Type B: Proof of Payment Attachment -->
@@ -357,13 +413,23 @@
         <!-- Totals Summary Bar -->
         <div class="totalsSummaryBar">
           <div class="totalItem">
-            <span class="totalLabel">{{ 'REQUESTS.TOTAL_GROSS_AMOUNT' | translate }}:</span>
-            <span class="totalValue font-bold">{{ request.totalGrossAmount | number:'1.2-2' }} {{ request.currency }}</span>
+            <span class="totalLabel">{{ 'REQUESTS.TOTAL_NET_AMOUNT' | translate }}:</span>
+            <span class="totalValue">{{ totalNetAmount | number:'1.2-2' }} {{ request.currency }}</span>
           </div>
           <div class="totalItem">
             <span class="totalLabel">{{ 'REQUESTS.TOTAL_VAT_AMOUNT' | translate }}:</span>
             <span class="totalValue">{{ request.totalVatAmount | number:'1.2-2' }} {{ request.currency }}</span>
           </div>
+          <div class="totalItem highlight">
+            <span class="totalLabel">{{ 'REQUESTS.TOTAL_GROSS_AMOUNT' | translate }}:</span>
+            <span class="totalValue font-bold">{{ request.totalGrossAmount | number:'1.2-2' }} {{ request.currency }}</span>
+          </div>
+        </div>
+
+        <!-- Direct Seller Payout Notice for INVOICE_TO_PAY -->
+        <div class="sellerPaymentNotice" *ngIf="request.requestType === 'INVOICE_TO_PAY'">
+          <ion-icon name="information-circle-outline"></ion-icon>
+          <span>{{ 'REQUESTS.DIRECT_SELLER_PAYMENT_NOTE' | translate }}</span>
         </div>
       </div>
 
@@ -378,12 +444,16 @@
             step="0.01"
             min="0"
             class="formInput font-bold"
+            [class.is-invalid]="isFieldInvalid('requestedAmountPLN')"
             [(ngModel)]="request.requestedAmountPLN"
             name="requestedAmountPLN"
             (input)="onAdvanceAmountChange()"
             required
             placeholder="0.00"
           />
+          <span class="errorText" *ngIf="isFieldInvalid('requestedAmountPLN')">
+            {{ 'REQUESTS.VALIDATION.ADVANCE_AMOUNT_REQUIRED' | translate }}
+          </span>
         </div>
 
         <div class="formGroup mt-4">
@@ -391,11 +461,15 @@
           <textarea
             class="formTextarea"
             rows="5"
+            [class.is-invalid]="isFieldInvalid('explanationAndBudget')"
             [(ngModel)]="request.explanationAndBudget"
             name="explanationAndBudget"
             required
             [placeholder]="'REQUESTS.PLACEHOLDERS.EXPLANATION_BUDGET' | translate"
           ></textarea>
+          <span class="errorText" *ngIf="isFieldInvalid('explanationAndBudget')">
+            {{ 'REQUESTS.VALIDATION.EXPLANATION_REQUIRED' | translate }}
+          </span>
         </div>
       </div>
 
@@ -406,7 +480,7 @@
         <!-- Filled Delegation Template -->
         <div class="formGroup">
           <label class="inputLabel">{{ 'REQUESTS.FIELDS.DELEGATION_TEMPLATE_FILE' | translate }} *</label>
-          <div class="fileUploadBox">
+          <div class="fileUploadBox" [class.is-invalid]="isFieldInvalid('delegationFormAttachment')">
             <input
               type="file"
               class="hiddenFileInput"
@@ -426,6 +500,9 @@
               </button>
             </div>
           </div>
+          <span class="errorText" *ngIf="isFieldInvalid('delegationFormAttachment')">
+            {{ 'REQUESTS.VALIDATION.DELEGATION_FILE_REQUIRED' | translate }}
+          </span>
         </div>
 
         <!-- Tickets (Multiple Supported) -->
@@ -454,10 +531,13 @@
               </button>
             </div>
           </div>
-          <div *ngIf="!request.ticketAttachments || request.ticketAttachments.length === 0" class="uploadPlaceholder" (click)="ticketsFileInput.click()">
+          <div *ngIf="!request.ticketAttachments || request.ticketAttachments.length === 0" class="uploadPlaceholder" [class.is-invalid]="isFieldInvalid('ticketAttachments')" (click)="ticketsFileInput.click()">
             <ion-icon name="cloud-upload-outline"></ion-icon>
             <span>{{ 'REQUESTS.UPLOAD_TICKETS' | translate }}</span>
           </div>
+          <span class="errorText" *ngIf="isFieldInvalid('ticketAttachments')">
+            {{ 'REQUESTS.VALIDATION.TICKETS_REQUIRED' | translate }}
+          </span>
         </div>
 
         <!-- Total Delegation Amount -->
@@ -468,29 +548,62 @@
             step="0.01"
             min="0"
             class="formInput font-bold"
+            [class.is-invalid]="isFieldInvalid('delegationTotalAmount')"
             [(ngModel)]="request.totalGrossAmount"
             name="delegationTotalAmount"
             required
             placeholder="0.00"
           />
+          <span class="errorText" *ngIf="isFieldInvalid('delegationTotalAmount')">
+            {{ 'REQUESTS.VALIDATION.DELEGATION_AMOUNT_REQUIRED' | translate }}
+          </span>
         </div>
       </div>
 
-      <!-- Section 4: Financial Information (Payout Bank Details) -->
-      <div class="formCard">
+      <!-- Section 4: Financial Information (Payout Bank Details - shown for reimbursement, advance, delegation) -->
+      <div class="formCard" *ngIf="request.requestType !== 'INVOICE_TO_PAY'">
         <h2 class="cardTitle">4. {{ 'REQUESTS.SECTIONS.FINANCIAL_INFO' | translate }}</h2>
         <p class="sectionHelp">{{ 'REQUESTS.PAYOUT_BANK_HELP' | translate }}</p>
+
+        <!-- Bank Account Type Toggle -->
+        <div class="bankTypeToggleRow">
+          <label class="inputLabel">{{ 'REQUESTS.BANK_ACCOUNT_TYPE' | translate }}</label>
+          <div class="bankTypeSegment">
+            <button
+              type="button"
+              class="segmentBtn"
+              [class.active]="bankAccountType === 'DOMESTIC'"
+              (click)="setBankAccountType('DOMESTIC')"
+            >
+              <ion-icon name="home-outline"></ion-icon>
+              {{ 'REQUESTS.BANK_DOMESTIC' | translate }}
+            </button>
+            <button
+              type="button"
+              class="segmentBtn"
+              [class.active]="bankAccountType === 'INTERNATIONAL'"
+              (click)="setBankAccountType('INTERNATIONAL')"
+            >
+              <ion-icon name="globe-outline"></ion-icon>
+              {{ 'REQUESTS.BANK_INTERNATIONAL' | translate }}
+            </button>
+          </div>
+        </div>
 
         <div class="formGroup">
           <label class="inputLabel">{{ 'REQUESTS.FIELDS.ACCOUNT_HOLDER_NAME' | translate }} *</label>
           <input
             type="text"
             class="formInput"
+            [class.is-invalid]="isFieldInvalid('accountHolderName')"
             [(ngModel)]="request.accountHolderName"
             name="accountHolderName"
             required
             [placeholder]="'REQUESTS.FIELDS.ACCOUNT_HOLDER_NAME' | translate"
           />
+          <span class="errorText" *ngIf="isFieldInvalid('accountHolderName')">
+            {{ 'REQUESTS.VALIDATION.ACCOUNT_HOLDER_REQUIRED' | translate }}
+          </span>
         </div>
 
         <div class="formGroup">
@@ -498,45 +611,61 @@
           <input
             type="text"
             class="formInput"
+            [class.is-invalid]="isFieldInvalid('accountHolderAddress')"
             [(ngModel)]="request.accountHolderAddress"
             name="accountHolderAddress"
             required
             [placeholder]="'REQUESTS.FIELDS.ACCOUNT_HOLDER_ADDRESS' | translate"
           />
+          <span class="errorText" *ngIf="isFieldInvalid('accountHolderAddress')">
+            {{ 'REQUESTS.VALIDATION.ACCOUNT_ADDRESS_REQUIRED' | translate }}
+          </span>
         </div>
 
         <div class="formGrid">
-          <div class="formGroup">
-            <label class="inputLabel">{{ 'REQUESTS.FIELDS.IBAN' | translate }} *</label>
-            <input
-              type="text"
-              class="formInput font-mono"
-              [(ngModel)]="request.iban"
-              name="iban"
-              required
-              placeholder="PL00 0000 0000 0000 0000 0000 0000"
-            />
-          </div>
-
-          <div class="formGroup">
+          <div class="formGroup" [class.fullWidth]="bankAccountType === 'DOMESTIC'">
             <label class="inputLabel">
-              {{ 'REQUESTS.FIELDS.SWIFT_BIC' | translate }}
-              <span class="optionalLabel">({{ 'COMMON.OPTIONAL' | translate }})</span>
+              {{ (bankAccountType === 'DOMESTIC' ? 'REQUESTS.FIELDS.BANK_ACCOUNT_NUMBER' : 'REQUESTS.FIELDS.IBAN') | translate }} *
             </label>
             <input
               type="text"
               class="formInput font-mono"
+              [class.is-invalid]="isFieldInvalid('iban')"
+              [(ngModel)]="request.iban"
+              (input)="onPayoutIbanInput($event)"
+              name="iban"
+              required
+              [placeholder]="bankAccountType === 'DOMESTIC' ? '00 0000 0000 0000 0000 0000 0000' : 'DE00 0000 0000 0000 0000 00'"
+            />
+            <span class="errorText" *ngIf="isFieldInvalid('iban')">
+              {{ (bankAccountType === 'DOMESTIC' ? 'REQUESTS.VALIDATION.INVALID_DOMESTIC_ACCOUNT' : 'REQUESTS.VALIDATION.INVALID_IBAN') | translate }}
+            </span>
+          </div>
+
+          <div class="formGroup" *ngIf="bankAccountType === 'INTERNATIONAL'">
+            <label class="inputLabel">{{ 'REQUESTS.FIELDS.SWIFT_BIC' | translate }} *</label>
+            <input
+              type="text"
+              class="formInput font-mono"
+              [class.is-invalid]="isFieldInvalid('swiftBic')"
               [(ngModel)]="request.swiftBic"
+              (input)="onPayoutSwiftInput($event)"
               name="swiftBic"
+              required
               placeholder="PKOPPLPW"
             />
+            <span class="errorText" *ngIf="isFieldInvalid('swiftBic')">
+              {{ 'REQUESTS.VALIDATION.INVALID_SWIFT' | translate }}
+            </span>
           </div>
         </div>
       </div>
 
       <!-- Section 5: Additional Information -->
       <div class="formCard">
-        <h2 class="cardTitle">5. {{ 'REQUESTS.SECTIONS.ADDITIONAL_INFO' | translate }}</h2>
+        <h2 class="cardTitle">
+          {{ (request.requestType === 'INVOICE_TO_PAY' ? '4. ' : '5. ') + ('REQUESTS.SECTIONS.ADDITIONAL_INFO' | translate) }}
+        </h2>
 
         <div class="formGroup">
           <label class="inputLabel">{{ 'REQUESTS.FIELDS.ADDITIONAL_REMARKS' | translate }}</label>

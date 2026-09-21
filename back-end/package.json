@@ -8,6 +8,7 @@
     "compile": "tsc --build",
     "deploy": "cdk deploy",
     "logs": "aws logs tail /aws/lambda/esn-poland-finances-dev-api-Fn_auth --follow --profile esn-finances",
+    "validate:swagger": "node -e \"const p = require('@apidevtools/swagger-parser'); p.validate('swagger.yaml').then(() => console.log('swagger.yaml is valid')).catch(err => { console.error(err); process.exit(1); });\"",
     "cdk": "cdk"
   },
   "dependencies": {

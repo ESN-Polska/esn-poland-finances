@@ -27,31 +27,13 @@
     }
   }
 
-  .warningBanner {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    background: #fffbeb;
-    border-left: 4px solid #f59e0b;
-    border-radius: 8px;
-    padding: 16px 20px;
-    margin-bottom: 32px;
-    text-align: left;
-
-    .warningIcon {
-      font-size: 1.4rem;
-      color: #b45309;
-      flex-shrink: 0;
-      margin-top: 2px;
-    }
-
-    .warningText {
-      font-size: 0.95rem;
-      line-height: 1.5;
-      color: #92400e;
-      margin: 0;
-      font-weight: 500;
-    }
+  .rulesNotice {
+    font-size: 1rem;
+    line-height: 1.6;
+    color: var(--text-medium);
+    margin: 0 auto 32px;
+    max-width: 600px;
+    text-align: center;
   }
 
   .downloadSection {
@@ -96,17 +78,49 @@
   }
 }
 
-body.dark {
-  .warningBanner {
-    background: rgba(245, 158, 11, 0.12);
-    border-left-color: #f59e0b;
+@media (max-width: 600px) {
+  .rulesContainer {
+    margin: 16px auto;
+    padding: 0 12px;
+  }
 
-    .warningIcon {
-      color: #fbbf24;
+  .rulesCard {
+    padding: 24px 16px;
+    border-radius: 10px;
+
+    .rulesHeader {
+      margin-bottom: 18px;
+
+      .rulesTitle {
+        font-size: 1.35rem;
+      }
     }
 
-    .warningText {
-      color: #fde68a;
+    .rulesNotice {
+      font-size: 0.95rem;
+      margin-bottom: 24px;
+    }
+
+    .downloadSection {
+      .downloadBtn {
+        min-width: 100%;
+        width: 100%;
+      }
     }
   }
 }
+
+body.dark {
+  .rulesCard {
+    border: none !important;
+    outline: none !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  }
+
+
+
+  .revisionFooter {
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+  }
+}
+

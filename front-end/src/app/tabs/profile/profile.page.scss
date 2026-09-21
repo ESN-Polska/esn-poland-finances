@@ -17,6 +17,106 @@
   padding: 32px 28px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
 
+  .profileHeroHeader {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding-bottom: 24px;
+    margin-bottom: 24px;
+    border-bottom: 1px solid var(--border-color);
+    flex-wrap: wrap;
+
+    .heroAvatarWrapper {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: var(--esn-cyan);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      flex-shrink: 0;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+
+      .heroAvatarImg {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .heroAvatarInitial {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #ffffff;
+        line-height: 1;
+      }
+    }
+
+    .heroMeta {
+      flex: 1;
+      min-width: 200px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+
+      .heroDetails {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+
+        .heroName {
+          font-size: 1.45rem;
+          font-weight: 700;
+          color: var(--text-dark);
+          margin: 0;
+        }
+
+        .heroUsername {
+          font-size: 0.9rem;
+          color: var(--text-medium);
+        }
+      }
+
+      .accountsLinkBtn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: rgba(0, 174, 239, 0.1);
+        color: var(--esn-cyan);
+        border: none;
+        outline: none !important;
+        border-radius: 8px;
+        padding: 6px 12px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        flex-shrink: 0;
+
+        &:hover {
+          background: var(--esn-cyan);
+          color: #ffffff;
+        }
+
+        ion-icon {
+          font-size: 0.95rem;
+        }
+      }
+
+      @media (max-width: 767px) {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+
+        .accountsLinkBtn {
+          margin-top: 2px;
+        }
+      }
+    }
+  }
+
   .cardHeader {
     margin-bottom: 20px;
 
@@ -40,7 +140,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 16px;
-  margin-bottom: 24px;
+  margin-bottom: 0;
 
   .infoField {
     display: flex;
@@ -56,57 +156,7 @@
     .fieldValue {
       font-size: 0.95rem;
       color: var(--text-dark);
-
-      &.font-mono {
-        font-family: monospace;
-      }
-
-      &.font-bold {
-        font-weight: 600;
-      }
-
-      .sectionTag {
-        color: var(--esn-cyan);
-        font-weight: 500;
-        margin-left: 4px;
-      }
     }
-  }
-}
-
-.rolesSection {
-  border-top: 1px solid var(--border-color);
-  padding-top: 18px;
-
-  .fieldLabel {
-    font-size: 0.8rem;
-    color: var(--text-medium);
-    font-weight: 500;
-    display: block;
-    margin-bottom: 10px;
-  }
-
-  .rolesList {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-
-    .roleBadge {
-      background: rgba(0, 174, 239, 0.1);
-      color: var(--esn-cyan);
-      border: 1px solid rgba(0, 174, 239, 0.25);
-      border-radius: 6px;
-      padding: 4px 10px;
-      font-size: 0.8rem;
-      font-weight: 600;
-    }
-  }
-
-  .emptyRoles {
-    color: var(--text-medium);
-    font-size: 0.85rem;
-    margin: 0;
-    font-style: italic;
   }
 }
 
@@ -115,6 +165,52 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+
+  .bankTypeToggleRow {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 4px;
+
+    .bankTypeSegment {
+      display: inline-flex;
+      background: var(--bg-body);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 3px;
+      gap: 4px;
+      width: fit-content;
+
+      .segmentBtn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 7px 16px;
+        border: none;
+        background: transparent;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--text-medium);
+        cursor: pointer;
+        transition: all 0.15s ease-in-out;
+
+        ion-icon {
+          font-size: 1.05rem;
+        }
+
+        &:hover {
+          color: var(--text-dark);
+        }
+
+        &.active {
+          background: var(--bg-card);
+          color: var(--esn-cyan);
+          box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+        }
+      }
+    }
+  }
 
   .formGrid {
     display: grid;
@@ -130,6 +226,10 @@
     display: flex;
     flex-direction: column;
     gap: 6px;
+
+    &.fullWidth {
+      grid-column: 1 / -1;
+    }
 
     .inputLabel {
       font-size: 0.85rem;
@@ -156,6 +256,24 @@
       &.font-mono {
         font-family: monospace;
       }
+
+      &.is-invalid {
+        border-color: #ef4444 !important;
+        background-color: rgba(239, 68, 68, 0.03) !important;
+
+        &:focus {
+          border-color: #ef4444 !important;
+          box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2) !important;
+        }
+      }
+    }
+
+    .errorText {
+      color: #ef4444;
+      font-size: 0.78rem;
+      font-weight: 500;
+      margin-top: 2px;
+      display: block;
     }
   }
 
@@ -187,3 +305,26 @@
     }
   }
 }
+
+body.dark {
+  .profileCard {
+    border: none !important;
+    outline: none !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  }
+
+  .bankTypeToggleRow {
+    .bankTypeSegment {
+      background: rgba(255, 255, 255, 0.04);
+      border-color: transparent !important;
+
+      .segmentBtn {
+        &.active {
+          background: rgba(0, 174, 239, 0.15);
+          color: #38bdf8;
+        }
+      }
+    }
+  }
+}
+

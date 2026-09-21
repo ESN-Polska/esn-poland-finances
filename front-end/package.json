@@ -4,7 +4,7 @@
   "description": "ESN Poland Finances front-end",
   "scripts": {
     "ng": "ng",
-    "start": "ionic serve --no-open",
+    "start": "ionic serve --no-open --external",
     "build": "ionic build --prod",
     "lint": "eslint --ext .ts"
   },
@@ -20,6 +20,8 @@
     "@capacitor/app": "5.0.6",
     "@capacitor/browser": "^5.0.6",
     "@capacitor/core": "^5.2.2",
+    "@capacitor/network": "^5.0.8",
+    "@capacitor/push-notifications": "^5.1.2",
     "@fontsource/poppins": "^5.3.0",
     "@idea-ionic/common": "7.1.4",
     "@ionic/angular": "^7.4.1",

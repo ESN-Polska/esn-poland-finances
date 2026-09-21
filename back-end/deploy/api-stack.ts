@@ -90,7 +90,9 @@ export class ApiStack extends cdk.Stack {
       APP_DOMAIN: props.appDomain,
       SES_IDENTITY_ARN: props.ses.identityArn,
       SES_NOTIFICATION_TOPIC_ARN: props.ses.notificationTopicArn,
-      LOG_LEVEL: props.lambdaLogLevel
+      LOG_LEVEL: props.lambdaLogLevel,
+      S3_BUCKET_MEDIA: `${props.project}-media`,
+      S3_IMAGES_FOLDER: `images/${props.stage}`
     };
     for (const [tableName, table] of Object.entries(this.ddbTables)) {
       lambdaEnv[`DDB_TABLE_${tableName}`] = table.tableName;
@@ -167,13 +169,30 @@ export class ApiStack extends cdk.Stack {
         );
 
         for (const path of controller.paths) {
-          const isPublic = path === '/login' || path === '/public-info';
-          this.httpApi.addRoutes({
-            path,
-            methods: [ApiGwAlpha.HttpMethod.ANY],
-            integration,
-            authorizer: isPublic ? undefined : httpAuthorizer
-          });
+          if (controller.name === 'configurations' && path === '/configurations') {
+            // GET /configurations is public (loaded on app startup before auth)
+            this.httpApi.addRoutes({
+              path,
+              methods: [ApiGwAlpha.HttpMethod.GET],
+              integration,
+              authorizer: undefined
+            });
+            // PUT /configurations is protected
+            this.httpApi.addRoutes({
+              path,
+              methods: [ApiGwAlpha.HttpMethod.PUT, ApiGwAlpha.HttpMethod.PATCH],
+              integration,
+              authorizer: httpAuthorizer
+            });
+          } else {
+            const isPublic = path === '/login' || path === '/public-info';
+            this.httpApi.addRoutes({
+              path,
+              methods: [ApiGwAlpha.HttpMethod.ANY],
+              integration,
+              authorizer: isPublic ? undefined : httpAuthorizer
+            });
+          }
         }
       }
     }

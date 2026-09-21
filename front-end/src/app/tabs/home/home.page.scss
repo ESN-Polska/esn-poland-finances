@@ -164,41 +164,52 @@
   }
 }
 
-/* Status Badges */
-.statusBadge {
-  font-size: 0.75rem;
-  font-weight: 700;
-  padding: 3px 10px;
-  border-radius: 20px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+@media (max-width: 600px) {
+  .homeContainer {
+    margin: 16px auto;
+    padding: 0 12px;
+  }
 
-  &.status-draft {
-    background: #f1f5f9;
-    color: #475569;
+  .welcomeHero {
+    padding: 24px 16px;
+    margin-bottom: 20px;
+
+    .welcomeTitle {
+      font-size: 1.35rem;
+    }
+
+    .welcomeSubtitle {
+      font-size: 0.92rem;
+      margin-bottom: 20px;
+    }
+
+    .primaryActionWrapper {
+      .submitRequestBtn {
+        min-width: 100%;
+        width: 100%;
+      }
+    }
   }
-  &.status-submitted {
-    background: #e0f2fe;
-    color: #0369a1;
-  }
-  &.status-in_review {
-    background: #fef3c7;
-    color: #b45309;
-  }
-  &.status-changes_requested {
-    background: #ffedd5;
-    color: #c2410c;
-  }
-  &.status-approved {
-    background: #dcfce7;
-    color: #15803d;
-  }
-  &.status-paid {
-    background: #dcfce7;
-    color: #166534;
-  }
-  &.status-rejected {
-    background: #fee2e2;
-    color: #b91c1c;
+
+  .recentActivitySection {
+    .latestRequestCard {
+      padding: 16px 14px;
+
+      .cardBody {
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+    }
   }
 }
+
+body.dark {
+  .welcomeHero,
+  .latestRequestCard,
+  .emptyActivityCard {
+    border: none !important;
+    outline: none !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  }
+}
+

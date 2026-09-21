@@ -142,8 +142,8 @@ body.dark {
   --ion-color-ideaToolbar-shade: #080808;
   --ion-color-ideaToolbar-tint: #222;
 
-  --border-color: #334155;
-  --border-light: #1e293b;
+  --border-color: transparent;
+  --border-light: transparent;
 
   --text-dark: #f8fafc;
   --text-medium: #94a3b8;
@@ -156,7 +156,7 @@ body.dark {
 
   --ion-item-background: #1e1e1e;
   --ion-card-background: #1e1e1e;
-  --ion-border-color: #334155;
+  --ion-border-color: transparent;
 
   --ion-color-step-50: #1e1e1e;
   --ion-color-step-100: #2a2a2a;

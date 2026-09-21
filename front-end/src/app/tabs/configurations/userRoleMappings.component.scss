@@ -1,0 +1,213 @@
+.mappingsContent {
+  --background: var(--bg-body);
+}
+
+.searchFilterToolbar {
+  --background: var(--bg-card);
+  --border-width: 0;
+  border-bottom: 1px solid var(--border-color);
+  padding: 10px 16px;
+
+  .headerFilterContainer {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    max-width: 900px;
+    margin: 0 auto;
+    flex-wrap: wrap;
+
+    .searchWrapper {
+      position: relative;
+      flex: 1;
+      min-width: 240px;
+      display: flex;
+      align-items: center;
+
+      .searchIcon {
+        position: absolute;
+        left: 12px;
+        font-size: 1.1rem;
+        color: var(--text-medium);
+        pointer-events: none;
+      }
+
+      .searchInput {
+        width: 100%;
+        height: 40px;
+        background: var(--bg-body);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 0 36px 0 36px;
+        font-size: 0.9rem;
+        color: var(--text-dark);
+        outline: none !important;
+        transition: border-color 0.15s ease;
+
+        &:focus {
+          border-color: var(--esn-cyan);
+        }
+      }
+
+      .clearSearchBtn {
+        position: absolute;
+        right: 10px;
+        background: transparent;
+        border: none;
+        color: var(--text-medium);
+        font-size: 1.1rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        padding: 0;
+      }
+    }
+
+    .casFilterWrapper {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+
+      .filterLabel {
+        font-size: 0.85rem;
+        color: var(--text-medium);
+        font-weight: 500;
+        white-space: nowrap;
+      }
+
+      .filterSelect {
+        background: var(--bg-body);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 6px 12px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--text-dark);
+        min-width: 180px;
+      }
+    }
+  }
+}
+
+.maxWidthContainer {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px 16px 40px;
+}
+
+.aList {
+  background: transparent;
+  padding: 0;
+
+  ion-item {
+    --background: var(--bg-card);
+    --color: var(--text-dark);
+    --border-radius: 10px;
+    --padding-start: 16px;
+    --padding-end: 16px;
+    --inner-padding-end: 8px;
+    margin-bottom: 8px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    transition: background-color 0.2s ease;
+
+    .userDisplayName {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text-dark);
+      margin: 0 0 2px 0;
+    }
+
+    .userMeta {
+      font-size: 0.85rem;
+      color: var(--text-medium);
+      margin: 0 0 4px 0;
+
+      .userHandle {
+        font-weight: 600;
+        color: var(--esn-cyan);
+      }
+    }
+
+    .loginMeta {
+      font-size: 0.8rem;
+      color: var(--text-medium);
+      margin: 0 0 8px 0;
+    }
+
+    .matchedRolesWrapper {
+      margin-top: 6px;
+
+      .matchedRolesLabel {
+        display: block;
+        font-size: 0.78rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--text-medium);
+        margin-bottom: 4px;
+      }
+
+      .tagsContainer {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+
+        .sourceTag {
+          font-family: monospace;
+          font-size: 0.78rem;
+          font-weight: 500;
+          background: rgba(0, 174, 239, 0.1);
+          color: var(--esn-cyan);
+          padding: 3px 8px;
+          border-radius: 6px;
+          border: 1px solid rgba(0, 174, 239, 0.2);
+        }
+      }
+    }
+  }
+
+  .noElements {
+    --color: var(--text-medium);
+    font-style: italic;
+  }
+}
+
+body.dark {
+  .searchFilterToolbar {
+    --background: var(--bg-card);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+
+    .headerFilterContainer {
+      .searchWrapper .searchInput {
+        background: rgba(255, 255, 255, 0.05);
+        border: none !important;
+        outline: none !important;
+        color: var(--text-dark);
+      }
+
+      .casFilterWrapper .filterSelect {
+        background: rgba(255, 255, 255, 0.05);
+        border: none !important;
+        outline: none !important;
+        color: var(--text-dark);
+      }
+    }
+  }
+
+  .aList {
+    ion-item {
+      --background: var(--bg-card);
+      --color: var(--text-dark);
+      border: none !important;
+      outline: none !important;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+
+      .matchedRolesWrapper .tagsContainer .sourceTag {
+        background: rgba(0, 174, 239, 0.16);
+        color: #38bdf8;
+        border-color: rgba(56, 189, 248, 0.2);
+      }
+    }
+  }
+}

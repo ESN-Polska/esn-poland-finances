@@ -68,7 +68,7 @@
     <div class="header-card">
       <div class="header-top">
         <div class="title-group">
-          <div class="request-id-badge">#{{ request.requestId }}</div>
+          <div class="request-id-badge">{{ request.requestId }}</div>
           <span class="status-badge status-{{ request.status | lowercase }}">
             {{ 'REQUESTS.STATUSES.' + request.status | translate }}
           </span>
@@ -90,11 +90,11 @@
       <div class="meta-row">
         <div class="meta-item">
           <span class="meta-lbl">{{ 'REQUESTS.SUBMITTED_ON' | translate }}:</span>
-          <span class="meta-val">{{ (request.submittedAt || request.createdAt) | date:'medium' }}</span>
+          <span class="meta-val">{{ (request.submittedAt || request.createdAt) | date:'dd.MM.yyyy' }}</span>
         </div>
         <div class="meta-item" *ngIf="request.updatedAt && request.updatedAt !== request.createdAt">
           <span class="meta-lbl">{{ 'REQUESTS.LAST_UPDATED' | translate }}:</span>
-          <span class="meta-val">{{ request.updatedAt | date:'medium' }}</span>
+          <span class="meta-val">{{ request.updatedAt | date:'dd.MM.yyyy' }}</span>
         </div>
       </div>
 
@@ -174,15 +174,15 @@
                 </div>
                 <div class="info-cell">
                   <span class="cell-lbl">{{ 'REQUESTS.DOC_ISSUED_ON' | translate }}</span>
-                  <span class="cell-val">{{ doc.issuedOn }}</span>
+                  <span class="cell-val">{{ doc.issuedOn | date:'dd.MM.yyyy' }}</span>
                 </div>
                 <div class="info-cell" *ngIf="doc.paymentDeadline">
                   <span class="cell-lbl">{{ 'REQUESTS.DOC_PAYMENT_DEADLINE' | translate }}</span>
-                  <span class="cell-val">{{ doc.paymentDeadline }}</span>
+                  <span class="cell-val">{{ doc.paymentDeadline | date:'dd.MM.yyyy' }}</span>
                 </div>
                 <div class="info-cell" *ngIf="doc.paidOn">
                   <span class="cell-lbl">{{ 'REQUESTS.DOC_PAID_ON' | translate }}</span>
-                  <span class="cell-val">{{ doc.paidOn }}</span>
+                  <span class="cell-val">{{ doc.paidOn | date:'dd.MM.yyyy' }}</span>
                 </div>
                 <div class="info-cell" *ngIf="doc.vatAmount > 0">
                   <span class="cell-lbl">{{ 'REQUESTS.DOC_VAT_AMOUNT' | translate }}</span>
@@ -280,23 +280,36 @@
           <div class="section-header">
             <h3>{{ 'REQUESTS.SUBMITTER_PROFILE' | translate }}</h3>
           </div>
-          <div class="user-summary">
+          <div
+            class="user-summary clickable-user"
+            (click)="openAccountsProfile(request.userId)"
+            [title]="'USER.VIEW_ON_ACCOUNTS' | translate"
+          >
             <div class="user-avatar-circle">
-              {{ request.userDisplayName?.charAt(0) || 'U' }}
+              <img
+                *ngIf="request.userAvatarURL && !avatarError"
+                [src]="request.userAvatarURL"
+                (error)="avatarError = true"
+                class="user-avatar-img"
+                alt="Submitter avatar"
+              />
+              <span *ngIf="!request.userAvatarURL || avatarError">
+                {{ request.userDisplayName?.charAt(0) || 'U' }}
+              </span>
             </div>
             <div class="user-meta">
-              <span class="user-name">{{ request.userDisplayName }}</span>
+              <div class="user-name-row">
+                <span class="user-name">{{ request.userDisplayName }}</span>
+                <ion-icon name="open-outline" class="user-external-icon"></ion-icon>
+              </div>
               <span class="user-email">{{ request.userEmail }}</span>
-              <span class="user-section" *ngIf="request.section">{{ request.section }}</span>
+              <span class="user-section" *ngIf="getSubmitterSection()">{{ getSubmitterSection() }}</span>
             </div>
-          </div>
-          <div class="roles-pills" *ngIf="request.extendedRoles && request.extendedRoles.length > 0">
-            <span class="role-pill" *ngFor="let role of request.extendedRoles">{{ role }}</span>
           </div>
         </div>
 
         <!-- Payout Bank Account Details -->
-        <div class="section-card">
+        <div class="section-card" *ngIf="request.requestType !== 'INVOICE_TO_PAY'">
           <div class="section-header">
             <h3>{{ 'REQUESTS.PAYOUT_BANK_ACCOUNT' | translate }}</h3>
           </div>
@@ -310,7 +323,7 @@
               <span class="cell-val">{{ request.accountHolderAddress }}</span>
             </div>
             <div class="info-cell">
-              <span class="cell-lbl">{{ 'REQUESTS.IBAN' | translate }}</span>
+              <span class="cell-lbl">{{ (request.swiftBic ? 'REQUESTS.IBAN' : 'REQUESTS.BANK_ACCOUNT_NUMBER') | translate }}</span>
               <span class="cell-val font-mono">{{ request.iban }}</span>
             </div>
             <div class="info-cell" *ngIf="request.swiftBic">
@@ -318,6 +331,15 @@
               <span class="cell-val font-mono">{{ request.swiftBic }}</span>
             </div>
           </div>
+        </div>
+
+        <div class="section-card" *ngIf="request.requestType === 'INVOICE_TO_PAY'">
+          <div class="section-header">
+            <h3>{{ 'REQUESTS.PAYOUT_BANK_ACCOUNT' | translate }}</h3>
+          </div>
+          <p class="seller-notice-view">
+            {{ 'REQUESTS.DIRECT_SELLER_PAYMENT_NOTE' | translate }}
+          </p>
         </div>
 
         <!-- Status History Timeline -->
@@ -333,7 +355,7 @@
                   <span class="history-status status-{{ h.status | lowercase }}">
                     {{ 'REQUESTS.STATUSES.' + h.status | translate }}
                   </span>
-                  <span class="history-date">{{ h.timestamp | date:'short' }}</span>
+                  <span class="history-date">{{ h.timestamp | date:'dd.MM.yyyy, HH:mm' }}</span>
                 </div>
                 <span class="history-user">{{ h.updatedBy }}</span>
                 <p class="history-note" *ngIf="h.comment">{{ h.comment }}</p>
