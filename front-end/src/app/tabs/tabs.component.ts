@@ -67,6 +67,7 @@ export class TabsComponent {
     if (!user) return false;
     return (
       user.isAdministrator ||
+      user.isAuditor ||
       user.hasPermission(AppPermission.CONFIGURATIONS.PARENT) ||
       user.hasPermission(AppPermission.CONFIGURATIONS.OPTIONS) ||
       user.hasPermission(AppPermission.CONFIGURATIONS.USERS)

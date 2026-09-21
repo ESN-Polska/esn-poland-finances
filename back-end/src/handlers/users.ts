@@ -85,8 +85,11 @@ class UsersRC extends ResourceController {
         ...(configurations.administratorsIds.includes(user.userId)
           ? [{ roleId: 'ADMINISTRATOR', roleName: 'ADMINISTRATOR', matchedExtendedRole: 'manual' }]
           : []),
-        ...(configurations.financialManagersIds.includes(user.userId)
-          ? [{ roleId: 'FINANCIAL_MANAGER', roleName: 'FINANCIAL MANAGER', matchedExtendedRole: 'manual' }]
+        ...((configurations.managersIds || []).includes(user.userId)
+          ? [{ roleId: 'MANAGER', roleName: 'MANAGER', matchedExtendedRole: 'manual' }]
+          : []),
+        ...((configurations.auditorsIds || []).includes(user.userId)
+          ? [{ roleId: 'AUDITOR', roleName: 'AUDITOR', matchedExtendedRole: 'manual' }]
           : [])
       ];
 

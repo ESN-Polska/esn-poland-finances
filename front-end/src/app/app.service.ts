@@ -217,6 +217,8 @@ export class AppService {
 
     const impersonated = new User(this.originalUser);
     impersonated.isAdministrator = false;
+    impersonated.isManager = false;
+    impersonated.isAuditor = false;
     impersonated.canManageFinances = false;
     impersonated.permissions = [];
     impersonated.customRoleIds = [];
@@ -227,7 +229,7 @@ export class AppService {
     }
   }
 
-  public seeAsFinancialManager(navigate = true): void {
+  public seeAsManager(navigate = true): void {
     const current = this.currentUser;
     if (!current) return;
 
@@ -235,17 +237,47 @@ export class AppService {
       this.originalUser = new User(current);
     }
     this.isImpersonating = true;
-    this.impersonatedRole = 'FINANCIAL_MANAGER';
-    this.impersonatedPersonaTitle = this.translate.instant('CONFIGURATIONS.FINANCIAL_MANAGER');
+    this.impersonatedRole = 'MANAGER';
+    this.impersonatedPersonaTitle = this.translate.instant('CONFIGURATIONS.MANAGER');
 
     const impersonated = new User(this.originalUser);
     impersonated.isAdministrator = false;
+    impersonated.isManager = true;
+    impersonated.isAuditor = false;
     impersonated.canManageFinances = true;
     // All current and future permissions except configurations
     const configurationsPrefix = AppPermission.CONFIGURATIONS.PARENT;
     impersonated.permissions = ALL_APP_PERMISSIONS.filter(
       perm => perm !== configurationsPrefix && !perm.startsWith(`${configurationsPrefix}.`)
     );
+    this.userSubject.next(impersonated);
+
+    if (navigate) {
+      this.goTo(['/t/home']);
+    }
+  }
+
+  public seeAsAuditor(navigate = true): void {
+    const current = this.currentUser;
+    if (!current) return;
+
+    if (!this.isImpersonating) {
+      this.originalUser = new User(current);
+    }
+    this.isImpersonating = true;
+    this.impersonatedRole = 'AUDITOR';
+    this.impersonatedPersonaTitle = this.translate.instant('CONFIGURATIONS.AUDITOR');
+
+    const impersonated = new User(this.originalUser);
+    impersonated.isAdministrator = false;
+    impersonated.isManager = false;
+    impersonated.isAuditor = true;
+    impersonated.canManageFinances = false;
+    impersonated.permissions = [
+      AppPermission.FINANCIAL_REQUESTS.VIEW_ALL,
+      AppPermission.FINANCIAL_REQUESTS.EXPORT
+    ];
+    impersonated.customRoleIds = [];
     this.userSubject.next(impersonated);
 
     if (navigate) {
@@ -266,6 +298,8 @@ export class AppService {
 
     const impersonated = new User(this.originalUser);
     impersonated.isAdministrator = false;
+    impersonated.isManager = false;
+    impersonated.isAuditor = false;
     impersonated.canManageFinances = false;
     impersonated.permissions = [...(customRole.permissions || [])];
     impersonated.customRoleIds = [customRole.id];
@@ -273,6 +307,26 @@ export class AppService {
 
     if (navigate) {
       this.goTo(['/t/home']);
+    }
+  }
+
+  /**
+   * Switch the persona directly while remaining on the current view.
+   */
+  public changeImpersonatedRole(role: string): void {
+    if (!role) return;
+    if (role === 'STANDARD_USER') {
+      this.seeAsStandardUser(false);
+    } else if (role === 'MANAGER') {
+      this.seeAsManager(false);
+    } else if (role === 'AUDITOR') {
+      this.seeAsAuditor(false);
+    } else if (role.startsWith('CUSTOM_ROLE:')) {
+      const roleId = role.replace('CUSTOM_ROLE:', '');
+      const customRole = this.configurations?.customRoles?.find(x => x.id === roleId);
+      if (customRole) {
+        this.seeAsCustomRole(customRole, false);
+      }
     }
   }
 
@@ -288,6 +342,10 @@ export class AppService {
     if (navigate) {
       this.goTo(['/t/configurations']);
     }
+  }
+
+  public exitSeeAs(navigate = true): void {
+    this.exitPreview(navigate);
   }
 
   public async getDefaultBankDetails(): Promise<{

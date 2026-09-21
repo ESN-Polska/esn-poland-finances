@@ -1,15 +1,26 @@
 <!-- Preview Mode Impersonation Banner -->
-<div class="previewBanner" *ngIf="app.isImpersonating">
-  <div class="previewBannerContent">
-    <ion-icon name="eye-outline" class="previewBannerIcon"></ion-icon>
-    <span class="previewBannerText">
-      {{ 'CONFIGURATIONS.VIEWING_AS' | translate }}:
-      <strong>{{ app.impersonatedPersonaTitle }}</strong>
-    </span>
-    <button type="button" class="exitPreviewBtn" (click)="app.exitPreview()">
-      {{ 'CONFIGURATIONS.EXIT_PREVIEW' | translate }}
-    </button>
+<div class="impersonationBanner" *ngIf="app.isImpersonating">
+  <div class="impersonationInfo">
+    <ion-icon name="eye-outline"></ion-icon>
+    <span>{{ 'CONFIGURATIONS.VIEWING_AS' | translate }}:</span>
+    <ion-select
+      class="personaSelect"
+      interface="popover"
+      [value]="app.impersonatedRole"
+      (ionChange)="app.changeImpersonatedRole($event.detail.value)"
+    >
+      <ion-select-option value="STANDARD_USER">{{ 'CONFIGURATIONS.STANDARD_USER' | translate }}</ion-select-option>
+      <ion-select-option value="MANAGER">{{ 'CONFIGURATIONS.MANAGER' | translate }}</ion-select-option>
+      <ion-select-option value="AUDITOR">{{ 'CONFIGURATIONS.AUDITOR' | translate }}</ion-select-option>
+      <ion-select-option *ngFor="let role of app.configurations?.customRoles" [value]="'CUSTOM_ROLE:' + role.id">
+        {{ role.name }}
+      </ion-select-option>
+    </ion-select>
   </div>
+  <ion-button size="small" fill="solid" color="light" class="exitPreviewBtn" (click)="app.exitPreview()">
+    <ion-icon slot="start" name="arrow-undo-outline"></ion-icon>
+    {{ 'CONFIGURATIONS.EXIT_PREVIEW' | translate }}
+  </ion-button>
 </div>
 
 <!-- Mobile Slide-Out Drawer Menu -->

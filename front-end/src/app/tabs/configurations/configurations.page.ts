@@ -1,5 +1,5 @@
-import { Component, OnInit } from '@angular/core';
-import { AlertController, LoadingController, ModalController } from '@ionic/angular';
+import { Component, OnInit, ViewChild } from '@angular/core';
+import { AlertController, IonSelect, LoadingController, ModalController } from '@ionic/angular';
 import { TranslateService } from '@ngx-translate/core';
 
 import { AppService } from '@app/app.service';
@@ -25,6 +25,9 @@ import {
 export class ConfigurationsPage implements OnInit {
   configurations: Configurations =
     this.app?.configurations || new Configurations({ PK: Configurations.PK });
+
+  @ViewChild('customRoleSelect') customRoleSelect?: IonSelect;
+  selectedCustomRoleId: string | null = null;
 
   pageSection: ConfigurationPageSection = 'OPTIONS';
   pageSections: ConfigurationPageSection[] =
@@ -92,7 +95,7 @@ export class ConfigurationsPage implements OnInit {
   canAccessPageSection(section: ConfigurationPageSection): boolean {
     const user = this.app.currentUser;
     if (!user) return false;
-    if (user.isAdministrator) return true;
+    if (user.isAdministrator || user.isAuditor) return true;
 
     if (section === 'OPTIONS') {
       return user.hasPermission(AppPermission.CONFIGURATIONS.OPTIONS);
@@ -103,9 +106,31 @@ export class ConfigurationsPage implements OnInit {
     return false;
   }
 
+  canModifyOptions(): boolean {
+    const user = this.app.currentUser;
+    if (!user) return false;
+    if (user.isAuditor) return false;
+    return user.isAdministrator || user.hasPermission(AppPermission.CONFIGURATIONS.OPTIONS);
+  }
+
+  canModifyUsers(): boolean {
+    const user = this.app.currentUser;
+    if (!user) return false;
+    if (user.isAuditor) return false;
+    return user.isAdministrator || user.hasPermission(AppPermission.CONFIGURATIONS.USERS);
+  }
+
+  canUsePreview(): boolean {
+    const user = this.app.currentUser;
+    if (!user) return false;
+    if (user.isAuditor) return false;
+    return user.isAdministrator || user.hasPermission(AppPermission.CONFIGURATIONS.USERS);
+  }
+
   canReorderPageSections(): boolean {
     const user = this.app.currentUser;
     if (!user) return false;
+    if (user.isAuditor) return false;
     if (user.isAdministrator) return true;
 
     return (
@@ -363,9 +388,9 @@ export class ConfigurationsPage implements OnInit {
     await alert.present();
   }
 
-  async addFinancialManager(): Promise<void> {
+  async addManager(): Promise<void> {
     const alert = await this.alertCtrl.create({
-      header: this.translate.instant('CONFIGURATIONS.ADD_FINANCIAL_MANAGER'),
+      header: this.translate.instant('CONFIGURATIONS.ADD_MANAGER'),
       inputs: [
         {
           name: 'userId',
@@ -381,8 +406,8 @@ export class ConfigurationsPage implements OnInit {
             const userId = data.userId?.trim().toLowerCase();
             if (!userId) return;
             const updated = new Configurations(this.configurations);
-            if (!updated.financialManagersIds.includes(userId)) {
-              updated.financialManagersIds.push(userId);
+            if (!updated.managersIds.includes(userId)) {
+              updated.managersIds.push(userId);
               await this.updateConfigurations(updated);
             }
           }
@@ -392,10 +417,10 @@ export class ConfigurationsPage implements OnInit {
     await alert.present();
   }
 
-  async removeFinancialManagerById(userId: string): Promise<void> {
+  async removeManagerById(userId: string): Promise<void> {
     const alert = await this.alertCtrl.create({
       header: this.translate.instant('COMMON.CONFIRM'),
-      message: this.translate.instant('CONFIGURATIONS.REMOVE_FINANCIAL_MANAGER_CONFIRM', { userId }),
+      message: this.translate.instant('CONFIGURATIONS.REMOVE_MANAGER_CONFIRM', { userId }),
       buttons: [
         { text: this.translate.instant('COMMON.CANCEL'), role: 'cancel' },
         {
@@ -403,7 +428,56 @@ export class ConfigurationsPage implements OnInit {
           role: 'destructive',
           handler: async () => {
             const updated = new Configurations(this.configurations);
-            updated.financialManagersIds = updated.financialManagersIds.filter(id => id !== userId);
+            updated.managersIds = updated.managersIds.filter(id => id !== userId);
+            await this.updateConfigurations(updated);
+          }
+        }
+      ]
+    });
+    await alert.present();
+  }
+
+  async addAuditor(): Promise<void> {
+    const alert = await this.alertCtrl.create({
+      header: this.translate.instant('CONFIGURATIONS.ADD_AUDITOR'),
+      inputs: [
+        {
+          name: 'userId',
+          type: 'text',
+          placeholder: this.translate.instant('CONFIGURATIONS.USERNAME_PLACEHOLDER')
+        }
+      ],
+      buttons: [
+        { text: this.translate.instant('COMMON.CANCEL'), role: 'cancel' },
+        {
+          text: this.translate.instant('COMMON.ADD'),
+          handler: async data => {
+            const userId = data.userId?.trim().toLowerCase();
+            if (!userId) return;
+            const updated = new Configurations(this.configurations);
+            if (!updated.auditorsIds.includes(userId)) {
+              updated.auditorsIds.push(userId);
+              await this.updateConfigurations(updated);
+            }
+          }
+        }
+      ]
+    });
+    await alert.present();
+  }
+
+  async removeAuditorById(userId: string): Promise<void> {
+    const alert = await this.alertCtrl.create({
+      header: this.translate.instant('COMMON.CONFIRM'),
+      message: this.translate.instant('CONFIGURATIONS.REMOVE_AUDITOR_CONFIRM', { userId }),
+      buttons: [
+        { text: this.translate.instant('COMMON.CANCEL'), role: 'cancel' },
+        {
+          text: this.translate.instant('COMMON.DELETE'),
+          role: 'destructive',
+          handler: async () => {
+            const updated = new Configurations(this.configurations);
+            updated.auditorsIds = updated.auditorsIds.filter(id => id !== userId);
             await this.updateConfigurations(updated);
           }
         }
@@ -422,6 +496,7 @@ export class ConfigurationsPage implements OnInit {
     const requirePatterns =
       roleId === 'ADMINISTRATOR' &&
       (!this.configurations?.administratorsIds || !this.configurations.administratorsIds.length);
+    const readOnly = !this.canModifyUsers();
 
     const modal = await this.modalCtrl.create({
       component: RoleEditorComponent,
@@ -429,12 +504,13 @@ export class ConfigurationsPage implements OnInit {
         mode: 'automatic',
         roleId,
         assignment: existing || { roleId, extendedRolePatterns: [] },
-        requirePatterns
+        requirePatterns,
+        readOnly
       }
     });
     await modal.present();
     const { data } = await modal.onDidDismiss();
-    if (!data?.extendedRolePatterns) return;
+    if (!data?.extendedRolePatterns || readOnly) return;
 
     if (
       roleId === 'ADMINISTRATOR' &&
@@ -474,13 +550,14 @@ export class ConfigurationsPage implements OnInit {
   }
 
   async manageCustomRole(role: CustomRole): Promise<void> {
+    const readOnly = !this.canModifyUsers();
     const modal = await this.modalCtrl.create({
       component: RoleEditorComponent,
-      componentProps: { mode: 'custom', role }
+      componentProps: { mode: 'custom', role, readOnly }
     });
     await modal.present();
     const { data } = await modal.onDidDismiss();
-    if (!data?.role) return;
+    if (!data?.role || readOnly) return;
 
     const updated = new Configurations(this.configurations);
     updated.customRoles = (updated.customRoles || []).map(r => (r.id === role.id ? data.role : r));
@@ -512,5 +589,20 @@ export class ConfigurationsPage implements OnInit {
       component: UserRoleMappingsComponent
     });
     await modal.present();
+  }
+
+  seeAsCustomRole(roleId: string): void {
+    const role = this.configurations?.customRoles?.find(customRole => customRole.id === roleId);
+    if (role) {
+      this.app.seeAsCustomRole(role);
+    }
+    setTimeout(() => this.resetCustomRoleSelector());
+  }
+
+  private resetCustomRoleSelector(): void {
+    this.selectedCustomRoleId = null;
+    if (this.customRoleSelect) {
+      this.customRoleSelect.value = null;
+    }
   }
 }
