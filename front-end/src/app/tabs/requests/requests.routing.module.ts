@@ -8,11 +8,6 @@ import { RequestViewPage } from './view/request-view.page';
 const routes: Routes = [
   {
     path: '',
-    redirectTo: 'my-requests',
-    pathMatch: 'full'
-  },
-  {
-    path: 'my-requests',
     component: RequestsPage
   },
   {
@@ -20,11 +15,11 @@ const routes: Routes = [
     component: RequestFormPage
   },
   {
-    path: 'edit/:id',
+    path: 'edit/:year/:id',
     component: RequestFormPage
   },
   {
-    path: 'view/:id',
+    path: 'view/:year/:id',
     component: RequestViewPage
   }
 ];

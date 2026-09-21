@@ -85,16 +85,26 @@ export class RequestsPage implements OnInit {
   }
 
   public viewRequest(requestId: string): void {
-    this.router.navigate(['/t/requests/view', encodeURIComponent(requestId)]);
+    const [seq, year] = requestId.split('/');
+    if (year && seq) {
+      this.router.navigate(['/t/requests/view', year, seq]);
+    } else {
+      this.router.navigate(['/t/requests/view', encodeURIComponent(requestId)]);
+    }
   }
 
   public editRequest(requestId: string): void {
-    this.router.navigate(['/t/requests/edit', encodeURIComponent(requestId)]);
+    const [seq, year] = requestId.split('/');
+    if (year && seq) {
+      this.router.navigate(['/t/requests/edit', year, seq]);
+    } else {
+      this.router.navigate(['/t/requests/edit', encodeURIComponent(requestId)]);
+    }
   }
 
   public async confirmDelete(requestId: string): Promise<void> {
     const alert = await this.alertCtrl.create({
-      header: this.translate.instant('REQUESTS.DELETE_CONFIRM_TITLE'),
+      header: this.translate.instant('REQUESTS.DELETE_CONFIRM_HEADER'),
       message: this.translate.instant('REQUESTS.DELETE_CONFIRM_MSG'),
       buttons: [
         {
@@ -109,7 +119,7 @@ export class RequestsPage implements OnInit {
               await this.requestsService.deleteDraft(requestId);
               await this.loadRequests();
               const toast = await this.toastCtrl.create({
-                message: this.translate.instant('REQUESTS.DELETED_SUCCESS'),
+                message: this.translate.instant('REQUESTS.DELETE_SUCCESS'),
                 duration: 2500,
                 color: 'success'
               });

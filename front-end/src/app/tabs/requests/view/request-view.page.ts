@@ -13,6 +13,7 @@ import { RequestsService } from '../../../services/requests.service';
 export class RequestViewPage implements OnInit {
   public request?: FinancialRequest;
   public isLoading = true;
+  public avatarError = false;
 
   public statusSteps: { key: FinancialRequestStatus; label: string }[] = [
     { key: 'SUBMITTED', label: 'REQUESTS.STATUSES.SUBMITTED' },
@@ -31,9 +32,18 @@ export class RequestViewPage implements OnInit {
   ) {}
 
   public async ngOnInit(): Promise<void> {
-    const requestId = this.route.snapshot.paramMap.get('id');
+    const year = this.route.snapshot.paramMap.get('year');
+    const id = this.route.snapshot.paramMap.get('id');
+    let requestId: string | null = null;
+
+    if (year && id) {
+      requestId = `${id}/${year}`;
+    } else if (id) {
+      requestId = decodeURIComponent(id);
+    }
+
     if (!requestId) {
-      this.router.navigate(['/t/requests/my-requests']);
+      this.router.navigate(['/t/requests']);
       return;
     }
     await this.loadRequest(requestId);
@@ -45,7 +55,7 @@ export class RequestViewPage implements OnInit {
       const found = await this.requestsService.getRequestById(requestId);
       if (!found) {
         await this.showToast('REQUESTS.NOT_FOUND', 'danger');
-        this.router.navigate(['/t/requests/my-requests']);
+        this.router.navigate(['/t/requests']);
         return;
       }
       this.request = found;
@@ -57,13 +67,40 @@ export class RequestViewPage implements OnInit {
     }
   }
 
+  public openAccountsProfile(userId?: string): void {
+    if (userId) {
+      window.open(`https://accounts.esn.org/user/${encodeURIComponent(userId)}`, '_blank', 'noopener,noreferrer');
+    }
+  }
+
+  public getSubmitterSection(): string {
+    if (!this.request) return '';
+    if (typeof this.request.getSectionOrCountry === 'function') {
+      return this.request.getSectionOrCountry();
+    }
+    const section = this.request.section?.trim();
+    if (section && section !== 'undefined') {
+      return section;
+    }
+    const country = this.request.country?.trim();
+    if (country && country !== 'undefined') {
+      return `ESN ${country}`;
+    }
+    return '';
+  }
+
   public canEdit(): boolean {
     return !!this.request && (this.request.status === 'DRAFT' || this.request.status === 'CHANGES_REQUESTED');
   }
 
   public editRequest(): void {
     if (!this.request || !this.canEdit()) return;
-    this.router.navigate(['/t/requests/edit', encodeURIComponent(this.request.requestId)]);
+    const [seq, year] = this.request.requestId.split('/');
+    if (year && seq) {
+      this.router.navigate(['/t/requests/edit', year, seq]);
+    } else {
+      this.router.navigate(['/t/requests/edit', encodeURIComponent(this.request.requestId)]);
+    }
   }
 
   public async confirmDeleteDraft(): Promise<void> {
@@ -83,7 +120,7 @@ export class RequestViewPage implements OnInit {
           handler: async () => {
             await this.requestsService.deleteDraft(this.request!.requestId);
             await this.showToast('REQUESTS.DELETE_SUCCESS', 'success');
-            this.router.navigate(['/t/requests/my-requests'], { replaceUrl: true });
+            this.router.navigate(['/t/requests'], { replaceUrl: true });
           }
         }
       ]
@@ -110,7 +147,7 @@ export class RequestViewPage implements OnInit {
   }
 
   public goBack(): void {
-    this.router.navigate(['/t/requests/my-requests']);
+    this.router.navigate(['/t/requests']);
   }
 
   private async showToast(messageKey: string, color: string): Promise<void> {

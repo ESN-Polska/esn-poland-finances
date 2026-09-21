@@ -17,7 +17,10 @@ import { parameters, stages, Stage, DOMAIN, PROD_CUSTOM_DOMAIN } from './environ
 const apiResources: ResourceController[] = [
   { name: 'auth', isAuthFunction: true },
   { name: 'login', paths: ['/login'] },
-  { name: 'requests', paths: ['/requests', '/requests/{id}'] }
+  { name: 'requests', paths: ['/requests', '/requests/{id}'] },
+  { name: 'configurations', paths: ['/configurations'] },
+  { name: 'users', paths: ['/users', '/users/{userId}'] },
+  { name: 'media', paths: ['/media'] }
 ];
 
 //

@@ -1,99 +1,231 @@
-<!-- Desktop Tabs (>= 768px) -->
-<ion-tabs class="desktopTabs" *ngIf="!app.isInMobileMode()">
-  <ion-tab-bar color="ideaToolbar" slot="top">
-    <!-- Brand Logo Button (matching esn-assembly-app) -->
-    <ion-tab-button (click)="app.goTo(['/t/home'])">
-      <ion-img src="assets/icons/icon.svg"></ion-img>
-    </ion-tab-button>
+<!-- Preview Mode Impersonation Banner -->
+<div class="previewBanner" *ngIf="app.isImpersonating">
+  <div class="previewBannerContent">
+    <ion-icon name="eye-outline" class="previewBannerIcon"></ion-icon>
+    <span class="previewBannerText">
+      {{ 'CONFIGURATIONS.VIEWING_AS' | translate }}:
+      <strong>{{ app.impersonatedPersonaTitle }}</strong>
+    </span>
+    <button type="button" class="exitPreviewBtn" (click)="app.exitPreview()">
+      {{ 'CONFIGURATIONS.EXIT_PREVIEW' | translate }}
+    </button>
+  </div>
+</div>
 
-    <!-- Text-Only Navigation Tabs (No icons) -->
-    <ion-tab-button tab="home">
-      <ion-label>{{ 'TABS.HOME' | translate }}</ion-label>
-    </ion-tab-button>
-
-    <ion-tab-button tab="rules">
-      <ion-label>{{ 'TABS.RULES' | translate }}</ion-label>
-    </ion-tab-button>
-
-    <ion-tab-button tab="requests">
-      <ion-label>{{ 'TABS.REQUESTS' | translate }}</ion-label>
-    </ion-tab-button>
-
-    <ion-tab-button tab="profile">
-      <ion-label>{{ 'TABS.PROFILE' | translate }}</ion-label>
-    </ion-tab-button>
-
-    <!-- Controls on Right (matching esn-assembly-app themeSwitcherDesktop) -->
-    <div class="themeSwitcherDesktop">
-      <!-- Theme Switcher -->
-      <ion-button
-        fill="clear"
-        class="themeToggleBtn"
-        (click)="app.cycleThemePreference()"
-        [title]="('COMMON.THEME' | translate) + ': ' + app.getThemeLabel()"
-      >
-        <ion-icon slot="icon-only" [name]="app.getThemeIcon()"></ion-icon>
-      </ion-button>
-
-      <!-- Language Selector -->
-      <div class="langSelector">
-        <button
-          type="button"
-          class="langBtn"
-          [class.active]="app.currentLanguage === 'en'"
-          (click)="app.setLanguage('en')"
-        >
-          EN
-        </button>
-        <span class="langDivider">|</span>
-        <button
-          type="button"
-          class="langBtn"
-          [class.active]="app.currentLanguage === 'pl'"
-          (click)="app.setLanguage('pl')"
-        >
-          PL
-        </button>
-      </div>
-
-      <!-- User Chip -->
-      <div class="userChip" *ngIf="app.currentUser as user" (click)="app.goTo(['/t/profile'])">
-        <span class="userName">{{ user.getDisplayName() }}</span>
-        <span class="sectionBadge" *ngIf="user.section || user.sectionCode">
-          {{ user.sectionCode || user.section }}
+<!-- Mobile Slide-Out Drawer Menu -->
+<ion-menu
+  side="end"
+  menuId="mainMenu"
+  contentId="main-tabs-content"
+  (ionWillOpen)="isMenuOpen = true"
+  (ionDidOpen)="isMenuOpen = true"
+  (ionWillClose)="isMenuOpen = false"
+  (ionDidClose)="isMenuOpen = false"
+>
+  <ion-content class="menuContent">
+    <!-- User Profile Card (if logged in) -->
+    <div
+      class="menuUserCard"
+      *ngIf="app.currentUser as user"
+      (click)="openAccountsProfile(user.userId)"
+      [title]="'USER.VIEW_ON_ACCOUNTS' | translate"
+    >
+      <div class="menuAvatarWrapper">
+        <img
+          *ngIf="user.avatarURL && !avatarError"
+          [src]="user.avatarURL"
+          (error)="avatarError = true"
+          class="menuAvatarImg"
+          alt="Avatar"
+        />
+        <span *ngIf="!user.avatarURL || avatarError" class="menuAvatarInitial">
+          {{ user.getDisplayName().charAt(0) || 'U' }}
         </span>
       </div>
-
-      <!-- Log Out Button -->
-      <ion-button
-        fill="clear"
-        class="logoutBtn"
-        (click)="logout()"
-        [title]="'TABS.LOGOUT' | translate"
-      >
-        <ion-label>{{ 'TABS.LOGOUT' | translate }}</ion-label>
-      </ion-button>
+      <div class="menuUserInfo">
+        <div class="menuUserName">{{ user.getDisplayName() }}</div>
+        <div class="menuUserSub">
+          <span class="accountsLink">
+            <ion-icon name="open-outline"></ion-icon>
+            {{ 'USER.VIEW_ON_ACCOUNTS' | translate }}
+          </span>
+        </div>
+      </div>
     </div>
-  </ion-tab-bar>
-</ion-tabs>
 
-<!-- Mobile Mode (< 768px) -->
-<ion-tabs class="mobileTabs" *ngIf="app.isInMobileMode()">
-  <ion-header class="ion-no-border">
-    <ion-toolbar color="ideaToolbar">
-      <ion-buttons slot="start">
-        <ion-tab-button (click)="app.goTo(['/t/home'])">
-          <ion-img src="assets/icons/icon.svg"></ion-img>
-        </ion-tab-button>
-      </ion-buttons>
+    <!-- Navigation Section -->
+    <div class="menuSection">
+      <div class="menuSectionHeader">{{ 'MENU.NAVIGATION' | translate }}</div>
 
-      <ion-title>{{ 'APP.TITLE' | translate }}</ion-title>
+      <div
+        class="menuNavItem"
+        [class.active]="isCurrentRoute('/t/home')"
+        (click)="navigateAndClose(['/t/home'])"
+      >
+        <ion-icon name="home-outline"></ion-icon>
+        <span>{{ 'TABS.HOME' | translate }}</span>
+      </div>
 
-      <ion-buttons slot="end">
-        <ion-button fill="clear" class="themeToggleBtn" (click)="app.cycleThemePreference()">
+      <div
+        class="menuNavItem"
+        [class.active]="isCurrentRoute('/t/requests')"
+        (click)="navigateAndClose(['/t/requests'])"
+      >
+        <ion-icon name="document-text-outline"></ion-icon>
+        <span>{{ 'TABS.REQUESTS' | translate }}</span>
+      </div>
+
+      <div
+        class="menuNavItem"
+        [class.active]="isCurrentRoute('/t/rules')"
+        (click)="navigateAndClose(['/t/rules'])"
+      >
+        <ion-icon name="book-outline"></ion-icon>
+        <span>{{ 'TABS.RULES' | translate }}</span>
+      </div>
+
+      <div
+        class="menuNavItem"
+        [class.active]="isCurrentRoute('/t/profile')"
+        (click)="navigateAndClose(['/t/profile'])"
+      >
+        <ion-icon name="person-outline"></ion-icon>
+        <span>{{ 'TABS.PROFILE' | translate }}</span>
+      </div>
+
+      <div
+        class="menuNavItem"
+        *ngIf="canAccessConfigurations()"
+        [class.active]="isCurrentRoute('/t/configurations')"
+        (click)="navigateAndClose(['/t/configurations'])"
+      >
+        <ion-icon name="settings-outline"></ion-icon>
+        <span>{{ 'TABS.CONFIGURATIONS' | translate }}</span>
+      </div>
+    </div>
+
+    <!-- Preferences Section -->
+    <div class="menuSection">
+      <div class="menuSectionHeader">{{ 'MENU.PREFERENCES' | translate }}</div>
+
+      <!-- Theme Switcher -->
+      <div class="menuSettingRow" (click)="app.cycleThemePreference()">
+        <div class="settingLeft">
+          <ion-icon [name]="app.getThemeIcon()"></ion-icon>
+          <span>{{ 'COMMON.THEME' | translate }}</span>
+        </div>
+        <span class="settingValue">{{ app.getThemeLabel() }}</span>
+      </div>
+
+      <!-- Language Selector: Click row to toggle language -->
+      <div class="menuSettingRow clickableRow" (click)="toggleLanguage()">
+        <div class="settingLeft">
+          <ion-icon name="globe-outline"></ion-icon>
+          <span>{{ 'COMMON.LANGUAGE' | translate }}</span>
+        </div>
+        <div class="langSelector">
+          <button
+            type="button"
+            class="langBtn"
+            [class.active]="app.currentLanguage === 'en'"
+            (click)="$event.stopPropagation(); app.setLanguage('en')"
+          >
+            EN
+          </button>
+          <span class="langDivider">|</span>
+          <button
+            type="button"
+            class="langBtn"
+            [class.active]="app.currentLanguage === 'pl'"
+            (click)="$event.stopPropagation(); app.setLanguage('pl')"
+          >
+            PL
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Log Out Section -->
+    <div class="menuLogoutWrapper">
+      <button type="button" class="menuLogoutBtn" (click)="logout()">
+        <ion-icon name="log-out-outline"></ion-icon>
+        <span>{{ 'TABS.LOGOUT' | translate }}</span>
+      </button>
+    </div>
+  </ion-content>
+</ion-menu>
+
+<!-- Stationary Mobile Header (Outside of main-tabs-content so pointer events are never blocked when menu is open) -->
+<div class="mobileTopHeader" *ngIf="app.isInMobileMode()">
+  <ion-toolbar color="ideaToolbar">
+    <!-- Brand on the left: Logo + Title + Subtitle -->
+    <ion-buttons slot="start">
+      <div class="mobileBrandWrapper" (click)="app.goTo(['/t/home'])">
+        <ion-img [src]="app.getIcon(app.isInDarkMode())" class="mobileHeaderLogo"></ion-img>
+        <div class="mobileBrandTexts">
+          <span class="mobileAppTitle">{{ app.getAppTitle() }}</span>
+          <span class="mobileAppSubtitle">{{ app.getAppSubtitle() }}</span>
+        </div>
+      </div>
+    </ion-buttons>
+
+    <!-- Right: Hamburger button that toggles between menu-outline and close-outline -->
+    <ion-buttons slot="end" class="mobileEndButtons">
+      <ion-button fill="clear" class="hamburgerBtn" (click)="toggleMenu()" aria-label="Toggle menu">
+        <ion-icon slot="icon-only" [name]="isMenuOpen ? 'close-outline' : 'menu-outline'"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</div>
+
+<!-- Main Container for contentId -->
+<div class="tabsContainer" id="main-tabs-content">
+  <!-- Desktop Tabs (>= 768px) -->
+  <ion-tabs class="desktopTabs" *ngIf="!app.isInMobileMode()">
+    <ion-tab-bar color="ideaToolbar" slot="top">
+      <!-- Brand Logo + Title + Subtitle -->
+      <div class="desktopBrandWrapper" (click)="app.goTo(['/t/home'])">
+        <ion-img [src]="app.getIcon(app.isInDarkMode())" class="desktopHeaderLogo"></ion-img>
+        <div class="desktopBrandTexts">
+          <span class="desktopAppTitle">{{ app.getAppTitle() }}</span>
+          <span class="desktopAppSubtitle">{{ app.getAppSubtitle() }}</span>
+        </div>
+      </div>
+
+      <!-- Text-Only Navigation Tabs (No icons) -->
+      <ion-tab-button tab="home">
+        <ion-label>{{ 'TABS.HOME' | translate }}</ion-label>
+      </ion-tab-button>
+
+      <ion-tab-button tab="rules">
+        <ion-label>{{ 'TABS.RULES' | translate }}</ion-label>
+      </ion-tab-button>
+
+      <ion-tab-button tab="requests">
+        <ion-label>{{ 'TABS.REQUESTS' | translate }}</ion-label>
+      </ion-tab-button>
+
+      <ion-tab-button tab="profile">
+        <ion-label>{{ 'TABS.PROFILE' | translate }}</ion-label>
+      </ion-tab-button>
+
+      <ion-tab-button tab="configurations" *ngIf="canAccessConfigurations()">
+        <ion-label>{{ 'TABS.CONFIGURATIONS' | translate }}</ion-label>
+      </ion-tab-button>
+
+      <!-- Controls on Right -->
+      <div class="themeSwitcherDesktop">
+        <!-- Theme Switcher -->
+        <ion-button
+          fill="clear"
+          class="themeToggleBtn"
+          (click)="app.cycleThemePreference()"
+          [title]="('COMMON.THEME' | translate) + ': ' + app.getThemeLabel()"
+        >
           <ion-icon slot="icon-only" [name]="app.getThemeIcon()"></ion-icon>
         </ion-button>
 
+        <!-- Language Selector -->
         <div class="langSelector">
           <button
             type="button"
@@ -113,30 +245,95 @@
             PL
           </button>
         </div>
-      </ion-buttons>
-    </ion-toolbar>
-  </ion-header>
 
-  <!-- Bottom Tabs (Text-Only) -->
-  <ion-tab-bar color="ideaToolbar" slot="bottom">
-    <ion-tab-button tab="home">
-      <ion-label>{{ 'TABS.HOME' | translate }}</ion-label>
-    </ion-tab-button>
+        <!-- User Chip Trigger for Dropdown -->
+        <div
+          class="userChip"
+          id="desktop-user-menu-trigger"
+          *ngIf="app.currentUser as user"
+        >
+          <div class="userChipAvatarWrapper">
+            <img
+              *ngIf="user.avatarURL && !avatarError"
+              [src]="user.avatarURL"
+              (error)="avatarError = true"
+              class="userChipAvatarImg"
+              alt="Avatar"
+            />
+            <span *ngIf="!user.avatarURL || avatarError" class="userChipAvatarInitial">
+              {{ user.getDisplayName().charAt(0) || 'U' }}
+            </span>
+          </div>
+          <span class="userName">{{ user.getDisplayName() }}</span>
+          <ion-icon name="chevron-down-outline" class="userChipChevron"></ion-icon>
+        </div>
 
-    <ion-tab-button tab="rules">
-      <ion-label>{{ 'TABS.RULES' | translate }}</ion-label>
-    </ion-tab-button>
+        <!-- User Dropdown Popover -->
+        <ion-popover
+          trigger="desktop-user-menu-trigger"
+          [dismissOnSelect]="true"
+          side="bottom"
+          alignment="end"
+          class="desktopUserPopover"
+          *ngIf="app.currentUser as user"
+        >
+          <ng-template>
+            <div class="popoverContent">
+              <!-- User Summary Header (No section code) -->
+              <div class="popoverUserHeader">
+                <div class="popoverAvatarWrapper">
+                  <img
+                    *ngIf="user.avatarURL && !avatarError"
+                    [src]="user.avatarURL"
+                    (error)="avatarError = true"
+                    class="popoverAvatarImg"
+                    alt="Avatar"
+                  />
+                  <span *ngIf="!user.avatarURL || avatarError" class="popoverAvatarInitial">
+                    {{ user.getDisplayName().charAt(0) || 'U' }}
+                  </span>
+                </div>
+                <div class="popoverUserInfo">
+                  <div class="popoverUserName">{{ user.getDisplayName() }}</div>
+                  <div class="popoverUserHandle font-mono">@{{ user.userId }}</div>
+                </div>
+              </div>
 
-    <ion-tab-button tab="requests">
-      <ion-label>{{ 'TABS.REQUESTS' | translate }}</ion-label>
-    </ion-tab-button>
+              <div class="popoverDivider"></div>
 
-    <ion-tab-button tab="profile">
-      <ion-label>{{ 'TABS.PROFILE' | translate }}</ion-label>
-    </ion-tab-button>
+              <!-- Menu Items -->
+              <div class="popoverMenuList">
+                <div class="popoverMenuItem" (click)="app.goTo(['/t/profile'])">
+                  <ion-icon name="person-outline"></ion-icon>
+                  <span>{{ 'TABS.PROFILE' | translate }}</span>
+                </div>
 
-    <ion-tab-button (click)="logout()">
-      <ion-label>{{ 'TABS.LOGOUT' | translate }}</ion-label>
-    </ion-tab-button>
-  </ion-tab-bar>
-</ion-tabs>
+                <div class="popoverMenuItem" *ngIf="canAccessConfigurations()" (click)="app.goTo(['/t/configurations'])">
+                  <ion-icon name="settings-outline"></ion-icon>
+                  <span>{{ 'TABS.CONFIGURATIONS' | translate }}</span>
+                </div>
+
+                <div class="popoverMenuItem" (click)="openAccountsProfile(user.userId)">
+                  <ion-icon name="open-outline"></ion-icon>
+                  <span>{{ 'USER.VIEW_ON_ACCOUNTS' | translate }}</span>
+                </div>
+
+                <div class="popoverDivider"></div>
+
+                <div class="popoverMenuItem logoutItem" (click)="logout()">
+                  <ion-icon name="log-out-outline"></ion-icon>
+                  <span>{{ 'TABS.LOGOUT' | translate }}</span>
+                </div>
+              </div>
+            </div>
+          </ng-template>
+        </ion-popover>
+      </div>
+    </ion-tab-bar>
+  </ion-tabs>
+
+  <!-- Mobile Mode (< 768px): Routed Content Container -->
+  <ion-tabs class="mobileTabs" *ngIf="app.isInMobileMode()">
+  </ion-tabs>
+</div>
+

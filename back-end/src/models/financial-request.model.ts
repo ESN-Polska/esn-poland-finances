@@ -61,6 +61,7 @@ export class FinancialRequest extends Resource {
   userId: string;
   userDisplayName: string;
   userEmail: string;
+  userAvatarURL?: string;
   section: string;
   country: string;
   extendedRoles: string[];
@@ -118,6 +119,7 @@ export class FinancialRequest extends Resource {
     this.userId = this.clean(x.userId, String)?.toLowerCase();
     this.userDisplayName = this.clean(x.userDisplayName, String);
     this.userEmail = this.clean(x.userEmail, String);
+    this.userAvatarURL = this.clean(x.userAvatarURL, String, '');
     this.section = this.clean(x.section, String);
     this.country = this.clean(x.country, String);
     this.extendedRoles = this.cleanArray(x.extendedRoles, String);
@@ -161,5 +163,17 @@ export class FinancialRequest extends Resource {
 
   isEditableBy(user: { userId: string }): boolean {
     return this.canEdit() && this.userId === user.userId?.toLowerCase();
+  }
+
+  getSectionOrCountry(): string {
+    const section = (this.section || '').trim();
+    if (section && section !== 'undefined') {
+      return section;
+    }
+    const country = (this.country || '').trim();
+    if (country && country !== 'undefined') {
+      return `ESN ${country}`;
+    }
+    return '';
   }
 }

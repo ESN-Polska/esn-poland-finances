@@ -3,16 +3,21 @@ import { Title } from '@angular/platform-browser';
 import { Storage } from '@ionic/storage-angular';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { TranslateService } from '@ngx-translate/core';
+import { Router } from '@angular/router';
+import { IDEAApiService } from '@idea-ionic/common';
+
 import { environment as env } from '@env';
 import { User } from '@models/user.model';
-
-import { Router } from '@angular/router';
+import { ALL_APP_PERMISSIONS, Configurations, CustomRole, AppPermission } from '@models/configurations.model';
+import { ConfigurationsService } from './tabs/configurations/configurations.service';
 
 const TOKEN_KEY = 'auth_token';
 const USER_KEY = 'auth_user';
 const LANG_KEY = 'app_lang';
 const THEME_PREFERENCE_STORAGE_KEY = 'themePreference';
 const DEFAULT_BANK_KEY = 'user_default_bank';
+
+const APP_ICON_DEFAULT = 'assets/icons/icon.svg';
 
 export type ThemePreference = 'auto' | 'dark' | 'light';
 
@@ -22,6 +27,14 @@ export type ThemePreference = 'auto' | 'dark' | 'light';
 export class AppService {
   private _storage: Storage | null = null;
   private _ready = false;
+
+  public configurations: Configurations = new Configurations({ PK: Configurations.PK });
+
+  // Preview / Impersonation State
+  public originalUser: User | null = null;
+  public isImpersonating = false;
+  public impersonatedRole = 'STANDARD_USER';
+  public impersonatedPersonaTitle = '';
 
   public themePreference: ThemePreference = 'auto';
   private darkMode = false;
@@ -36,7 +49,9 @@ export class AppService {
     private storage: Storage,
     private translate: TranslateService,
     private titleService: Title,
-    private router: Router
+    private router: Router,
+    private api: IDEAApiService,
+    private configurationsService: ConfigurationsService
   ) {
     this.themePreference = this.loadStoredThemePreference();
     this.updateDarkMode();
@@ -61,19 +76,26 @@ export class AppService {
     const langToUse = savedLang || (browserLang && ['en', 'pl'].includes(browserLang) ? browserLang : 'en');
     await this.setLanguage(langToUse);
 
+    // Load configurations from backend
+    await this.loadConfigurations();
+
     // Load saved auth state
     const savedToken = await this._storage.get(TOKEN_KEY);
     const savedUser = await this._storage.get(USER_KEY);
 
     if (savedToken && this.isTokenValid(savedToken)) {
       this.tokenSubject.next(savedToken);
+      this.api.authToken = savedToken;
+
       if (savedUser) {
         const u = new User(savedUser);
+        User.applyConfigurationPermissions(u, this.configurations);
         this.userSubject.next(u);
       } else {
         const parsed = this.parseTokenPayload(savedToken);
         if (parsed) {
           const u = new User(parsed);
+          User.applyConfigurationPermissions(u, this.configurations);
           this.userSubject.next(u);
           await this._storage.set(USER_KEY, parsed);
         }
@@ -83,6 +105,19 @@ export class AppService {
     }
 
     this._ready = true;
+  }
+
+  public async loadConfigurations(): Promise<Configurations> {
+    try {
+      this.configurations = await this.configurationsService.get();
+      if (this.currentUser) {
+        User.applyConfigurationPermissions(this.currentUser, this.configurations);
+      }
+    } catch {
+      // Keep existing/default configurations if backend is unreachable
+    }
+    this.updateTitle();
+    return this.configurations;
   }
 
   public get currentUser(): User | null {
@@ -103,11 +138,14 @@ export class AppService {
       await this.init();
     }
 
+    this.api.authToken = token;
     const payload = this.parseTokenPayload(token);
     await this._storage?.set(TOKEN_KEY, token);
+
     let user: User | null = null;
     if (payload) {
       user = new User(payload);
+      User.applyConfigurationPermissions(user, this.configurations);
       await this._storage?.set(USER_KEY, payload);
       this.userSubject.next(user);
     }
@@ -116,6 +154,9 @@ export class AppService {
   }
 
   public async logout(): Promise<void> {
+    if (this.isImpersonating) {
+      this.exitPreview(false);
+    }
     await this.clearAuth();
     await this.router.navigate(['/auth'], { replaceUrl: true });
   }
@@ -130,6 +171,123 @@ export class AppService {
 
   public isInMobileMode(): boolean {
     return typeof window !== 'undefined' && window.innerWidth < 768;
+  }
+
+  /**
+   * Get the active app logo based on theme and configuration.
+   */
+  public getIcon(white = false): string {
+    if (white) {
+      return this.configurations?.appLogoURLDarkMode || this.configurations?.appLogoURL || APP_ICON_DEFAULT;
+    }
+    return this.configurations?.appLogoURL || APP_ICON_DEFAULT;
+  }
+
+  /**
+   * Resolve an image URI into an absolute CDN URL.
+   */
+  public getImageURLByURI(imageURI: string): string {
+    const stage = env.idea?.api?.stage || 'dev';
+    return `https://${env.parameters.mediaDomain}/images/${stage}/${imageURI}.png`;
+  }
+
+  /**
+   * Open user profile on accounts.esn.org.
+   */
+  public openUserProfileById(userId: string): void {
+    if (userId) {
+      window.open(`https://accounts.esn.org/user/${encodeURIComponent(userId)}`, '_blank', 'noopener,noreferrer');
+    }
+  }
+
+  //
+  // PREVIEW / IMPERSONATION SYSTEM
+  //
+
+  public seeAsStandardUser(navigate = true): void {
+    const current = this.currentUser;
+    if (!current) return;
+
+    if (!this.isImpersonating) {
+      this.originalUser = new User(current);
+    }
+    this.isImpersonating = true;
+    this.impersonatedRole = 'STANDARD_USER';
+    this.impersonatedPersonaTitle = this.translate.instant('CONFIGURATIONS.STANDARD_USER');
+
+    const impersonated = new User(this.originalUser);
+    impersonated.isAdministrator = false;
+    impersonated.canManageFinances = false;
+    impersonated.permissions = [];
+    impersonated.customRoleIds = [];
+    this.userSubject.next(impersonated);
+
+    if (navigate) {
+      this.goTo(['/t/home']);
+    }
+  }
+
+  public seeAsFinancialManager(navigate = true): void {
+    const current = this.currentUser;
+    if (!current) return;
+
+    if (!this.isImpersonating) {
+      this.originalUser = new User(current);
+    }
+    this.isImpersonating = true;
+    this.impersonatedRole = 'FINANCIAL_MANAGER';
+    this.impersonatedPersonaTitle = this.translate.instant('CONFIGURATIONS.FINANCIAL_MANAGER');
+
+    const impersonated = new User(this.originalUser);
+    impersonated.isAdministrator = false;
+    impersonated.canManageFinances = true;
+    // All current and future permissions except configurations
+    const configurationsPrefix = AppPermission.CONFIGURATIONS.PARENT;
+    impersonated.permissions = ALL_APP_PERMISSIONS.filter(
+      perm => perm !== configurationsPrefix && !perm.startsWith(`${configurationsPrefix}.`)
+    );
+    this.userSubject.next(impersonated);
+
+    if (navigate) {
+      this.goTo(['/t/home']);
+    }
+  }
+
+  public seeAsCustomRole(customRole: CustomRole, navigate = true): void {
+    const current = this.currentUser;
+    if (!current || !customRole) return;
+
+    if (!this.isImpersonating) {
+      this.originalUser = new User(current);
+    }
+    this.isImpersonating = true;
+    this.impersonatedRole = `CUSTOM_ROLE:${customRole.id}`;
+    this.impersonatedPersonaTitle = customRole.name;
+
+    const impersonated = new User(this.originalUser);
+    impersonated.isAdministrator = false;
+    impersonated.canManageFinances = false;
+    impersonated.permissions = [...(customRole.permissions || [])];
+    impersonated.customRoleIds = [customRole.id];
+    this.userSubject.next(impersonated);
+
+    if (navigate) {
+      this.goTo(['/t/home']);
+    }
+  }
+
+  public exitPreview(navigate = true): void {
+    if (this.originalUser) {
+      this.userSubject.next(new User(this.originalUser));
+      this.originalUser = null;
+    }
+    this.isImpersonating = false;
+    this.impersonatedRole = 'STANDARD_USER';
+    this.impersonatedPersonaTitle = '';
+
+    if (navigate) {
+      this.goTo(['/t/configurations']);
+    }
   }
 
   public async getDefaultBankDetails(): Promise<{
@@ -153,6 +311,7 @@ export class AppService {
   }
 
   private async clearAuth(): Promise<void> {
+    this.api.authToken = null as any;
     if (this._storage) {
       await this._storage.remove(TOKEN_KEY);
       await this._storage.remove(USER_KEY);
@@ -169,12 +328,24 @@ export class AppService {
     }
   }
 
+  public async toggleLanguage(): Promise<void> {
+    const nextLang = this.currentLanguage === 'pl' ? 'en' : 'pl';
+    await this.setLanguage(nextLang);
+  }
+
+  public getAppTitle(): string {
+    return this.configurations?.getAppTitle(this.currentLanguage) || '';
+  }
+
+  public getAppSubtitle(): string {
+    return this.configurations?.getAppSubtitle(this.currentLanguage) || '';
+  }
+
   public updateTitle(): void {
-    this.translate.get('APP.TITLE').subscribe((title: string) => {
-      if (title && title !== 'APP.TITLE') {
-        this.titleService.setTitle(title);
-      }
-    });
+    const title = this.getAppTitle();
+    if (title) {
+      this.titleService.setTitle(title);
+    }
   }
 
   public get currentLanguage(): string {
@@ -268,9 +439,18 @@ export class AppService {
   }
 
   public startLoginFlow(): void {
-    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    const port = window.location.port ? window.location.port : '8100';
-    const localhostParam = isLocal ? `?localhost=${port}` : '';
+    const hostname = window.location.hostname;
+    const isLocal =
+      hostname === 'localhost' ||
+      hostname === '127.0.0.1' ||
+      hostname.startsWith('192.168.') ||
+      /^192\.168\.\d{1,3}\.\d{1,3}$/.test(hostname) ||
+      hostname.startsWith('10.') ||
+      /^172\.(1[6-9]|2\d|3[0-1])\./.test(hostname);
+
+    const port = window.location.port || '8100';
+    const localHost = window.location.port ? window.location.host : `${hostname}:${port}`;
+    const localhostParam = isLocal ? `?localhost=${localHost}` : '';
     const apiLoginURL = `https://${env.idea.api.url}/${env.idea.api.stage}/login`;
     const casLoginUrl = `https://accounts.esn.org/cas/login?service=${encodeURIComponent(apiLoginURL + localhostParam)}`;
 

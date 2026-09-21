@@ -1,0 +1,983 @@
+openapi: 3.0.3
+
+info:
+  title: ESN Poland Finances app
+  version: 1.0.0
+  description: Serverless AWS CDK backend API for ESN Poland financial requests and management
+  contact:
+    name: Szymon Cichy
+    email: szymon.cichy@esn.pl
+    url: https://esn.pl
+
+externalDocs:
+  description: Models documentation
+  url: https://github.com/ESN-Polska/esn-poland-finances/tree/main/back-end/src/models
+
+tags:
+  - name: Login
+    description: Access the platform via ESN Accounts CAS
+  - name: Configurations
+    description: The platform's configurations
+  - name: Requests
+    description: Financial requests and expense settlements
+  - name: Users
+    description: Registered users and permissions
+  - name: Media
+    description: Media and image uploads
+
+paths:
+  /login:
+    get:
+      summary: Manage login accepted request from ESN Accounts and return auth token
+      description: Validate the CAS ticket, persist or update user profile, and issue JWT or redirect to front-end
+      tags: [Login]
+      parameters:
+        - name: ticket
+          in: query
+          description: CAS service ticket provided by ESN Accounts
+          required: true
+          schema:
+            type: string
+        - name: service
+          in: query
+          description: Custom service callback URL validated by CAS
+          required: false
+          schema:
+            type: string
+        - name: localhost
+          in: query
+          description: Localhost port or hostname for development redirect
+          required: false
+          schema:
+            type: string
+        - name: redirect
+          in: query
+          description: Force browser redirect when true even if Accept header includes application/json
+          required: false
+          schema:
+            type: boolean
+      responses:
+        200:
+          $ref: '#/components/responses/LoginResponse'
+        302:
+          description: Redirect to front-end application with authentication token
+          headers:
+            Location:
+              schema:
+                type: string
+              description: Front-end redirect URL with JWT token query parameter
+        400:
+          $ref: '#/components/responses/BadParameters'
+
+  /configurations:
+    get:
+      summary: Get the platform's configurations
+      description: Retrieve global platform settings, localized titles, timezone, custom roles, and section ordering
+      tags: [Configurations]
+      responses:
+        200:
+          $ref: '#/components/responses/Configurations'
+    put:
+      summary: Edit the platform's configurations
+      description: Requires Administrator or granular configuration permissions (configurations.options, configurations.users)
+      tags: [Configurations]
+      security:
+        - AuthFunction: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Configurations'
+      responses:
+        200:
+          $ref: '#/components/responses/Configurations'
+        400:
+          $ref: '#/components/responses/BadParameters'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        403:
+          $ref: '#/components/responses/Forbidden'
+
+  /requests:
+    get:
+      summary: List financial requests
+      description: Returns requests belonging to current user, or all requests across the federation if called by administrator with all=true
+      tags: [Requests]
+      security:
+        - AuthFunction: []
+      parameters:
+        - name: all
+          in: query
+          description: Retrieve all requests across all users (administrators only)
+          required: false
+          schema:
+            type: boolean
+      responses:
+        200:
+          $ref: '#/components/responses/FinancialRequests'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      summary: Create or submit a new financial request
+      description: Create a financial request draft or submit directly. Automatically assigns sequential requestId (e.g. 1/2026).
+      tags: [Requests]
+      security:
+        - AuthFunction: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FinancialRequestInput'
+      responses:
+        200:
+          $ref: '#/components/responses/FinancialRequest'
+        400:
+          $ref: '#/components/responses/BadParameters'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+
+  /requests/{id}:
+    parameters:
+      - name: id
+        in: path
+        description: Request ID (e.g. 1/2026 or URL-encoded 1%2F2026)
+        required: true
+        schema:
+          type: string
+    get:
+      summary: Get a financial request by ID
+      description: Fetch full request details. Allowed for the creator or administrators.
+      tags: [Requests]
+      security:
+        - AuthFunction: []
+      responses:
+        200:
+          $ref: '#/components/responses/FinancialRequest'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        403:
+          $ref: '#/components/responses/Forbidden'
+        404:
+          $ref: '#/components/responses/NotFound'
+    patch:
+      summary: Update a financial request
+      description: Modify an existing request. Allowed for creator when status is DRAFT or CHANGES_REQUESTED, or administrator.
+      tags: [Requests]
+      security:
+        - AuthFunction: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FinancialRequestUpdate'
+      responses:
+        200:
+          $ref: '#/components/responses/FinancialRequest'
+        400:
+          $ref: '#/components/responses/BadParameters'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        403:
+          $ref: '#/components/responses/Forbidden'
+        404:
+          $ref: '#/components/responses/NotFound'
+    delete:
+      summary: Delete a draft financial request
+      description: Permanently delete a financial request. Only draft requests can be deleted.
+      tags: [Requests]
+      security:
+        - AuthFunction: []
+      responses:
+        200:
+          $ref: '#/components/responses/OperationCompleted'
+        400:
+          $ref: '#/components/responses/BadParameters'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        403:
+          $ref: '#/components/responses/Forbidden'
+        404:
+          $ref: '#/components/responses/NotFound'
+
+  /users:
+    get:
+      summary: Search or list users
+      description: Search users by username, name, or section. Can optionally compute role assignment sources.
+      tags: [Users]
+      security:
+        - AuthFunction: []
+      parameters:
+        - name: search
+          in: query
+          description: Search term to filter by userId, name, firstName, lastName, or section
+          required: false
+          schema:
+            type: string
+        - name: roleAssignments
+          in: query
+          description: If true and caller has permissions, returns computed role assignment sources
+          required: false
+          schema:
+            type: boolean
+      responses:
+        200:
+          $ref: '#/components/responses/Users'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+
+  /users/{userId}:
+    parameters:
+      - name: userId
+        in: path
+        description: ESN Accounts username (lowercase)
+        required: true
+        schema:
+          type: string
+    get:
+      summary: Get user profile by user ID
+      description: Retrieve stored profile of a user
+      tags: [Users]
+      security:
+        - AuthFunction: []
+      responses:
+        200:
+          $ref: '#/components/responses/User'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        404:
+          $ref: '#/components/responses/NotFound'
+
+  /media:
+    post:
+      summary: Get presigned S3 URL to upload an image
+      description: Generate a presigned S3 PUT URL for image upload. Requires Administrator or configurations.options permission.
+      tags: [Media]
+      security:
+        - AuthFunction: []
+      responses:
+        200:
+          $ref: '#/components/responses/SignedURL'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        403:
+          $ref: '#/components/responses/Forbidden'
+
+components:
+  securitySchemes:
+    AuthFunction:
+      type: apiKey
+      name: Authorization
+      in: header
+      description: Bearer JSON Web Token issued upon successful CAS login
+
+  schemas:
+    LocalizedText:
+      type: object
+      description: Localized text in supported languages
+      properties:
+        en:
+          type: string
+          example: Online Financial System
+        pl:
+          type: string
+          example: Internetowy System Finansowy
+
+    CustomRole:
+      type: object
+      required:
+        - id
+        - name
+        - userIds
+        - permissions
+        - extendedRolePatterns
+      properties:
+        id:
+          type: string
+          example: auditor_role
+        name:
+          type: string
+          example: National Auditor
+        userIds:
+          type: array
+          items:
+            type: string
+          example: ["john.doe"]
+        permissions:
+          type: array
+          items:
+            type: string
+          example: ["financial_requests.view_all", "financial_requests.export"]
+        extendedRolePatterns:
+          type: array
+          items:
+            type: string
+          example: ["National.Auditor:PL"]
+
+    AutomaticRoleAssignment:
+      type: object
+      required:
+        - roleId
+        - extendedRolePatterns
+      properties:
+        roleId:
+          type: string
+          example: FINANCIAL_MANAGER
+        extendedRolePatterns:
+          type: array
+          items:
+            type: string
+          example: ["National.treasurer:PL", "National.vicePresident:PL"]
+
+    Configurations:
+      type: object
+      properties:
+        PK:
+          type: string
+          example: "1"
+        appTitle:
+          $ref: '#/components/schemas/LocalizedText'
+        appSubtitle:
+          $ref: '#/components/schemas/LocalizedText'
+        supportEmail:
+          type: string
+          example: finances@esn.pl
+        appLogoURL:
+          type: string
+          example: https://media.finances.esn-poland.link/images/dev/logo.png
+        appLogoURLDarkMode:
+          type: string
+          example: https://media.finances.esn-poland.link/images/dev/logo-dark.png
+        timezone:
+          type: string
+          example: Europe/Warsaw
+        configurationPageSectionsOrder:
+          type: array
+          items:
+            type: string
+            enum:
+              - OPTIONS
+              - USERS
+          example: ["OPTIONS", "USERS"]
+        administratorsIds:
+          type: array
+          items:
+            type: string
+          example: ["admin.user"]
+        financialManagersIds:
+          type: array
+          items:
+            type: string
+          example: ["treasurer.user"]
+        customRoles:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomRole'
+        automaticRoleAssignments:
+          type: array
+          items:
+            $ref: '#/components/schemas/AutomaticRoleAssignment'
+
+    RoleAssignmentSource:
+      type: object
+      properties:
+        roleId:
+          type: string
+          example: FINANCIAL_MANAGER
+        roleName:
+          type: string
+          example: FINANCIAL MANAGER
+        matchedExtendedRole:
+          type: string
+          example: National.treasurer:PL
+
+    User:
+      type: object
+      required:
+        - userId
+        - email
+      properties:
+        userId:
+          type: string
+          example: john.doe
+        email:
+          type: string
+          example: john.doe@esn.pl
+        firstName:
+          type: string
+          example: John
+        lastName:
+          type: string
+          example: Doe
+        name:
+          type: string
+          example: John Doe
+        sectionCode:
+          type: string
+          example: PL-WAR-SGH
+        section:
+          type: string
+          example: ESN SGH Warsaw
+        country:
+          type: string
+          example: Poland
+        avatarURL:
+          type: string
+          example: https://accounts.esn.org/sites/default/files/pictures/picture-default.png
+        roles:
+          type: array
+          items:
+            type: string
+          example: ["authenticated user"]
+        extendedRoles:
+          type: array
+          items:
+            type: string
+          example: ["National.treasurer:PL"]
+        lastLoginAt:
+          type: string
+          format: date-time
+        isAdministrator:
+          type: boolean
+          example: false
+        canManageFinances:
+          type: boolean
+          example: true
+        permissions:
+          type: array
+          items:
+            type: string
+          example:
+            - financial_requests
+            - financial_requests.view_all
+            - financial_requests.manage
+            - financial_requests.export
+            - rules
+            - rules.manage
+        customRoleIds:
+          type: array
+          items:
+            type: string
+          example: []
+        roleAssignmentSources:
+          type: array
+          items:
+            $ref: '#/components/schemas/RoleAssignmentSource'
+
+    AttachmentFile:
+      type: object
+      required:
+        - fileId
+        - fileName
+        - fileSize
+        - contentType
+        - s3Key
+      properties:
+        fileId:
+          type: string
+          example: f8d9c2e0-1234-5678-9abc-def012345678
+        fileName:
+          type: string
+          example: invoice_123.pdf
+        fileSize:
+          type: integer
+          example: 204800
+        contentType:
+          type: string
+          example: application/pdf
+        s3Key:
+          type: string
+          example: attachments/2026/f8d9c2e0-1234-5678-9abc-def012345678.pdf
+        url:
+          type: string
+          example: https://media.finances.esn-poland.link/attachments/2026/invoice_123.pdf
+        uploadedAt:
+          type: string
+          format: date-time
+
+    InvoiceDocumentItem:
+      type: object
+      required:
+        - id
+        - invoiceNumber
+        - issuedBy
+        - issuedOn
+        - currency
+        - grossAmount
+        - vatAmount
+      properties:
+        id:
+          type: string
+          example: doc_01
+        invoiceNumber:
+          type: string
+          example: FV/2026/09/001
+        ksefNumber:
+          type: string
+          example: 1234567890-20260921-123456789012-1A
+        issuedBy:
+          type: string
+          example: Example Sp. z o.o.
+        issuedOn:
+          type: string
+          format: date
+          example: "2026-09-15"
+        paymentDeadline:
+          type: string
+          format: date
+          example: "2026-09-29"
+        paidOn:
+          type: string
+          format: date
+          example: "2026-09-16"
+        bankAccountDetails:
+          type: string
+          example: 00 0000 0000 0000 0000 0000 0000
+        currency:
+          type: string
+          enum: [PLN, EUR]
+          example: PLN
+        grossAmount:
+          type: number
+          example: 1230.00
+        vatAmount:
+          type: number
+          example: 230.00
+        explanation:
+          type: string
+          example: Accommodation for training participants
+        attachment:
+          $ref: '#/components/schemas/AttachmentFile'
+        proofOfPaymentAttachment:
+          $ref: '#/components/schemas/AttachmentFile'
+
+    StatusHistoryEntry:
+      type: object
+      required:
+        - status
+        - timestamp
+        - updatedBy
+      properties:
+        status:
+          type: string
+          enum:
+            - DRAFT
+            - SUBMITTED
+            - IN_REVIEW
+            - CHANGES_REQUESTED
+            - APPROVED
+            - PAID
+            - REJECTED
+          example: SUBMITTED
+        timestamp:
+          type: string
+          format: date-time
+        updatedBy:
+          type: string
+          example: John Doe
+        comment:
+          type: string
+          example: Initial submission
+
+    FinancialRequest:
+      type: object
+      required:
+        - requestId
+        - year
+        - sequenceNumber
+        - userId
+        - requestType
+        - status
+        - currency
+        - createdAt
+        - updatedAt
+      properties:
+        requestId:
+          type: string
+          example: "1/2026"
+        year:
+          type: integer
+          example: 2026
+        sequenceNumber:
+          type: integer
+          example: 1
+        userId:
+          type: string
+          example: john.doe
+        userDisplayName:
+          type: string
+          example: John Doe
+        userEmail:
+          type: string
+          example: john.doe@esn.pl
+        userAvatarURL:
+          type: string
+        section:
+          type: string
+          example: ESN SGH Warsaw
+        country:
+          type: string
+          example: Poland
+        extendedRoles:
+          type: array
+          items:
+            type: string
+          example: ["National.treasurer:PL"]
+        position:
+          type: string
+          example: National Treasurer
+        sourceOfFunding:
+          type: string
+          example: National Board Statutory Budget
+        requestType:
+          type: string
+          enum:
+            - INVOICE_TO_PAY
+            - INVOICE_REIMBURSEMENT
+            - ADVANCE_PAYMENT
+            - DELEGATION_SETTLEMENT
+          example: INVOICE_TO_PAY
+        status:
+          type: string
+          enum:
+            - DRAFT
+            - SUBMITTED
+            - IN_REVIEW
+            - CHANGES_REQUESTED
+            - APPROVED
+            - PAID
+            - REJECTED
+          example: SUBMITTED
+        currency:
+          type: string
+          enum: [PLN, EUR]
+          example: PLN
+        totalGrossAmount:
+          type: number
+          example: 1230.00
+        totalVatAmount:
+          type: number
+          example: 230.00
+        documents:
+          type: array
+          items:
+            $ref: '#/components/schemas/InvoiceDocumentItem'
+        requestedAmountPLN:
+          type: number
+          example: 500.00
+        explanationAndBudget:
+          type: string
+          example: Budget breakdown for local council workshop
+        delegationFormAttachment:
+          $ref: '#/components/schemas/AttachmentFile'
+        ticketAttachments:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttachmentFile'
+        otherReceipts:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttachmentFile'
+        generalExplanation:
+          type: string
+          example: Financial settlement for council event
+        accountHolderName:
+          type: string
+          example: John Doe
+        accountHolderAddress:
+          type: string
+          example: ul. Przykładowa 1, 00-001 Warszawa
+        iban:
+          type: string
+          example: PL00000000000000000000000000
+        swiftBic:
+          type: string
+          example: BPKOAND
+        additionalRemarks:
+          type: string
+        adminRemarks:
+          type: string
+        statusHistory:
+          type: array
+          items:
+            $ref: '#/components/schemas/StatusHistoryEntry'
+        submittedAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    FinancialRequestInput:
+      type: object
+      required:
+        - position
+        - sourceOfFunding
+        - requestType
+        - currency
+      properties:
+        position:
+          type: string
+          example: National Treasurer
+        sourceOfFunding:
+          type: string
+          example: National Board Statutory Budget
+        requestType:
+          type: string
+          enum:
+            - INVOICE_TO_PAY
+            - INVOICE_REIMBURSEMENT
+            - ADVANCE_PAYMENT
+            - DELEGATION_SETTLEMENT
+          example: INVOICE_TO_PAY
+        status:
+          type: string
+          enum: [DRAFT, SUBMITTED]
+          example: DRAFT
+        currency:
+          type: string
+          enum: [PLN, EUR]
+          example: PLN
+        totalGrossAmount:
+          type: number
+          example: 1230.00
+        totalVatAmount:
+          type: number
+          example: 230.00
+        documents:
+          type: array
+          items:
+            $ref: '#/components/schemas/InvoiceDocumentItem'
+        requestedAmountPLN:
+          type: number
+        explanationAndBudget:
+          type: string
+        delegationFormAttachment:
+          $ref: '#/components/schemas/AttachmentFile'
+        ticketAttachments:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttachmentFile'
+        otherReceipts:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttachmentFile'
+        generalExplanation:
+          type: string
+        accountHolderName:
+          type: string
+          example: John Doe
+        accountHolderAddress:
+          type: string
+          example: ul. Przykładowa 1, 00-001 Warszawa
+        iban:
+          type: string
+          example: PL00000000000000000000000000
+        swiftBic:
+          type: string
+        additionalRemarks:
+          type: string
+
+    FinancialRequestUpdate:
+      type: object
+      properties:
+        position:
+          type: string
+        sourceOfFunding:
+          type: string
+        requestType:
+          type: string
+          enum:
+            - INVOICE_TO_PAY
+            - INVOICE_REIMBURSEMENT
+            - ADVANCE_PAYMENT
+            - DELEGATION_SETTLEMENT
+        status:
+          type: string
+          enum:
+            - DRAFT
+            - SUBMITTED
+            - IN_REVIEW
+            - CHANGES_REQUESTED
+            - APPROVED
+            - PAID
+            - REJECTED
+        currency:
+          type: string
+          enum: [PLN, EUR]
+        totalGrossAmount:
+          type: number
+        totalVatAmount:
+          type: number
+        documents:
+          type: array
+          items:
+            $ref: '#/components/schemas/InvoiceDocumentItem'
+        requestedAmountPLN:
+          type: number
+        explanationAndBudget:
+          type: string
+        delegationFormAttachment:
+          $ref: '#/components/schemas/AttachmentFile'
+        ticketAttachments:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttachmentFile'
+        otherReceipts:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttachmentFile'
+        generalExplanation:
+          type: string
+        accountHolderName:
+          type: string
+        accountHolderAddress:
+          type: string
+        iban:
+          type: string
+        swiftBic:
+          type: string
+        additionalRemarks:
+          type: string
+        adminRemarks:
+          type: string
+        historyNote:
+          type: string
+          description: Optional note appended to statusHistory comment
+          example: Corrected invoice tax ID
+
+    SignedURL:
+      type: object
+      required:
+        - id
+        - url
+      properties:
+        id:
+          type: string
+          description: Unique identifier of the uploaded asset
+          example: "01J8K3M4N5P6Q7R8S9T0"
+        url:
+          type: string
+          description: Presigned S3 PUT URL
+          example: https://esn-poland-finances-media.s3.eu-central-1.amazonaws.com/images/dev/01J8K3M4N5P6Q7R8S9T0.png?...
+
+    LoginResponse:
+      type: object
+      required:
+        - token
+        - user
+      properties:
+        token:
+          type: string
+          description: Signed JWT authentication token
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        user:
+          $ref: '#/components/schemas/User'
+
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Unauthorized
+
+  responses:
+    OperationCompleted:
+      description: Operation completed successfully
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: true
+              deletedId:
+                type: string
+                example: "1/2026"
+
+    BadParameters:
+      description: Bad or invalid input parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Unauthorized:
+      description: Authentication required or invalid token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Forbidden:
+      description: Access denied or insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    NotFound:
+      description: Requested resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Configurations:
+      description: Platform configurations
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Configurations'
+
+    FinancialRequest:
+      description: A single financial request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/FinancialRequest'
+
+    FinancialRequests:
+      description: List of financial requests
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/FinancialRequest'
+
+    User:
+      description: ESN user profile
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/User'
+
+    Users:
+      description: List of ESN users
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/User'
+
+    SignedURL:
+      description: Presigned upload URL
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SignedURL'
+
+    LoginResponse:
+      description: Authentication result with token and user details
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/LoginResponse'

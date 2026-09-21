@@ -1,0 +1,273 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar class="configSubnavToolbar">
+    <ion-segment [(ngModel)]="pageSection">
+      <ng-container *ngFor="let section of pageSections">
+        <ion-segment-button *ngIf="canAccessPageSection(section)" [value]="section">
+          <ion-label>{{ 'CONFIGURATIONS.PAGE_SECTIONS.' + section | translate }}</ion-label>
+        </ion-segment-button>
+      </ng-container>
+    </ion-segment>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="configContent">
+  <div class="maxWidthContainer">
+    <!-- SUBTAB: OPTIONS -->
+    <ion-list class="aList" *ngIf="pageSection === 'OPTIONS'">
+      <ion-list-header>
+        <ion-label>
+          <h2>{{ 'CONFIGURATIONS.DISPLAY_OPTIONS' | translate }}</h2>
+          <p>{{ 'CONFIGURATIONS.DISPLAY_OPTIONS_I' | translate }}</p>
+        </ion-label>
+      </ion-list-header>
+
+      <!-- App Title (English) -->
+      <ion-item>
+        <ion-label position="stacked">{{ 'CONFIGURATIONS.APP_TITLE_EN' | translate }}</ion-label>
+        <ion-input readonly [(ngModel)]="configurations.appTitle.en"></ion-input>
+        <ion-button slot="end" fill="clear" color="medium" class="ion-margin-top" (click)="changeAppTitle('en')">
+          <ion-icon name="pencil" slot="icon-only"></ion-icon>
+        </ion-button>
+      </ion-item>
+
+      <!-- App Title (Polish) -->
+      <ion-item>
+        <ion-label position="stacked">{{ 'CONFIGURATIONS.APP_TITLE_PL' | translate }}</ion-label>
+        <ion-input readonly [(ngModel)]="configurations.appTitle.pl"></ion-input>
+        <ion-button slot="end" fill="clear" color="medium" class="ion-margin-top" (click)="changeAppTitle('pl')">
+          <ion-icon name="pencil" slot="icon-only"></ion-icon>
+        </ion-button>
+      </ion-item>
+
+      <!-- App Subtitle (English) -->
+      <ion-item>
+        <ion-label position="stacked">{{ 'CONFIGURATIONS.APP_SUBTITLE_EN' | translate }}</ion-label>
+        <ion-input readonly [(ngModel)]="configurations.appSubtitle.en"></ion-input>
+        <ion-button slot="end" fill="clear" color="medium" class="ion-margin-top" (click)="changeAppSubtitle('en')">
+          <ion-icon name="pencil" slot="icon-only"></ion-icon>
+        </ion-button>
+      </ion-item>
+
+      <!-- App Subtitle (Polish) -->
+      <ion-item>
+        <ion-label position="stacked">{{ 'CONFIGURATIONS.APP_SUBTITLE_PL' | translate }}</ion-label>
+        <ion-input readonly [(ngModel)]="configurations.appSubtitle.pl"></ion-input>
+        <ion-button slot="end" fill="clear" color="medium" class="ion-margin-top" (click)="changeAppSubtitle('pl')">
+          <ion-icon name="pencil" slot="icon-only"></ion-icon>
+        </ion-button>
+      </ion-item>
+
+      <!-- Support Email -->
+      <ion-item>
+        <ion-label position="stacked">{{ 'CONFIGURATIONS.SUPPORT_EMAIL' | translate }}</ion-label>
+        <ion-input readonly [(ngModel)]="configurations.supportEmail"></ion-input>
+        <ion-button slot="end" fill="clear" color="medium" class="ion-margin-top" (click)="changeSupportEmail()">
+          <ion-icon name="pencil" slot="icon-only"></ion-icon>
+        </ion-button>
+      </ion-item>
+
+      <!-- App Logo Light Mode -->
+      <ion-item>
+        <ion-label class="ion-text-wrap">
+          {{ 'CONFIGURATIONS.APP_LOGO_LIGHT' | translate }}
+          <p>{{ 'CONFIGURATIONS.APP_LOGO_LIGHT_I' | translate }}</p>
+        </ion-label>
+        <ion-thumbnail slot="end" class="logoThumbnail">
+          <ion-img [src]="configurations.appLogoURL || app.getIcon()"></ion-img>
+        </ion-thumbnail>
+        <input #appLogoInput type="file" accept="image/*" style="display: none" (change)="uploadAppLogo($event)" />
+        <ion-button slot="end" fill="clear" color="medium" (click)="appLogoInput.click()">
+          <ion-icon name="cloud-upload-outline" slot="icon-only"></ion-icon>
+        </ion-button>
+        <ion-button slot="end" fill="clear" color="danger" (click)="resetAppLogo()" *ngIf="configurations.appLogoURL">
+          <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
+        </ion-button>
+      </ion-item>
+
+      <!-- App Logo Dark Mode -->
+      <ion-item>
+        <ion-label class="ion-text-wrap">
+          {{ 'CONFIGURATIONS.APP_LOGO_DARK' | translate }}
+          <p>{{ 'CONFIGURATIONS.APP_LOGO_DARK_I' | translate }}</p>
+        </ion-label>
+        <ion-thumbnail slot="end" class="logoThumbnail darkThumbnail">
+          <ion-img [src]="configurations.appLogoURLDarkMode || app.getIcon(true)"></ion-img>
+        </ion-thumbnail>
+        <input #appLogoDarkModeInput type="file" accept="image/*" style="display: none" (change)="uploadAppLogo($event, true)" />
+        <ion-button slot="end" fill="clear" color="medium" (click)="appLogoDarkModeInput.click()">
+          <ion-icon name="cloud-upload-outline" slot="icon-only"></ion-icon>
+        </ion-button>
+        <ion-button slot="end" fill="clear" color="danger" (click)="resetAppLogo(true)" *ngIf="configurations.appLogoURLDarkMode">
+          <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
+        </ion-button>
+      </ion-item>
+
+
+      <!-- Timezone -->
+      <ion-item>
+        <ion-label position="stacked">{{ 'CONFIGURATIONS.TIMEZONE_OF_REFERENCE' | translate }}</ion-label>
+        <ion-select interface="popover" [(ngModel)]="configurations.timezone" (ionChange)="updateConfigurations()">
+          <ion-select-option *ngFor="let tz of timezones" [value]="tz">{{ tz }}</ion-select-option>
+        </ion-select>
+      </ion-item>
+
+      <!-- Page Sections Order (Users with full configurations rights) -->
+      <ion-list-header *ngIf="canReorderPageSections()">
+        <ion-label>
+          <h2>{{ 'CONFIGURATIONS.PAGE_SECTIONS_ORDER' | translate }}</h2>
+          <p>{{ 'CONFIGURATIONS.PAGE_SECTIONS_ORDER_I' | translate }}</p>
+        </ion-label>
+      </ion-list-header>
+      <ion-reorder-group *ngIf="canReorderPageSections()" [disabled]="false" (ionItemReorder)="reorderPageSections($event)">
+        <ion-item *ngFor="let section of pageSections">
+          <ion-label>{{ 'CONFIGURATIONS.PAGE_SECTIONS.' + section | translate }}</ion-label>
+          <ion-reorder slot="end"></ion-reorder>
+        </ion-item>
+      </ion-reorder-group>
+    </ion-list>
+
+    <!-- SUBTAB: USERS -->
+    <ion-list class="aList" *ngIf="pageSection === 'USERS'">
+      <!-- Preview Mode -->
+      <ion-list-header class="ion-padding-top">
+        <ion-label>
+          <h2>{{ 'CONFIGURATIONS.SEE_AS' | translate }}</h2>
+          <p>{{ 'CONFIGURATIONS.SEE_AS_I' | translate }}</p>
+        </ion-label>
+      </ion-list-header>
+      <ion-item button detail (click)="app.seeAsStandardUser()">
+        <ion-icon name="person-outline" slot="start" color="primary"></ion-icon>
+        <ion-label>{{ 'CONFIGURATIONS.SEE_AS_STANDARD_USER' | translate }}</ion-label>
+      </ion-item>
+      <ion-item button detail (click)="app.seeAsFinancialManager()">
+        <ion-icon name="cash-outline" slot="start" color="primary"></ion-icon>
+        <ion-label>{{ 'CONFIGURATIONS.SEE_AS_FINANCIAL_MANAGER' | translate }}</ion-label>
+      </ion-item>
+      <ng-container *ngFor="let role of configurations?.customRoles">
+        <ion-item button detail (click)="app.seeAsCustomRole(role)">
+          <ion-icon name="shield-outline" slot="start" color="secondary"></ion-icon>
+          <ion-label>{{ 'CONFIGURATIONS.SEE_AS_CUSTOM_ROLE' | translate }}: {{ role.name }}</ion-label>
+        </ion-item>
+      </ng-container>
+
+      <!-- Automatic Role Assignments (CAS patterns) -->
+      <ion-list-header class="ion-padding-top">
+        <ion-label>
+          <h2>{{ 'CONFIGURATIONS.AUTOMATIC_ROLE_ASSIGNMENTS' | translate }}</h2>
+          <p>{{ 'CONFIGURATIONS.AUTOMATIC_ROLE_ASSIGNMENTS_I' | translate }}</p>
+        </ion-label>
+      </ion-list-header>
+      <ion-item button detail (click)="manageAutomaticRole('ADMINISTRATOR')">
+        <ion-label>
+          {{ 'CONFIGURATIONS.ADMINISTRATORS' | translate }}
+          <p *ngIf="getAutomaticRoleAssignmentCount('ADMINISTRATOR') > 0">
+            {{ getAutomaticRoleAssignmentCount('ADMINISTRATOR') }}
+            {{ (getAutomaticRoleAssignmentCount('ADMINISTRATOR') === 1 ? 'CONFIGURATIONS.ESN_ACCOUNTS_ROLE_ONE' : 'CONFIGURATIONS.ESN_ACCOUNTS_ROLES_MANY') | translate }}
+          </p>
+        </ion-label>
+      </ion-item>
+      <ion-item button detail (click)="manageAutomaticRole('FINANCIAL_MANAGER')">
+        <ion-label>
+          {{ 'CONFIGURATIONS.FINANCIAL_MANAGERS' | translate }}
+          <p *ngIf="getAutomaticRoleAssignmentCount('FINANCIAL_MANAGER') > 0">
+            {{ getAutomaticRoleAssignmentCount('FINANCIAL_MANAGER') }}
+            {{ (getAutomaticRoleAssignmentCount('FINANCIAL_MANAGER') === 1 ? 'CONFIGURATIONS.ESN_ACCOUNTS_ROLE_ONE' : 'CONFIGURATIONS.ESN_ACCOUNTS_ROLES_MANY') | translate }}
+          </p>
+        </ion-label>
+      </ion-item>
+
+      <!-- Administrators List -->
+      <ion-list-header class="ion-padding-top">
+        <ion-label>
+          <h2>{{ 'CONFIGURATIONS.ADMINISTRATORS' | translate }}</h2>
+          <p>{{ 'CONFIGURATIONS.ADMINISTRATORS_I' | translate }}</p>
+        </ion-label>
+        <ion-button size="small" (click)="addAdministrator()">{{ 'COMMON.ADD' | translate }}</ion-button>
+      </ion-list-header>
+      <ion-item *ngFor="let adminId of configurations?.administratorsIds">
+        <ion-label>{{ adminId }}</ion-label>
+        <ion-button fill="clear" color="medium" slot="end" (click)="app.openUserProfileById(adminId)">
+          <ion-icon name="open-outline" slot="icon-only"></ion-icon>
+        </ion-button>
+        <ion-button
+          fill="clear"
+          color="danger"
+          slot="end"
+          *ngIf="configurations.administratorsIds.length > 1"
+          (click)="removeAdministratorById(adminId)"
+        >
+          <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
+        </ion-button>
+      </ion-item>
+
+      <!-- Financial Managers List -->
+      <ion-list-header class="ion-padding-top">
+        <ion-label>
+          <h2>{{ 'CONFIGURATIONS.FINANCIAL_MANAGERS' | translate }}</h2>
+          <p>{{ 'CONFIGURATIONS.FINANCIAL_MANAGERS_I' | translate }}</p>
+        </ion-label>
+        <ion-button size="small" (click)="addFinancialManager()">{{ 'COMMON.ADD' | translate }}</ion-button>
+      </ion-list-header>
+      <ion-item class="noElements" *ngIf="configurations?.financialManagersIds && !configurations.financialManagersIds.length">
+        <ion-label>{{ 'CONFIGURATIONS.NO_USERS_ADDED' | translate }}</ion-label>
+      </ion-item>
+      <ion-item *ngFor="let managerId of configurations?.financialManagersIds">
+        <ion-label>{{ managerId }}</ion-label>
+        <ion-button fill="clear" color="medium" slot="end" (click)="app.openUserProfileById(managerId)">
+          <ion-icon name="open-outline" slot="icon-only"></ion-icon>
+        </ion-button>
+        <ion-button fill="clear" color="danger" slot="end" (click)="removeFinancialManagerById(managerId)">
+          <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
+        </ion-button>
+      </ion-item>
+
+      <!-- Custom Roles -->
+      <ion-list-header class="ion-padding-top">
+        <ion-label>
+          <h2>{{ 'CONFIGURATIONS.CUSTOM_ROLES' | translate }}</h2>
+          <p>{{ 'CONFIGURATIONS.CUSTOM_ROLES_I' | translate }}</p>
+        </ion-label>
+        <ion-button size="small" (click)="addCustomRole()">{{ 'COMMON.ADD' | translate }}</ion-button>
+      </ion-list-header>
+      <ion-item class="noElements" *ngIf="configurations?.customRoles && !configurations.customRoles.length">
+        <ion-label>{{ 'CONFIGURATIONS.NO_CUSTOM_ROLES' | translate }}</ion-label>
+      </ion-item>
+      <ion-item button detail *ngFor="let role of configurations?.customRoles" (click)="manageCustomRole(role)">
+        <ion-label class="ion-text-wrap">
+          <h2>{{ role.name }}</h2>
+          <p class="customRoleSummary">
+            <span>
+              {{ role.userIds?.length || 0 }}
+              {{ ((role.userIds?.length || 0) === 1 ? 'CONFIGURATIONS.USER_ONE' : 'CONFIGURATIONS.USERS_MANY') | translate }}
+            </span>
+            <span> · </span>
+            <span>
+              {{ role.extendedRolePatterns?.length || 0 }}
+              {{ ((role.extendedRolePatterns?.length || 0) === 1 ? 'CONFIGURATIONS.ESN_ACCOUNTS_ROLE_ONE' : 'CONFIGURATIONS.ESN_ACCOUNTS_ROLES_MANY') | translate }}
+            </span>
+            <span> · </span>
+            <span>
+              {{ role.permissions?.length || 0 }}
+              {{ ((role.permissions?.length || 0) === 1 ? 'CONFIGURATIONS.PERMISSION_ONE' : 'CONFIGURATIONS.PERMISSIONS_MANY') | translate }}
+            </span>
+          </p>
+        </ion-label>
+        <ion-button fill="clear" color="danger" slot="end" (click)="$event.stopPropagation(); removeCustomRole(role)">
+          <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
+        </ion-button>
+      </ion-item>
+
+      <!-- CAS Matched Users -->
+      <ion-list-header class="ion-padding-top">
+        <ion-label>
+          <h2>{{ 'CONFIGURATIONS.CAS_MATCHED_USERS' | translate }}</h2>
+          <p>{{ 'CONFIGURATIONS.CAS_MATCHED_USERS_I' | translate }}</p>
+        </ion-label>
+        <ion-button size="small" (click)="openUserRoleMappings()">
+          <ion-icon name="open-outline" slot="start"></ion-icon>
+          {{ 'COMMON.OPEN' | translate }}
+        </ion-button>
+      </ion-list-header>
+    </ion-list>
+  </div>
+</ion-content>

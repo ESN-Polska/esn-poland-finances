@@ -41,6 +41,11 @@ export class HomePage implements OnInit {
   }
 
   public viewRequest(requestId: string): void {
-    this.router.navigate(['/t/requests/view', encodeURIComponent(requestId)]);
+    const [seq, year] = requestId.split('/');
+    if (year && seq) {
+      this.router.navigate(['/t/requests/view', year, seq]);
+    } else {
+      this.router.navigate(['/t/requests/view', encodeURIComponent(requestId)]);
+    }
   }
 }

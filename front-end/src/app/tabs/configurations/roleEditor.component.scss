@@ -1,0 +1,89 @@
+.roleEditorContent {
+  --background: var(--bg-body);
+}
+
+.maxWidthContainer {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 16px 16px 40px;
+}
+
+.roleEditorList {
+  background: transparent;
+  padding: 0;
+
+  ion-list-header {
+    padding-left: 0;
+    padding-right: 0;
+    margin-top: 20px;
+    margin-bottom: 8px;
+
+    h2 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text-dark);
+      letter-spacing: -0.01em;
+    }
+
+    p {
+      font-size: 0.85rem;
+      color: var(--text-medium);
+      margin-top: 4px;
+    }
+  }
+
+  ion-item {
+    --background: var(--bg-card);
+    --color: var(--text-dark);
+    --border-radius: 10px;
+    --padding-start: 16px;
+    --padding-end: 16px;
+    margin-bottom: 8px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+    transition: background-color 0.2s ease;
+
+    ion-label {
+      white-space: normal;
+      font-weight: 500;
+      color: var(--text-dark);
+
+      &[position='stacked'] {
+        color: var(--text-medium);
+        font-size: 0.82rem;
+        font-weight: 600;
+        margin-bottom: 6px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+    }
+
+    ion-input,
+    ion-textarea {
+      --color: var(--text-dark);
+      color: var(--text-dark);
+      font-weight: 500;
+    }
+
+    ion-checkbox {
+      --color-checked: var(--esn-cyan);
+      margin-right: 12px;
+    }
+
+    &.permissionChild {
+      --padding-start: 36px;
+    }
+  }
+}
+
+body.dark {
+  .roleEditorList {
+    ion-item {
+      --background: var(--bg-card);
+      --color: var(--text-dark);
+      border: none !important;
+      outline: none !important;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+    }
+  }
+}

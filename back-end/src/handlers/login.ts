@@ -105,6 +105,7 @@ class Login extends ResourceController {
               roles: user.roles,
               extendedRoles: user.extendedRoles,
               isAdministrator: user.isAdministrator,
+              canManageFinances: user.canManageFinances,
               lastLoginAt: user.lastLoginAt
             }
           });
@@ -124,7 +125,20 @@ class Login extends ResourceController {
       }
 
       // Default browser redirect to the front-end with token
-      const appURL = this.queryParams.localhost ? `http://localhost:${this.queryParams.localhost}` : APP_URL;
+      let appURL = APP_URL;
+      if (this.queryParams.localhost) {
+        const local = String(this.queryParams.localhost);
+        const isLocalHost =
+          /^\d+$/.test(local) ||
+          /^(localhost|127\.0\.0\.1)(:\d+)?$/.test(local) ||
+          /^192\.168\.\d{1,3}\.\d{1,3}(:\d+)?$/.test(local) ||
+          /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d+)?$/.test(local) ||
+          /^172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}(:\d+)?$/.test(local);
+
+        if (isLocalHost) {
+          appURL = local.includes(':') || local.includes('.') ? `http://${local}` : `http://localhost:${local}`;
+        }
+      }
       this.callback(null, {
         statusCode: 302,
         headers: {

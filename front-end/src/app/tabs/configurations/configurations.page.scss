@@ -1,0 +1,198 @@
+.configContent {
+  --background: var(--bg-body);
+}
+
+.configSubnavToolbar {
+  --background: var(--bg-card);
+  --border-width: 0;
+  border-bottom: 1px solid var(--border-color);
+  padding: 8px 16px;
+
+  ion-segment {
+    background: var(--bg-body);
+    border-radius: 10px;
+    padding: 3px;
+    max-width: 480px;
+    margin: 0 auto;
+
+    ion-segment-button {
+      --color: var(--text-medium);
+      --color-checked: var(--esn-cyan);
+      --indicator-color: var(--bg-card);
+      --indicator-box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+      --border-radius: 8px;
+      font-weight: 600;
+      min-height: 38px;
+      text-transform: none;
+      letter-spacing: 0;
+      transition: all 0.2s ease;
+    }
+  }
+}
+
+.maxWidthContainer {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+}
+
+.aList {
+  background: transparent;
+  padding: 0;
+  margin-bottom: 32px;
+
+  ion-list-header {
+    padding-left: 0;
+    padding-right: 0;
+    margin-top: 20px;
+    margin-bottom: 10px;
+
+    h2 {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--text-dark);
+      letter-spacing: -0.01em;
+    }
+
+    p {
+      font-size: 0.88rem;
+      color: var(--text-medium);
+      margin-top: 4px;
+    }
+  }
+
+  ion-item {
+    --background: var(--bg-card);
+    --color: var(--text-dark);
+    --border-radius: 10px;
+    --padding-start: 16px;
+    --padding-end: 16px;
+    --inner-padding-end: 8px;
+    margin-bottom: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    border: 1px solid var(--border-color);
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+
+    ion-label {
+      font-weight: 500;
+      color: var(--text-dark);
+
+      &[position='stacked'] {
+        color: var(--text-medium);
+        font-size: 0.82rem;
+        font-weight: 600;
+        margin-bottom: 6px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+
+      h2 {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--text-dark);
+      }
+
+      p {
+        color: var(--text-medium);
+        font-size: 0.85rem;
+      }
+    }
+
+    ion-input {
+      --color: var(--text-dark);
+      color: var(--text-dark);
+      font-weight: 500;
+      font-size: 0.95rem;
+    }
+
+    ion-select {
+      --color: var(--text-dark);
+      color: var(--text-dark);
+      font-weight: 500;
+      max-width: 100%;
+      width: 100%;
+    }
+
+    ion-reorder {
+      color: var(--text-medium);
+    }
+  }
+
+  .noElements {
+    --color: var(--text-medium);
+    font-style: italic;
+  }
+}
+
+.logoThumbnail {
+  width: 52px;
+  height: 52px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+
+  ion-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+}
+
+.darkThumbnail {
+  background: #0f172a;
+  border-color: #334155;
+}
+
+.customRoleSummary {
+  font-size: 0.82rem;
+  color: var(--text-medium);
+  margin-top: 4px;
+}
+
+body.dark {
+  .configSubnavToolbar {
+    --background: var(--bg-card);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+
+    ion-segment {
+      background: rgba(255, 255, 255, 0.05);
+
+      ion-segment-button {
+        --color: var(--text-medium);
+        --color-checked: #38bdf8;
+        --indicator-color: #2a2a2a;
+        --indicator-box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+      }
+    }
+  }
+
+  .aList {
+    ion-item {
+      --background: var(--bg-card);
+      --color: var(--text-dark);
+      border: none !important;
+      outline: none !important;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+
+      &.reorder-selected {
+        --background: #262626;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+      }
+    }
+  }
+
+  .logoThumbnail {
+    border-color: rgba(255, 255, 255, 0.15);
+  }
+
+  .darkThumbnail {
+    background: #0f172a;
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+}

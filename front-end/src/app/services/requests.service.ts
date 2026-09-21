@@ -152,6 +152,7 @@ export class RequestsService {
         ...rawList[existingIndex],
         ...payload,
         ...totals,
+        userAvatarURL: rawList[existingIndex]?.userAvatarURL || user.avatarURL || '',
         status: targetStatus,
         updatedAt: now
       };
@@ -191,8 +192,9 @@ export class RequestsService {
         userId: user.userId,
         userDisplayName: user.getDisplayName(),
         userEmail: user.email,
-        section: user.section || user.sectionCode,
-        country: user.country || 'Poland',
+        userAvatarURL: user.avatarURL || '',
+        section: user.section || user.sectionCode || (user.country ? 'ESN ' + user.country : ''),
+        country: user.country || '',
         extendedRoles: user.extendedRoles || [],
         status: targetStatus,
         ...totals,
