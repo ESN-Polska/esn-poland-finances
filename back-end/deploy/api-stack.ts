@@ -187,7 +187,7 @@ export class ApiStack extends cdk.Stack {
           } else if (path === '/login') {
             this.httpApi.addRoutes({
               path,
-              methods: [ApiGwAlpha.HttpMethod.POST],
+              methods: [ApiGwAlpha.HttpMethod.GET, ApiGwAlpha.HttpMethod.POST],
               integration,
               authorizer: undefined
             });
