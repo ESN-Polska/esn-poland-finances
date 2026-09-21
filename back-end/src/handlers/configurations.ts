@@ -1,11 +1,14 @@
-import { DynamoDB, HandledError, ResourceController } from 'idea-aws';
+import { DynamoDB, HandledError, ResourceController, S3 } from 'idea-aws';
 import { AppPermission, Configurations, DEFAULT_CONFIGURATION_PAGE_SECTIONS_ORDER } from '../models/configurations.model';
 import { User } from '../models/user.model';
 
+const PROJECT = process.env.PROJECT || 'esn-poland-finances';
+const S3_BUCKET_MEDIA = process.env.S3_BUCKET_MEDIA || `${PROJECT}-media`;
 const DDB_TABLES = {
   configurations: process.env.DDB_TABLE_configurations
 };
 const ddb = new DynamoDB();
+const s3 = new S3();
 
 export const handler = (ev: any, _: any, cb: any): Promise<void> => new ConfigurationsRC(ev, cb).handleRequest();
 
@@ -100,10 +103,37 @@ class ConfigurationsRC extends ResourceController {
         }
         throw err;
       }
+
+      // Clean up previous files from S3 if URLs were replaced
+      if (this.configurations?.rulesFileURL && newConfigurations.rulesFileURL !== this.configurations.rulesFileURL) {
+        await this.deleteOldS3File(this.configurations.rulesFileURL);
+      }
+      if (this.configurations?.appLogoURL && newConfigurations.appLogoURL !== this.configurations.appLogoURL) {
+        await this.deleteOldS3File(this.configurations.appLogoURL);
+      }
+      if (this.configurations?.appLogoURLDarkMode && newConfigurations.appLogoURLDarkMode !== this.configurations.appLogoURLDarkMode) {
+        await this.deleteOldS3File(this.configurations.appLogoURLDarkMode);
+      }
     }
 
     this.configurations = newConfigurations;
     return this.configurations;
+  }
+
+  private async deleteOldS3File(fileUrl?: string): Promise<void> {
+    if (!fileUrl) return;
+    try {
+      const url = new URL(fileUrl);
+      const mediaDomain = process.env.MEDIA_DOMAIN || 'media.finances.esn-poland.link';
+      if (url.hostname === mediaDomain) {
+        const key = url.pathname.replace(/^\/+/, '');
+        if (key && (key.startsWith('documents/') || key.startsWith('images/'))) {
+          await s3.deleteObject({ bucket: S3_BUCKET_MEDIA, key });
+        }
+      }
+    } catch {
+      // Ignore URL parsing or S3 errors to prevent blocking configuration updates
+    }
   }
 
   private checkConfigurationUpdatePermissions(): void {

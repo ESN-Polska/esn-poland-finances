@@ -26,7 +26,7 @@ export class MediaService {
   async uploadDocument(file: File): Promise<{ id: string; url: string }> {
     const extension = file.name.split('.').pop()?.toLowerCase() || 'pdf';
     const res = await this.api.postResource('media', {
-      body: { type: 'document', extension }
+      body: { type: 'document', extension, filename: file.name }
     });
     await fetch(res.url, {
       method: 'PUT',
