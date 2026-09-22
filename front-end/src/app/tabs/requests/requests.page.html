@@ -29,63 +29,21 @@
         </button>
       </div>
 
-      <div class="statusFilterPills">
-        <button
-          type="button"
-          class="filterPill"
-          [class.active]="selectedStatus === 'ALL'"
-          (click)="setStatusFilter('ALL')"
+      <div class="statusFilterWrapper">
+        <span class="filterLabel">{{ 'REQUESTS.FILTER_BY_STATUS' | translate }}:</span>
+        <ion-select
+          interface="popover"
+          class="statusFilterSelect"
+          [(ngModel)]="selectedStatus"
+          (ionChange)="applyFilters()"
         >
-          {{ 'COMMON.ALL' | translate }} ({{ allRequests.length }})
-        </button>
-        <button
-          type="button"
-          class="filterPill"
-          [class.active]="selectedStatus === 'DRAFT'"
-          (click)="setStatusFilter('DRAFT')"
-        >
-          {{ 'REQUESTS.STATUSES.DRAFT' | translate }} ({{ countByStatus('DRAFT') }})
-        </button>
-        <button
-          type="button"
-          class="filterPill"
-          [class.active]="selectedStatus === 'SUBMITTED'"
-          (click)="setStatusFilter('SUBMITTED')"
-        >
-          {{ 'REQUESTS.STATUSES.SUBMITTED' | translate }} ({{ countByStatus('SUBMITTED') }})
-        </button>
-        <button
-          type="button"
-          class="filterPill"
-          [class.active]="selectedStatus === 'IN_REVIEW'"
-          (click)="setStatusFilter('IN_REVIEW')"
-        >
-          {{ 'REQUESTS.STATUSES.IN_REVIEW' | translate }} ({{ countByStatus('IN_REVIEW') }})
-        </button>
-        <button
-          type="button"
-          class="filterPill alertPill"
-          [class.active]="selectedStatus === 'CHANGES_REQUESTED'"
-          (click)="setStatusFilter('CHANGES_REQUESTED')"
-        >
-          {{ 'REQUESTS.STATUSES.CHANGES_REQUESTED' | translate }} ({{ countByStatus('CHANGES_REQUESTED') }})
-        </button>
-        <button
-          type="button"
-          class="filterPill"
-          [class.active]="selectedStatus === 'APPROVED'"
-          (click)="setStatusFilter('APPROVED')"
-        >
-          {{ 'REQUESTS.STATUSES.APPROVED' | translate }} ({{ countByStatus('APPROVED') }})
-        </button>
-        <button
-          type="button"
-          class="filterPill"
-          [class.active]="selectedStatus === 'PAID'"
-          (click)="setStatusFilter('PAID')"
-        >
-          {{ 'REQUESTS.STATUSES.PAID' | translate }} ({{ countByStatus('PAID') }})
-        </button>
+          <ion-select-option value="ALL">
+            {{ 'COMMON.ALL' | translate }} ({{ allRequests.length }})
+          </ion-select-option>
+          <ion-select-option *ngFor="let s of allStatuses" [value]="s">
+            {{ ('REQUESTS.STATUSES.' + s) | translate }} ({{ countByStatus(s) }})
+          </ion-select-option>
+        </ion-select>
       </div>
     </div>
 

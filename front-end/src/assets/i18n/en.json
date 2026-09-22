@@ -130,6 +130,7 @@
     "MY_REQUESTS_TITLE": "My Requests",
     "MY_REQUESTS_SUBTITLE": "Track and manage your submitted financial requests and drafts.",
     "SEARCH_PLACEHOLDER": "Search by ID, issuer, position or funding source...",
+    "FILTER_BY_STATUS": "Status",
     "DOCUMENTS_COUNT": "document(s)",
     "TOTAL_AMOUNT": "Total Amount",
     "TOTAL_NET": "Total Net",

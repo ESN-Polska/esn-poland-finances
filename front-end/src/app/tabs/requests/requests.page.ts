@@ -17,6 +17,16 @@ export class RequestsPage implements OnInit {
   public searchQuery: string = '';
   public isLoading: boolean = false;
 
+  public readonly allStatuses: RequestStatus[] = [
+    'DRAFT',
+    'SUBMITTED',
+    'IN_REVIEW',
+    'CHANGES_REQUESTED',
+    'APPROVED',
+    'PAID',
+    'REJECTED'
+  ];
+
   constructor(
     private router: Router,
     private alertCtrl: AlertController,
