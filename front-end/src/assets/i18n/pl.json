@@ -364,6 +364,7 @@
     "MANAGER": "Menedżer",
     "AUDITOR": "Audytor",
     "ADMINISTRATOR": "Administrator",
+    "CUSTOM_ROLE": "Niestandardowa",
     "VIEWING_AS": "Przeglądasz jako",
     "EXIT_PREVIEW": "Zakończ podgląd",
     "ADMINISTRATORS": "Administratorzy",

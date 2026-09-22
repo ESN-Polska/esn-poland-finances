@@ -571,8 +571,7 @@ export class AppService {
     if (targetUser.isManager) return this.translate.instant('CONFIGURATIONS.MANAGER');
     if (targetUser.isAuditor) return this.translate.instant('CONFIGURATIONS.AUDITOR');
     if (targetUser.customRoleIds && targetUser.customRoleIds.length > 0) {
-      const customRole = this.configurations?.customRoles?.find((r) => targetUser.customRoleIds.includes(r.id));
-      if (customRole?.name) return customRole.name;
+      return this.translate.instant('CONFIGURATIONS.CUSTOM_ROLE');
     }
     return this.translate.instant('CONFIGURATIONS.STANDARD_USER');
   }
