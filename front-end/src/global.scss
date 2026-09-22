@@ -60,11 +60,11 @@ ion-toolbar {
 }
 
 .text-cyan {
-  color: var(--esn-cyan);
+  color: var(--ion-color-ESNcyan, #00aeef);
 }
 
 .text-dark-blue {
-  color: var(--esn-dark-blue);
+  color: var(--ion-color-ESNdarkBlue, #2e3192);
 }
 
 .text-pink {
@@ -276,5 +276,15 @@ body.dark {
     outline: none !important;
   }
 }
+
+/*
+ * Accent Color Hint Popover (matching esn-poland-assembly)
+ * -------------------------------------------
+ */
+ion-popover.accentHintPopover {
+  --width: 270px;
+  --max-width: 90vw;
+}
+
 
 
