@@ -4,7 +4,7 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { TranslateService } from '@ngx-translate/core';
 import { ConfigurationsService } from '../configurations.service';
 import { AppService } from '@app/app.service';
-import { EmailTemplates, EmailTemplateTypes, getEmailTemplateKey } from '@models/configurations.model';
+import { AppPermission, EmailTemplates, EmailTemplateTypes, getEmailTemplateKey } from '@models/configurations.model';
 
 @Component({
   selector: 'app-email-template',
@@ -14,6 +14,18 @@ import { EmailTemplates, EmailTemplateTypes, getEmailTemplateKey } from '@models
 export class EmailTemplateComponent implements OnInit {
   @Input() templateType!: EmailTemplateTypes;
   @Input() template?: EmailTemplates | EmailTemplateTypes;
+  @Input() readOnly?: boolean;
+
+  public get isReadOnly(): boolean {
+    if (this.readOnly !== undefined) {
+      return this.readOnly;
+    }
+    const user = this.app.currentUser;
+    if (!user) return true;
+    if (user.isAdministrator) return false;
+    if (user.isAuditor) return true;
+    return !user.hasPermission(AppPermission.CONFIGURATIONS.TEMPLATES);
+  }
 
   public currentLang: 'en' | 'pl' = 'en';
   public subject = '';
@@ -91,6 +103,7 @@ export class EmailTemplateComponent implements OnInit {
   }
 
   public onSubjectChange(): void {
+    if (this.isReadOnly) return;
     if (!this.templatesState[this.currentLang]) {
       this.templatesState[this.currentLang] = { subject: this.subject, content: this.content, isLoaded: true };
     } else {
@@ -99,6 +112,7 @@ export class EmailTemplateComponent implements OnInit {
   }
 
   public onContentChange(): void {
+    if (this.isReadOnly) return;
     if (!this.templatesState[this.currentLang]) {
       this.templatesState[this.currentLang] = { subject: this.subject, content: this.content, isLoaded: true };
     } else {
@@ -197,6 +211,7 @@ export class EmailTemplateComponent implements OnInit {
   }
 
   public async save(): Promise<void> {
+    if (this.isReadOnly) return;
     this.errors.clear();
     if (!this.subject?.trim()) this.errors.add('subject');
     if (!this.content?.trim()) this.errors.add('content');
@@ -244,10 +259,12 @@ export class EmailTemplateComponent implements OnInit {
   }
 
   public browseHTMLFile(): void {
+    if (this.isReadOnly) return;
     document.getElementById('sesHtmlFileInput')?.click();
   }
 
   public async loadTemplateFromFile(inputEl: any): Promise<void> {
+    if (this.isReadOnly) return;
     if (!inputEl?.files?.length) return;
     const file = inputEl.files[0];
     if (!file) return;
@@ -277,6 +294,7 @@ export class EmailTemplateComponent implements OnInit {
   }
 
   public async askAndResetTemplate(): Promise<void> {
+    if (this.isReadOnly) return;
     const alert = await this.alertCtrl.create({
       header: this.translate.instant('COMMON.ARE_YOU_SURE'),
       message: this.translate.instant('EMAIL_TEMPLATE.RESET_CONFIRM_MSG'),
@@ -311,6 +329,7 @@ export class EmailTemplateComponent implements OnInit {
   }
 
   public async askAndSendTestEmailWithCurrentTemplate(): Promise<void> {
+    if (this.isReadOnly) return;
     const userEmail = this.app.currentUser?.email || '';
     const alert = await this.alertCtrl.create({
       header: this.translate.instant('EMAIL_TEMPLATE.TEST_TEMPLATE'),

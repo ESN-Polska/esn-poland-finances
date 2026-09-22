@@ -3,7 +3,9 @@ import { Router } from '@angular/router';
 import { AlertController, ToastController } from '@ionic/angular';
 import { TranslateService } from '@ngx-translate/core';
 import { FinancialRequest, RequestStatus } from '@models/financial-request.model';
+import { AppPermission } from '@models/configurations.model';
 import { RequestsService } from '../../services/requests.service';
+import { AppService } from '../../app.service';
 
 @Component({
   selector: 'app-requests-tab',
@@ -16,6 +18,7 @@ export class RequestsPage implements OnInit {
   public selectedStatus: string = 'ALL';
   public searchQuery: string = '';
   public isLoading: boolean = false;
+  public pendingReviewCount = 0;
 
   public readonly allStatuses: RequestStatus[] = [
     'DRAFT',
@@ -27,12 +30,27 @@ export class RequestsPage implements OnInit {
     'REJECTED'
   ];
 
+  public get canAccessManage(): boolean {
+    const user = this.appService.currentUser;
+    if (!user) return false;
+    return (
+      user.isAdministrator ||
+      user.isManager ||
+      user.isAuditor ||
+      user.hasPermission(AppPermission.REQUESTS.PARENT) ||
+      user.hasPermission(AppPermission.REQUESTS.VIEW_ALL) ||
+      user.hasPermission(AppPermission.REQUESTS.MANAGE) ||
+      user.hasPermission(AppPermission.REQUESTS.EXPORT)
+    );
+  }
+
   constructor(
     private router: Router,
     private alertCtrl: AlertController,
     private toastCtrl: ToastController,
     private translate: TranslateService,
-    private requestsService: RequestsService
+    private requestsService: RequestsService,
+    private appService: AppService
   ) {}
 
   public async ngOnInit(): Promise<void> {
@@ -48,11 +66,29 @@ export class RequestsPage implements OnInit {
     try {
       this.allRequests = await this.requestsService.loadMyRequests();
       this.applyFilters();
+      if (this.canAccessManage) {
+        this.loadPendingCount();
+      }
     } catch (err) {
       console.error('Failed to load requests', err);
     } finally {
       this.isLoading = false;
     }
+  }
+
+  private async loadPendingCount(): Promise<void> {
+    try {
+      const all = await this.requestsService.loadAllRequests();
+      this.pendingReviewCount = (all || []).filter(
+        (r) => r.status === 'SUBMITTED' || r.status === 'IN_REVIEW'
+      ).length;
+    } catch {
+      this.pendingReviewCount = 0;
+    }
+  }
+
+  public goToManage(): void {
+    this.router.navigate(['/t/requests/manage']);
   }
 
   public setStatusFilter(status: string): void {

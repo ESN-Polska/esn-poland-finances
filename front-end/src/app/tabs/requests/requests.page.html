@@ -7,10 +7,25 @@
         <p class="pageSubtitle">{{ 'REQUESTS.MY_REQUESTS_SUBTITLE' | translate }}</p>
       </div>
 
-      <ion-button class="submitBtn" (click)="goToSubmit()">
-        <ion-icon slot="start" name="add-circle-outline"></ion-icon>
-        {{ 'HOME.SUBMIT_REQUEST' | translate }}
-      </ion-button>
+      <div class="headerActions">
+        <ion-button
+          *ngIf="canAccessManage"
+          class="manageBtn"
+          fill="outline"
+          (click)="goToManage()"
+        >
+          <ion-icon slot="start" name="shield-checkmark-outline"></ion-icon>
+          {{ 'REQUESTS.MANAGE_REQUESTS_BTN' | translate }}
+          <ion-badge *ngIf="pendingReviewCount > 0" class="manageBadge" color="warning">
+            {{ pendingReviewCount }}
+          </ion-badge>
+        </ion-button>
+
+        <ion-button class="submitBtn" (click)="goToSubmit()">
+          <ion-icon slot="start" name="add-circle-outline"></ion-icon>
+          {{ 'HOME.SUBMIT_REQUEST' | translate }}
+        </ion-button>
+      </div>
     </div>
 
     <!-- Search and Status Filter Bar -->

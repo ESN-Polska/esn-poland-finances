@@ -30,6 +30,36 @@
     margin: 4px 0 0 0;
   }
 
+  .headerActions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .manageBtn {
+    --border-color: var(--ion-color-primary, #00aeef);
+    --color: var(--ion-color-primary, #00aeef);
+    --border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    height: 42px;
+    text-transform: none;
+    margin: 0;
+
+    .manageBadge {
+      margin-left: 8px;
+      font-size: 0.75rem;
+      border-radius: 10px;
+      padding: 2px 7px;
+    }
+
+    ion-icon {
+      font-size: 1.15rem;
+      margin-right: 6px;
+    }
+  }
+
   .submitBtn {
     --background: var(--ion-color-primary, #00aeef);
     --background-hover: var(--ion-color-primary-shade, #0099d2);
@@ -131,15 +161,27 @@
       min-width: 190px;
       display: flex;
       align-items: center;
-      transition: border-color 0.15s ease;
+      outline: none !important;
+      box-shadow: none !important;
+      --border-color: transparent !important;
+      --border-width: 0px !important;
+      --highlight-color: transparent !important;
+      --highlight-color-focused: transparent !important;
 
-      &:hover {
-        border-color: var(--text-medium);
+      &::part(container) {
+        outline: none !important;
+        box-shadow: none !important;
+        border: none !important;
       }
 
+      &:hover,
       &:focus,
-      &.ion-focused {
-        border-color: var(--ion-color-primary, var(--esn-cyan));
+      &:focus-visible,
+      &.ion-focused,
+      &:active {
+        outline: none !important;
+        box-shadow: none !important;
+        border-color: var(--border-color) !important;
       }
     }
   }

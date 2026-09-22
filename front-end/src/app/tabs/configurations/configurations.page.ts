@@ -217,7 +217,10 @@ export class ConfigurationsPage implements OnInit {
   async openTemplateEmailModal(templateType: EmailTemplateTypes | EmailTemplates): Promise<void> {
     const modal = await this.modalCtrl.create({
       component: EmailTemplateComponent,
-      componentProps: { templateType }
+      componentProps: {
+        templateType,
+        readOnly: !this.canModifyTemplates()
+      }
     });
     await modal.present();
   }
