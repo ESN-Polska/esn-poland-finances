@@ -102,14 +102,14 @@ paths:
   /requests:
     get:
       summary: List financial requests
-      description: Returns requests belonging to current user, or all requests across the federation if called by administrator with all=true
+      description: Returns requests belonging to current user, or all requests across the federation if called with all=true by users with requests.view_all, requests.manage, requests.export, auditor, manager, or administrator
       tags: [Requests]
       security:
         - AuthFunction: []
       parameters:
         - name: all
           in: query
-          description: Retrieve all requests across all users (administrators only)
+          description: Retrieve all requests across all users (requires requests.view_all, requests.manage, requests.export, or auditor/manager/administrator role)
           required: false
           schema:
             type: boolean
@@ -148,7 +148,7 @@ paths:
           type: string
     get:
       summary: Get a financial request by ID
-      description: Fetch full request details. Allowed for the creator or administrators.
+      description: Fetch full request details. Allowed for the creator, auditors, managers, administrators, or users with requests permissions.
       tags: [Requests]
       security:
         - AuthFunction: []
@@ -163,7 +163,7 @@ paths:
           $ref: '#/components/responses/NotFound'
     patch:
       summary: Update a financial request
-      description: Modify an existing request. Allowed for creator when status is DRAFT or CHANGES_REQUESTED, or administrator.
+      description: Modify an existing request. Allowed for creator when status is DRAFT or CHANGES_REQUESTED, or for managers/administrators with requests.manage permission.
       tags: [Requests]
       security:
         - AuthFunction: []
@@ -345,7 +345,7 @@ components:
           type: array
           items:
             type: string
-          example: ["financial_requests.view_all", "financial_requests.export"]
+          example: ["requests.view_all", "requests.export"]
         extendedRolePatterns:
           type: array
           items:
@@ -519,13 +519,13 @@ components:
           items:
             type: string
           example:
-            - financial_requests
-            - financial_requests.view_all
-            - financial_requests.manage
-            - financial_requests.export
             - rules
             - rules.text
             - rules.update
+            - requests
+            - requests.view_all
+            - requests.manage
+            - requests.export
         customRoleIds:
           type: array
           items:

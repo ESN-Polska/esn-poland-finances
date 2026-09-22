@@ -1,7 +1,7 @@
 import { DynamoDB, HandledError, ResourceController, SES } from 'idea-aws';
 import { randomUUID } from 'crypto';
 import { FinancialRequest } from '../models/financial-request.model';
-import { Configurations, EmailTemplates, formatSenderName } from '../models/configurations.model';
+import { AppPermission, Configurations, EmailTemplates, formatSenderName } from '../models/configurations.model';
 import { User } from '../models/user.model';
 import { isEmailInBlockList } from './sesNotifications';
 
@@ -33,6 +33,15 @@ class RequestsHandler extends ResourceController {
    */
   protected async getResources(): Promise<any> {
     const user = this.getAuthenticatedUser();
+    const canViewAll =
+      user.isAdministrator ||
+      user.isManager ||
+      user.isAuditor ||
+      user.hasPermission(AppPermission.REQUESTS.PARENT) ||
+      user.hasPermission(AppPermission.REQUESTS.VIEW_ALL) ||
+      user.hasPermission(AppPermission.REQUESTS.MANAGE) ||
+      user.hasPermission(AppPermission.REQUESTS.EXPORT);
+
     const requestId = this.pathParameters?.id;
 
     if (requestId) {
@@ -47,19 +56,24 @@ class RequestsHandler extends ResourceController {
       }
 
       const request = new FinancialRequest(raw);
-      if (!user.isAdministrator && request.userId !== user.userId.toLowerCase()) {
+      if (!canViewAll && request.userId !== user.userId.toLowerCase()) {
         throw new HandledError('Access denied');
       }
 
       return request;
     }
 
-    // List user's requests (or all if admin requested)
-    if (this.queryParams?.all === 'true' && user.isAdministrator) {
+    // List all requests if requested and user has view_all permissions
+    if (this.queryParams?.all === 'true') {
+      if (!canViewAll) {
+        throw new HandledError('Access denied');
+      }
       const items: any[] = await ddb.scan({
         TableName: DDB_TABLES.requests
       });
-      return items.map((x: any) => new FinancialRequest(x));
+      return items
+        .map((x: any) => new FinancialRequest(x))
+        .sort((a: FinancialRequest, b: FinancialRequest) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     }
 
     // List current user's requests using GSI
@@ -182,12 +196,19 @@ class RequestsHandler extends ResourceController {
     if (!raw) throw new HandledError('Request not found');
     const existing = new FinancialRequest(raw);
 
-    // Permission check
-    if (!user.isAdministrator && existing.userId !== user.userId.toLowerCase()) {
+    const isOwner = existing.userId === user.userId.toLowerCase();
+    const canManage =
+      user.isAdministrator ||
+      user.isManager ||
+      user.hasPermission(AppPermission.REQUESTS.PARENT) ||
+      user.hasPermission(AppPermission.REQUESTS.MANAGE);
+
+    // Permission check: either owner modifying an editable request, or a manager
+    if (!isOwner && !canManage) {
       throw new HandledError('Access denied');
     }
 
-    if (!user.isAdministrator && !existing.canEdit()) {
+    if (isOwner && !canManage && !existing.canEdit()) {
       throw new HandledError('This request cannot be modified in its current status');
     }
 
@@ -215,17 +236,20 @@ class RequestsHandler extends ResourceController {
       targetRequestId = `${targetSeqNumber}/${targetYear}`;
     }
 
+    const defaultComment =
+      isTransitioningFromDraftToSubmitted
+        ? 'Initial submission'
+        : updatedStatus === 'SUBMITTED'
+        ? 'Resubmitted after corrections'
+        : canManage && existing.status !== updatedStatus
+        ? `Status changed to ${updatedStatus}`
+        : 'Updated';
+
     const newHistoryEntry = {
       status: updatedStatus,
       timestamp: new Date().toISOString(),
       updatedBy: user.getDisplayName() || user.userId,
-      comment:
-        updates.historyNote ||
-        (updatedStatus === 'SUBMITTED'
-          ? isTransitioningFromDraftToSubmitted
-            ? 'Initial submission'
-            : 'Resubmitted after corrections'
-          : 'Updated')
+      comment: updates.historyNote || defaultComment
     };
 
     const updated = new FinancialRequest({
@@ -236,6 +260,7 @@ class RequestsHandler extends ResourceController {
       sequenceNumber: targetSeqNumber,
       userId: existing.userId,
       status: updatedStatus,
+      adminRemarks: typeof updates.adminRemarks !== 'undefined' ? updates.adminRemarks : existing.adminRemarks,
       statusHistory: [...(existing.statusHistory || []), newHistoryEntry],
       updatedAt: new Date().toISOString()
     });
@@ -364,7 +389,7 @@ class RequestsHandler extends ResourceController {
     }
   }
 
-  private getTemplateForStatus(status: string, lang: 'pl' | 'en' = 'pl'): EmailTemplates {
+  private getTemplateForStatus(status: string, lang: 'pl' | 'en' = 'pl'): EmailTemplates | null {
     if (lang === 'en') {
       switch (status) {
         case 'SUBMITTED':
@@ -378,7 +403,7 @@ class RequestsHandler extends ResourceController {
         case 'REJECTED':
           return EmailTemplates.REQUEST_REJECTED_EN;
         default:
-          return EmailTemplates.REQUEST_STATUS_UPDATED_EN;
+          return null;
       }
     } else {
       switch (status) {
@@ -393,7 +418,7 @@ class RequestsHandler extends ResourceController {
         case 'REJECTED':
           return EmailTemplates.REQUEST_REJECTED_PL;
         default:
-          return EmailTemplates.REQUEST_STATUS_UPDATED_PL;
+          return null;
       }
     }
   }
@@ -420,12 +445,8 @@ class RequestsHandler extends ResourceController {
         return 'notify-request-rejected-pl';
       case EmailTemplates.REQUEST_REJECTED_EN:
         return 'notify-request-rejected-en';
-      case EmailTemplates.REQUEST_STATUS_UPDATED_PL:
-        return 'notify-request-status-updated-pl';
-      case EmailTemplates.REQUEST_STATUS_UPDATED_EN:
-        return 'notify-request-status-updated-en';
       default:
-        return 'notify-request-status-updated-pl';
+        throw new HandledError("Template doesn't exist");
     }
   }
 
@@ -454,7 +475,7 @@ class RequestsHandler extends ResourceController {
     targetStatus: string,
     comment?: string
   ): Promise<void> {
-    if (!request.userEmail || targetStatus === 'DRAFT') return;
+    if (!request.userEmail || targetStatus === 'DRAFT' || targetStatus === 'IN_REVIEW') return;
 
     try {
       if (await isEmailInBlockList(request.userEmail)) {
@@ -465,6 +486,8 @@ class RequestsHandler extends ResourceController {
       const userLang = ((request as any).language || (request as any).preferredLanguage || '').toLowerCase();
       const lang: 'pl' | 'en' = userLang === 'en' || (request.country && request.country.toLowerCase() !== 'poland') ? 'en' : 'pl';
       const templateEnum = this.getTemplateForStatus(targetStatus, lang);
+      if (!templateEnum) return;
+
       const templateName = this.getSESTemplateName(templateEnum);
       const totalAmount = `${Number(request.totalGrossAmount || 0).toFixed(2)} ${request.currency || 'PLN'}`;
       const requestUrl = `${BASE_URL}/t/requests/view/${encodeURIComponent(request.requestId)}`;
