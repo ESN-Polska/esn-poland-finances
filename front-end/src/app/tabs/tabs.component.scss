@@ -315,6 +315,43 @@ ion-tabs.desktopTabs {
         font-weight: 600;
       }
 
+      .userRoleChip {
+        font-size: 0.62rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        padding: 2px 7px;
+        border-radius: 9999px;
+        line-height: 1.2;
+        white-space: nowrap;
+
+        &.role-administrator {
+          background: rgba(139, 92, 246, 0.32);
+          color: #ddd6fe;
+          border: 1px solid rgba(196, 181, 253, 0.55);
+        }
+        &.role-manager {
+          background: rgba(14, 165, 233, 0.32);
+          color: #bae6fd;
+          border: 1px solid rgba(125, 211, 252, 0.55);
+        }
+        &.role-auditor {
+          background: rgba(245, 158, 11, 0.32);
+          color: #fef3c7;
+          border: 1px solid rgba(253, 230, 138, 0.55);
+        }
+        &.role-custom {
+          background: rgba(20, 184, 166, 0.32);
+          color: #ccfbf1;
+          border: 1px solid rgba(153, 246, 228, 0.55);
+        }
+        &.role-standard_user {
+          background: rgba(255, 255, 255, 0.18);
+          color: rgba(255, 255, 255, 0.92);
+          border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+      }
+
       .userChipChevron {
         font-size: 0.85rem;
         color: rgba(255, 255, 255, 0.8);
@@ -493,6 +530,12 @@ ion-menu {
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+      }
+
+      .menuUserRoleRow {
+        display: flex;
+        align-items: center;
+        margin: 1px 0 2px 0;
       }
 
       .menuUserSub {
@@ -729,9 +772,17 @@ ion-popover.desktopUserPopover {
         text-overflow: ellipsis;
       }
 
-      .popoverUserHandle {
-        font-size: 0.78rem;
-        color: var(--text-medium, #64748b);
+      .popoverUserMetaRow {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin-top: 1px;
+
+        .popoverUserHandle {
+          font-size: 0.78rem;
+          color: var(--text-medium, #64748b);
+        }
       }
     }
   }
@@ -790,7 +841,76 @@ ion-popover.desktopUserPopover {
   }
 }
 
+/* Card / Popover / Drawer context userRoleChip */
+.userRoleChip {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 1.5px 7px;
+  border-radius: 9999px;
+  line-height: 1.25;
+  white-space: nowrap;
+  flex-shrink: 0;
+
+  &.role-administrator {
+    background: #f5f3ff;
+    color: #6d28d9;
+    border: 1px solid #ddd6fe;
+  }
+  &.role-manager {
+    background: #f0f9ff;
+    color: #0369a1;
+    border: 1px solid #bae6fd;
+  }
+  &.role-auditor {
+    background: #fffbeb;
+    color: #b45309;
+    border: 1px solid #fde68a;
+  }
+  &.role-custom {
+    background: #f0fdfa;
+    color: #0f766e;
+    border: 1px solid #99f6e4;
+  }
+  &.role-standard_user {
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid #cbd5e1;
+  }
+}
+
 body.dark {
+  .userRoleChip {
+    &.role-administrator {
+      background: rgba(139, 92, 246, 0.22);
+      color: #c4b5fd;
+      border-color: rgba(167, 139, 250, 0.4);
+    }
+    &.role-manager {
+      background: rgba(14, 165, 233, 0.22);
+      color: #7dd3fc;
+      border-color: rgba(56, 189, 248, 0.4);
+    }
+    &.role-auditor {
+      background: rgba(245, 158, 11, 0.22);
+      color: #fde68a;
+      border-color: rgba(251, 191, 36, 0.4);
+    }
+    &.role-custom {
+      background: rgba(20, 184, 166, 0.22);
+      color: #99f6e4;
+      border-color: rgba(45, 212, 191, 0.4);
+    }
+    &.role-standard_user {
+      background: rgba(255, 255, 255, 0.08);
+      color: rgba(255, 255, 255, 0.8);
+      border-color: rgba(255, 255, 255, 0.16);
+    }
+  }
+
   ion-menu {
     .menuUserCard {
       background: rgba(255, 255, 255, 0.04);

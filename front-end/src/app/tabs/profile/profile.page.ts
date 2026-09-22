@@ -10,7 +10,9 @@ import { AppService } from '../../app.service';
   styleUrls: ['./profile.page.scss']
 })
 export class ProfilePage implements OnInit {
-  public user: User | null = null;
+  public get user(): User | null {
+    return this.app.currentUser;
+  }
   public avatarError = false;
   public bankDetails = {
     accountHolderName: '',
@@ -35,7 +37,6 @@ export class ProfilePage implements OnInit {
   }
 
   public async ngOnInit(): Promise<void> {
-    this.user = this.app.currentUser;
     const saved = await this.app.getDefaultBankDetails();
     if (saved) {
       this.bankDetails = { ...this.bankDetails, ...saved };

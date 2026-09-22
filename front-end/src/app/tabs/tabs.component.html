@@ -55,6 +55,11 @@
       </div>
       <div class="menuUserInfo">
         <div class="menuUserName">{{ user.getDisplayName() }}</div>
+        <div class="menuUserRoleRow" *ngIf="app.hasElevatedRole(user)">
+          <span class="userRoleChip role-{{ app.getUserRoleKey(user).toLowerCase() }}">
+            {{ app.getUserRoleName(user) }}
+          </span>
+        </div>
         <div class="menuUserSub">
           <span class="accountsLink">
             <ion-icon name="open-outline"></ion-icon>
@@ -276,6 +281,12 @@
             </span>
           </div>
           <span class="userName">{{ user.getDisplayName() }}</span>
+          <span
+            class="userRoleChip role-{{ app.getUserRoleKey(user).toLowerCase() }}"
+            *ngIf="app.hasElevatedRole(user)"
+          >
+            {{ app.getUserRoleName(user) }}
+          </span>
           <ion-icon name="chevron-down-outline" class="userChipChevron"></ion-icon>
         </div>
 
@@ -306,7 +317,15 @@
                 </div>
                 <div class="popoverUserInfo">
                   <div class="popoverUserName">{{ user.getDisplayName() }}</div>
-                  <div class="popoverUserHandle font-mono">@{{ user.userId }}</div>
+                  <div class="popoverUserMetaRow">
+                    <span class="popoverUserHandle font-mono">@{{ user.userId }}</span>
+                    <span
+                      class="userRoleChip role-{{ app.getUserRoleKey(user).toLowerCase() }}"
+                      *ngIf="app.hasElevatedRole(user)"
+                    >
+                      {{ app.getUserRoleName(user) }}
+                    </span>
+                  </div>
                 </div>
               </div>
 
