@@ -19,8 +19,7 @@ export enum EmailTemplateTypes {
   REQUEST_CHANGES_REQUESTED = 'REQUEST_CHANGES_REQUESTED',
   REQUEST_APPROVED = 'REQUEST_APPROVED',
   REQUEST_PAID = 'REQUEST_PAID',
-  REQUEST_REJECTED = 'REQUEST_REJECTED',
-  REQUEST_STATUS_UPDATED = 'REQUEST_STATUS_UPDATED'
+  REQUEST_REJECTED = 'REQUEST_REJECTED'
 }
 
 export enum EmailTemplates {
@@ -35,9 +34,7 @@ export enum EmailTemplates {
   REQUEST_PAID_PL = 'REQUEST_PAID_PL',
   REQUEST_PAID_EN = 'REQUEST_PAID_EN',
   REQUEST_REJECTED_PL = 'REQUEST_REJECTED_PL',
-  REQUEST_REJECTED_EN = 'REQUEST_REJECTED_EN',
-  REQUEST_STATUS_UPDATED_PL = 'REQUEST_STATUS_UPDATED_PL',
-  REQUEST_STATUS_UPDATED_EN = 'REQUEST_STATUS_UPDATED_EN'
+  REQUEST_REJECTED_EN = 'REQUEST_REJECTED_EN'
 }
 
 export const getEmailTemplateKey = (type: EmailTemplateTypes, lang: 'pl' | 'en'): EmailTemplates => {
@@ -67,16 +64,16 @@ export const AppPermission = {
     NOTICE: 'home.notice',
     STATISTICS: 'home.statistics'
   },
-  FINANCIAL_REQUESTS: {
-    PARENT: 'financial_requests',
-    VIEW_ALL: 'financial_requests.view_all',
-    MANAGE: 'financial_requests.manage',
-    EXPORT: 'financial_requests.export'
-  },
   RULES: {
     PARENT: 'rules',
     TEXT: 'rules.text',
     UPDATE: 'rules.update'
+  },
+  REQUESTS: {
+    PARENT: 'requests',
+    VIEW_ALL: 'requests.view_all',
+    MANAGE: 'requests.manage',
+    EXPORT: 'requests.export'
   },
   CONFIGURATIONS: {
     PARENT: 'configurations',

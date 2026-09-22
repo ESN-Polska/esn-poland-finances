@@ -160,14 +160,27 @@ class ConfigurationsRC extends ResourceController {
       return await this.sendGuestInvitationEmail(this.body);
     }
 
-    // All other template management requires TEMPLATES permission
-    if (!this.user.isAdministrator && !this.user.hasPermission(AppPermission.CONFIGURATIONS.TEMPLATES)) {
+    // Viewing templates can be performed by administrators, auditors, or users with TEMPLATES permission
+    if (action === 'GET_EMAIL_TEMPLATE') {
+      if (
+        !this.user.isAdministrator &&
+        !this.user.isAuditor &&
+        !this.user.hasPermission(AppPermission.CONFIGURATIONS.TEMPLATES)
+      ) {
+        throw new HandledError('Unauthorized');
+      }
+      return await this.getEmailTemplate(this.body.template);
+    }
+
+    // All template modifications and tests require TEMPLATES permission and cannot be performed by auditors
+    if (
+      this.user.isAuditor ||
+      (!this.user.isAdministrator && !this.user.hasPermission(AppPermission.CONFIGURATIONS.TEMPLATES))
+    ) {
       throw new HandledError('Unauthorized');
     }
 
     switch (action) {
-      case 'GET_EMAIL_TEMPLATE':
-        return await this.getEmailTemplate(this.body.template);
       case 'SET_EMAIL_TEMPLATE':
         return await this.setEmailTemplate(this.body.template, this.body.subject, this.body.content);
       case 'RESET_EMAIL_TEMPLATE':
@@ -205,10 +218,6 @@ class ConfigurationsRC extends ResourceController {
         return 'notify-request-rejected-pl';
       case EmailTemplates.REQUEST_REJECTED_EN:
         return 'notify-request-rejected-en';
-      case EmailTemplates.REQUEST_STATUS_UPDATED_PL:
-        return 'notify-request-status-updated-pl';
-      case EmailTemplates.REQUEST_STATUS_UPDATED_EN:
-        return 'notify-request-status-updated-en';
       default:
         throw new HandledError("Template doesn't exist");
     }
@@ -304,9 +313,7 @@ class ConfigurationsRC extends ResourceController {
       [EmailTemplates.REQUEST_PAID_PL]: 'Wypłata środków dla wniosku finansowego {{requestId}}',
       [EmailTemplates.REQUEST_PAID_EN]: 'Payment processed for financial request {{requestId}}',
       [EmailTemplates.REQUEST_REJECTED_PL]: 'Wniosek finansowy {{requestId}} został odrzucony',
-      [EmailTemplates.REQUEST_REJECTED_EN]: 'Financial request {{requestId}} rejected',
-      [EmailTemplates.REQUEST_STATUS_UPDATED_PL]: 'Aktualizacja statusu wniosku {{requestId}}',
-      [EmailTemplates.REQUEST_STATUS_UPDATED_EN]: 'Status update for financial request {{requestId}}'
+      [EmailTemplates.REQUEST_REJECTED_EN]: 'Financial request {{requestId}} rejected'
     };
 
     const subject = defaultSubjects[emailTemplate] || templateName;
@@ -436,6 +443,10 @@ class ConfigurationsRC extends ResourceController {
     ].filter(field => JSON.stringify(this.body[field]) !== JSON.stringify((this.configurations as any)[field]));
 
     if (!changedFields.length) return;
+
+    if (this.user.isAuditor) {
+      throw new HandledError('Unauthorized');
+    }
 
     const hasFullConfigurationsRights =
       this.user.isAdministrator ||
