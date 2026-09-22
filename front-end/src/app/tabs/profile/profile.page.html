@@ -21,7 +21,15 @@
             <h1 class="heroName">
               {{ user.getDisplayName() }}
             </h1>
-            <span class="heroUsername font-mono">@{{ user.userId }}</span>
+            <div class="heroMetaRow">
+              <span class="heroUsername font-mono">@{{ user.userId }}</span>
+              <span
+                class="userRoleChip role-{{ app.getUserRoleKey(user).toLowerCase() }}"
+                *ngIf="app.hasElevatedRole(user)"
+              >
+                {{ app.getUserRoleName(user) }}
+              </span>
+            </div>
           </div>
 
           <button

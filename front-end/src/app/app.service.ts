@@ -545,4 +545,39 @@ export class AppService {
       return false;
     }
   }
+
+  public getUserRoleKey(user?: User | null): string {
+    const targetUser =
+      this.isImpersonating && (!user || user.userId === this.originalUser?.userId)
+        ? this.currentUser
+        : (user || this.currentUser);
+
+    if (!targetUser) return 'STANDARD_USER';
+    if (targetUser.isAdministrator) return 'ADMINISTRATOR';
+    if (targetUser.isManager) return 'MANAGER';
+    if (targetUser.isAuditor) return 'AUDITOR';
+    if (targetUser.customRoleIds && targetUser.customRoleIds.length > 0) return 'CUSTOM';
+    return 'STANDARD_USER';
+  }
+
+  public getUserRoleName(user?: User | null): string {
+    const targetUser =
+      this.isImpersonating && (!user || user.userId === this.originalUser?.userId)
+        ? this.currentUser
+        : (user || this.currentUser);
+
+    if (!targetUser) return '';
+    if (targetUser.isAdministrator) return this.translate.instant('CONFIGURATIONS.ADMINISTRATOR');
+    if (targetUser.isManager) return this.translate.instant('CONFIGURATIONS.MANAGER');
+    if (targetUser.isAuditor) return this.translate.instant('CONFIGURATIONS.AUDITOR');
+    if (targetUser.customRoleIds && targetUser.customRoleIds.length > 0) {
+      const customRole = this.configurations?.customRoles?.find((r) => targetUser.customRoleIds.includes(r.id));
+      if (customRole?.name) return customRole.name;
+    }
+    return this.translate.instant('CONFIGURATIONS.STANDARD_USER');
+  }
+
+  public hasElevatedRole(user?: User | null): boolean {
+    return this.getUserRoleKey(user) !== 'STANDARD_USER';
+  }
 }
