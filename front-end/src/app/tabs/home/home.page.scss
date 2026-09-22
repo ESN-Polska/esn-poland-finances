@@ -374,33 +374,6 @@
               color: var(--text-dark);
               margin: 0;
             }
-
-            .userRoleChip {
-              font-size: 0.68rem;
-              font-weight: 600;
-              padding: 2px 7px;
-              border-radius: 9999px;
-              text-transform: uppercase;
-              letter-spacing: 0.03em;
-              line-height: 1.2;
-
-              &.role-administrator {
-                background: rgba(239, 68, 68, 0.12);
-                color: #dc2626;
-              }
-              &.role-manager {
-                background: rgba(14, 165, 233, 0.12);
-                color: #0284c7;
-              }
-              &.role-auditor {
-                background: rgba(139, 92, 246, 0.12);
-                color: #7c3aed;
-              }
-              &.role-custom {
-                background: rgba(100, 116, 139, 0.12);
-                color: #475569;
-              }
-            }
           }
 
           .userOrigin {
@@ -759,25 +732,6 @@ body.dark {
   }
 
   .userItem {
-    .userNameRow .userRoleChip {
-      &.role-administrator {
-        background: rgba(239, 68, 68, 0.22);
-        color: #f87171;
-      }
-      &.role-manager {
-        background: rgba(14, 165, 233, 0.22);
-        color: #38bdf8;
-      }
-      &.role-auditor {
-        background: rgba(139, 92, 246, 0.22);
-        color: #a78bfa;
-      }
-      &.role-custom {
-        background: rgba(100, 116, 139, 0.22);
-        color: #94a3b8;
-      }
-    }
-
     .userItemEnd .openAccountsBtn {
       background: rgba(0, 174, 239, 0.15);
       color: #38bdf8;
