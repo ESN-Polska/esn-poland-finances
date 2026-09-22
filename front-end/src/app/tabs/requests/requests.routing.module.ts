@@ -4,11 +4,16 @@ import { RouterModule, Routes } from '@angular/router';
 import { RequestsPage } from './requests.page';
 import { RequestFormPage } from './submit/request-form.page';
 import { RequestViewPage } from './view/request-view.page';
+import { ManageRequestsPage } from './manage/manage-requests.page';
 
 const routes: Routes = [
   {
     path: '',
     component: RequestsPage
+  },
+  {
+    path: 'manage',
+    component: ManageRequestsPage
   },
   {
     path: 'submit',

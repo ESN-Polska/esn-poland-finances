@@ -8,10 +8,6 @@
     "THEME_AUTO": "Automatic",
     "THEME_DARK": "Dark",
     "THEME_LIGHT": "Light",
-    "APPEARANCE": "Appearance",
-    "ACCENT_COLOR": "Accent colour",
-    "ACCENT_DEFAULT": "Default",
-    "ACCENT_DEFAULT_HINT": "Default adapts automatically: ESN Dark Blue in light mode and ESN Cyan in dark mode.",
     "ALL": "All",
     "BACK": "Back",
     "VIEW": "View",
@@ -41,7 +37,9 @@
     "ARE_YOU_SURE": "Are you sure?",
     "OPERATION_COMPLETED": "Operation completed successfully",
     "SOMETHING_WENT_WRONG": "Something went wrong. Please try again.",
-    "FORM_HAS_ERROR_TO_CHECK": "Please fix errors in the form before proceeding."
+    "FORM_HAS_ERROR_TO_CHECK": "Please fix errors in the form before proceeding.",
+    "YEAR": "Year",
+    "TYPE": "Type"
   },
   "AUTH": {
     "LOGIN_BUTTON": "Sign in with ESN Accounts",
@@ -128,6 +126,10 @@
   },
   "PROFILE": {
     "USER_PROFILE": "User Profile",
+    "APPEARANCE": "Appearance",
+    "ACCENT_COLOR": "Accent colour",
+    "ACCENT_DEFAULT": "Default",
+    "ACCENT_DEFAULT_HINT": "Default adapts automatically: ESN Dark Blue in light mode and ESN Cyan in dark mode.",
     "DEFAULT_BANK_TITLE": "Default Payout Bank Details",
     "DEFAULT_BANK_DESC": "These bank details will be automatically pre-filled when you create new reimbursement or advance payment requests.",
     "BANK_SAVED_SUCCESS": "Default bank details saved successfully!"
@@ -148,6 +150,40 @@
   "REQUESTS": {
     "MY_REQUESTS_TITLE": "My Requests",
     "MY_REQUESTS_SUBTITLE": "Track and manage your submitted financial requests and drafts.",
+    "MANAGE_REQUESTS_BTN": "Manage Requests",
+    "MANAGE_PANEL": {
+      "TITLE": "Manage Financial Requests",
+      "SUBTITLE": "Review, process, and audit all federation financial requests",
+      "AUDITOR_BADGE": "Auditor Mode",
+      "AUDITOR_NOTICE": "You have read-only access to inspect and export all financial requests across the federation.",
+      "TOTAL_APPROVED_PAID": "Approved & Paid",
+      "SEARCH_PLACEHOLDER": "Search by ID, applicant, section, funding source, or invoice...",
+      "SHOWING_RESULTS": "Showing {{current}} of {{total}} requests",
+      "RESET_FILTERS": "Reset filters",
+      "APPLICANT": "Applicant",
+      "NO_MATCHING_REQUESTS": "No financial requests match your current search and filter criteria.",
+      "EXPORT_CSV": "Export CSV",
+      "EXPORT_SUCCESS": "Requests export downloaded successfully.",
+      "STATUS_UPDATED": "Request status updated successfully.",
+      "START_REVIEW": "Start Review",
+      "IN_REVIEW_COMMENT": "Review started by manager",
+      "APPROVE_HEADER": "Approve Financial Request",
+      "APPROVE_CONFIRM": "Are you sure you want to approve request",
+      "OPTIONAL_COMMENT": "Optional approval comment",
+      "REQUEST_CHANGES_HEADER": "Request Changes",
+      "REQUEST_CHANGES_DESC": "Provide clear instructions for what needs to be changed by the applicant:",
+      "REQUIRED_CHANGES_PLACEHOLDER": "Explain required modifications...",
+      "SEND_REQUEST_CHANGES": "Send Request for Changes",
+      "REMARKS_REQUIRED": "Please specify what changes are required.",
+      "MARK_PAID_HEADER": "Mark as Paid",
+      "MARK_PAID_CONFIRM": "Confirm payout completion for request",
+      "OPTIONAL_PAYMENT_REF": "Optional transfer reference / note",
+      "REJECT_HEADER": "Reject Request",
+      "REJECT_DESC": "Provide the rejection reason for the applicant:",
+      "REJECTION_REASON_PLACEHOLDER": "Enter rejection reason...",
+      "REASON_REQUIRED": "Rejection reason is required.",
+      "MANAGER_REVIEW_TITLE": "Manager Actions"
+    },
     "SEARCH_PLACEHOLDER": "Search by ID, issuer, position or funding source...",
     "FILTER_BY_STATUS": "Status",
     "DOCUMENTS_COUNT": "document(s)",
@@ -241,6 +277,12 @@
       "ADVANCE_PAYMENT": "Submit an advance payment request",
       "DELEGATION_SETTLEMENT": "Submit a delegation to be settled"
     },
+    "TYPES_SHORT": {
+      "INVOICE_TO_PAY": "Pay",
+      "INVOICE_REIMBURSEMENT": "Reimburse",
+      "ADVANCE_PAYMENT": "Advance",
+      "DELEGATION_SETTLEMENT": "Delegation"
+    },
     "TYPES_DESC": {
       "INVOICE_TO_PAY": "For federation invoices that should be transferred directly to the vendor's bank account.",
       "INVOICE_REIMBURSEMENT": "For expenses paid with personal funds that require reimbursement to your account.",
@@ -266,6 +308,8 @@
       "ADDITIONAL_INFO": "Additional Remarks"
     },
     "FIELDS": {
+      "ID": "Request ID",
+      "TYPE": "Request Type",
       "POSITION": "Position",
       "FUNDING_SOURCE": "Source of Funding",
       "INVOICE_NUMBER": "Invoice / Document Number",
@@ -524,9 +568,7 @@
       "REQUEST_PAID": "Request Paid",
       "REQUEST_PAID_I": "Sent when the bank transfer has been executed and request marked as paid.",
       "REQUEST_REJECTED": "Request Rejected",
-      "REQUEST_REJECTED_I": "Sent when the financial request is rejected.",
-      "REQUEST_STATUS_UPDATED": "Status Updated",
-      "REQUEST_STATUS_UPDATED_I": "Sent for generic status updates or review comments."
+      "REQUEST_REJECTED_I": "Sent when the financial request is rejected."
     },
     "EMAIL_GUEST_ON_DONE": "Send email invitation to guest",
     "EMAIL_GUEST_ON_DONE_I": "An invitation email with the secure link will be sent to {{email}} when you click Done.",

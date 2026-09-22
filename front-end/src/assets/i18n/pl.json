@@ -8,10 +8,6 @@
     "THEME_AUTO": "Automatyczny",
     "THEME_DARK": "Ciemny",
     "THEME_LIGHT": "Jasny",
-    "APPEARANCE": "Wygląd",
-    "ACCENT_COLOR": "Kolor akcentu",
-    "ACCENT_DEFAULT": "Domyślny",
-    "ACCENT_DEFAULT_HINT": "Domyślny dopasowuje się automatycznie: ESN Dark Blue w trybie jasnym oraz ESN Cyan w trybie ciemnym.",
     "ALL": "Wszystkie",
     "BACK": "Wstecz",
     "VIEW": "Podgląd",
@@ -41,7 +37,9 @@
     "ARE_YOU_SURE": "Czy na pewno?",
     "OPERATION_COMPLETED": "Operacja zakończona sukcesem",
     "SOMETHING_WENT_WRONG": "Coś poszło nie tak. Spróbuj ponownie.",
-    "FORM_HAS_ERROR_TO_CHECK": "Popraw błędy w formularzu przed kontynuowaniem."
+    "FORM_HAS_ERROR_TO_CHECK": "Popraw błędy w formularzu przed kontynuowaniem.",
+    "YEAR": "Rok",
+    "TYPE": "Typ"
   },
   "AUTH": {
     "LOGIN_BUTTON": "Zaloguj się przez ESN Accounts",
@@ -128,6 +126,10 @@
   },
   "PROFILE": {
     "USER_PROFILE": "Profil użytkownika",
+    "APPEARANCE": "Wygląd",
+    "ACCENT_COLOR": "Kolor akcentu",
+    "ACCENT_DEFAULT": "Domyślny",
+    "ACCENT_DEFAULT_HINT": "Domyślny dopasowuje się automatycznie: ESN Dark Blue w trybie jasnym oraz ESN Cyan w trybie ciemnym.",
     "DEFAULT_BANK_TITLE": "Domyślny rachunek bankowy do wypłat",
     "DEFAULT_BANK_DESC": "Dane tego rachunku będą automatycznie uzupełniane podczas składania wniosków o zwrot wydatków lub zaliczkę.",
     "BANK_SAVED_SUCCESS": "Domyślne dane bankowe zostały zapisane pomyślnie!"
@@ -148,6 +150,40 @@
   "REQUESTS": {
     "MY_REQUESTS_TITLE": "Moje wnioski",
     "MY_REQUESTS_SUBTITLE": "Śledź i zarządzaj swoimi wnioskami finansowymi oraz wersjami roboczymi.",
+    "MANAGE_REQUESTS_BTN": "Zarządzaj wnioskami",
+    "MANAGE_PANEL": {
+      "TITLE": "Zarządzanie wnioskami finansowymi",
+      "SUBTITLE": "Weryfikuj, przetwarzaj i audytuj wszystkie wnioski finansowe stowarzyszenia",
+      "AUDITOR_BADGE": "Tryb Audytora",
+      "AUDITOR_NOTICE": "Posiadasz uprawnienia tylko do odczytu umożliwiające przeglądanie oraz eksport wszystkich wniosków finansowych.",
+      "TOTAL_APPROVED_PAID": "Zatwierdzone i wypłacone",
+      "SEARCH_PLACEHOLDER": "Szukaj po ID, wnioskodawcy, sekcji, źródle finansowania lub fakturze...",
+      "SHOWING_RESULTS": "Wyświetlono {{current}} z {{total}} wniosków",
+      "RESET_FILTERS": "Wyczyść filtry",
+      "APPLICANT": "Wnioskodawca",
+      "NO_MATCHING_REQUESTS": "Żadne wnioski nie spełniają aktualnych kryteriów wyszukiwania i filtrów.",
+      "EXPORT_CSV": "Eksportuj CSV",
+      "EXPORT_SUCCESS": "Plik CSV z wnioskami został pomyślnie pobrany.",
+      "STATUS_UPDATED": "Status wniosku został zaktualizowany.",
+      "START_REVIEW": "Rozpocznij weryfikację",
+      "IN_REVIEW_COMMENT": "Weryfikacja rozpoczęta przez managera",
+      "APPROVE_HEADER": "Zatwierdź wniosek finansowy",
+      "APPROVE_CONFIRM": "Czy na pewno chcesz zatwierdzić wniosek",
+      "OPTIONAL_COMMENT": "Opcjonalna uwaga do zatwierdzenia",
+      "REQUEST_CHANGES_HEADER": "Poproś o poprawki",
+      "REQUEST_CHANGES_DESC": "Wskaż wnioskodawcy wymagane poprawki lub brakujące dokumenty:",
+      "REQUIRED_CHANGES_PLACEHOLDER": "Opisz wymagane modyfikacje...",
+      "SEND_REQUEST_CHANGES": "Wyślij prośbę o poprawki",
+      "REMARKS_REQUIRED": "Podanie uwag do poprawy jest wymagane.",
+      "MARK_PAID_HEADER": "Oznacz jako wypłacone",
+      "MARK_PAID_CONFIRM": "Potwierdź realizację wypłaty dla wniosku",
+      "OPTIONAL_PAYMENT_REF": "Opcjonalny numer przelewu / notatka",
+      "REJECT_HEADER": "Odrzuć wniosek",
+      "REJECT_DESC": "Podaj uzasadnienie odrzucenia wniosku dla wnioskodawcy:",
+      "REJECTION_REASON_PLACEHOLDER": "Wpisz powód odrzucenia...",
+      "REASON_REQUIRED": "Podanie powodu odrzucenia jest wymagane.",
+      "MANAGER_REVIEW_TITLE": "Działania managera"
+    },
     "SEARCH_PLACEHOLDER": "Szukaj po numerze, wystawcy, stanowisku lub źródle...",
     "FILTER_BY_STATUS": "Status",
     "DOCUMENTS_COUNT": "dok.",
@@ -241,6 +277,12 @@
       "ADVANCE_PAYMENT": "Złóż wniosek o zaliczkę",
       "DELEGATION_SETTLEMENT": "Zgłoś delegację do rozliczenia"
     },
+    "TYPES_SHORT": {
+      "INVOICE_TO_PAY": "Opłacenie",
+      "INVOICE_REIMBURSEMENT": "Zwrot",
+      "ADVANCE_PAYMENT": "Zaliczka",
+      "DELEGATION_SETTLEMENT": "Delegacja"
+    },
     "TYPES_DESC": {
       "INVOICE_TO_PAY": "Dla faktur wystawionych na federację, które mają zostać opłacone bezpośrednio na rachunek wystawcy.",
       "INVOICE_REIMBURSEMENT": "Dla wydatków opłaconych z prywatnych środków, wymagających zwrotu na Twoje konto.",
@@ -266,6 +308,8 @@
       "ADDITIONAL_INFO": "Dodatkowe informacje"
     },
     "FIELDS": {
+      "ID": "Numer wniosku",
+      "TYPE": "Typ wniosku",
       "POSITION": "Stanowisko",
       "FUNDING_SOURCE": "Źródło finansowania",
       "INVOICE_NUMBER": "Numer faktury / dokumentu",
@@ -524,9 +568,7 @@
       "REQUEST_PAID": "Wniosek wypłacony",
       "REQUEST_PAID_I": "Wysyłane, gdy przelew bankowy został zrealizowany i wniosek oznaczony jako wypłacony.",
       "REQUEST_REJECTED": "Wniosek odrzucony",
-      "REQUEST_REJECTED_I": "Wysyłane, gdy wniosek finansowy zostanie odrzucony.",
-      "REQUEST_STATUS_UPDATED": "Aktualizacja statusu wniosku",
-      "REQUEST_STATUS_UPDATED_I": "Wysyłane przy ogólnych aktualizacjach statusu lub komentarzach weryfikatorów."
+      "REQUEST_REJECTED_I": "Wysyłane, gdy wniosek finansowy zostanie odrzucony."
     },
     "EMAIL_GUEST_ON_DONE": "Wyślij zaproszenie e-mail do gościa",
     "EMAIL_GUEST_ON_DONE_I": "Wiadomość e-mail z bezpiecznym linkiem zostanie wysłana na adres {{email}} po kliknięciu Gotowe.",

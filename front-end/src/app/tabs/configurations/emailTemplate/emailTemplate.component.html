@@ -6,7 +6,7 @@
       </ion-button>
     </ion-buttons>
     <ion-title>{{ ('CONFIGURATIONS.EMAIL_TEMPLATES_TYPES.' + resolvedTemplateType) | translate }}</ion-title>
-    <ion-buttons slot="end">
+    <ion-buttons slot="end" *ngIf="!isReadOnly">
       <ion-button [title]="'COMMON.SAVE' | translate" (click)="save()" color="primary">
         <ion-icon name="checkmark-circle-outline" slot="icon-only"></ion-icon>
       </ion-button>
@@ -64,13 +64,14 @@
         </div>
 
         <ion-item [class.fieldHasError]="hasFieldAnError('subject')" class="ion-margin-top">
-          <ion-label position="stacked">{{ 'EMAIL_TEMPLATE.SUBJECT' | translate }} ({{ currentLang.toUpperCase() }}) *</ion-label>
-          <ion-input [(ngModel)]="subject" (ngModelChange)="onSubjectChange()" [placeholder]="'EMAIL_TEMPLATE.SUBJECT_PLACEHOLDER' | translate"></ion-input>
+          <ion-label position="stacked">{{ 'EMAIL_TEMPLATE.SUBJECT' | translate }} ({{ currentLang.toUpperCase() }}) <span *ngIf="!isReadOnly">*</span></ion-label>
+          <ion-input [readonly]="isReadOnly" [(ngModel)]="subject" (ngModelChange)="onSubjectChange()" [placeholder]="'EMAIL_TEMPLATE.SUBJECT_PLACEHOLDER' | translate"></ion-input>
         </ion-item>
 
         <ion-item [class.fieldHasError]="hasFieldAnError('content')" class="ion-margin-top contentItem">
-          <ion-label position="stacked">{{ 'EMAIL_TEMPLATE.CONTENT' | translate }} (HTML &bull; {{ currentLang.toUpperCase() }}) *</ion-label>
+          <ion-label position="stacked">{{ 'EMAIL_TEMPLATE.CONTENT' | translate }} (HTML &bull; {{ currentLang.toUpperCase() }}) <span *ngIf="!isReadOnly">*</span></ion-label>
           <ion-textarea
+            [readonly]="isReadOnly"
             [(ngModel)]="content"
             (ngModelChange)="onContentChange()"
             [rows]="14"
@@ -82,13 +83,13 @@
       </ion-list>
 
       <ion-row class="ion-margin-top actionButtonsRow">
-        <ion-col size="12" size-sm="6">
+        <ion-col size="12" size-sm="6" *ngIf="!isReadOnly">
           <ion-button size="small" expand="block" color="danger" fill="outline" (click)="askAndResetTemplate()">
             <ion-icon name="trash-outline" slot="start"></ion-icon>
             {{ 'EMAIL_TEMPLATE.RESET' | translate }}
           </ion-button>
         </ion-col>
-        <ion-col size="12" size-sm="6">
+        <ion-col size="12" size-sm="6" *ngIf="!isReadOnly">
           <input
             id="sesHtmlFileInput"
             type="file"
@@ -101,13 +102,13 @@
             {{ 'EMAIL_TEMPLATE.CONTENT_FROM_FILE' | translate }}
           </ion-button>
         </ion-col>
-        <ion-col size="12" size-sm="6">
+        <ion-col size="12" [sizeSm]="isReadOnly ? 12 : 6">
           <ion-button size="small" expand="block" fill="outline" color="medium" (click)="downloadTemplate()">
             <ion-icon name="cloud-download-outline" slot="start"></ion-icon>
             {{ 'EMAIL_TEMPLATE.DOWNLOAD_TEMPLATE' | translate }}
           </ion-button>
         </ion-col>
-        <ion-col size="12" size-sm="6">
+        <ion-col size="12" size-sm="6" *ngIf="!isReadOnly">
           <ion-button size="small" expand="block" color="primary" (click)="askAndSendTestEmailWithCurrentTemplate()">
             <ion-icon name="paper-plane-outline" slot="start"></ion-icon>
             {{ 'EMAIL_TEMPLATE.TEST_TEMPLATE' | translate }}

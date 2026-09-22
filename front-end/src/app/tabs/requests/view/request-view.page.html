@@ -9,6 +9,15 @@
 
       <div class="top-actions">
         <button
+          *ngIf="canExport"
+          class="btn-outline"
+          (click)="exportCurrentRequest()"
+        >
+          <ion-icon name="download-outline"></ion-icon>
+          <span>{{ 'REQUESTS.MANAGE_PANEL.EXPORT_CSV' | translate }}</span>
+        </button>
+
+        <button
           *ngIf="request.status === 'DRAFT'"
           class="btn-danger-outline"
           (click)="confirmDeleteDraft()"
@@ -25,6 +34,86 @@
           <ion-icon name="create-outline"></ion-icon>
           <span>{{ (request.status === 'CHANGES_REQUESTED' ? 'REQUESTS.EDIT_AND_RESUBMIT' : 'REQUESTS.EDIT_DRAFT') | translate }}</span>
         </button>
+      </div>
+    </div>
+
+    <!-- Auditor Banner -->
+    <div class="auditor-banner" *ngIf="isAuditorOnly">
+      <ion-icon name="shield-outline"></ion-icon>
+      <div class="auditor-text">
+        <strong>{{ 'REQUESTS.MANAGE_PANEL.AUDITOR_BADGE' | translate }}:</strong>
+        <span>{{ 'REQUESTS.MANAGE_PANEL.AUDITOR_NOTICE' | translate }}</span>
+      </div>
+    </div>
+
+    <!-- Manager Actions Control Bar -->
+    <div class="manager-actions-card" *ngIf="canManage && request.status !== 'DRAFT'">
+      <div class="card-title-row">
+        <div class="tag-title">
+          <ion-icon name="shield-checkmark-outline"></ion-icon>
+          <span>{{ 'REQUESTS.MANAGE_PANEL.MANAGER_REVIEW_TITLE' | translate }}</span>
+        </div>
+        <div class="action-buttons-group">
+          <!-- In Review -->
+          <ion-button
+            *ngIf="request.status === 'SUBMITTED'"
+            fill="outline"
+            size="small"
+            color="primary"
+            (click)="takeInReview()"
+          >
+            <ion-icon slot="start" name="search-outline"></ion-icon>
+            {{ 'REQUESTS.MANAGE_PANEL.START_REVIEW' | translate }}
+          </ion-button>
+
+          <!-- Approve -->
+          <ion-button
+            *ngIf="request.status === 'SUBMITTED' || request.status === 'IN_REVIEW'"
+            fill="solid"
+            size="small"
+            color="success"
+            (click)="promptApprove()"
+          >
+            <ion-icon slot="start" name="checkmark-circle-outline"></ion-icon>
+            {{ 'REQUESTS.STATUSES.APPROVED' | translate }}
+          </ion-button>
+
+          <!-- Request Changes -->
+          <ion-button
+            *ngIf="request.status === 'SUBMITTED' || request.status === 'IN_REVIEW'"
+            fill="outline"
+            size="small"
+            color="warning"
+            (click)="promptRequestChanges()"
+          >
+            <ion-icon slot="start" name="create-outline"></ion-icon>
+            {{ 'REQUESTS.STATUSES.CHANGES_REQUESTED' | translate }}
+          </ion-button>
+
+          <!-- Mark Paid -->
+          <ion-button
+            *ngIf="request.status === 'APPROVED'"
+            fill="solid"
+            size="small"
+            color="tertiary"
+            (click)="promptMarkPaid()"
+          >
+            <ion-icon slot="start" name="cash-outline"></ion-icon>
+            {{ 'REQUESTS.STATUSES.PAID' | translate }}
+          </ion-button>
+
+          <!-- Reject -->
+          <ion-button
+            *ngIf="request.status !== 'PAID' && request.status !== 'REJECTED'"
+            fill="clear"
+            size="small"
+            color="danger"
+            (click)="promptReject()"
+          >
+            <ion-icon slot="start" name="close-circle-outline"></ion-icon>
+            {{ 'REQUESTS.STATUSES.REJECTED' | translate }}
+          </ion-button>
+        </div>
       </div>
     </div>
 

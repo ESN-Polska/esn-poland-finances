@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Storage } from '@ionic/storage-angular';
 import { BehaviorSubject, Observable } from 'rxjs';
+import { IDEAApiService } from '@idea-ionic/common';
 import { environment as env } from '@env';
 import {
   FinancialRequest,
@@ -25,6 +26,7 @@ export class RequestsService {
   constructor(
     private storage: Storage,
     private http: HttpClient,
+    private api: IDEAApiService,
     private appService: AppService
   ) {}
 
@@ -42,6 +44,19 @@ export class RequestsService {
     const user = this.appService.currentUser;
     if (!user) return [];
 
+    try {
+      const apiRequests: any[] = await this.api.getResource('requests');
+      if (Array.isArray(apiRequests)) {
+        const mapped = apiRequests.map((r) => new FinancialRequest(r));
+        this.requestsSubject.next(mapped);
+        const storage = await this.initStorage();
+        await storage.set(REQUESTS_STORAGE_KEY, apiRequests);
+        return mapped;
+      }
+    } catch {
+      // Fallback to local storage if API call fails
+    }
+
     const storage = await this.initStorage();
     const rawList: any[] = (await storage.get(REQUESTS_STORAGE_KEY)) || [];
     const myRequests = rawList
@@ -51,6 +66,159 @@ export class RequestsService {
 
     this.requestsSubject.next(myRequests);
     return myRequests;
+  }
+
+  /**
+   * Loads all requests across all users (for managers, auditors, and administrators)
+   */
+  public async loadAllRequests(): Promise<FinancialRequest[]> {
+    try {
+      const apiRequests: any[] = await this.api.getResource('requests', { params: { all: 'true' } });
+      if (Array.isArray(apiRequests)) {
+        const mapped = apiRequests.map((r) => new FinancialRequest(r));
+        const storage = await this.initStorage();
+        await storage.set(REQUESTS_STORAGE_KEY, apiRequests);
+        return mapped;
+      }
+    } catch {
+      // Fallback to local storage
+    }
+
+    const storage = await this.initStorage();
+    const rawList: any[] = (await storage.get(REQUESTS_STORAGE_KEY)) || [];
+    return rawList
+      .map((r) => new FinancialRequest(r))
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  /**
+   * Update request status and optional reviewer comments / remarks (for managers & administrators)
+   */
+  public async updateRequestStatus(
+    requestId: string,
+    status: RequestStatus,
+    comment?: string,
+    adminRemarks?: string
+  ): Promise<FinancialRequest> {
+    const user = this.appService.currentUser;
+    const now = new Date().toISOString();
+
+    const body: any = { status };
+    if (comment) body.historyNote = comment;
+    if (typeof adminRemarks !== 'undefined') body.adminRemarks = adminRemarks;
+
+    try {
+      const updatedRaw = await this.api.patchResource(['requests', encodeURIComponent(requestId)], { body });
+      if (updatedRaw) {
+        const updatedReq = new FinancialRequest(updatedRaw);
+        const storage = await this.initStorage();
+        const rawList: any[] = (await storage.get(REQUESTS_STORAGE_KEY)) || [];
+        const idx = rawList.findIndex((r) => r.requestId === requestId);
+        if (idx >= 0) {
+          rawList[idx] = updatedRaw;
+          await storage.set(REQUESTS_STORAGE_KEY, rawList);
+        }
+        await this.loadMyRequests();
+        return updatedReq;
+      }
+    } catch {
+      // Fallback to local storage update
+    }
+
+    const storage = await this.initStorage();
+    const rawList: any[] = (await storage.get(REQUESTS_STORAGE_KEY)) || [];
+    const idx = rawList.findIndex((r) => r.requestId === requestId);
+    if (idx < 0) throw new Error('Request not found');
+
+    const existing = new FinancialRequest(rawList[idx]);
+    const newHistory = {
+      status,
+      timestamp: now,
+      updatedBy: user?.getDisplayName() || user?.userId || 'Manager',
+      comment: comment || `Status changed to ${status}`
+    };
+
+    const updatedData = {
+      ...rawList[idx],
+      status,
+      adminRemarks: typeof adminRemarks !== 'undefined' ? adminRemarks : existing.adminRemarks,
+      statusHistory: [...(existing.statusHistory || []), newHistory],
+      updatedAt: now
+    };
+
+    rawList[idx] = updatedData;
+    await storage.set(REQUESTS_STORAGE_KEY, rawList);
+    await this.loadMyRequests();
+    return new FinancialRequest(updatedData);
+  }
+
+  /**
+   * Export financial requests to a downloadable CSV spreadsheet
+   */
+  public exportToCsv(
+    requests: FinancialRequest[],
+    filename = `requests-export-${new Date().toISOString().slice(0, 10)}.csv`
+  ): void {
+    const headers = [
+      'ID',
+      'Date Created',
+      'Date Submitted',
+      'Status',
+      'Type',
+      'Applicant Name',
+      'Applicant Email',
+      'Section / Country',
+      'Guest',
+      'Position',
+      'Funding Source',
+      'Gross Amount',
+      'VAT Amount',
+      'Currency',
+      'IBAN',
+      'SWIFT/BIC',
+      'Account Holder',
+      'Admin Remarks'
+    ];
+
+    const rows = requests.map((req) => {
+      const escape = (val: any) => {
+        if (val === null || val === undefined) return '""';
+        const str = String(val).replace(/"/g, '""');
+        return `"${str}"`;
+      };
+
+      return [
+        escape(req.displayId),
+        escape(req.createdAt ? new Date(req.createdAt).toISOString().slice(0, 10) : ''),
+        escape(req.submittedAt ? new Date(req.submittedAt).toISOString().slice(0, 10) : ''),
+        escape(req.status),
+        escape(req.requestType),
+        escape(req.userDisplayName || ''),
+        escape(req.userEmail || ''),
+        escape(typeof req.getSectionOrCountry === 'function' ? req.getSectionOrCountry() : req.section || req.country || ''),
+        escape(req.isGuest ? 'Yes' : 'No'),
+        escape(req.position || ''),
+        escape(req.sourceOfFunding || ''),
+        escape(req.totalGrossAmount || 0),
+        escape(req.totalVatAmount || 0),
+        escape(req.currency || 'PLN'),
+        escape(req.iban || ''),
+        escape(req.swiftBic || ''),
+        escape(req.accountHolderName || ''),
+        escape(req.adminRemarks || '')
+      ].join(';');
+    });
+
+    const csvContent = '\uFEFF' + [headers.join(';'), ...rows].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   }
 
   /**
@@ -65,6 +233,13 @@ export class RequestsService {
    * Get request by formatted ID (e.g. "1/2026")
    */
   public async getRequestById(requestId: string): Promise<FinancialRequest | null> {
+    try {
+      const raw = await this.api.getResource(['requests', encodeURIComponent(requestId)]);
+      if (raw) return new FinancialRequest(raw);
+    } catch {
+      // Fallback to local storage
+    }
+
     const storage = await this.initStorage();
     const rawList: any[] = (await storage.get(REQUESTS_STORAGE_KEY)) || [];
     const found = rawList.find(

@@ -1,0 +1,456 @@
+<ion-content class="manageRequestsContent ion-padding">
+  <div class="manageContainer">
+    <!-- Top Header -->
+    <div class="panelHeader">
+      <div class="headerLeft">
+        <ion-button fill="clear" class="backBtn" (click)="goBackToMyRequests()">
+          <ion-icon slot="icon-only" name="arrow-back-outline"></ion-icon>
+        </ion-button>
+        <div>
+          <div class="headerTitleRow">
+            <h1 class="panelTitle">{{ 'REQUESTS.MANAGE_PANEL.TITLE' | translate }}</h1>
+            <span class="countBadge">{{ allRequests.length }}</span>
+          </div>
+          <p class="panelSubtitle">{{ 'REQUESTS.MANAGE_PANEL.SUBTITLE' | translate }}</p>
+        </div>
+      </div>
+
+      <div class="headerRight">
+        <ion-button *ngIf="canExport" class="exportBtn" fill="outline" (click)="exportData()">
+          <ion-icon slot="start" name="download-outline"></ion-icon>
+          {{ 'REQUESTS.MANAGE_PANEL.EXPORT_CSV' | translate }}
+        </ion-button>
+
+        <ion-button class="refreshBtn" fill="clear" (click)="loadRequests()">
+          <ion-icon slot="icon-only" name="refresh-outline" [class.spinning]="isLoading"></ion-icon>
+        </ion-button>
+      </div>
+    </div>
+
+    <!-- Auditor Banner (if auditor-only access) -->
+    <div class="auditorNotice" *ngIf="isAuditorOnly">
+      <ion-icon name="information-circle-outline"></ion-icon>
+      <div class="noticeText">
+        <strong>{{ 'REQUESTS.MANAGE_PANEL.AUDITOR_BADGE' | translate }}:</strong>
+        <span>{{ 'REQUESTS.MANAGE_PANEL.AUDITOR_NOTICE' | translate }}</span>
+      </div>
+    </div>
+
+    <!-- Statistics Ribbon / Metric Cards -->
+    <div class="metricsGrid">
+      <div
+        class="metricCard metricSubmitted"
+        [class.active]="selectedStatus === 'SUBMITTED'"
+        (click)="setStatusFilter(selectedStatus === 'SUBMITTED' ? 'ALL' : 'SUBMITTED')"
+      >
+        <div class="metricTop">
+          <span class="metricLabel">{{ 'REQUESTS.STATUSES.SUBMITTED' | translate }}</span>
+          <ion-icon name="hourglass-outline"></ion-icon>
+        </div>
+        <div class="metricValue">{{ pendingCount }}</div>
+      </div>
+
+      <div
+        class="metricCard metricInReview"
+        [class.active]="selectedStatus === 'IN_REVIEW'"
+        (click)="setStatusFilter(selectedStatus === 'IN_REVIEW' ? 'ALL' : 'IN_REVIEW')"
+      >
+        <div class="metricTop">
+          <span class="metricLabel">{{ 'REQUESTS.STATUSES.IN_REVIEW' | translate }}</span>
+          <ion-icon name="eye-outline"></ion-icon>
+        </div>
+        <div class="metricValue">{{ inReviewCount }}</div>
+      </div>
+
+      <div
+        class="metricCard metricChanges"
+        [class.active]="selectedStatus === 'CHANGES_REQUESTED'"
+        (click)="setStatusFilter(selectedStatus === 'CHANGES_REQUESTED' ? 'ALL' : 'CHANGES_REQUESTED')"
+      >
+        <div class="metricTop">
+          <span class="metricLabel">{{ 'REQUESTS.STATUSES.CHANGES_REQUESTED' | translate }}</span>
+          <ion-icon name="alert-circle-outline"></ion-icon>
+        </div>
+        <div class="metricValue">{{ changesRequestedCount }}</div>
+      </div>
+
+      <div
+        class="metricCard metricApproved"
+        [class.active]="selectedStatus === 'APPROVED'"
+        (click)="setStatusFilter(selectedStatus === 'APPROVED' ? 'ALL' : 'APPROVED')"
+      >
+        <div class="metricTop">
+          <span class="metricLabel">{{ 'REQUESTS.STATUSES.APPROVED' | translate }}</span>
+          <ion-icon name="checkmark-circle-outline"></ion-icon>
+        </div>
+        <div class="metricValue">{{ approvedCount }}</div>
+      </div>
+
+      <div
+        class="metricCard metricPaid"
+        [class.active]="selectedStatus === 'PAID'"
+        (click)="setStatusFilter(selectedStatus === 'PAID' ? 'ALL' : 'PAID')"
+      >
+        <div class="metricTop">
+          <span class="metricLabel">{{ 'REQUESTS.STATUSES.PAID' | translate }}</span>
+          <ion-icon name="cash-outline"></ion-icon>
+        </div>
+        <div class="metricValue">{{ paidCount }}</div>
+      </div>
+
+      <div class="metricCard metricFinancials">
+        <div class="metricTop">
+          <span class="metricLabel">{{ 'REQUESTS.MANAGE_PANEL.TOTAL_APPROVED_PAID' | translate }}</span>
+          <ion-icon name="wallet-outline"></ion-icon>
+        </div>
+        <div class="metricValue">{{ totalApprovedAmountPLN | number:'1.2-2' }} <small>PLN</small></div>
+      </div>
+    </div>
+
+    <!-- Filters & Search Toolbar -->
+    <div class="toolbarCard">
+      <div class="searchWrapper">
+        <ion-icon name="search-outline" class="searchIcon"></ion-icon>
+        <input
+          type="text"
+          class="searchInput"
+          [(ngModel)]="searchQuery"
+          (input)="applyFilters()"
+          [placeholder]="'REQUESTS.MANAGE_PANEL.SEARCH_PLACEHOLDER' | translate"
+        />
+        <button *ngIf="searchQuery" class="clearBtn" (click)="clearSearch()">
+          <ion-icon name="close-circle"></ion-icon>
+        </button>
+      </div>
+
+      <div class="filterDropdowns">
+        <!-- Status Filter -->
+        <div class="dropdownGroup">
+          <span class="dropdownLabel">{{ 'REQUESTS.FILTER_BY_STATUS' | translate }}:</span>
+          <ion-select
+            interface="popover"
+            class="filterSelect statusSelect"
+            [(ngModel)]="selectedStatus"
+            (ionChange)="applyFilters()"
+          >
+            <ion-select-option value="ALL">{{ 'COMMON.ALL' | translate }}</ion-select-option>
+            <ion-select-option *ngFor="let s of allStatuses" [value]="s">
+              {{ ('REQUESTS.STATUSES.' + s) | translate }}
+            </ion-select-option>
+          </ion-select>
+        </div>
+
+        <!-- Request Type Filter -->
+        <div class="dropdownGroup">
+          <span class="dropdownLabel">{{ 'COMMON.TYPE' | translate }}:</span>
+          <ion-select
+            interface="popover"
+            class="filterSelect typeSelect"
+            [(ngModel)]="selectedType"
+            (ionChange)="applyFilters()"
+          >
+            <ion-select-option value="ALL">{{ 'COMMON.ALL' | translate }}</ion-select-option>
+            <ion-select-option *ngFor="let t of allTypes" [value]="t">
+              {{ ('REQUESTS.TYPES_SHORT.' + t) | translate }}
+            </ion-select-option>
+          </ion-select>
+        </div>
+
+        <!-- Year Filter -->
+        <div class="dropdownGroup" *ngIf="availableYears.length > 0">
+          <span class="dropdownLabel">{{ 'COMMON.YEAR' | translate }}:</span>
+          <ion-select
+            interface="popover"
+            class="filterSelect yearSelect"
+            [(ngModel)]="selectedYear"
+            (ionChange)="applyFilters()"
+          >
+            <ion-select-option value="ALL">{{ 'COMMON.ALL' | translate }}</ion-select-option>
+            <ion-select-option *ngFor="let y of availableYears" [value]="y.toString()">
+              {{ y }}
+            </ion-select-option>
+          </ion-select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Active Filters Feedback bar -->
+    <div class="resultsCountBar">
+      <span>
+        {{ 'REQUESTS.MANAGE_PANEL.SHOWING_RESULTS' | translate:{ current: filteredRequests.length, total: allRequests.length } }}
+      </span>
+      <ion-button
+        *ngIf="isFiltered"
+        fill="clear"
+        size="small"
+        class="resetFiltersBtn"
+        (click)="resetFilters()"
+      >
+        {{ 'REQUESTS.MANAGE_PANEL.RESET_FILTERS' | translate }}
+      </ion-button>
+    </div>
+
+    <!-- Requests Table (Desktop) -->
+    <div class="desktopTableWrapper" *ngIf="filteredRequests.length > 0; else noResults">
+      <table class="requestsTable">
+        <thead>
+          <tr>
+            <th>{{ 'REQUESTS.FIELDS.ID' | translate }}</th>
+            <th>{{ 'REQUESTS.CREATED_AT' | translate }}</th>
+            <th>{{ 'REQUESTS.MANAGE_PANEL.APPLICANT' | translate }}</th>
+            <th>{{ 'COMMON.TYPE' | translate }}</th>
+            <th>{{ 'REQUESTS.TOTAL_AMOUNT' | translate }}</th>
+            <th>{{ 'COMMON.STATUS' | translate }}</th>
+            <th class="actionsCol">{{ 'COMMON.ACTIONS' | translate }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            *ngFor="let req of filteredRequests"
+            (click)="viewRequest(req.requestId)"
+            class="tableRow"
+          >
+            <!-- ID -->
+            <td class="idCell">
+              <span class="rowId" [class.isDraftPlaceholder]="req.isDraft">{{ req.displayId }}</span>
+              <span class="guestBadge" *ngIf="req.isGuest">
+                <ion-icon name="person-outline"></ion-icon>
+                {{ 'CONFIGURATIONS.GUEST_BADGE' | translate }}
+              </span>
+            </td>
+
+            <!-- Date -->
+            <td class="dateCell">
+              {{ (req.submittedAt || req.createdAt) | date:'dd.MM.yyyy' }}
+            </td>
+
+            <!-- Applicant -->
+            <td class="applicantCell">
+              <div class="applicantInfo">
+                <div class="applicantNameRow">
+                  <span class="applicantName">{{ req.userDisplayName || req.userId }}</span>
+                  <span class="sectionPill" *ngIf="req.getSectionOrCountry()">
+                    {{ req.getSectionOrCountry() }}
+                  </span>
+                </div>
+                <span class="applicantEmail">{{ req.userEmail }}</span>
+              </div>
+            </td>
+
+            <!-- Type -->
+            <td class="typeCell">
+              <span class="typePill">
+                {{ ('REQUESTS.TYPES_SHORT.' + req.requestType) | translate }}
+              </span>
+            </td>
+
+            <!-- Amount -->
+            <td class="amountCell">
+              <strong>{{ req.totalGrossAmount | number:'1.2-2' }}</strong>
+              <small>{{ req.currency }}</small>
+            </td>
+
+            <!-- Status -->
+            <td class="statusCell">
+              <span class="statusBadge" [ngClass]="'status-' + req.status.toLowerCase()">
+                {{ ('REQUESTS.STATUSES.' + req.status) | translate }}
+              </span>
+            </td>
+
+            <!-- Actions -->
+            <td class="actionsCell" (click)="$event.stopPropagation()">
+              <div class="rowActions">
+                <ion-button
+                  fill="clear"
+                  size="small"
+                  class="actionBtn viewActionBtn"
+                  (click)="viewRequest(req.requestId)"
+                  [title]="'COMMON.VIEW' | translate"
+                >
+                  <ion-icon slot="icon-only" name="eye-outline"></ion-icon>
+                </ion-button>
+
+                <!-- Manager Actions -->
+                <ng-container *ngIf="canManage">
+                  <!-- In Review -->
+                  <ion-button
+                    *ngIf="req.status === 'SUBMITTED'"
+                    fill="outline"
+                    size="small"
+                    color="primary"
+                    class="actionBtn"
+                    (click)="takeInReview(req, $event)"
+                    [title]="'REQUESTS.MANAGE_PANEL.START_REVIEW' | translate"
+                  >
+                    <ion-icon slot="start" name="search-outline"></ion-icon>
+                    {{ 'REQUESTS.STATUSES.IN_REVIEW' | translate }}
+                  </ion-button>
+
+                  <!-- Approve -->
+                  <ion-button
+                    *ngIf="req.status === 'SUBMITTED' || req.status === 'IN_REVIEW'"
+                    fill="solid"
+                    size="small"
+                    color="success"
+                    class="actionBtn"
+                    (click)="promptApprove(req, $event)"
+                    [title]="'REQUESTS.STATUSES.APPROVED' | translate"
+                  >
+                    <ion-icon slot="icon-only" name="checkmark-outline"></ion-icon>
+                  </ion-button>
+
+                  <!-- Request Changes -->
+                  <ion-button
+                    *ngIf="req.status === 'SUBMITTED' || req.status === 'IN_REVIEW'"
+                    fill="outline"
+                    size="small"
+                    color="warning"
+                    class="actionBtn"
+                    (click)="promptRequestChanges(req, $event)"
+                    [title]="'REQUESTS.STATUSES.CHANGES_REQUESTED' | translate"
+                  >
+                    <ion-icon slot="icon-only" name="create-outline"></ion-icon>
+                  </ion-button>
+
+                  <!-- Mark Paid -->
+                  <ion-button
+                    *ngIf="req.status === 'APPROVED'"
+                    fill="solid"
+                    size="small"
+                    color="tertiary"
+                    class="actionBtn"
+                    (click)="promptMarkPaid(req, $event)"
+                    [title]="'REQUESTS.STATUSES.PAID' | translate"
+                  >
+                    <ion-icon slot="start" name="cash-outline"></ion-icon>
+                    {{ 'REQUESTS.STATUSES.PAID' | translate }}
+                  </ion-button>
+
+                  <!-- Reject -->
+                  <ion-button
+                    *ngIf="req.status !== 'PAID' && req.status !== 'REJECTED' && req.status !== 'DRAFT'"
+                    fill="clear"
+                    size="small"
+                    color="danger"
+                    class="actionBtn"
+                    (click)="promptReject(req, $event)"
+                    [title]="'REQUESTS.STATUSES.REJECTED' | translate"
+                  >
+                    <ion-icon slot="icon-only" name="close-circle-outline"></ion-icon>
+                  </ion-button>
+                </ng-container>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Mobile Cards View -->
+    <div class="mobileCardsWrapper" *ngIf="filteredRequests.length > 0">
+      <div
+        class="manageCard"
+        *ngFor="let req of filteredRequests"
+        (click)="viewRequest(req.requestId)"
+      >
+        <div class="cardHeaderRow">
+          <div class="idSection">
+            <span class="cardId" [class.isDraftPlaceholder]="req.isDraft">{{ req.displayId }}</span>
+            <span class="guestBadge" *ngIf="req.isGuest">
+              <ion-icon name="person-outline"></ion-icon>
+              {{ 'CONFIGURATIONS.GUEST_BADGE' | translate }}
+            </span>
+          </div>
+          <span class="statusBadge" [ngClass]="'status-' + req.status.toLowerCase()">
+            {{ ('REQUESTS.STATUSES.' + req.status) | translate }}
+          </span>
+        </div>
+
+        <div class="cardApplicantRow">
+          <div class="applicantDetails">
+            <span class="name">{{ req.userDisplayName || req.userId }}</span>
+            <span class="email">{{ req.userEmail }}</span>
+          </div>
+          <span class="sectionPill" *ngIf="req.getSectionOrCountry()">
+            {{ req.getSectionOrCountry() }}
+          </span>
+        </div>
+
+        <div class="cardMetaRow">
+          <span class="typePill">{{ ('REQUESTS.TYPES_SHORT.' + req.requestType) | translate }}</span>
+          <span class="datePill">{{ (req.submittedAt || req.createdAt) | date:'dd.MM.yyyy' }}</span>
+        </div>
+
+        <div class="cardAmountRow">
+          <span class="amountLabel">{{ 'REQUESTS.TOTAL_AMOUNT' | translate }}:</span>
+          <span class="amountValue">{{ req.totalGrossAmount | number:'1.2-2' }} {{ req.currency }}</span>
+        </div>
+
+        <!-- Remarks banner if present -->
+        <div class="remarksBox" *ngIf="req.adminRemarks">
+          <ion-icon name="chatbox-outline"></ion-icon>
+          <span>{{ req.adminRemarks }}</span>
+        </div>
+
+        <!-- Card Actions -->
+        <div class="cardActionsRow" (click)="$event.stopPropagation()">
+          <ion-button fill="clear" size="small" (click)="viewRequest(req.requestId)">
+            <ion-icon slot="start" name="eye-outline"></ion-icon>
+            {{ 'COMMON.VIEW' | translate }}
+          </ion-button>
+
+          <ng-container *ngIf="canManage">
+            <ion-button
+              *ngIf="req.status === 'SUBMITTED'"
+              fill="outline"
+              size="small"
+              color="primary"
+              (click)="takeInReview(req, $event)"
+            >
+              {{ 'REQUESTS.STATUSES.IN_REVIEW' | translate }}
+            </ion-button>
+
+            <ion-button
+              *ngIf="req.status === 'SUBMITTED' || req.status === 'IN_REVIEW'"
+              fill="solid"
+              size="small"
+              color="success"
+              (click)="promptApprove(req, $event)"
+            >
+              {{ 'REQUESTS.STATUSES.APPROVED' | translate }}
+            </ion-button>
+
+            <ion-button
+              *ngIf="req.status === 'SUBMITTED' || req.status === 'IN_REVIEW'"
+              fill="outline"
+              size="small"
+              color="warning"
+              (click)="promptRequestChanges(req, $event)"
+            >
+              {{ 'REQUESTS.STATUSES.CHANGES_REQUESTED' | translate }}
+            </ion-button>
+
+            <ion-button
+              *ngIf="req.status === 'APPROVED'"
+              fill="solid"
+              size="small"
+              color="tertiary"
+              (click)="promptMarkPaid(req, $event)"
+            >
+              {{ 'REQUESTS.STATUSES.PAID' | translate }}
+            </ion-button>
+          </ng-container>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty Results Template -->
+    <ng-template #noResults>
+      <div class="emptyCard">
+        <ion-icon name="file-tray-outline" class="emptyIcon"></ion-icon>
+        <h3>{{ 'REQUESTS.NO_REQUESTS_FOUND' | translate }}</h3>
+        <p>{{ 'REQUESTS.MANAGE_PANEL.NO_MATCHING_REQUESTS' | translate }}</p>
+      </div>
+    </ng-template>
+  </div>
+</ion-content>

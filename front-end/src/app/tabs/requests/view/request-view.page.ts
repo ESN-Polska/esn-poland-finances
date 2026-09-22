@@ -2,8 +2,10 @@ import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AlertController, ToastController } from '@ionic/angular';
 import { TranslateService } from '@ngx-translate/core';
-import { FinancialRequest, FinancialRequestStatus } from '@models/financial-request.model';
+import { FinancialRequest, FinancialRequestStatus, RequestStatus } from '@models/financial-request.model';
+import { AppPermission } from '@models/configurations.model';
 import { RequestsService } from '../../../services/requests.service';
+import { AppService } from '../../../app.service';
 
 @Component({
   selector: 'app-request-view',
@@ -22,13 +24,43 @@ export class RequestViewPage implements OnInit {
     { key: 'PAID', label: 'REQUESTS.STATUSES.PAID' }
   ];
 
+  public get canManage(): boolean {
+    const user = this.appService.currentUser;
+    if (!user) return false;
+    return (
+      user.isAdministrator ||
+      user.isManager ||
+      user.hasPermission(AppPermission.REQUESTS.PARENT) ||
+      user.hasPermission(AppPermission.REQUESTS.MANAGE)
+    );
+  }
+
+  public get canExport(): boolean {
+    const user = this.appService.currentUser;
+    if (!user) return false;
+    return (
+      user.isAdministrator ||
+      user.isManager ||
+      user.isAuditor ||
+      user.hasPermission(AppPermission.REQUESTS.PARENT) ||
+      user.hasPermission(AppPermission.REQUESTS.EXPORT)
+    );
+  }
+
+  public get isAuditorOnly(): boolean {
+    const user = this.appService.currentUser;
+    if (!user) return false;
+    return user.isAuditor && !user.isAdministrator && !user.isManager && !user.hasPermission(AppPermission.REQUESTS.MANAGE);
+  }
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private alertCtrl: AlertController,
     private toastCtrl: ToastController,
     private translate: TranslateService,
-    private requestsService: RequestsService
+    private requestsService: RequestsService,
+    public appService: AppService
   ) {}
 
   public async ngOnInit(): Promise<void> {
@@ -148,6 +180,166 @@ export class RequestViewPage implements OnInit {
 
   public goBack(): void {
     this.router.navigate(['/t/requests']);
+  }
+
+  public exportCurrentRequest(): void {
+    if (!this.request || !this.canExport) return;
+    this.requestsService.exportToCsv([this.request], `request-${this.request.displayId.replace(/[\/\\?%*:|"<>]/g, '_')}.csv`);
+    this.showToast('REQUESTS.MANAGE_PANEL.EXPORT_SUCCESS', 'success');
+  }
+
+  public async takeInReview(): Promise<void> {
+    if (!this.request || !this.canManage) return;
+    await this.executeStatusChange('IN_REVIEW', 'Review started by manager');
+  }
+
+  public async promptApprove(): Promise<void> {
+    if (!this.request || !this.canManage) return;
+
+    const alert = await this.alertCtrl.create({
+      header: this.translate.instant('REQUESTS.MANAGE_PANEL.APPROVE_HEADER') || 'Approve Request',
+      message: `${this.translate.instant('REQUESTS.MANAGE_PANEL.APPROVE_CONFIRM')} ${this.request.displayId}?`,
+      inputs: [
+        {
+          name: 'comment',
+          type: 'text',
+          placeholder: this.translate.instant('REQUESTS.MANAGE_PANEL.OPTIONAL_COMMENT') || 'Optional approval note'
+        }
+      ],
+      buttons: [
+        {
+          text: this.translate.instant('COMMON.CANCEL') || 'Cancel',
+          role: 'cancel'
+        },
+        {
+          text: this.translate.instant('REQUESTS.STATUSES.APPROVED') || 'Approve',
+          handler: async (data) => {
+            await this.executeStatusChange('APPROVED', data.comment || 'Request approved');
+          }
+        }
+      ]
+    });
+    await alert.present();
+  }
+
+  public async promptRequestChanges(): Promise<void> {
+    if (!this.request || !this.canManage) return;
+
+    const alert = await this.alertCtrl.create({
+      header: this.translate.instant('REQUESTS.MANAGE_PANEL.REQUEST_CHANGES_HEADER') || 'Request Changes',
+      message: this.translate.instant('REQUESTS.MANAGE_PANEL.REQUEST_CHANGES_DESC') || 'Provide clear instructions for what needs to be changed by the applicant:',
+      inputs: [
+        {
+          name: 'remarks',
+          type: 'textarea',
+          placeholder: this.translate.instant('REQUESTS.MANAGE_PANEL.REQUIRED_CHANGES_PLACEHOLDER') || 'Explain required modifications...'
+        }
+      ],
+      buttons: [
+        {
+          text: this.translate.instant('COMMON.CANCEL') || 'Cancel',
+          role: 'cancel'
+        },
+        {
+          text: this.translate.instant('REQUESTS.MANAGE_PANEL.SEND_REQUEST_CHANGES') || 'Request Changes',
+          handler: async (data) => {
+            const remarks = (data.remarks || '').trim();
+            if (!remarks) {
+              this.showToast('REQUESTS.MANAGE_PANEL.REMARKS_REQUIRED', 'warning');
+              return false;
+            }
+            await this.executeStatusChange('CHANGES_REQUESTED', remarks, remarks);
+            return true;
+          }
+        }
+      ]
+    });
+    await alert.present();
+  }
+
+  public async promptMarkPaid(): Promise<void> {
+    if (!this.request || !this.canManage) return;
+
+    const alert = await this.alertCtrl.create({
+      header: this.translate.instant('REQUESTS.MANAGE_PANEL.MARK_PAID_HEADER') || 'Mark as Paid',
+      message: `${this.translate.instant('REQUESTS.MANAGE_PANEL.MARK_PAID_CONFIRM')} ${this.request.displayId} (${this.request.totalGrossAmount} ${this.request.currency})?`,
+      inputs: [
+        {
+          name: 'comment',
+          type: 'text',
+          placeholder: this.translate.instant('REQUESTS.MANAGE_PANEL.OPTIONAL_PAYMENT_REF') || 'Optional transfer reference / note'
+        }
+      ],
+      buttons: [
+        {
+          text: this.translate.instant('COMMON.CANCEL') || 'Cancel',
+          role: 'cancel'
+        },
+        {
+          text: this.translate.instant('REQUESTS.STATUSES.PAID') || 'Mark Paid',
+          handler: async (data) => {
+            await this.executeStatusChange('PAID', data.comment || 'Payout completed');
+          }
+        }
+      ]
+    });
+    await alert.present();
+  }
+
+  public async promptReject(): Promise<void> {
+    if (!this.request || !this.canManage) return;
+
+    const alert = await this.alertCtrl.create({
+      header: this.translate.instant('REQUESTS.MANAGE_PANEL.REJECT_HEADER') || 'Reject Request',
+      message: this.translate.instant('REQUESTS.MANAGE_PANEL.REJECT_DESC') || 'Provide the rejection reason for the applicant:',
+      inputs: [
+        {
+          name: 'reason',
+          type: 'textarea',
+          placeholder: this.translate.instant('REQUESTS.MANAGE_PANEL.REJECTION_REASON_PLACEHOLDER') || 'Enter rejection reason...'
+        }
+      ],
+      buttons: [
+        {
+          text: this.translate.instant('COMMON.CANCEL') || 'Cancel',
+          role: 'cancel'
+        },
+        {
+          text: this.translate.instant('REQUESTS.STATUSES.REJECTED') || 'Reject',
+          role: 'destructive',
+          handler: async (data) => {
+            const reason = (data.reason || '').trim();
+            if (!reason) {
+              this.showToast('REQUESTS.MANAGE_PANEL.REASON_REQUIRED', 'warning');
+              return false;
+            }
+            await this.executeStatusChange('REJECTED', reason, reason);
+            return true;
+          }
+        }
+      ]
+    });
+    await alert.present();
+  }
+
+  private async executeStatusChange(
+    newStatus: RequestStatus,
+    comment?: string,
+    adminRemarks?: string
+  ): Promise<void> {
+    if (!this.request) return;
+    try {
+      const updated = await this.requestsService.updateRequestStatus(
+        this.request.requestId,
+        newStatus,
+        comment,
+        adminRemarks
+      );
+      this.request = updated;
+      await this.showToast('REQUESTS.MANAGE_PANEL.STATUS_UPDATED', 'success');
+    } catch (err: any) {
+      this.showToast(err.message || 'Error updating status', 'danger');
+    }
   }
 
   private async showToast(messageKey: string, color: string): Promise<void> {
