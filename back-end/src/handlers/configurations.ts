@@ -160,7 +160,13 @@ class ConfigurationsRC extends ResourceController {
       'rulesWarningText',
       'rulesFileURL',
       'rulesResolutionNumber',
-      'rulesRevisionDate'
+      'rulesRevisionDate',
+      'guestAccessEnabled',
+      'guestAccessAllowedRequestTypes',
+      'guestAccessDefaultExpirationDays',
+      'guestAccessInstructions',
+      'guestAccessRequirePurpose',
+      'guestInvitations'
     ].filter(field => JSON.stringify(this.body[field]) !== JSON.stringify((this.configurations as any)[field]));
 
     if (!changedFields.length) return;
@@ -170,6 +176,7 @@ class ConfigurationsRC extends ResourceController {
       DEFAULT_CONFIGURATION_PAGE_SECTIONS_ORDER.every(section => {
         if (section === 'OPTIONS') return this.user!.hasPermission(AppPermission.CONFIGURATIONS.OPTIONS);
         if (section === 'USERS') return this.user!.hasPermission(AppPermission.CONFIGURATIONS.USERS);
+        if (section === 'GUESTS') return this.user!.hasPermission(AppPermission.CONFIGURATIONS.GUESTS);
         return false;
       });
 
@@ -199,6 +206,15 @@ class ConfigurationsRC extends ResourceController {
       'automaticRoleAssignments'
     ];
 
+    const guestFields = [
+      'guestAccessEnabled',
+      'guestAccessAllowedRequestTypes',
+      'guestAccessDefaultExpirationDays',
+      'guestAccessInstructions',
+      'guestAccessRequirePurpose',
+      'guestInvitations'
+    ];
+
     const homeTextFields = ['homeWelcomeTitle', 'homeWelcomeSubtitle'];
     const homeNoticeFields = ['homeNotice'];
     const rulesTextFields = ['rulesWarningText'];
@@ -207,6 +223,7 @@ class ConfigurationsRC extends ResourceController {
     const allowedFields = [
       ...(this.user.hasPermission(AppPermission.CONFIGURATIONS.OPTIONS) ? optionFields : []),
       ...(this.user.hasPermission(AppPermission.CONFIGURATIONS.USERS) ? userFields : []),
+      ...(this.user.hasPermission(AppPermission.CONFIGURATIONS.GUESTS) ? guestFields : []),
       ...(hasFullConfigurationsRights ? ['configurationPageSectionsOrder'] : []),
       ...(this.user.hasPermission(AppPermission.RULES.TEXT) ? rulesTextFields : []),
       ...(this.user.hasPermission(AppPermission.RULES.UPDATE) ? rulesDocumentFields : []),

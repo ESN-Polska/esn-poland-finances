@@ -1,0 +1,244 @@
+<ion-header>
+  <ion-toolbar color="ideaToolbar">
+    <ion-buttons slot="start">
+      <ion-button [title]="'COMMON.CLOSE' | translate" (click)="close()">
+        <ion-icon name="close-circle-outline" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>
+      {{ (isCreatedStep ? 'CONFIGURATIONS.GUEST_LINK_CREATED_TITLE' : (isEditMode ? 'CONFIGURATIONS.EDIT_INVITE_TITLE' : 'CONFIGURATIONS.GENERATE_GUEST_LINK')) | translate }}
+    </ion-title>
+    <ion-buttons slot="end" *ngIf="!isCreatedStep">
+      <ion-button (click)="generate()" [disabled]="!isValid" color="primary">
+        <ion-icon [name]="isEditMode ? 'save-outline' : 'checkmark-circle-outline'" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="guestModalContent">
+  <div class="maxWidthContainer">
+    <!-- STEP 1: FORM INPUTS -->
+    <ion-list class="aList" *ngIf="!isCreatedStep">
+      <ion-list-header>
+        <ion-label>
+          <h2>{{ 'CONFIGURATIONS.GUEST_ACCESS' | translate }}</h2>
+          <p>{{ 'CONFIGURATIONS.GUEST_ACCESS_I' | translate }}</p>
+        </ion-label>
+      </ion-list-header>
+
+      <!-- Guest Name -->
+      <ion-item>
+        <ion-label position="stacked">{{ 'CONFIGURATIONS.GUEST_NAME' | translate }} *</ion-label>
+        <ion-input [(ngModel)]="guestName" placeholder="Jan Kowalski"></ion-input>
+      </ion-item>
+
+      <!-- Guest Email -->
+      <ion-item>
+        <ion-label position="stacked">{{ 'CONFIGURATIONS.GUEST_EMAIL' | translate }} *</ion-label>
+        <ion-input type="email" [(ngModel)]="guestEmail" placeholder="jan.kowalski@example.com"></ion-input>
+      </ion-item>
+
+      <!-- Purpose / Event -->
+      <ion-item>
+        <ion-label position="stacked">
+          {{ 'CONFIGURATIONS.GUEST_PURPOSE' | translate }}
+          <span *ngIf="configurations?.guestAccessRequirePurpose">*</span>
+        </ion-label>
+        <ion-input
+          [(ngModel)]="purpose"
+          [placeholder]="'CONFIGURATIONS.GUEST_PURPOSE_PLACEHOLDER' | translate"
+        ></ion-input>
+      </ion-item>
+
+      <!-- Position (Optional) -->
+      <ion-item>
+        <ion-label position="stacked">{{ 'CONFIGURATIONS.GUEST_POSITION' | translate }}</ion-label>
+        <ion-input
+          [(ngModel)]="position"
+          [placeholder]="'CONFIGURATIONS.GUEST_POSITION_I' | translate"
+        ></ion-input>
+      </ion-item>
+
+      <!-- Expiration Period -->
+      <ion-list-header class="ion-padding-top">
+        <ion-label>
+          <h2>{{ 'CONFIGURATIONS.GUEST_EXPIRATION' | translate }}</h2>
+        </ion-label>
+      </ion-list-header>
+      <ion-segment [(ngModel)]="expirationOption" class="expirationSegment">
+        <ion-segment-button value="7">
+          <ion-label>{{ 'CONFIGURATIONS.GUEST_DAYS_COUNT' | translate:{ days: 7 } }}</ion-label>
+        </ion-segment-button>
+        <ion-segment-button value="14">
+          <ion-label>{{ 'CONFIGURATIONS.GUEST_DAYS_COUNT' | translate:{ days: 14 } }}</ion-label>
+        </ion-segment-button>
+        <ion-segment-button value="30">
+          <ion-label>{{ 'CONFIGURATIONS.GUEST_DAYS_COUNT' | translate:{ days: 30 } }}</ion-label>
+        </ion-segment-button>
+        <ion-segment-button value="custom">
+          <ion-label>{{ 'COMMON.CUSTOM' | translate }}</ion-label>
+        </ion-segment-button>
+      </ion-segment>
+
+      <ion-item *ngIf="expirationOption === 'custom'" class="customDateItem">
+        <ion-label position="stacked">{{ 'CONFIGURATIONS.GUEST_EXPIRATION_CUSTOM' | translate }}</ion-label>
+        <ion-input type="date" [(ngModel)]="customExpirationDate"></ion-input>
+      </ion-item>
+
+      <!-- Allowed Request Types -->
+      <ion-list-header class="ion-padding-top">
+        <ion-label>
+          <h2>{{ 'CONFIGURATIONS.GUEST_ALLOWED_TYPES' | translate }}</h2>
+          <p>{{ 'CONFIGURATIONS.GUEST_ALLOWED_TYPES_I' | translate }}</p>
+        </ion-label>
+      </ion-list-header>
+      <ion-item *ngFor="let t of availableRequestTypes">
+        <ion-checkbox slot="start" [(ngModel)]="allowedTypesMap[t]"></ion-checkbox>
+        <ion-label>{{ 'REQUESTS.TYPES.' + t | translate }}</ion-label>
+      </ion-item>
+
+      <!-- Preset Source of Funding (Optional) -->
+      <ion-list-header class="ion-padding-top">
+        <ion-label>
+          <h2>{{ 'CONFIGURATIONS.GUEST_PRESET_FUNDING' | translate }}</h2>
+          <p>{{ 'CONFIGURATIONS.GUEST_PRESET_FUNDING_I' | translate }}</p>
+        </ion-label>
+      </ion-list-header>
+      <ion-item>
+        <ion-input
+          [(ngModel)]="defaultSourceOfFunding"
+          [placeholder]="'REQUESTS.PLACEHOLDERS.FUNDING_SOURCE' | translate"
+        ></ion-input>
+      </ion-item>
+
+      <!-- Max Amount (Optional) -->
+      <ion-list-header class="ion-padding-top">
+        <ion-label>
+          <h2>{{ 'CONFIGURATIONS.GUEST_MAX_AMOUNT' | translate }}</h2>
+          <p>{{ 'CONFIGURATIONS.GUEST_MAX_AMOUNT_I' | translate }}</p>
+        </ion-label>
+      </ion-list-header>
+      <ion-item>
+        <ion-input
+          type="number"
+          min="0"
+          step="0.01"
+          [(ngModel)]="maxAmount"
+          placeholder="e.g. 1500"
+        ></ion-input>
+        <span slot="end" class="currencySuffix">PLN</span>
+      </ion-item>
+
+      <!-- Custom Instructions Toggle & Inputs -->
+      <ion-item class="ion-margin-top">
+        <ion-label class="ion-text-wrap">
+          {{ 'CONFIGURATIONS.GUEST_CUSTOM_INSTRUCTIONS' | translate }}
+          <p>{{ 'CONFIGURATIONS.GUEST_CUSTOM_INSTRUCTIONS_I' | translate }}</p>
+        </ion-label>
+        <ion-toggle slot="end" [(ngModel)]="customizeInstructions"></ion-toggle>
+      </ion-item>
+
+      <ng-container *ngIf="customizeInstructions">
+        <ion-item class="ion-margin-top">
+          <ion-label position="stacked">{{ 'CONFIGURATIONS.GUEST_INSTRUCTIONS_EN' | translate }}</ion-label>
+          <ion-textarea
+            [(ngModel)]="customInstructionsEn"
+            [autoGrow]="true"
+            [rows]="4"
+            [placeholder]="'CONFIGURATIONS.GUEST_INSTRUCTIONS_PLACEHOLDER' | translate"
+          ></ion-textarea>
+        </ion-item>
+        <ion-item class="ion-margin-top">
+          <ion-label position="stacked">{{ 'CONFIGURATIONS.GUEST_INSTRUCTIONS_PL' | translate }}</ion-label>
+          <ion-textarea
+            [(ngModel)]="customInstructionsPl"
+            [autoGrow]="true"
+            [rows]="4"
+            [placeholder]="'CONFIGURATIONS.GUEST_INSTRUCTIONS_PLACEHOLDER' | translate"
+          ></ion-textarea>
+        </ion-item>
+      </ng-container>
+
+      <!-- Multi-use Toggle -->
+      <ion-item class="ion-margin-top">
+        <ion-label class="ion-text-wrap">
+          {{ 'CONFIGURATIONS.GUEST_MULTI_USE' | translate }}
+          <p>{{ 'CONFIGURATIONS.GUEST_MULTI_USE_I' | translate }}</p>
+        </ion-label>
+        <ion-toggle slot="end" [(ngModel)]="isMultiUse"></ion-toggle>
+      </ion-item>
+
+      <!-- Action Button -->
+      <div class="submitWrapper">
+        <ion-button expand="block" (click)="generate()" [disabled]="!isValid" class="actionBtn">
+          <ion-icon slot="start" [name]="isEditMode ? 'save-outline' : 'link-outline'"></ion-icon>
+          {{ (isEditMode ? 'COMMON.SAVE' : 'CONFIGURATIONS.GENERATE_GUEST_LINK') | translate }}
+        </ion-button>
+      </div>
+    </ion-list>
+
+    <!-- STEP 2: CREATED LINK VIEW -->
+    <div class="createdContainer" *ngIf="isCreatedStep && createdInvitation">
+      <div class="successCard">
+        <div class="successIconWrapper">
+          <ion-icon name="checkmark-circle" color="success"></ion-icon>
+        </div>
+        <h2>{{ 'CONFIGURATIONS.GUEST_LINK_CREATED_TITLE' | translate }}</h2>
+        <p class="successSubtitle">{{ 'CONFIGURATIONS.GUEST_LINK_CREATED_DESC' | translate }}</p>
+
+        <!-- Link Display Box -->
+        <div class="linkBox">
+          <ion-input readonly [value]="generatedLink" class="linkInput font-mono"></ion-input>
+          <ion-button fill="solid" color="primary" class="copyBtn" (click)="copyLink()">
+            <ion-icon slot="start" name="copy-outline"></ion-icon>
+            {{ 'CONFIGURATIONS.COPY_LINK' | translate }}
+          </ion-button>
+        </div>
+
+        <div class="emailTemplateWrapper">
+          <ion-button fill="outline" color="medium" size="small" (click)="copyEmailTemplate()">
+            <ion-icon slot="start" name="mail-outline"></ion-icon>
+            {{ 'CONFIGURATIONS.COPY_EMAIL_TEMPLATE' | translate }}
+          </ion-button>
+        </div>
+
+        <!-- Invitation Details Summary -->
+        <ion-card class="summaryCard">
+          <ion-card-content>
+            <div class="summaryRow">
+              <span class="summaryLabel">{{ 'CONFIGURATIONS.GUEST_NAME' | translate }}:</span>
+              <span class="summaryValue">{{ createdInvitation.guestName }}</span>
+            </div>
+            <div class="summaryRow">
+              <span class="summaryLabel">{{ 'CONFIGURATIONS.GUEST_EMAIL' | translate }}:</span>
+              <span class="summaryValue">{{ createdInvitation.guestEmail }}</span>
+            </div>
+            <div class="summaryRow" *ngIf="createdInvitation.purpose">
+              <span class="summaryLabel">{{ 'CONFIGURATIONS.GUEST_PURPOSE' | translate }}:</span>
+              <span class="summaryValue">{{ createdInvitation.purpose }}</span>
+            </div>
+            <div class="summaryRow">
+              <span class="summaryLabel">{{ 'CONFIGURATIONS.GUEST_EXPIRATION' | translate }}:</span>
+              <span class="summaryValue">{{ createdInvitation.expiresAt | date:'dd.MM.yyyy' }}</span>
+            </div>
+            <div class="summaryRow" *ngIf="createdInvitation.maxAmount">
+              <span class="summaryLabel">{{ 'CONFIGURATIONS.GUEST_MAX_AMOUNT' | translate }}:</span>
+              <span class="summaryValue font-mono">{{ createdInvitation.maxAmount }} PLN</span>
+            </div>
+            <div class="summaryRow" *ngIf="createdInvitation.instructions && (createdInvitation.instructions.en || createdInvitation.instructions.pl)">
+              <span class="summaryLabel">{{ 'CONFIGURATIONS.GUEST_INSTRUCTIONS' | translate }}:</span>
+              <span class="summaryValue">{{ 'CONFIGURATIONS.GUEST_HAS_CUSTOM_INSTRUCTIONS' | translate }}</span>
+            </div>
+          </ion-card-content>
+        </ion-card>
+
+        <div class="doneWrapper">
+          <ion-button expand="block" color="success" (click)="dismiss()">
+            {{ 'COMMON.DONE' | translate }}
+          </ion-button>
+        </div>
+      </div>
+    </div>
+  </div>
+</ion-content>

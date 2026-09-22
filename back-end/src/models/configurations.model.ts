@@ -1,10 +1,13 @@
 import { Resource } from 'idea-toolbox';
+import { FinancialRequestType } from './financial-request.model';
+export { FinancialRequestType };
 
 export const DEFAULT_TIMEZONE = 'Europe/Warsaw';
 
 export const DEFAULT_CONFIGURATION_PAGE_SECTIONS_ORDER = [
-  'OPTIONS',
-  'USERS'
+  'GUESTS',
+  'USERS',
+  'OPTIONS'
 ] as const;
 
 export type ConfigurationPageSection = (typeof DEFAULT_CONFIGURATION_PAGE_SECTIONS_ORDER)[number];
@@ -29,8 +32,9 @@ export const AppPermission = {
   },
   CONFIGURATIONS: {
     PARENT: 'configurations',
-    OPTIONS: 'configurations.options',
-    USERS: 'configurations.users'
+    GUESTS: 'configurations.guests',
+    USERS: 'configurations.users',
+    OPTIONS: 'configurations.options'
   }
 } as const;
 
@@ -96,6 +100,28 @@ export interface AutomaticRoleAssignment {
   extendedRolePatterns: string[];
 }
 
+export type GuestInvitationStatus = 'ACTIVE' | 'USED' | 'EXPIRED' | 'REVOKED';
+
+export interface GuestInvitation {
+  id: string;
+  guestName: string;
+  guestEmail: string;
+  purpose: string;
+  position?: string;
+  allowedRequestTypes?: FinancialRequestType[];
+  defaultSourceOfFunding?: string;
+  maxAmount?: number;
+  instructions?: LocalizedText;
+  createdAt: string;
+  expiresAt: string;
+  createdBy: string;
+  status: GuestInvitationStatus;
+  isMultiUse?: boolean;
+  submittedRequestId?: string;
+  submittedAt?: string;
+  lastAccessedAt?: string;
+}
+
 /**
  * The possible options in displaying information about a user.
  */
@@ -157,7 +183,16 @@ export const DEFAULT_CONFIGURATIONS = {
   },
   rulesFileURL: 'https://media.finances.esn-poland.link/rules/finances-rules.pdf',
   rulesResolutionNumber: 'XX/XX',
-  rulesRevisionDate: ''
+  rulesRevisionDate: '',
+  guestAccessEnabled: true,
+  guestAccessAllowedRequestTypes: ['INVOICE_REIMBURSEMENT', 'DELEGATION_SETTLEMENT'] as FinancialRequestType[],
+  guestAccessDefaultExpirationDays: 14,
+  guestAccessInstructions: {
+    en: 'Please provide all necessary invoice attachments, travel tickets, and proof of payment. Ensure that the bank account details match the invoice or attendee name.',
+    pl: 'Prosimy o dołączenie wszystkich faktur, biletów podróżnych oraz potwierdzeń płatności. Upewnij się, że dane konta bankowego są poprawne.'
+  },
+  guestAccessRequirePurpose: true,
+  guestInvitations: [] as GuestInvitation[]
 };
 
 /**
@@ -206,9 +241,23 @@ export class Configurations extends Resource {
   /** Rules document URL to download. */
   rulesFileURL: string;
   /** Resolution number governing this rules revision (e.g. "XX/XX" or "04/2026"). */
+  /** Rules resolution number. */
   rulesResolutionNumber: string;
   /** Date of the rules revision (YYYY-MM-DD). */
   rulesRevisionDate: string;
+
+  /** Master switch for guest reimbursements without ESN Accounts. */
+  guestAccessEnabled: boolean;
+  /** Allowed request types for guests. */
+  guestAccessAllowedRequestTypes: FinancialRequestType[];
+  /** Default expiration days for generated guest links. */
+  guestAccessDefaultExpirationDays: number;
+  /** Localized instructions shown to guests. */
+  guestAccessInstructions: LocalizedText;
+  /** Whether purpose is required when creating an invite. */
+  guestAccessRequirePurpose: boolean;
+  /** Active and historical guest invitations. */
+  guestInvitations: GuestInvitation[];
 
   constructor(data?: any) {
     super();
@@ -278,7 +327,10 @@ export class Configurations extends Resource {
     const defaultNotice = DEFAULT_CONFIGURATIONS.homeNotice;
     const noticeType = ['info', 'warning', 'success'].includes(x.homeNotice?.type) ? x.homeNotice.type : 'info';
     this.homeNotice = {
-      active: this.clean(x.homeNotice?.active, Boolean, defaultNotice.active),
+      active:
+        x.homeNotice?.active !== undefined
+          ? Boolean(x.homeNotice.active)
+          : defaultNotice.active,
       type: noticeType,
       text: {
         en: this.clean(x.homeNotice?.text?.en, String, defaultNotice.text.en),
@@ -316,6 +368,61 @@ export class Configurations extends Resource {
       DEFAULT_CONFIGURATIONS.rulesResolutionNumber
     );
     this.rulesRevisionDate = this.clean(x.rulesRevisionDate, String, DEFAULT_CONFIGURATIONS.rulesRevisionDate);
+
+    this.guestAccessEnabled =
+      x.guestAccessEnabled !== undefined
+        ? Boolean(x.guestAccessEnabled)
+        : DEFAULT_CONFIGURATIONS.guestAccessEnabled;
+    this.guestAccessAllowedRequestTypes = this.cleanArray(
+      x.guestAccessAllowedRequestTypes,
+      String,
+      DEFAULT_CONFIGURATIONS.guestAccessAllowedRequestTypes
+    ) as FinancialRequestType[];
+    this.guestAccessDefaultExpirationDays = this.clean(
+      x.guestAccessDefaultExpirationDays,
+      Number,
+      DEFAULT_CONFIGURATIONS.guestAccessDefaultExpirationDays
+    );
+    const defaultGuestInstructions = DEFAULT_CONFIGURATIONS.guestAccessInstructions;
+    if (typeof x.guestAccessInstructions === 'string') {
+      this.guestAccessInstructions = { en: x.guestAccessInstructions, pl: x.guestAccessInstructions };
+    } else {
+      this.guestAccessInstructions = {
+        en: this.clean(x.guestAccessInstructions?.en, String, defaultGuestInstructions.en),
+        pl: this.clean(x.guestAccessInstructions?.pl, String, defaultGuestInstructions.pl)
+      };
+    }
+    this.guestAccessRequirePurpose =
+      x.guestAccessRequirePurpose !== undefined
+        ? Boolean(x.guestAccessRequirePurpose)
+        : DEFAULT_CONFIGURATIONS.guestAccessRequirePurpose;
+    this.guestInvitations = this.cleanArray(x.guestInvitations, Object).map((inv: any) => ({
+      id: this.clean(inv.id, String),
+      guestName: this.clean(inv.guestName, String),
+      guestEmail: this.clean(inv.guestEmail, String),
+      purpose: this.clean(inv.purpose, String),
+      position: this.clean(inv.position, String),
+      allowedRequestTypes: this.cleanArray(inv.allowedRequestTypes, String) as FinancialRequestType[],
+      defaultSourceOfFunding: this.clean(inv.defaultSourceOfFunding, String),
+      maxAmount:
+        inv.maxAmount !== undefined && inv.maxAmount !== null && inv.maxAmount !== ''
+          ? Number(inv.maxAmount)
+          : undefined,
+      instructions: inv.instructions
+        ? {
+            en: this.clean(inv.instructions.en, String),
+            pl: this.clean(inv.instructions.pl, String)
+          }
+        : undefined,
+      createdAt: this.clean(inv.createdAt, String),
+      expiresAt: this.clean(inv.expiresAt, String),
+      createdBy: this.clean(inv.createdBy, String),
+      status: (['ACTIVE', 'USED', 'EXPIRED', 'REVOKED'].includes(inv.status) ? inv.status : 'ACTIVE') as GuestInvitationStatus,
+      isMultiUse: inv.isMultiUse !== undefined ? Boolean(inv.isMultiUse) : false,
+      submittedRequestId: this.clean(inv.submittedRequestId, String),
+      submittedAt: this.clean(inv.submittedAt, String),
+      lastAccessedAt: this.clean(inv.lastAccessedAt, String)
+    }));
   }
 
   getAppTitle(lang: string = 'en'): string {
@@ -364,6 +471,12 @@ export class Configurations extends Resource {
     this.rulesFileURL = safeData.rulesFileURL;
     this.rulesResolutionNumber = safeData.rulesResolutionNumber;
     this.rulesRevisionDate = safeData.rulesRevisionDate;
+    this.guestAccessEnabled = safeData.guestAccessEnabled;
+    this.guestAccessAllowedRequestTypes = safeData.guestAccessAllowedRequestTypes;
+    this.guestAccessDefaultExpirationDays = safeData.guestAccessDefaultExpirationDays;
+    this.guestAccessInstructions = safeData.guestAccessInstructions;
+    this.guestAccessRequirePurpose = safeData.guestAccessRequirePurpose;
+    this.guestInvitations = safeData.guestInvitations;
   }
 
   hasAdminGroup(): boolean {
@@ -405,6 +518,14 @@ export class Configurations extends Resource {
     for (const assignment of this.automaticRoleAssignments || []) {
       if ((assignment.extendedRolePatterns || []).some(pattern => !validExtendedRolePattern.test(pattern))) {
         errors.push('automaticRoleAssignments.extendedRolePatterns');
+      }
+    }
+    for (const inv of this.guestInvitations || []) {
+      if (!inv.id || !inv.id.trim()) errors.push('guestInvitations.id');
+      if (!inv.guestName || !inv.guestName.trim()) errors.push('guestInvitations.guestName');
+      if (!inv.guestEmail || !inv.guestEmail.trim()) errors.push('guestInvitations.guestEmail');
+      if (this.guestAccessRequirePurpose && (!inv.purpose || !inv.purpose.trim())) {
+        errors.push('guestInvitations.purpose');
       }
     }
     return errors;

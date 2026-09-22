@@ -208,6 +208,25 @@
         opacity: 0.8;
       }
     }
+
+    .guest-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      padding: 0.35rem 0.75rem;
+      border-radius: 8px;
+      background: #f5f3ff;
+      color: #7c3aed;
+      border: 1px solid rgba(124, 58, 237, 0.25);
+
+      ion-icon {
+        font-size: 0.95rem;
+      }
+    }
   }
 
   .amount-hero {
@@ -579,6 +598,10 @@
     overflow: hidden;
     flex-shrink: 0;
 
+    &.guest-avatar {
+      background: #7c3aed;
+    }
+
     .user-avatar-img {
       width: 100%;
       height: 100%;
@@ -620,6 +643,30 @@
       font-size: 0.75rem;
       font-weight: 600;
       color: var(--text-dark);
+    }
+
+    .guest-pill {
+      display: inline-flex;
+      align-items: center;
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 1px 6px;
+      border-radius: 4px;
+      background: #f5f3ff;
+      color: #7c3aed;
+      border: 1px solid rgba(124, 58, 237, 0.3);
+    }
+
+    .guest-purpose {
+      font-size: 0.75rem;
+      color: var(--text-dark);
+      margin-top: 2px;
+
+      strong {
+        color: var(--text-medium);
+      }
     }
   }
 }

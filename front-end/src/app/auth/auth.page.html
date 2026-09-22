@@ -48,10 +48,20 @@
 
         <div *ngIf="isProcessing" class="loading-state">
           <ion-spinner name="crescent" color="primary"></ion-spinner>
-          <p class="loading-text">{{ 'AUTH.LOGGING_IN' | translate }}</p>
+          <p class="loading-text">{{ (isGuestLogin ? 'AUTH.GUEST_VERIFYING' : 'AUTH.LOGGING_IN') | translate }}</p>
         </div>
 
-        <div *ngIf="!isProcessing" class="action-section">
+        <!-- Guest Link Error Notice (replaces login button) -->
+        <div *ngIf="!isProcessing && guestErrorKey" class="guestErrorCard">
+          <div class="guestErrorIcon">
+            <ion-icon name="alert-circle-outline"></ion-icon>
+          </div>
+          <h3 class="guestErrorTitle">{{ 'AUTH.GUEST_LINK_UNAVAILABLE' | translate }}</h3>
+          <p class="guestErrorDesc">{{ guestErrorKey | translate }}</p>
+        </div>
+
+        <!-- Standard Login Button (hidden if guest link error notice is displayed) -->
+        <div *ngIf="!isProcessing && !guestErrorKey" class="action-section">
           <ion-button
             expand="block"
             class="login-button"

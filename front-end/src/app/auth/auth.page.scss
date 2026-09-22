@@ -191,3 +191,34 @@ p.version {
     margin: 0;
   }
 }
+
+.guestErrorCard {
+  background: rgba(var(--ion-color-danger-rgb, 235, 68, 90), 0.08);
+  border: 1px solid rgba(var(--ion-color-danger-rgb, 235, 68, 90), 0.25);
+  border-radius: 12px;
+  padding: 24px 20px;
+  text-align: center;
+  margin: 16px 0 8px 0;
+
+  .guestErrorIcon {
+    font-size: 2.5rem;
+    color: var(--ion-color-danger, #eb445a);
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: center;
+  }
+
+  .guestErrorTitle {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--ion-color-danger, #eb445a);
+    margin: 0 0 8px 0;
+  }
+
+  .guestErrorDesc {
+    font-size: 0.92rem;
+    color: var(--text-dark, #222428);
+    margin: 0;
+    line-height: 1.5;
+  }
+}

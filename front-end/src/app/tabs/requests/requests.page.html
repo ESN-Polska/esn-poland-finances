@@ -57,6 +57,10 @@
         <div class="cardTop">
           <div class="idGroup">
             <span class="requestId" [class.isDraftPlaceholder]="req.isDraft">{{ req.displayId }}</span>
+            <span class="guestBadge" *ngIf="req.isGuest">
+              <ion-icon name="person-outline"></ion-icon>
+              {{ 'CONFIGURATIONS.GUEST_BADGE' | translate }}
+            </span>
             <span class="requestTypeBadge">
               {{ ('REQUESTS.TYPES.' + req.requestType) | translate }}
             </span>

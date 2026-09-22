@@ -162,6 +162,11 @@ ion-toolbar {
     color: #0f766e;
     border: 1px solid #99f6e4;
   }
+  &.role-guest {
+    background: #fdf2f8;
+    color: #be185d;
+    border: 1px solid #fbcfe8;
+  }
 }
 
 /* Dark Mode Status Badges & Surfaces (eliminates light backgrounds and border outlines in dark mode) */
@@ -235,6 +240,11 @@ body.dark {
       background: rgba(20, 184, 166, 0.22) !important;
       color: #99f6e4 !important;
       border: 1px solid rgba(45, 212, 191, 0.4) !important;
+    }
+    &.role-guest {
+      background: rgba(236, 72, 153, 0.22) !important;
+      color: #f472b6 !important;
+      border: 1px solid rgba(244, 114, 182, 0.4) !important;
     }
   }
 

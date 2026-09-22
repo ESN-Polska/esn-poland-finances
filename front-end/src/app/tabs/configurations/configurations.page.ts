@@ -1,5 +1,5 @@
 import { Component, OnInit, ViewChild } from '@angular/core';
-import { AlertController, IonSelect, LoadingController, ModalController } from '@ionic/angular';
+import { AlertController, IonSelect, LoadingController, ModalController, ToastController } from '@ionic/angular';
 import { TranslateService } from '@ngx-translate/core';
 
 import { AppService } from '@app/app.service';
@@ -7,6 +7,8 @@ import { ConfigurationsService } from './configurations.service';
 import { MediaService } from '@app/common/media.service';
 import { RoleEditorComponent } from './roleEditor.component';
 import { UserRoleMappingsComponent } from './userRoleMappings.component';
+import { GuestInviteModalComponent } from './guestInviteModal.component';
+import { GuestInstructionsModalComponent } from './guestInstructionsModal.component';
 
 import {
   AppPermission,
@@ -14,7 +16,9 @@ import {
   ConfigurationPageSection,
   CustomRole,
   DEFAULT_CONFIGURATION_PAGE_SECTIONS_ORDER,
-  BuiltInRole
+  BuiltInRole,
+  GuestInvitation,
+  FinancialRequestType
 } from '@models/configurations.model';
 import { User } from '@models/user.model';
 
@@ -30,7 +34,7 @@ export class ConfigurationsPage implements OnInit {
   @ViewChild('customRoleSelect') customRoleSelect?: IonSelect;
   selectedCustomRoleId: string | null = null;
 
-  pageSection: ConfigurationPageSection = 'OPTIONS';
+  pageSection: ConfigurationPageSection = DEFAULT_CONFIGURATION_PAGE_SECTIONS_ORDER[0];
   pageSections: ConfigurationPageSection[] =
     this.configurations?.configurationPageSectionsOrder?.length
       ? [...this.configurations.configurationPageSectionsOrder]
@@ -40,10 +44,14 @@ export class ConfigurationsPage implements OnInit {
     ? (Intl as any).supportedValuesOf('timeZone')
     : ['Europe/Warsaw', 'UTC'];
 
+  guestFilterStatus: 'ALL' | 'ACTIVE' | 'USED' | 'EXPIRED' | 'REVOKED' = 'ALL';
+  guestSearchQuery: string = '';
+
   constructor(
     private modalCtrl: ModalController,
     private alertCtrl: AlertController,
     private loadingCtrl: LoadingController,
+    private toastCtrl: ToastController,
     private translate: TranslateService,
     private configurationsService: ConfigurationsService,
     private mediaService: MediaService,
@@ -58,14 +66,12 @@ export class ConfigurationsPage implements OnInit {
       }
     }
 
-    if (!this.canAccessPageSection(this.pageSection)) {
-      const accessible = this.pageSections.find(s => this.canAccessPageSection(s));
-      if (accessible) {
-        this.pageSection = accessible;
-      } else {
-        this.app.goTo(['/t/home']);
-        return;
-      }
+    const firstAccessible = this.pageSections.find(s => this.canAccessPageSection(s));
+    if (firstAccessible) {
+      this.pageSection = firstAccessible;
+    } else {
+      this.app.goTo(['/t/home']);
+      return;
     }
 
     await this.loadData();
@@ -107,6 +113,9 @@ export class ConfigurationsPage implements OnInit {
     if (section === 'USERS') {
       return user.hasPermission(AppPermission.CONFIGURATIONS.USERS);
     }
+    if (section === 'GUESTS') {
+      return user.hasPermission(AppPermission.CONFIGURATIONS.GUESTS);
+    }
     return false;
   }
 
@@ -124,6 +133,14 @@ export class ConfigurationsPage implements OnInit {
     if (user.isAdministrator) return true;
     if (user.isAuditor) return false;
     return user.hasPermission(AppPermission.CONFIGURATIONS.USERS);
+  }
+
+  canModifyGuests(): boolean {
+    const user = this.app.currentUser;
+    if (!user) return false;
+    if (user.isAdministrator) return true;
+    if (user.isAuditor) return false;
+    return user.hasPermission(AppPermission.CONFIGURATIONS.GUESTS);
   }
 
   canUsePreview(): boolean {
@@ -613,6 +630,272 @@ export class ConfigurationsPage implements OnInit {
     this.selectedCustomRoleId = null;
     if (this.customRoleSelect) {
       this.customRoleSelect.value = null;
+    }
+  }
+
+  get filteredGuestInvitations(): GuestInvitation[] {
+    const invites = this.configurations?.guestInvitations || [];
+    const query = this.guestSearchQuery.trim().toLowerCase();
+    const now = new Date().toISOString();
+
+    return invites.filter(inv => {
+      let effectiveStatus = inv.status;
+      if (inv.status === 'ACTIVE' && inv.expiresAt && inv.expiresAt < now) {
+        effectiveStatus = 'EXPIRED';
+      }
+
+      const matchesStatus =
+        this.guestFilterStatus === 'ALL' || effectiveStatus === this.guestFilterStatus;
+
+      const matchesSearch =
+        !query ||
+        inv.guestName?.toLowerCase().includes(query) ||
+        inv.guestEmail?.toLowerCase().includes(query) ||
+        (inv.purpose && inv.purpose.toLowerCase().includes(query)) ||
+        (inv.submittedRequestId && inv.submittedRequestId.toLowerCase().includes(query));
+
+      return matchesStatus && matchesSearch;
+    });
+  }
+
+  getGuestStatus(invite: GuestInvitation): string {
+    const now = new Date().toISOString();
+    if (invite.status === 'ACTIVE' && invite.expiresAt && invite.expiresAt < now) {
+      return 'EXPIRED';
+    }
+    return invite.status;
+  }
+
+  async openCreateGuestInviteModal(existing?: GuestInvitation): Promise<void> {
+    const modal = await this.modalCtrl.create({
+      component: GuestInviteModalComponent,
+      componentProps: {
+        configurations: this.configurations,
+        existingInvite: existing
+      }
+    });
+
+    await modal.present();
+    const { data } = await modal.onWillDismiss();
+
+    if (data?.invitation && !existing) {
+      const updated = new Configurations(this.configurations);
+      updated.guestAccessEnabled = true;
+      updated.guestInvitations = [data.invitation, ...(updated.guestInvitations || [])];
+      await this.updateConfigurations(updated);
+    }
+  }
+
+  async openEditGuestInviteModal(invite: GuestInvitation): Promise<void> {
+    const modal = await this.modalCtrl.create({
+      component: GuestInviteModalComponent,
+      componentProps: {
+        configurations: this.configurations,
+        existingInvite: invite,
+        isEditMode: true
+      }
+    });
+
+    await modal.present();
+    const { data } = await modal.onWillDismiss();
+
+    if (data?.invitation && data?.isEdit) {
+      const updated = new Configurations(this.configurations);
+      const list = [...(updated.guestInvitations || [])];
+      const idx = list.findIndex(i => i.id === invite.id);
+      if (idx !== -1) {
+        list[idx] = data.invitation;
+        updated.guestInvitations = list;
+        await this.updateConfigurations(updated);
+        const toast = await this.toastCtrl.create({
+          message: this.translate.instant('CONFIGURATIONS.INVITE_UPDATED'),
+          duration: 2500,
+          color: 'success',
+          position: 'bottom'
+        });
+        await toast.present();
+      }
+    }
+  }
+
+  async copyGuestLink(invite: GuestInvitation): Promise<void> {
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://finances.esn-poland.link';
+    const link = `${origin}/auth?guestToken=${encodeURIComponent(invite.id)}`;
+
+    try {
+      await navigator.clipboard.writeText(link);
+      const toast = await this.toastCtrl.create({
+        message: this.translate.instant('CONFIGURATIONS.LINK_COPIED'),
+        duration: 2500,
+        color: 'success',
+        position: 'bottom'
+      });
+      await toast.present();
+    } catch {
+      // Fallback
+    }
+  }
+
+  async changeGuestInviteValidity(invite: GuestInvitation): Promise<void> {
+    const currentExpiry = invite.expiresAt ? new Date(invite.expiresAt) : new Date();
+    const currentDateStr = currentExpiry.toISOString().substring(0, 10);
+
+    const alert = await this.alertCtrl.create({
+      header: this.translate.instant('CONFIGURATIONS.CHANGE_VALIDITY'),
+      inputs: [
+        {
+          name: 'validityDate',
+          type: 'date',
+          value: currentDateStr
+        }
+      ],
+      buttons: [
+        { text: this.translate.instant('COMMON.CANCEL'), role: 'cancel' },
+        {
+          text: this.translate.instant('COMMON.SAVE'),
+          handler: async (data: { validityDate?: string }) => {
+            if (!data?.validityDate) return;
+            const updated = new Configurations(this.configurations);
+            const target = (updated.guestInvitations || []).find(i => i.id === invite.id);
+            if (!target) return;
+
+            const newDate = new Date(data.validityDate);
+            newDate.setHours(23, 59, 59, 999);
+            target.expiresAt = newDate.toISOString();
+            if (target.status === 'EXPIRED' && newDate.getTime() > Date.now()) {
+              target.status = 'ACTIVE';
+            }
+
+            await this.updateConfigurations(updated);
+          }
+        }
+      ]
+    });
+    await alert.present();
+  }
+
+  async revokeGuestInvite(invite: GuestInvitation): Promise<void> {
+    const alert = await this.alertCtrl.create({
+      header: this.translate.instant('COMMON.CONFIRM'),
+      message: this.translate.instant('CONFIGURATIONS.REVOKE_INVITE_CONFIRM'),
+      buttons: [
+        { text: this.translate.instant('COMMON.CANCEL'), role: 'cancel' },
+        {
+          text: this.translate.instant('CONFIGURATIONS.REVOKE_INVITE'),
+          role: 'destructive',
+          handler: async () => {
+            const updated = new Configurations(this.configurations);
+            const target = (updated.guestInvitations || []).find(i => i.id === invite.id);
+            if (target) {
+              target.status = 'REVOKED';
+              await this.updateConfigurations(updated);
+            }
+          }
+        }
+      ]
+    });
+    await alert.present();
+  }
+
+  async unrevokeGuestInvite(invite: GuestInvitation): Promise<void> {
+    const alert = await this.alertCtrl.create({
+      header: this.translate.instant('COMMON.CONFIRM'),
+      message: this.translate.instant('CONFIGURATIONS.UNREVOKE_INVITE_CONFIRM'),
+      buttons: [
+        { text: this.translate.instant('COMMON.CANCEL'), role: 'cancel' },
+        {
+          text: this.translate.instant('CONFIGURATIONS.UNREVOKE_INVITE'),
+          handler: async () => {
+            const updated = new Configurations(this.configurations);
+            const target = (updated.guestInvitations || []).find(i => i.id === invite.id);
+            if (target) {
+              target.status = 'ACTIVE';
+              const now = new Date();
+              if (target.expiresAt && new Date(target.expiresAt).getTime() <= now.getTime()) {
+                const days = this.configurations?.guestAccessDefaultExpirationDays || 7;
+                const newExp = new Date();
+                newExp.setDate(newExp.getDate() + days);
+                newExp.setHours(23, 59, 59, 999);
+                target.expiresAt = newExp.toISOString();
+              }
+              await this.updateConfigurations(updated);
+              const toast = await this.toastCtrl.create({
+                message: this.translate.instant('CONFIGURATIONS.UNREVOKE_INVITE_SUCCESS'),
+                duration: 2500,
+                color: 'success',
+                position: 'bottom'
+              });
+              await toast.present();
+            }
+          }
+        }
+      ]
+    });
+    await alert.present();
+  }
+
+  async deleteGuestInvite(invite: GuestInvitation): Promise<void> {
+    const alert = await this.alertCtrl.create({
+      header: this.translate.instant('COMMON.CONFIRM'),
+      message: this.translate.instant('CONFIGURATIONS.DELETE_INVITE_CONFIRM'),
+      buttons: [
+        { text: this.translate.instant('COMMON.CANCEL'), role: 'cancel' },
+        {
+          text: this.translate.instant('COMMON.DELETE'),
+          role: 'destructive',
+          handler: async () => {
+            const updated = new Configurations(this.configurations);
+            updated.guestInvitations = (updated.guestInvitations || []).filter(i => i.id !== invite.id);
+            await this.updateConfigurations(updated);
+          }
+        }
+      ]
+    });
+    await alert.present();
+  }
+
+  viewGuestRequest(requestId?: string): void {
+    if (!requestId) return;
+    const parts = requestId.split('/');
+    if (parts.length === 2) {
+      this.app.goTo(['/t/requests/view', parts[1], parts[0]]);
+    } else {
+      this.app.goTo(['/t/requests/view', encodeURIComponent(requestId)]);
+    }
+  }
+
+  isGuestRequestTypeAllowed(type: FinancialRequestType): boolean {
+    const allowed = this.configurations?.guestAccessAllowedRequestTypes || [];
+    return allowed.includes(type);
+  }
+
+  async toggleGuestRequestType(type: FinancialRequestType): Promise<void> {
+    const updated = new Configurations(this.configurations);
+    const current = new Set(updated.guestAccessAllowedRequestTypes || []);
+    if (current.has(type)) {
+      current.delete(type);
+    } else {
+      current.add(type);
+    }
+    updated.guestAccessAllowedRequestTypes = Array.from(current);
+    await this.updateConfigurations(updated);
+  }
+
+  async changeGuestInstructions(lang?: 'en' | 'pl'): Promise<void> {
+    const modal = await this.modalCtrl.create({
+      component: GuestInstructionsModalComponent,
+      componentProps: {
+        instructions: this.configurations.guestAccessInstructions,
+        initialLang: lang || 'pl'
+      }
+    });
+
+    await modal.present();
+    const { data } = await modal.onWillDismiss();
+    if (data?.instructions) {
+      const updated = new Configurations(this.configurations);
+      updated.guestAccessInstructions = data.instructions;
+      await this.updateConfigurations(updated);
     }
   }
 }

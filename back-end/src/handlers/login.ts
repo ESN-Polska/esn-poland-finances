@@ -39,9 +39,14 @@ class Login extends ResourceController {
   }
 
   protected async getResources(): Promise<any> {
+    const guestToken = this.queryParams?.guestToken;
+    if (guestToken) {
+      return this.handleGuestLogin(guestToken);
+    }
+
     const ticket = this.queryParams?.ticket;
     if (!ticket) {
-      throw new HandledError('Missing ticket parameter');
+      throw new HandledError('Missing ticket or guestToken parameter');
     }
 
     try {
@@ -148,6 +153,156 @@ class Login extends ResourceController {
     } catch (err) {
       this.logger.error('CAS validation error', err);
       throw new HandledError('Login failed');
+    }
+  }
+
+  protected async postResources(): Promise<any> {
+    const guestToken = this.body?.guestToken || this.queryParams?.guestToken;
+    if (guestToken) {
+      return this.handleGuestLogin(guestToken);
+    }
+    throw new HandledError('Missing guestToken');
+  }
+
+  private async handleGuestLogin(guestToken: string): Promise<any> {
+    const configurations = await this.loadConfigurations();
+    if (!configurations.guestAccessEnabled) {
+      throw new HandledError('Guest access is currently disabled');
+    }
+
+    const invitation = (configurations.guestInvitations || []).find(inv => inv.id === guestToken);
+    if (!invitation) {
+      throw new HandledError('Invalid guest invitation link');
+    }
+
+    if (invitation.status === 'REVOKED') {
+      throw new HandledError('This guest invitation has been revoked');
+    }
+
+    if (invitation.status === 'USED' && !invitation.isMultiUse) {
+      throw new HandledError('This guest invitation link has already been used');
+    }
+
+    const now = new Date().toISOString();
+    if (invitation.expiresAt && invitation.expiresAt < now) {
+      throw new HandledError('This guest invitation has expired');
+    }
+
+    const shortId = invitation.id.replace(/-/g, '').slice(0, 10);
+    const guestUser = new User({
+      userId: `guest_${shortId}`,
+      email: invitation.guestEmail,
+      firstName: invitation.guestName,
+      lastName: '',
+      section: '',
+      sectionCode: '',
+      country: 'Guest',
+      roles: ['GUEST'],
+      extendedRoles: [],
+      isAdministrator: false,
+      isManager: false,
+      isAuditor: false,
+      canManageFinances: false,
+      isGuest: true,
+      guestInvitationId: invitation.id,
+      guestPurpose: invitation.purpose,
+      guestPosition: invitation.position,
+      guestDefaultSourceOfFunding: invitation.defaultSourceOfFunding,
+      guestAllowedRequestTypes: invitation.allowedRequestTypes || configurations.guestAccessAllowedRequestTypes,
+      guestMaxAmount: invitation.maxAmount,
+      guestInstructions: invitation.instructions,
+      lastLoginAt: now
+    });
+
+    // Persist guest user to DynamoDB users table
+    if (DDB_TABLES.users) {
+      try {
+        await ddb.put({
+          TableName: DDB_TABLES.users,
+          Item: {
+            userId: guestUser.userId,
+            email: guestUser.email,
+            firstName: guestUser.firstName,
+            lastName: '',
+            name: guestUser.getDisplayName(),
+            section: '',
+            sectionCode: '',
+            country: '',
+            avatarURL: '',
+            roles: guestUser.roles,
+            extendedRoles: guestUser.extendedRoles,
+            isAdministrator: false,
+            canManageFinances: false,
+            isGuest: true,
+            guestInvitationId: guestUser.guestInvitationId,
+            guestPurpose: guestUser.guestPurpose,
+            guestPosition: guestUser.guestPosition,
+            guestDefaultSourceOfFunding: guestUser.guestDefaultSourceOfFunding,
+            lastLoginAt: guestUser.lastLoginAt
+          }
+        });
+      } catch (dbErr) {
+        this.logger.error('Failed to persist guest user to DynamoDB', dbErr);
+      }
+    }
+
+    // Update invitation lastAccessedAt in Configurations
+    if (DDB_TABLES.configurations) {
+      try {
+        const invTarget = (configurations.guestInvitations || []).find(i => i.id === invitation.id);
+        if (invTarget) {
+          invTarget.lastAccessedAt = now;
+          await ddb.put({
+            TableName: DDB_TABLES.configurations,
+            Item: JSON.parse(JSON.stringify(configurations))
+          });
+        }
+      } catch (dbErr) {
+        this.logger.error('Failed to update invitation lastAccessedAt in Configurations', dbErr);
+      }
+    }
+
+    const userData = JSON.parse(JSON.stringify(guestUser));
+    const secret = await getJwtSecret();
+    const token = sign(userData, secret, { expiresIn: JWT_EXPIRE_TIME });
+
+    // Return JSON payload unless explicit redirect parameter was provided
+    if (!this.queryParams.redirect) {
+      return { token, user: userData };
+    }
+
+    let appURL = APP_URL;
+    if (this.queryParams.localhost) {
+      const local = String(this.queryParams.localhost);
+      const isLocalHost =
+        /^\d+$/.test(local) ||
+        /^(localhost|127\.0\.0\.1)(:\d+)?$/.test(local) ||
+        /^192\.168\.\d{1,3}\.\d{1,3}(:\d+)?$/.test(local) ||
+        /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d+)?$/.test(local) ||
+        /^172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}(:\d+)?$/.test(local);
+
+      if (isLocalHost) {
+        appURL = local.includes(':') || local.includes('.') ? `http://${local}` : `http://localhost:${local}`;
+      }
+    }
+
+    this.callback(null, {
+      statusCode: 302,
+      headers: {
+        Location: `${appURL}/auth?token=${token}`
+      }
+    });
+  }
+
+  private async loadConfigurations(): Promise<Configurations> {
+    if (!DDB_TABLES.configurations) {
+      return new Configurations({ PK: Configurations.PK });
+    }
+    try {
+      const data = await ddb.get({ TableName: DDB_TABLES.configurations, Key: { PK: Configurations.PK } });
+      return new Configurations(data);
+    } catch {
+      return new Configurations({ PK: Configurations.PK });
     }
   }
 

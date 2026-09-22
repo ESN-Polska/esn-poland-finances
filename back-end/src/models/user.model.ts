@@ -3,6 +3,7 @@ import {
   ALL_APP_PERMISSIONS,
   AppPermission,
   Configurations,
+  LocalizedText,
   UsersOriginDisplayOptions
 } from './configurations.model';
 
@@ -49,6 +50,22 @@ export class User extends Resource {
   customRoleIds: string[];
   /** Source breakdown for inherited/automatic roles */
   roleAssignmentSources: RoleAssignmentSource[];
+  /** Whether the user is an external guest without an ESN Account */
+  isGuest: boolean;
+  /** Guest invitation ID / token reference if authenticated as guest */
+  guestInvitationId?: string;
+  /** Purpose / event for the guest reimbursement */
+  guestPurpose?: string;
+  /** Optional prefilled position for the guest */
+  guestPosition?: string;
+  /** Optional prefilled default source of funding for the guest */
+  guestDefaultSourceOfFunding?: string;
+  /** Allowed request types for this guest */
+  guestAllowedRequestTypes?: string[];
+  /** Optional reimbursement amount limit for this guest */
+  guestMaxAmount?: number;
+  /** Optional custom localized instructions for this guest */
+  guestInstructions?: LocalizedText;
 
   constructor(data?: any) {
     super();
@@ -78,8 +95,20 @@ export class User extends Resource {
    * - Manager gets all permissions EXCEPT configurations.users.
    * - Auditor gets read-only access (view all requests, export).
    * - Custom roles add explicit permissions.
+   * - Guest gets zero administrative permissions.
    */
   static applyConfigurationPermissions(user: User, configurations: Configurations): void {
+    if (user.isGuest) {
+      user.isAdministrator = false;
+      user.isManager = false;
+      user.isAuditor = false;
+      user.canManageFinances = false;
+      user.permissions = [];
+      user.customRoleIds = [];
+      user.roleAssignmentSources = [];
+      return;
+    }
+
     const autoRoleAssignments = configurations.automaticRoleAssignments || [];
     const automaticRoleIds = autoRoleAssignments
       .filter(assignment => User.hasAnyCASPermission(user, assignment.extendedRolePatterns))
@@ -171,6 +200,22 @@ export class User extends Resource {
     this.permissions = this.cleanArray(x.permissions, String) as AppPermission[];
     this.customRoleIds = this.cleanArray(x.customRoleIds, String);
     this.roleAssignmentSources = this.cleanArray(x.roleAssignmentSources, Object) as RoleAssignmentSource[];
+    this.isGuest = this.clean(x.isGuest, Boolean, false);
+    this.guestInvitationId = this.clean(x.guestInvitationId, String);
+    this.guestPurpose = this.clean(x.guestPurpose, String);
+    this.guestPosition = this.clean(x.guestPosition, String);
+    this.guestDefaultSourceOfFunding = this.clean(x.guestDefaultSourceOfFunding, String);
+    this.guestAllowedRequestTypes = this.cleanArray(x.guestAllowedRequestTypes, String);
+    this.guestMaxAmount =
+      x.guestMaxAmount !== undefined && x.guestMaxAmount !== null && x.guestMaxAmount !== ''
+        ? Number(x.guestMaxAmount)
+        : undefined;
+    if (x.guestInstructions && typeof x.guestInstructions === 'object') {
+      this.guestInstructions = {
+        en: this.clean(x.guestInstructions.en, String),
+        pl: this.clean(x.guestInstructions.pl, String)
+      };
+    }
   }
 
   getDisplayName(): string {

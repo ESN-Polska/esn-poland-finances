@@ -8,6 +8,8 @@ import { ConfigurationsPage } from './configurations.page';
 import { ConfigurationsPageRoutingModule } from './configurations.routing.module';
 import { RoleEditorComponent } from './roleEditor.component';
 import { UserRoleMappingsComponent } from './userRoleMappings.component';
+import { GuestInviteModalComponent } from './guestInviteModal.component';
+import { GuestInstructionsModalComponent } from './guestInstructionsModal.component';
 
 @NgModule({
   imports: [
@@ -20,7 +22,9 @@ import { UserRoleMappingsComponent } from './userRoleMappings.component';
   declarations: [
     ConfigurationsPage,
     RoleEditorComponent,
-    UserRoleMappingsComponent
+    UserRoleMappingsComponent,
+    GuestInviteModalComponent,
+    GuestInstructionsModalComponent
   ]
 })
 export class ConfigurationsModule {}

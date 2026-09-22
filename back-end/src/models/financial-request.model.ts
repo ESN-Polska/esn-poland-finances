@@ -66,6 +66,13 @@ export class FinancialRequest extends Resource {
   country: string;
   extendedRoles: string[];
 
+  /** Whether this request was submitted by an external guest without an ESN Account */
+  isGuest?: boolean;
+  /** Invitation ID / token that authorized the guest submission */
+  guestInvitationId?: string;
+  /** Purpose / event attached to the guest invitation */
+  guestPurpose?: string;
+
   position: string;
   sourceOfFunding: string;
   requestType: FinancialRequestType;
@@ -123,6 +130,10 @@ export class FinancialRequest extends Resource {
     this.section = this.clean(x.section, String);
     this.country = this.clean(x.country, String);
     this.extendedRoles = this.cleanArray(x.extendedRoles, String);
+
+    this.isGuest = this.clean(x.isGuest, Boolean, false);
+    this.guestInvitationId = this.clean(x.guestInvitationId, String);
+    this.guestPurpose = this.clean(x.guestPurpose, String);
 
     this.position = this.clean(x.position, String);
     this.sourceOfFunding = this.clean(x.sourceOfFunding, String);

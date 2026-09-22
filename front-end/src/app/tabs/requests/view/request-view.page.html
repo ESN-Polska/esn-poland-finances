@@ -69,6 +69,10 @@
       <div class="header-top">
         <div class="title-group">
           <div class="request-id-badge" [class.isDraftPlaceholder]="request.isDraft">{{ request.displayId }}</div>
+          <span class="guest-badge" *ngIf="request.isGuest">
+            <ion-icon name="person-outline"></ion-icon>
+            {{ 'CONFIGURATIONS.GUEST_BADGE' | translate }}
+          </span>
           <span class="status-badge status-{{ request.status | lowercase }}">
             {{ 'REQUESTS.STATUSES.' + request.status | translate }}
           </span>
@@ -285,29 +289,34 @@
             <h3>{{ 'REQUESTS.SUBMITTER_PROFILE' | translate }}</h3>
           </div>
           <div
-            class="user-summary clickable-user"
-            (click)="openAccountsProfile(request.userId)"
-            [title]="'USER.VIEW_ON_ACCOUNTS' | translate"
+            class="user-summary"
+            [class.clickable-user]="!request.isGuest"
+            (click)="!request.isGuest && openAccountsProfile(request.userId)"
+            [title]="!request.isGuest ? ('USER.VIEW_ON_ACCOUNTS' | translate) : ''"
           >
-            <div class="user-avatar-circle">
+            <div class="user-avatar-circle" [class.guest-avatar]="request.isGuest">
               <img
-                *ngIf="request.userAvatarURL && !avatarError"
+                *ngIf="request.userAvatarURL && !avatarError && !request.isGuest"
                 [src]="request.userAvatarURL"
                 (error)="avatarError = true"
                 class="user-avatar-img"
                 alt="Submitter avatar"
               />
-              <span *ngIf="!request.userAvatarURL || avatarError">
-                {{ request.userDisplayName?.charAt(0) || 'U' }}
+              <span *ngIf="!request.userAvatarURL || avatarError || request.isGuest">
+                {{ request.userDisplayName?.charAt(0) || 'G' }}
               </span>
             </div>
             <div class="user-meta">
               <div class="user-name-row">
                 <span class="user-name">{{ request.userDisplayName }}</span>
-                <ion-icon name="open-outline" class="user-external-icon"></ion-icon>
+                <span class="guest-pill" *ngIf="request.isGuest">{{ 'CONFIGURATIONS.GUEST_BADGE' | translate }}</span>
+                <ion-icon *ngIf="!request.isGuest" name="open-outline" class="user-external-icon"></ion-icon>
               </div>
               <span class="user-email">{{ request.userEmail }}</span>
-              <span class="user-section" *ngIf="getSubmitterSection()">{{ getSubmitterSection() }}</span>
+              <span class="user-section" *ngIf="!request.isGuest && getSubmitterSection()">{{ getSubmitterSection() }}</span>
+              <span class="guest-purpose" *ngIf="request.isGuest && request.guestPurpose">
+                <strong>{{ 'CONFIGURATIONS.GUEST_PURPOSE' | translate }}:</strong> {{ request.guestPurpose }}
+              </span>
             </div>
           </div>
         </div>

@@ -546,6 +546,17 @@ export class AppService {
     }
   }
 
+  public async loginWithGuestToken(guestToken: string): Promise<User | null> {
+    const res: any = await this.api.getResource('login', {
+      params: { guestToken },
+      headers: { Accept: 'application/json' }
+    });
+    if (res?.token) {
+      return await this.setToken(res.token);
+    }
+    throw new Error('Login failed: no token returned');
+  }
+
   public getUserRoleKey(user?: User | null): string {
     const targetUser =
       this.isImpersonating && (!user || user.userId === this.originalUser?.userId)
@@ -553,6 +564,7 @@ export class AppService {
         : (user || this.currentUser);
 
     if (!targetUser) return 'STANDARD_USER';
+    if (targetUser.isGuest) return 'GUEST';
     if (targetUser.isAdministrator) return 'ADMINISTRATOR';
     if (targetUser.isManager) return 'MANAGER';
     if (targetUser.isAuditor) return 'AUDITOR';
@@ -567,6 +579,7 @@ export class AppService {
         : (user || this.currentUser);
 
     if (!targetUser) return '';
+    if (targetUser.isGuest) return this.translate.instant('CONFIGURATIONS.GUEST_BADGE');
     if (targetUser.isAdministrator) return this.translate.instant('CONFIGURATIONS.ADMINISTRATOR');
     if (targetUser.isManager) return this.translate.instant('CONFIGURATIONS.MANAGER');
     if (targetUser.isAuditor) return this.translate.instant('CONFIGURATIONS.AUDITOR');
@@ -577,6 +590,7 @@ export class AppService {
   }
 
   public hasElevatedRole(user?: User | null): boolean {
-    return this.getUserRoleKey(user) !== 'STANDARD_USER';
+    const roleKey = this.getUserRoleKey(user);
+    return roleKey !== 'STANDARD_USER';
   }
 }
