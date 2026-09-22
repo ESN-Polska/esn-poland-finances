@@ -37,10 +37,9 @@ export class RequestsPage implements OnInit {
       user.isAdministrator ||
       user.isManager ||
       user.isAuditor ||
-      user.hasPermission(AppPermission.REQUESTS.PARENT) ||
       user.hasPermission(AppPermission.REQUESTS.VIEW_ALL) ||
       user.hasPermission(AppPermission.REQUESTS.MANAGE) ||
-      user.hasPermission(AppPermission.REQUESTS.EXPORT)
+      user.hasPermission(AppPermission.REQUESTS.PARENT)
     );
   }
 
@@ -110,13 +109,16 @@ export class RequestsPage implements OnInit {
       const matchesSearch =
         !q ||
         req.displayId?.toLowerCase().includes(q) ||
-        (req.status !== 'DRAFT' && req.requestId?.toLowerCase().includes(q)) ||
+        (req.requestId && req.requestId.toLowerCase().includes(q)) ||
+        (req.status === 'DRAFT' && ('draft'.includes(q) || 'szkic'.includes(q))) ||
         req.position?.toLowerCase().includes(q) ||
         req.sourceOfFunding?.toLowerCase().includes(q) ||
+        req.generalExplanation?.toLowerCase().includes(q) ||
         req.documents?.some(
           (d) =>
             d.invoiceNumber?.toLowerCase().includes(q) ||
-            d.issuedBy?.toLowerCase().includes(q)
+            d.issuedBy?.toLowerCase().includes(q) ||
+            d.explanation?.toLowerCase().includes(q)
         );
 
       return matchesStatus && matchesSearch;

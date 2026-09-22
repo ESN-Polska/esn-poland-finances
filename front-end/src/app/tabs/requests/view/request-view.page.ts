@@ -47,6 +47,19 @@ export class RequestViewPage implements OnInit {
     );
   }
 
+  public get canViewAll(): boolean {
+    const user = this.appService.currentUser;
+    if (!user) return false;
+    return (
+      user.isAdministrator ||
+      user.isManager ||
+      user.isAuditor ||
+      user.hasPermission(AppPermission.REQUESTS.VIEW_ALL) ||
+      user.hasPermission(AppPermission.REQUESTS.MANAGE) ||
+      user.hasPermission(AppPermission.REQUESTS.PARENT)
+    );
+  }
+
   public get isAuditorOnly(): boolean {
     const user = this.appService.currentUser;
     if (!user) return false;
@@ -90,10 +103,24 @@ export class RequestViewPage implements OnInit {
         this.router.navigate(['/t/requests']);
         return;
       }
+
+      const currentUser = this.appService.currentUser;
+      const isOwner = (found.userId || '').toLowerCase() === (currentUser?.userId || '').toLowerCase();
+      if (!this.canViewAll && !isOwner) {
+        await this.showToast('REQUESTS.ACCESS_DENIED', 'danger');
+        this.router.navigate(['/t/requests']);
+        return;
+      }
+
       this.request = found;
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to load request', err);
-      await this.showToast('REQUESTS.LOAD_ERROR', 'danger');
+      if (err?.message?.includes('Access denied') || err?.status === 403 || err?.statusCode === 403) {
+        await this.showToast('REQUESTS.ACCESS_DENIED', 'danger');
+      } else {
+        await this.showToast('REQUESTS.LOAD_ERROR', 'danger');
+      }
+      this.router.navigate(['/t/requests']);
     } finally {
       this.isLoading = false;
     }
@@ -188,157 +215,13 @@ export class RequestViewPage implements OnInit {
     this.showToast('REQUESTS.MANAGE_PANEL.EXPORT_SUCCESS', 'success');
   }
 
-  public async takeInReview(): Promise<void> {
+  public goToReview(): void {
     if (!this.request || !this.canManage) return;
-    await this.executeStatusChange('IN_REVIEW', 'Review started by manager');
-  }
-
-  public async promptApprove(): Promise<void> {
-    if (!this.request || !this.canManage) return;
-
-    const alert = await this.alertCtrl.create({
-      header: this.translate.instant('REQUESTS.MANAGE_PANEL.APPROVE_HEADER') || 'Approve Request',
-      message: `${this.translate.instant('REQUESTS.MANAGE_PANEL.APPROVE_CONFIRM')} ${this.request.displayId}?`,
-      inputs: [
-        {
-          name: 'comment',
-          type: 'text',
-          placeholder: this.translate.instant('REQUESTS.MANAGE_PANEL.OPTIONAL_COMMENT') || 'Optional approval note'
-        }
-      ],
-      buttons: [
-        {
-          text: this.translate.instant('COMMON.CANCEL') || 'Cancel',
-          role: 'cancel'
-        },
-        {
-          text: this.translate.instant('REQUESTS.STATUSES.APPROVED') || 'Approve',
-          handler: async (data) => {
-            await this.executeStatusChange('APPROVED', data.comment || 'Request approved');
-          }
-        }
-      ]
-    });
-    await alert.present();
-  }
-
-  public async promptRequestChanges(): Promise<void> {
-    if (!this.request || !this.canManage) return;
-
-    const alert = await this.alertCtrl.create({
-      header: this.translate.instant('REQUESTS.MANAGE_PANEL.REQUEST_CHANGES_HEADER') || 'Request Changes',
-      message: this.translate.instant('REQUESTS.MANAGE_PANEL.REQUEST_CHANGES_DESC') || 'Provide clear instructions for what needs to be changed by the applicant:',
-      inputs: [
-        {
-          name: 'remarks',
-          type: 'textarea',
-          placeholder: this.translate.instant('REQUESTS.MANAGE_PANEL.REQUIRED_CHANGES_PLACEHOLDER') || 'Explain required modifications...'
-        }
-      ],
-      buttons: [
-        {
-          text: this.translate.instant('COMMON.CANCEL') || 'Cancel',
-          role: 'cancel'
-        },
-        {
-          text: this.translate.instant('REQUESTS.MANAGE_PANEL.SEND_REQUEST_CHANGES') || 'Request Changes',
-          handler: async (data) => {
-            const remarks = (data.remarks || '').trim();
-            if (!remarks) {
-              this.showToast('REQUESTS.MANAGE_PANEL.REMARKS_REQUIRED', 'warning');
-              return false;
-            }
-            await this.executeStatusChange('CHANGES_REQUESTED', remarks, remarks);
-            return true;
-          }
-        }
-      ]
-    });
-    await alert.present();
-  }
-
-  public async promptMarkPaid(): Promise<void> {
-    if (!this.request || !this.canManage) return;
-
-    const alert = await this.alertCtrl.create({
-      header: this.translate.instant('REQUESTS.MANAGE_PANEL.MARK_PAID_HEADER') || 'Mark as Paid',
-      message: `${this.translate.instant('REQUESTS.MANAGE_PANEL.MARK_PAID_CONFIRM')} ${this.request.displayId} (${this.request.totalGrossAmount} ${this.request.currency})?`,
-      inputs: [
-        {
-          name: 'comment',
-          type: 'text',
-          placeholder: this.translate.instant('REQUESTS.MANAGE_PANEL.OPTIONAL_PAYMENT_REF') || 'Optional transfer reference / note'
-        }
-      ],
-      buttons: [
-        {
-          text: this.translate.instant('COMMON.CANCEL') || 'Cancel',
-          role: 'cancel'
-        },
-        {
-          text: this.translate.instant('REQUESTS.STATUSES.PAID') || 'Mark Paid',
-          handler: async (data) => {
-            await this.executeStatusChange('PAID', data.comment || 'Payout completed');
-          }
-        }
-      ]
-    });
-    await alert.present();
-  }
-
-  public async promptReject(): Promise<void> {
-    if (!this.request || !this.canManage) return;
-
-    const alert = await this.alertCtrl.create({
-      header: this.translate.instant('REQUESTS.MANAGE_PANEL.REJECT_HEADER') || 'Reject Request',
-      message: this.translate.instant('REQUESTS.MANAGE_PANEL.REJECT_DESC') || 'Provide the rejection reason for the applicant:',
-      inputs: [
-        {
-          name: 'reason',
-          type: 'textarea',
-          placeholder: this.translate.instant('REQUESTS.MANAGE_PANEL.REJECTION_REASON_PLACEHOLDER') || 'Enter rejection reason...'
-        }
-      ],
-      buttons: [
-        {
-          text: this.translate.instant('COMMON.CANCEL') || 'Cancel',
-          role: 'cancel'
-        },
-        {
-          text: this.translate.instant('REQUESTS.STATUSES.REJECTED') || 'Reject',
-          role: 'destructive',
-          handler: async (data) => {
-            const reason = (data.reason || '').trim();
-            if (!reason) {
-              this.showToast('REQUESTS.MANAGE_PANEL.REASON_REQUIRED', 'warning');
-              return false;
-            }
-            await this.executeStatusChange('REJECTED', reason, reason);
-            return true;
-          }
-        }
-      ]
-    });
-    await alert.present();
-  }
-
-  private async executeStatusChange(
-    newStatus: RequestStatus,
-    comment?: string,
-    adminRemarks?: string
-  ): Promise<void> {
-    if (!this.request) return;
-    try {
-      const updated = await this.requestsService.updateRequestStatus(
-        this.request.requestId,
-        newStatus,
-        comment,
-        adminRemarks
-      );
-      this.request = updated;
-      await this.showToast('REQUESTS.MANAGE_PANEL.STATUS_UPDATED', 'success');
-    } catch (err: any) {
-      this.showToast(err.message || 'Error updating status', 'danger');
+    const [seq, year] = this.request.requestId.split('/');
+    if (year && seq) {
+      this.router.navigate(['/t/requests/review', year, seq]);
+    } else {
+      this.router.navigate(['/t/requests/review', encodeURIComponent(this.request.requestId)]);
     }
   }
 

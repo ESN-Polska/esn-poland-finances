@@ -112,6 +112,25 @@
   }
 }
 
+.btn-review-outline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: rgba(0, 174, 239, 0.12);
+  color: var(--ion-color-primary, #00aeef);
+  border: 1px solid rgba(0, 174, 239, 0.35);
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: var(--ion-color-primary, #00aeef);
+    color: #ffffff;
+  }
+}
+
 /* Auditor Banner */
 .auditor-banner {
   display: flex;
@@ -131,51 +150,6 @@
   }
 }
 
-/* Manager Action Panel */
-.manager-actions-card {
-  background: var(--bg-card, #ffffff);
-  border: 1px solid var(--border-color, #e2e8f0);
-  border-radius: 12px;
-  padding: 14px 18px;
-  margin-bottom: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
-
-  .card-title-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 12px;
-
-    .tag-title {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-weight: 700;
-      font-size: 0.95rem;
-      color: var(--text-dark);
-
-      ion-icon {
-        color: var(--ion-color-primary, #00aeef);
-        font-size: 1.2rem;
-      }
-    }
-
-    .action-buttons-group {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-
-      ion-button {
-        font-size: 0.85rem;
-        font-weight: 600;
-        text-transform: none;
-        margin: 0;
-      }
-    }
-  }
-}
 
 /* Alert Boxes */
 .alert-box {
@@ -713,7 +687,7 @@
 
       .user-external-icon {
         font-size: 0.85rem;
-        color: var(--esn-cyan);
+        color: var(--ion-color-primary, #00aeef);
         opacity: 0.7;
         transition: opacity 0.15s ease;
       }

@@ -10,6 +10,7 @@ import {
   InvoiceDocumentItem,
   RequestStatus
 } from '@models/financial-request.model';
+import { AppPermission } from '@models/configurations.model';
 import { AppService } from '../app.service';
 
 const REQUESTS_STORAGE_KEY = 'financial_requests_list';
@@ -44,12 +45,36 @@ export class RequestsService {
     const user = this.appService.currentUser;
     if (!user) return [];
 
+    const storage = await this.initStorage();
+    const rawList: any[] = (await storage.get(REQUESTS_STORAGE_KEY)) || [];
+
     try {
       const apiRequests: any[] = await this.api.getResource('requests');
       if (Array.isArray(apiRequests)) {
-        const mapped = apiRequests.map((r) => new FinancialRequest(r));
+        // Recover any local unsynced drafts that are not yet on the server
+        const unsyncedDrafts = rawList.filter(
+          (r) =>
+            r.status === 'DRAFT' &&
+            r.userId?.toLowerCase() === user.userId?.toLowerCase() &&
+            !apiRequests.some((ar) => ar.requestId === r.requestId)
+        );
+
+        for (const draft of unsyncedDrafts) {
+          try {
+            const synced = await this.api.postResource('requests', { body: draft });
+            if (synced) {
+              apiRequests.push(synced);
+            }
+          } catch (syncErr) {
+            console.warn('Could not sync local draft to backend', syncErr);
+            apiRequests.push(draft);
+          }
+        }
+
+        const mapped = apiRequests
+          .map((r) => new FinancialRequest(r))
+          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         this.requestsSubject.next(mapped);
-        const storage = await this.initStorage();
         await storage.set(REQUESTS_STORAGE_KEY, apiRequests);
         return mapped;
       }
@@ -57,8 +82,6 @@ export class RequestsService {
       // Fallback to local storage if API call fails
     }
 
-    const storage = await this.initStorage();
-    const rawList: any[] = (await storage.get(REQUESTS_STORAGE_KEY)) || [];
     const myRequests = rawList
       .filter((r) => r.userId?.toLowerCase() === user.userId?.toLowerCase())
       .map((r) => new FinancialRequest(r))
@@ -72,6 +95,19 @@ export class RequestsService {
    * Loads all requests across all users (for managers, auditors, and administrators)
    */
   public async loadAllRequests(): Promise<FinancialRequest[]> {
+    const user = this.appService.currentUser;
+    const canViewAll =
+      user?.isAdministrator ||
+      user?.isManager ||
+      user?.isAuditor ||
+      user?.hasPermission(AppPermission.REQUESTS.VIEW_ALL) ||
+      user?.hasPermission(AppPermission.REQUESTS.MANAGE) ||
+      user?.hasPermission(AppPermission.REQUESTS.PARENT);
+
+    if (!canViewAll) {
+      return [];
+    }
+
     try {
       const apiRequests: any[] = await this.api.getResource('requests', { params: { all: 'true' } });
       if (Array.isArray(apiRequests)) {
@@ -80,13 +116,16 @@ export class RequestsService {
         await storage.set(REQUESTS_STORAGE_KEY, apiRequests);
         return mapped;
       }
-    } catch {
-      // Fallback to local storage
+    } catch (err: any) {
+      if (err?.status === 403 || err?.statusCode === 403 || err?.message?.includes('Access denied')) {
+        return [];
+      }
     }
 
     const storage = await this.initStorage();
     const rawList: any[] = (await storage.get(REQUESTS_STORAGE_KEY)) || [];
     return rawList
+      .filter((r) => (r.status || '').toUpperCase() !== 'DRAFT')
       .map((r) => new FinancialRequest(r))
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
@@ -103,12 +142,25 @@ export class RequestsService {
     const user = this.appService.currentUser;
     const now = new Date().toISOString();
 
-    const body: any = { status };
+    const body: any = { status, requestId };
     if (comment) body.historyNote = comment;
     if (typeof adminRemarks !== 'undefined') body.adminRemarks = adminRemarks;
 
     try {
-      const updatedRaw = await this.api.patchResource(['requests', encodeURIComponent(requestId)], { body });
+      let updatedRaw: any = null;
+      try {
+        updatedRaw = await this.api.patchResource(this.getRequestApiPath(requestId), { body });
+      } catch {
+        try {
+          updatedRaw = await this.api.patchResource('requests', {
+            params: { id: requestId },
+            body
+          });
+        } catch {
+          updatedRaw = await this.api.patchResource(['requests', encodeURIComponent(requestId)], { body });
+        }
+      }
+
       if (updatedRaw) {
         const updatedReq = new FinancialRequest(updatedRaw);
         const storage = await this.initStorage();
@@ -232,20 +284,110 @@ export class RequestsService {
   /**
    * Get request by formatted ID (e.g. "1/2026")
    */
+  /**
+   * Helper to build clean API path segments e.g. /requests/2026/1 or /requests/draft_xyz
+   */
+  public getRequestApiPath(requestId: string): string[] {
+    const [seq, year] = requestId.split('/');
+    if (year && seq) {
+      return ['requests', year, seq];
+    }
+    return ['requests', encodeURIComponent(requestId)];
+  }
+
   public async getRequestById(requestId: string): Promise<FinancialRequest | null> {
     try {
+      const raw = await this.api.getResource(this.getRequestApiPath(requestId));
+      if (raw && !Array.isArray(raw)) {
+        const req = new FinancialRequest(raw);
+        await this.updateRequestInCache(req);
+        return req;
+      }
+    } catch (err: any) {
+      if (err?.status === 403 || err?.statusCode === 403 || err?.message?.includes('Access denied')) {
+        throw err;
+      }
+      // Fallback to query param
+    }
+
+    try {
+      const raw = await this.api.getResource('requests', { params: { id: requestId } });
+      if (raw && !Array.isArray(raw)) {
+        const req = new FinancialRequest(raw);
+        await this.updateRequestInCache(req);
+        return req;
+      }
+      if (Array.isArray(raw)) {
+        const foundItem = raw.find(
+          (r: any) => r.requestId === requestId || r.requestId === decodeURIComponent(requestId)
+        );
+        if (foundItem) {
+          const req = new FinancialRequest(foundItem);
+          await this.updateRequestInCache(req);
+          return req;
+        }
+      }
+    } catch (err: any) {
+      if (err?.status === 403 || err?.statusCode === 403 || err?.message?.includes('Access denied')) {
+        throw err;
+      }
+      // Fallback
+    }
+
+    try {
       const raw = await this.api.getResource(['requests', encodeURIComponent(requestId)]);
-      if (raw) return new FinancialRequest(raw);
-    } catch {
+      if (raw && !Array.isArray(raw)) {
+        const req = new FinancialRequest(raw);
+        await this.updateRequestInCache(req);
+        return req;
+      }
+    } catch (err: any) {
+      if (err?.status === 403 || err?.statusCode === 403 || err?.message?.includes('Access denied')) {
+        throw err;
+      }
       // Fallback to local storage
     }
+
+    const user = this.appService.currentUser;
+    const canViewAll =
+      user?.isAdministrator ||
+      user?.isManager ||
+      user?.isAuditor ||
+      user?.hasPermission(AppPermission.REQUESTS.VIEW_ALL) ||
+      user?.hasPermission(AppPermission.REQUESTS.MANAGE) ||
+      user?.hasPermission(AppPermission.REQUESTS.PARENT);
 
     const storage = await this.initStorage();
     const rawList: any[] = (await storage.get(REQUESTS_STORAGE_KEY)) || [];
     const found = rawList.find(
       (r) => r.requestId === requestId || r.requestId === decodeURIComponent(requestId)
     );
-    return found ? new FinancialRequest(found) : null;
+    if (!found) {
+      return null;
+    }
+
+    const isOwner = (found.userId || '').toLowerCase() === (user?.userId || '').toLowerCase();
+    if (!canViewAll && !isOwner) {
+      return null;
+    }
+
+    return new FinancialRequest(found);
+  }
+
+  private async updateRequestInCache(req: FinancialRequest): Promise<void> {
+    try {
+      const storage = await this.initStorage();
+      const rawList: any[] = (await storage.get(REQUESTS_STORAGE_KEY)) || [];
+      const idx = rawList.findIndex((r) => r.requestId === req.requestId);
+      if (idx >= 0) {
+        rawList[idx] = req;
+      } else {
+        rawList.unshift(req);
+      }
+      await storage.set(REQUESTS_STORAGE_KEY, rawList);
+    } catch {
+      // Ignore cache errors
+    }
   }
 
   /**
@@ -301,15 +443,99 @@ export class RequestsService {
     const storage = await this.initStorage();
     const rawList: any[] = (await storage.get(REQUESTS_STORAGE_KEY)) || [];
 
+    // Calculate totals
+    let totals: { totalGrossAmount: number; totalVatAmount: number };
+    if (payload.documents && payload.documents.length > 0) {
+      totals = this.calculateTotals(payload.documents);
+    } else if (payload.requestType === 'ADVANCE_PAYMENT') {
+      totals = { totalGrossAmount: Number(payload.requestedAmountPLN) || 0, totalVatAmount: 0 };
+    } else {
+      totals = {
+        totalGrossAmount: Number(payload.totalGrossAmount) || 0,
+        totalVatAmount: Number(payload.totalVatAmount) || 0
+      };
+    }
+
+    const now = new Date().toISOString();
+    const requestBody: any = {
+      ...payload,
+      ...totals,
+      status: targetStatus,
+      currency: payload.currency || 'PLN'
+    };
+
+    let savedReq: FinancialRequest | null = null;
+
+    // 1. Try persisting via backend API
+    if (payload.requestId) {
+      try {
+        let updatedRaw: any = null;
+        try {
+          updatedRaw = await this.api.patchResource(
+            this.getRequestApiPath(payload.requestId),
+            { body: requestBody }
+          );
+        } catch {
+          try {
+            updatedRaw = await this.api.patchResource('requests', {
+              params: { id: payload.requestId },
+              body: requestBody
+            });
+          } catch {
+            updatedRaw = await this.api.patchResource(
+              ['requests', encodeURIComponent(payload.requestId)],
+              { body: requestBody }
+            );
+          }
+        }
+        if (updatedRaw) {
+          savedReq = new FinancialRequest(updatedRaw);
+        }
+      } catch (err: any) {
+        console.warn('Failed to patch request on backend API', err);
+        // If request was not found on backend (e.g. was a purely local draft), fallback to POST
+        if (err?.status === 404 || err?.statusCode === 404 || err?.message?.includes('not found')) {
+          try {
+            const createdRaw = await this.api.postResource('requests', { body: requestBody });
+            if (createdRaw) {
+              savedReq = new FinancialRequest(createdRaw);
+            }
+          } catch (postErr) {
+            console.error('Failed to post request as fallback', postErr);
+          }
+        }
+      }
+    } else {
+      try {
+        const createdRaw = await this.api.postResource('requests', { body: requestBody });
+        if (createdRaw) {
+          savedReq = new FinancialRequest(createdRaw);
+        }
+      } catch (err) {
+        console.warn('Failed to post new request to backend API', err);
+      }
+    }
+
+    // 2. If API succeeded, update local storage cache and reload
+    if (savedReq) {
+      const idx = rawList.findIndex((r) => r.requestId === payload.requestId || r.requestId === savedReq!.requestId);
+      if (idx >= 0) {
+        rawList[idx] = savedReq;
+      } else {
+        rawList.unshift(savedReq);
+      }
+      await storage.set(REQUESTS_STORAGE_KEY, rawList);
+      await this.loadMyRequests();
+      return savedReq;
+    }
+
+    // 3. Fallback to local storage if API was unreachable or failed completely
     let existingIndex = -1;
     if (payload.requestId) {
       existingIndex = rawList.findIndex((r) => r.requestId === payload.requestId);
     }
 
-    const now = new Date().toISOString();
-
     if (existingIndex >= 0) {
-      // Modifying existing request
       const existing = new FinancialRequest(rawList[existingIndex]);
       if (!existing.canEdit()) {
         throw new Error('This request is locked and cannot be modified');
@@ -324,14 +550,6 @@ export class RequestsService {
         targetRequestId = nextId.requestId;
         targetSeqNumber = nextId.sequenceNumber;
         targetYear = nextId.year;
-      }
-
-      // Calculate totals
-      let totals = { totalGrossAmount: 0, totalVatAmount: 0 };
-      if (payload.documents && payload.documents.length > 0) {
-        totals = this.calculateTotals(payload.documents);
-      } else if (payload.requestType === 'ADVANCE_PAYMENT') {
-        totals = { totalGrossAmount: payload.requestedAmountPLN || 0, totalVatAmount: 0 };
       }
 
       const updatedData = {
@@ -350,7 +568,6 @@ export class RequestsService {
         updatedData.submittedAt = now;
       }
 
-      // Add status history entry if status changed
       if (existing.status !== targetStatus) {
         updatedData.statusHistory = [
           ...(updatedData.statusHistory || []),
@@ -368,7 +585,6 @@ export class RequestsService {
       await this.loadMyRequests();
       return new FinancialRequest(updatedData);
     } else {
-      // Creating brand new request
       const year = new Date().getFullYear();
       let sequenceNumber: number | undefined;
       let requestId: string;
@@ -380,13 +596,6 @@ export class RequestsService {
       } else {
         const rand = Math.random().toString(36).substring(2, 8);
         requestId = `draft_${Date.now()}_${rand}`;
-      }
-
-      let totals = { totalGrossAmount: 0, totalVatAmount: 0 };
-      if (payload.documents && payload.documents.length > 0) {
-        totals = this.calculateTotals(payload.documents);
-      } else if (payload.requestType === 'ADVANCE_PAYMENT') {
-        totals = { totalGrossAmount: payload.requestedAmountPLN || 0, totalVatAmount: 0 };
       }
 
       const newRequestData: any = {
@@ -431,19 +640,29 @@ export class RequestsService {
     const user = this.appService.currentUser;
     if (!user) return false;
 
+    try {
+      await this.api.deleteResource(this.getRequestApiPath(requestId));
+    } catch {
+      try {
+        await this.api.deleteResource('requests', { params: { id: requestId } });
+      } catch {
+        try {
+          await this.api.deleteResource(['requests', encodeURIComponent(requestId)]);
+        } catch (err) {
+          console.warn('Failed to delete draft from backend API', err);
+        }
+      }
+    }
+
     const storage = await this.initStorage();
     const rawList: any[] = (await storage.get(REQUESTS_STORAGE_KEY)) || [];
     const targetIndex = rawList.findIndex((r) => r.requestId === requestId);
 
-    if (targetIndex < 0) return false;
-
-    const target = new FinancialRequest(rawList[targetIndex]);
-    if (target.status !== 'DRAFT' || target.userId?.toLowerCase() !== user.userId?.toLowerCase()) {
-      throw new Error('Only draft requests can be deleted');
+    if (targetIndex >= 0) {
+      rawList.splice(targetIndex, 1);
+      await storage.set(REQUESTS_STORAGE_KEY, rawList);
     }
 
-    rawList.splice(targetIndex, 1);
-    await storage.set(REQUESTS_STORAGE_KEY, rawList);
     await this.loadMyRequests();
     return true;
   }

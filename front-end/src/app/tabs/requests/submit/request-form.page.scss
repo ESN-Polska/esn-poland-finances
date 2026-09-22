@@ -268,7 +268,7 @@
     transition: border-color 0.15s ease;
 
     &:focus {
-      border-color: var(--esn-cyan);
+      border-color: var(--ion-color-primary, #00aeef);
     }
 
     &.font-mono {
@@ -349,7 +349,7 @@
 
       &.active {
         background: var(--bg-card);
-        color: var(--esn-cyan);
+        color: var(--ion-color-primary, #00aeef);
         box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
       }
     }
@@ -531,7 +531,7 @@
 
     &.highlight {
       .totalValue {
-        color: var(--esn-cyan);
+        color: var(--ion-color-primary, #00aeef);
       }
     }
   }
@@ -583,7 +583,7 @@
 
     ion-icon {
       font-size: 1.8rem;
-      color: var(--esn-cyan);
+      color: var(--ion-color-primary, #00aeef);
     }
 
     span {
@@ -627,7 +627,7 @@
 
     .docIcon {
       font-size: 1.3rem;
-      color: var(--esn-cyan);
+      color: var(--ion-color-primary, #00aeef);
 
       &.success {
         color: #10b981;
@@ -664,7 +664,7 @@
 .inlineAddBtn {
   background: transparent;
   border: none;
-  color: var(--esn-cyan);
+  color: var(--ion-color-primary, #00aeef);
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;

@@ -4,6 +4,7 @@ import { RouterModule, Routes } from '@angular/router';
 import { RequestsPage } from './requests.page';
 import { RequestFormPage } from './submit/request-form.page';
 import { RequestViewPage } from './view/request-view.page';
+import { RequestReviewPage } from './review/request-review.page';
 import { ManageRequestsPage } from './manage/manage-requests.page';
 
 const routes: Routes = [
@@ -14,6 +15,14 @@ const routes: Routes = [
   {
     path: 'manage',
     component: ManageRequestsPage
+  },
+  {
+    path: 'manage/review/:id',
+    component: RequestReviewPage
+  },
+  {
+    path: 'manage/review/:year/:id',
+    component: RequestReviewPage
   },
   {
     path: 'submit',
@@ -34,6 +43,14 @@ const routes: Routes = [
   {
     path: 'view/:year/:id',
     component: RequestViewPage
+  },
+  {
+    path: 'review/:id',
+    component: RequestReviewPage
+  },
+  {
+    path: 'review/:year/:id',
+    component: RequestReviewPage
   }
 ];
 

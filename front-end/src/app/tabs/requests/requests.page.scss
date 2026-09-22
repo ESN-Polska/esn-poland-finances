@@ -46,6 +46,11 @@
     height: 42px;
     text-transform: none;
     margin: 0;
+    transition: all 0.15s ease;
+
+    &:hover {
+      --background: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.08);
+    }
 
     .manageBadge {
       margin-left: 8px;
@@ -70,10 +75,17 @@
     font-weight: 600;
     height: 42px;
     text-transform: none;
-    --box-shadow: none !important;
-    box-shadow: none !important;
+    --box-shadow: 0 4px 14px rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.35) !important;
+    box-shadow: 0 4px 14px rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.35) !important;
     outline: none !important;
     margin: 0;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+
+    &:hover {
+      transform: translateY(-1px);
+      --box-shadow: 0 6px 18px rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.45) !important;
+      box-shadow: 0 6px 18px rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.45) !important;
+    }
 
     ion-icon {
       font-size: 1.2rem;
@@ -115,10 +127,11 @@
       font-size: 0.95rem;
       color: var(--text-dark);
       outline: none !important;
-      transition: border-color 0.15s ease;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
 
       &:focus {
-        border-color: var(--ion-color-primary, var(--esn-cyan));
+        border-color: var(--ion-color-primary, #00aeef);
+        box-shadow: 0 0 0 3px rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.15);
       }
     }
 
@@ -162,7 +175,7 @@
       display: flex;
       align-items: center;
       outline: none !important;
-      box-shadow: none !important;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
       --border-color: transparent !important;
       --border-width: 0px !important;
       --highlight-color: transparent !important;
@@ -174,14 +187,17 @@
         border: none !important;
       }
 
-      &:hover,
+      &:hover {
+        border-color: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.4) !important;
+      }
+
       &:focus,
       &:focus-visible,
       &.ion-focused,
       &:active {
         outline: none !important;
-        box-shadow: none !important;
-        border-color: var(--border-color) !important;
+        border-color: var(--ion-color-primary, #00aeef) !important;
+        box-shadow: 0 0 0 3px rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.15) !important;
       }
     }
   }
@@ -196,15 +212,21 @@
 
 .requestCard {
   background: var(--bg-card);
+  border: 1px solid var(--border-color);
   border-radius: 12px;
   padding: 20px 24px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
 
   &:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 8px 24px rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.12);
+    border-color: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.4);
+
+    .cardTop .idGroup .requestId {
+      color: var(--ion-color-primary, #00aeef);
+    }
   }
 
   .cardTop {
@@ -226,6 +248,7 @@
         font-weight: 700;
         font-family: monospace;
         color: var(--text-dark);
+        transition: color 0.15s ease;
 
         &.isDraftPlaceholder {
           color: var(--text-medium);
@@ -259,7 +282,7 @@
         padding: 2px 8px;
         border-radius: 6px;
         background: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.1);
-        color: var(--ion-color-primary, var(--esn-cyan));
+        color: var(--ion-color-primary, #00aeef);
       }
 
       .docCountBadge {
@@ -267,8 +290,9 @@
         font-weight: 600;
         padding: 2px 8px;
         border-radius: 6px;
-        background: rgba(0, 43, 73, 0.08);
-        color: var(--text-dark);
+        background: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.08);
+        color: var(--ion-color-primary, #00aeef);
+        border: 1px solid rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.16);
       }
     }
   }
@@ -352,11 +376,25 @@
         font-weight: 600;
         text-transform: none;
         margin: 0;
+        border-radius: 6px;
+        transition: all 0.15s ease;
+      }
+
+      .viewBtn {
+        --color: var(--ion-color-primary, #00aeef);
+
+        &:hover {
+          --background: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.08);
+        }
       }
 
       .editBtn {
-        --color: var(--ion-color-primary, var(--esn-cyan));
-        --border-color: var(--ion-color-primary, var(--esn-cyan));
+        --color: var(--ion-color-primary, #00aeef);
+        --border-color: var(--ion-color-primary, #00aeef);
+
+        &:hover {
+          --background: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.08);
+        }
       }
     }
   }
@@ -372,7 +410,8 @@
 
   .emptyIcon {
     font-size: 3rem;
-    color: var(--text-medium);
+    color: var(--ion-color-primary, #00aeef);
+    opacity: 0.7;
     margin-bottom: 12px;
   }
 
@@ -399,6 +438,8 @@
     font-weight: 600;
     text-transform: none;
     margin: 0;
+    --box-shadow: 0 4px 14px rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.35) !important;
+    box-shadow: 0 4px 14px rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.35) !important;
   }
 }
 
@@ -475,33 +516,65 @@ body.dark {
   .statusFilterSelect {
     border-color: rgba(255, 255, 255, 0.1) !important;
     background: var(--bg-card);
+
+    &:hover {
+      border-color: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.5) !important;
+    }
+
+    &:focus,
+    &:focus-visible,
+    &.ion-focused {
+      border-color: var(--ion-color-primary, #00aeef) !important;
+    }
   }
 
   .searchInput {
-    border: none !important;
+    background: var(--bg-card);
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
     outline: none !important;
+
+    &:focus {
+      border-color: var(--ion-color-primary, #00aeef) !important;
+    }
   }
 
   .requestCard {
-    border: none !important;
-    outline: none !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+
+    &:hover {
+      border-color: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.45) !important;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+    }
   }
 
   .idGroup .docCountBadge {
-    background: rgba(255, 255, 255, 0.08);
-    color: var(--text-dark);
+    background: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.15);
+    color: var(--ion-color-primary, #00aeef);
+    border-color: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.25);
   }
 
   .cardBottom {
     border-top: 1px solid rgba(255, 255, 255, 0.06);
   }
 
-  .cardActions .editBtn {
-    --border-color: transparent !important;
-    --background: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.12);
-    border: none !important;
-    outline: none !important;
+  .cardActions {
+    .viewBtn {
+      --color: var(--ion-color-primary, #00aeef);
+      --background-hover: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.15);
+    }
+
+    .editBtn {
+      --border-color: transparent !important;
+      --background: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.12);
+      --color: var(--ion-color-primary, #00aeef);
+      border: none !important;
+      outline: none !important;
+
+      &:hover {
+        --background: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.22);
+      }
+    }
   }
 }
 
