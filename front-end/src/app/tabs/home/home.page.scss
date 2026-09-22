@@ -200,47 +200,12 @@
         }
 
         .requestTypeBadge {
-          font-size: 0.78rem;
+          font-size: 0.75rem;
           font-weight: 600;
-          color: var(--text-medium);
-          background: var(--bg-body);
-          padding: 3px 8px;
+          padding: 2px 8px;
           border-radius: 6px;
-          text-transform: uppercase;
-        }
-      }
-
-      .statusBadge {
-        font-size: 0.8rem;
-        font-weight: 700;
-        padding: 4px 10px;
-        border-radius: 6px;
-        text-transform: uppercase;
-        letter-spacing: 0.03em;
-
-        &.status-draft {
-          background: #e2e8f0;
-          color: #475569;
-        }
-        &.status-submitted {
-          background: #dbeafe;
-          color: #1e40af;
-        }
-        &.status-in_review {
-          background: #fef3c7;
-          color: #92400e;
-        }
-        &.status-approved {
-          background: #dcfce7;
-          color: #166534;
-        }
-        &.status-rejected {
-          background: #fee2e2;
-          color: #991b1b;
-        }
-        &.status-paid {
-          background: #ede9fe;
-          color: #5b21b6;
+          background: rgba(0, 174, 239, 0.1);
+          color: var(--esn-cyan);
         }
       }
     }
@@ -299,25 +264,26 @@
     align-items: center;
     margin: 0 0 16px 4px;
 
-    .sectionTitleWrap {
-      display: flex;
-      align-items: center;
-      gap: 12px;
+    .sectionTitle {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--text-dark);
+      margin: 0;
+    }
 
-      .sectionTitle {
-        font-size: 1.2rem;
-        font-weight: 700;
-        color: var(--text-dark);
-        margin: 0;
+    .refreshStatsBtn {
+      --padding-start: 4px;
+      --padding-end: 4px;
+      height: 28px;
+      color: var(--text-medium);
+      transition: color 0.15s ease, transform 0.15s ease;
+
+      &:hover {
+        color: #00aeef;
       }
 
-      .userCountBadge {
-        background: rgba(0, 174, 239, 0.12);
-        color: #00aeef;
-        padding: 3px 10px;
-        border-radius: 12px;
-        font-size: 0.82rem;
-        font-weight: 600;
+      ion-icon {
+        font-size: 1.1rem;
       }
     }
   }
@@ -370,6 +336,7 @@
         .userAvatar {
           width: 38px;
           height: 38px;
+          min-width: 38px;
           margin-right: 12px;
 
           .avatarInitials {
@@ -386,34 +353,105 @@
           }
         }
 
-        .userName {
-          font-size: 0.95rem;
-          font-weight: 600;
-          color: var(--text-dark);
-          margin-bottom: 2px;
-        }
+        .userLabel {
+          overflow: hidden;
 
-        .userOrigin {
-          font-size: 0.8rem;
-          color: var(--text-medium);
-        }
+          .userNameRow {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
 
-        .loginTime {
-          text-align: right;
-          display: flex;
-          flex-direction: column;
+            .userName {
+              font-size: 0.95rem;
+              font-weight: 600;
+              color: var(--text-dark);
+              margin: 0;
+            }
 
-          .timeLabel {
-            font-size: 0.72rem;
-            color: var(--text-medium);
-            text-transform: uppercase;
-            letter-spacing: 0.02em;
+            .userRoleChip {
+              font-size: 0.68rem;
+              font-weight: 600;
+              padding: 2px 7px;
+              border-radius: 9999px;
+              text-transform: uppercase;
+              letter-spacing: 0.03em;
+              line-height: 1.2;
+
+              &.role-administrator {
+                background: rgba(239, 68, 68, 0.12);
+                color: #dc2626;
+              }
+              &.role-manager {
+                background: rgba(14, 165, 233, 0.12);
+                color: #0284c7;
+              }
+              &.role-auditor {
+                background: rgba(139, 92, 246, 0.12);
+                color: #7c3aed;
+              }
+              &.role-custom {
+                background: rgba(100, 116, 139, 0.12);
+                color: #475569;
+              }
+            }
           }
 
-          .timeValue {
-            font-size: 0.82rem;
-            font-weight: 600;
-            color: var(--text-dark);
+          .userOrigin {
+            font-size: 0.8rem;
+            color: var(--text-medium);
+            margin: 2px 0 0 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+
+          .mobileLoginTime {
+            display: none;
+          }
+        }
+
+        .userItemEnd {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+
+          .desktopLoginTime {
+            text-align: right;
+            display: flex;
+            flex-direction: column;
+
+            .timeLabel {
+              font-size: 0.72rem;
+              color: var(--text-medium);
+              text-transform: uppercase;
+              letter-spacing: 0.02em;
+            }
+
+            .timeValue {
+              font-size: 0.82rem;
+              font-weight: 600;
+              color: var(--text-dark);
+              white-space: nowrap;
+            }
+          }
+
+          .openAccountsBtn {
+            --padding-start: 6px;
+            --padding-end: 6px;
+            height: 32px;
+            color: var(--text-medium);
+            margin: 0;
+            transition: color 0.15s ease, transform 0.15s ease;
+
+            &:hover {
+              color: #00aeef;
+              transform: translateY(-1px);
+            }
+
+            ion-icon {
+              font-size: 1.15rem;
+            }
           }
         }
       }
@@ -432,6 +470,20 @@
     align-items: flex-start;
     gap: 8px;
     padding: 12px 14px;
+    border-radius: 10px;
+
+    .noticeContent {
+      gap: 10px;
+
+      .noticeIcon ion-icon {
+        font-size: 1.3rem;
+      }
+
+      .noticeText p {
+        font-size: 0.86rem;
+        line-height: 1.4;
+      }
+    }
 
     .noticeActions {
       align-self: flex-end;
@@ -440,40 +492,233 @@
   }
 
   .welcomeHero {
-    padding: 24px 16px;
-    margin-bottom: 20px;
+    padding: 20px 14px;
+    margin-bottom: 18px;
+    border-radius: 12px;
+
+    .heroHeaderActions {
+      justify-content: flex-end;
+      margin-top: -8px;
+      margin-bottom: 8px;
+      gap: 4px;
+      flex-wrap: wrap;
+
+      .heroActionBtn {
+        font-size: 0.78rem;
+        --padding-start: 4px;
+        --padding-end: 4px;
+        height: 28px;
+      }
+    }
 
     .welcomeTitle {
-      font-size: 1.35rem;
+      font-size: 1.3rem;
+      line-height: 1.25;
+      margin-bottom: 8px;
     }
 
     .welcomeSubtitle {
-      font-size: 0.92rem;
-      margin-bottom: 20px;
+      font-size: 0.88rem;
+      line-height: 1.45;
+      margin-bottom: 18px;
     }
 
     .primaryActionWrapper {
       .submitRequestBtn {
         min-width: 100%;
         width: 100%;
+        height: 44px;
+        font-size: 0.95rem;
       }
     }
   }
 
   .recentActivitySection {
+    margin-bottom: 20px;
+
+    .sectionTitle {
+      font-size: 1.1rem;
+      margin-bottom: 12px;
+    }
+
     .latestRequestCard {
-      padding: 16px 14px;
+      padding: 14px;
+      border-radius: 12px;
+
+      .cardHeader {
+        margin-bottom: 10px;
+        gap: 8px;
+        flex-wrap: wrap;
+
+        .requestIdent {
+          gap: 6px;
+          .requestId {
+            font-size: 0.85rem;
+          }
+          .requestTypeBadge {
+            font-size: 0.72rem;
+            padding: 2px 6px;
+          }
+        }
+      }
 
       .cardBody {
-        gap: 12px;
-        margin-bottom: 12px;
+        gap: 8px 16px;
+        margin-bottom: 10px;
+        flex-wrap: wrap;
+
+        .amountRow,
+        .dateRow {
+          .amountLabel,
+          .dateLabel {
+            font-size: 0.78rem;
+          }
+          .amountValue {
+            font-size: 0.95rem;
+          }
+          .dateValue {
+            font-size: 0.88rem;
+          }
+        }
       }
     }
   }
 
   .statisticsSection {
+    margin-bottom: 22px;
+
+    .sectionHeader {
+      margin: 0 0 12px 2px;
+      gap: 8px;
+
+      .sectionTitle {
+        font-size: 1.1rem;
+      }
+
+      .refreshStatsBtn {
+        width: 32px;
+        height: 32px;
+        --padding-start: 0;
+        --padding-end: 0;
+      }
+    }
+
     .statisticsCard {
-      padding: 12px;
+      padding: 10px 12px;
+      border-radius: 12px;
+
+      .usersSearchBar {
+        --min-height: 38px;
+        height: 38px;
+        padding: 0 0 6px 0;
+      }
+
+      .emptyUsersState {
+        padding: 28px 12px;
+
+        ion-icon {
+          font-size: 2rem;
+        }
+
+        p {
+          font-size: 0.88rem;
+        }
+      }
+
+      .accessedUsersList {
+        .userItem {
+          --padding-start: 2px;
+          --inner-padding-end: 2px;
+          --min-height: 52px;
+          padding: 3px 0;
+
+          .userAvatar {
+            width: 36px;
+            height: 36px;
+            min-width: 36px;
+            margin-right: 10px;
+
+            .avatarInitials {
+              font-size: 0.8rem;
+            }
+          }
+
+          .userLabel {
+            margin: 6px 0;
+            overflow: hidden;
+
+            .userNameRow {
+              gap: 6px;
+
+              .userName {
+                font-size: 0.9rem;
+                line-height: 1.25;
+              }
+
+              .userRoleChip {
+                font-size: 0.62rem;
+                padding: 1px 6px;
+              }
+            }
+
+            .userOrigin {
+              font-size: 0.76rem;
+              color: var(--text-medium);
+              margin: 2px 0 0 0;
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
+            }
+
+            .mobileLoginTime {
+              display: flex;
+              align-items: center;
+              gap: 4px;
+              margin-top: 3px;
+              font-size: 0.72rem;
+              color: var(--text-medium);
+
+              ion-icon {
+                font-size: 0.8rem;
+                opacity: 0.75;
+                flex-shrink: 0;
+              }
+
+              span {
+                line-height: 1.2;
+              }
+            }
+          }
+
+          .userItemEnd {
+            margin-left: 8px;
+            gap: 0;
+
+            .desktopLoginTime {
+              display: none !important;
+            }
+
+            .openAccountsBtn {
+              width: 36px;
+              height: 36px;
+              --padding-start: 0;
+              --padding-end: 0;
+              border-radius: 8px;
+              background: rgba(0, 174, 239, 0.08);
+              color: #00aeef;
+
+              &:active {
+                background: rgba(0, 174, 239, 0.22);
+                transform: scale(0.94);
+              }
+
+              ion-icon {
+                font-size: 1.15rem;
+              }
+            }
+          }
+        }
+      }
     }
   }
 }
@@ -505,5 +750,35 @@ body.dark {
     border: none !important;
     outline: none !important;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  }
+
+  .userItem {
+    .userNameRow .userRoleChip {
+      &.role-administrator {
+        background: rgba(239, 68, 68, 0.22);
+        color: #f87171;
+      }
+      &.role-manager {
+        background: rgba(14, 165, 233, 0.22);
+        color: #38bdf8;
+      }
+      &.role-auditor {
+        background: rgba(139, 92, 246, 0.22);
+        color: #a78bfa;
+      }
+      &.role-custom {
+        background: rgba(100, 116, 139, 0.22);
+        color: #94a3b8;
+      }
+    }
+
+    .userItemEnd .openAccountsBtn {
+      background: rgba(0, 174, 239, 0.15);
+      color: #38bdf8;
+
+      &:active {
+        background: rgba(0, 174, 239, 0.3);
+      }
+    }
   }
 }
