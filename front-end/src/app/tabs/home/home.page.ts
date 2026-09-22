@@ -121,7 +121,33 @@ export class HomePage implements OnInit {
     this.isLoadingUsers = true;
     try {
       const users = await this.usersService.getAll();
-      this.accessedUsers = (users || [])
+
+      // Also include guest invitations that have accessed/submitted or have lastAccessedAt
+      const guestUsersFromInvites: User[] = [];
+      const existingUserIds = new Set((users || []).map(u => u.userId));
+
+      for (const inv of this.app.configurations?.guestInvitations || []) {
+        const accessTime = inv.lastAccessedAt || inv.submittedAt;
+        const guestUserId = `guest_${inv.id.replace(/-/g, '').slice(0, 10)}`;
+        if (accessTime && !existingUserIds.has(guestUserId)) {
+          guestUsersFromInvites.push(
+            new User({
+              userId: guestUserId,
+              email: inv.guestEmail,
+              firstName: inv.guestName,
+              lastName: '',
+              isGuest: true,
+              guestInvitationId: inv.id,
+              guestPurpose: inv.purpose,
+              guestPosition: inv.position,
+              lastLoginAt: accessTime
+            })
+          );
+        }
+      }
+
+      const allUsers = [...(users || []), ...guestUsersFromInvites];
+      this.accessedUsers = allUsers
         .filter(u => !!u.lastLoginAt)
         .map(u => {
           if (this.app.configurations) {
@@ -147,31 +173,34 @@ export class HomePage implements OnInit {
     this.filteredAccessedUsers = this.accessedUsers.filter(u =>
       u.getDisplayName().toLowerCase().includes(query) ||
       u.userId.toLowerCase().includes(query) ||
+      (u.email || '').toLowerCase().includes(query) ||
       (u.section || '').toLowerCase().includes(query) ||
-      (u.country || '').toLowerCase().includes(query)
+      (u.country || '').toLowerCase().includes(query) ||
+      (u.guestPurpose || '').toLowerCase().includes(query) ||
+      (u.guestPosition || '').toLowerCase().includes(query) ||
+      (u.isGuest && ('guest'.includes(query) || 'gość'.includes(query)))
     );
   }
 
   public formatLoginDate(isoDate: string): string {
     if (!isoDate) return '';
     try {
-      const date = new Date(isoDate);
-      return date.toLocaleString(
-        this.translate.currentLang === 'pl' ? 'pl-PL' : 'en-GB',
-        {
-          day: '2-digit',
-          month: '2-digit',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit'
-        }
-      );
+      const d = new Date(isoDate);
+      const dd = String(d.getDate()).padStart(2, '0');
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const yyyy = d.getFullYear();
+      const hh = String(d.getHours()).padStart(2, '0');
+      const min = String(d.getMinutes()).padStart(2, '0');
+      return `${dd}.${mm}.${yyyy}, ${hh}:${min}`;
     } catch {
       return isoDate;
     }
   }
 
   public getUserOrigin(user: User): string {
+    if (user.isGuest) {
+      return user.guestPosition?.trim() || this.translate.instant('CONFIGURATIONS.GUEST_BADGE');
+    }
     return user.getOrigin() || '';
   }
 

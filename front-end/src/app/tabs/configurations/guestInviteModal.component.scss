@@ -1,0 +1,135 @@
+.guestModalContent {
+  --background: var(--bg-body);
+}
+
+.maxWidthContainer {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 16px 16px 40px;
+}
+
+.expirationSegment {
+  margin-bottom: 12px;
+  --background: var(--bg-card);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.customDateItem {
+  margin-bottom: 12px;
+}
+
+.currencySuffix {
+  font-weight: 600;
+  color: var(--text-medium);
+  font-size: 0.9rem;
+  padding-left: 8px;
+}
+
+.submitWrapper {
+  margin-top: 24px;
+}
+
+.actionBtn {
+  --border-radius: 8px;
+  font-weight: 600;
+}
+
+/* STEP 2: Created state */
+.createdContainer {
+  display: flex;
+  justify-content: center;
+  padding-top: 20px;
+}
+
+.successCard {
+  width: 100%;
+  max-width: 600px;
+  text-align: center;
+  background: var(--bg-card);
+  padding: 32px 24px;
+  border-radius: 16px;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+
+  .successIconWrapper {
+    font-size: 4rem;
+    margin-bottom: 12px;
+  }
+
+  h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-dark);
+    margin: 0 0 8px;
+  }
+
+  .successSubtitle {
+    font-size: 0.95rem;
+    color: var(--text-medium);
+    margin: 0 0 24px;
+    line-height: 1.4;
+  }
+}
+
+.linkBox {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  background: var(--bg-body);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 6px 12px;
+  margin-bottom: 16px;
+
+  .linkInput {
+    --color: var(--text-dark);
+    font-size: 0.9rem;
+    text-align: left;
+  }
+
+  .copyBtn {
+    --border-radius: 8px;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+}
+
+.emailTemplateWrapper {
+  margin-bottom: 24px;
+}
+
+.summaryCard {
+  margin: 0 0 24px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  box-shadow: none;
+  background: var(--bg-body);
+  text-align: left;
+
+  .summaryRow {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.9rem;
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    .summaryLabel {
+      color: var(--text-medium);
+      font-weight: 500;
+    }
+
+    .summaryValue {
+      color: var(--text-dark);
+      font-weight: 600;
+    }
+  }
+}
+
+.doneWrapper {
+  margin-top: 16px;
+}

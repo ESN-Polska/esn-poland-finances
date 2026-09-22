@@ -120,14 +120,26 @@
         <ion-list *ngIf="!isLoadingUsers && filteredAccessedUsers.length > 0" class="accessedUsersList" lines="full">
           <ion-item *ngFor="let u of filteredAccessedUsers" class="userItem">
             <ion-avatar slot="start" class="userAvatar">
-              <img *ngIf="u.avatarURL" [src]="u.avatarURL" alt="" />
-              <div *ngIf="!u.avatarURL" class="avatarInitials">
-                {{ (u.firstName?.[0] || u.userId?.[0] || '').toUpperCase() }}{{ (u.lastName?.[0] || '').toUpperCase() }}
+              <img *ngIf="u.avatarURL && !u.isGuest" [src]="u.avatarURL" alt="" />
+              <div *ngIf="!u.avatarURL || u.isGuest" class="avatarInitials" [class.guestAvatar]="u.isGuest">
+                <ion-icon *ngIf="u.isGuest" name="person-outline"></ion-icon>
+                <span *ngIf="!u.isGuest">
+                  {{ (u.firstName?.[0] || u.userId?.[0] || '').toUpperCase() }}{{ (u.lastName?.[0] || '').toUpperCase() }}
+                </span>
               </div>
             </ion-avatar>
             <ion-label class="userLabel">
               <div class="userNameRow">
                 <h3 class="userName">{{ u.getDisplayName() }}</h3>
+                <ion-button
+                  fill="clear"
+                  class="openAccountsBtn desktopOpenBtn"
+                  *ngIf="!u.isGuest"
+                  (click)="$event.stopPropagation(); app.openUserProfileById(u.userId)"
+                  [title]="'COMMON.OPEN' | translate"
+                >
+                  <ion-icon name="open-outline" slot="icon-only"></ion-icon>
+                </ion-button>
                 <span
                   *ngIf="app.hasElevatedRole(u)"
                   class="userRoleChip role-{{ app.getUserRoleKey(u).toLowerCase() }}"
@@ -135,7 +147,9 @@
                   {{ app.getUserRoleName(u) }}
                 </span>
               </div>
-              <p class="userOrigin" *ngIf="getUserOrigin(u)">{{ getUserOrigin(u) }}</p>
+              <p class="userOrigin" *ngIf="getUserOrigin(u)">
+                {{ (u.isGuest && !u.guestPosition?.trim()) ? ('CONFIGURATIONS.GUEST_BADGE' | translate) : getUserOrigin(u) }}
+              </p>
               <div class="mobileLoginTime">
                 <ion-icon name="time-outline"></ion-icon>
                 <span>{{ formatLoginDate(u.lastLoginAt) }}</span>
@@ -148,7 +162,8 @@
               </div>
               <ion-button
                 fill="clear"
-                class="openAccountsBtn"
+                class="openAccountsBtn mobileOpenBtn"
+                *ngIf="!u.isGuest"
                 (click)="$event.stopPropagation(); app.openUserProfileById(u.userId)"
                 [title]="'COMMON.OPEN' | translate"
               >

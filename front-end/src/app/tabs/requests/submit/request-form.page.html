@@ -25,6 +25,27 @@
       </div>
     </div>
 
+    <!-- Guest Notice Banner -->
+    <div class="guestNoticeBanner" *ngIf="appService.currentUser?.isGuest">
+      <div class="guestBannerIcon">
+        <ion-icon name="person-circle-outline"></ion-icon>
+      </div>
+      <div class="guestBannerContent">
+        <h3 class="guestBannerTitle">{{ 'CONFIGURATIONS.GUEST_BANNER_TITLE' | translate }}</h3>
+        <p class="guestBannerSubtitle">
+          {{ (appService.currentUser?.guestPurpose
+            ? ('CONFIGURATIONS.GUEST_BANNER_SUBTITLE' | translate:{ purpose: appService.currentUser?.guestPurpose })
+            : ('CONFIGURATIONS.GUEST_BANNER_SUBTITLE_NO_PURPOSE' | translate)) }}
+        </p>
+        <p *ngIf="appService.currentUser?.guestMaxAmount" class="guestLimit">
+          {{ 'CONFIGURATIONS.GUEST_LIMIT_HELPER' | translate:{ amount: appService.currentUser?.guestMaxAmount } }}
+        </p>
+        <div *ngIf="guestInstructionsText" class="guestInstructionsBox">
+          <p>{{ guestInstructionsText }}</p>
+        </div>
+      </div>
+    </div>
+
     <form (ngSubmit)="save('SUBMITTED')" class="mainForm">
       <!-- Section 1: General Info -->
       <div class="formCard">
@@ -36,7 +57,9 @@
             <input
               type="text"
               class="formInput"
+              [class.readOnlyInput]="isPositionLocked"
               [class.is-invalid]="isFieldInvalid('position')"
+              [readonly]="isPositionLocked"
               [(ngModel)]="request.position"
               name="position"
               required
@@ -52,7 +75,9 @@
             <input
               type="text"
               class="formInput"
+              [class.readOnlyInput]="isSourceOfFundingLocked"
               [class.is-invalid]="isFieldInvalid('sourceOfFunding')"
+              [readonly]="isSourceOfFundingLocked"
               [(ngModel)]="request.sourceOfFunding"
               name="sourceOfFunding"
               required
@@ -72,6 +97,7 @@
 
         <div class="typeSelectionGrid">
           <div
+            *ngIf="isTypeAllowed('INVOICE_TO_PAY')"
             class="typeCard"
             [class.active]="request.requestType === 'INVOICE_TO_PAY'"
             (click)="selectType('INVOICE_TO_PAY')"
@@ -84,6 +110,7 @@
           </div>
 
           <div
+            *ngIf="isTypeAllowed('INVOICE_REIMBURSEMENT')"
             class="typeCard"
             [class.active]="request.requestType === 'INVOICE_REIMBURSEMENT'"
             (click)="selectType('INVOICE_REIMBURSEMENT')"
@@ -96,6 +123,7 @@
           </div>
 
           <div
+            *ngIf="isTypeAllowed('ADVANCE_PAYMENT')"
             class="typeCard"
             [class.active]="request.requestType === 'ADVANCE_PAYMENT'"
             (click)="selectType('ADVANCE_PAYMENT')"
@@ -108,6 +136,7 @@
           </div>
 
           <div
+            *ngIf="isTypeAllowed('DELEGATION_SETTLEMENT')"
             class="typeCard"
             [class.active]="request.requestType === 'DELEGATION_SETTLEMENT'"
             (click)="selectType('DELEGATION_SETTLEMENT')"

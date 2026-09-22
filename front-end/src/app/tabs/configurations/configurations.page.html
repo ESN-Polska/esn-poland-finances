@@ -12,119 +12,265 @@
 
 <ion-content class="configContent">
   <div class="maxWidthContainer" *ngIf="configurations">
-    <!-- SUBTAB: OPTIONS -->
-    <ion-list class="aList" *ngIf="pageSection === 'OPTIONS'">
-      <ion-list-header>
-        <ion-label>
-          <h2>{{ 'CONFIGURATIONS.DISPLAY_OPTIONS' | translate }}</h2>
-          <p>{{ 'CONFIGURATIONS.DISPLAY_OPTIONS_I' | translate }}</p>
-        </ion-label>
-      </ion-list-header>
+    <!-- SUBTAB: GUEST ACCESS -->
+    <div *ngIf="pageSection === 'GUESTS'">
+      <!-- Global Guest Policy -->
+      <ion-list class="aList">
+        <ion-list-header>
+          <ion-label>
+            <h2>{{ 'CONFIGURATIONS.GUEST_ACCESS_TITLE' | translate }}</h2>
+            <p>{{ 'CONFIGURATIONS.GUEST_ACCESS_I' | translate }}</p>
+          </ion-label>
+        </ion-list-header>
 
-      <!-- App Title (English) -->
-      <ion-item>
-        <ion-label position="stacked">{{ 'CONFIGURATIONS.APP_TITLE_EN' | translate }}</ion-label>
-        <ion-input readonly [(ngModel)]="configurations.appTitle.en"></ion-input>
-        <ion-button slot="end" fill="clear" color="medium" class="ion-margin-top" *ngIf="canModifyOptions()" (click)="changeAppTitle('en')">
-          <ion-icon name="pencil" slot="icon-only"></ion-icon>
-        </ion-button>
-      </ion-item>
-
-      <!-- App Title (Polish) -->
-      <ion-item>
-        <ion-label position="stacked">{{ 'CONFIGURATIONS.APP_TITLE_PL' | translate }}</ion-label>
-        <ion-input readonly [(ngModel)]="configurations.appTitle.pl"></ion-input>
-        <ion-button slot="end" fill="clear" color="medium" class="ion-margin-top" *ngIf="canModifyOptions()" (click)="changeAppTitle('pl')">
-          <ion-icon name="pencil" slot="icon-only"></ion-icon>
-        </ion-button>
-      </ion-item>
-
-      <!-- App Subtitle (English) -->
-      <ion-item>
-        <ion-label position="stacked">{{ 'CONFIGURATIONS.APP_SUBTITLE_EN' | translate }}</ion-label>
-        <ion-input readonly [(ngModel)]="configurations.appSubtitle.en"></ion-input>
-        <ion-button slot="end" fill="clear" color="medium" class="ion-margin-top" *ngIf="canModifyOptions()" (click)="changeAppSubtitle('en')">
-          <ion-icon name="pencil" slot="icon-only"></ion-icon>
-        </ion-button>
-      </ion-item>
-
-      <!-- App Subtitle (Polish) -->
-      <ion-item>
-        <ion-label position="stacked">{{ 'CONFIGURATIONS.APP_SUBTITLE_PL' | translate }}</ion-label>
-        <ion-input readonly [(ngModel)]="configurations.appSubtitle.pl"></ion-input>
-        <ion-button slot="end" fill="clear" color="medium" class="ion-margin-top" *ngIf="canModifyOptions()" (click)="changeAppSubtitle('pl')">
-          <ion-icon name="pencil" slot="icon-only"></ion-icon>
-        </ion-button>
-      </ion-item>
-
-      <!-- Support Email -->
-      <ion-item>
-        <ion-label position="stacked">{{ 'CONFIGURATIONS.SUPPORT_EMAIL' | translate }}</ion-label>
-        <ion-input readonly [(ngModel)]="configurations.supportEmail"></ion-input>
-        <ion-button slot="end" fill="clear" color="medium" class="ion-margin-top" *ngIf="canModifyOptions()" (click)="changeSupportEmail()">
-          <ion-icon name="pencil" slot="icon-only"></ion-icon>
-        </ion-button>
-      </ion-item>
-
-      <!-- App Logo Light Mode -->
-      <ion-item>
-        <ion-label class="ion-text-wrap">
-          {{ 'CONFIGURATIONS.APP_LOGO_LIGHT' | translate }}
-          <p>{{ 'CONFIGURATIONS.APP_LOGO_LIGHT_I' | translate }}</p>
-        </ion-label>
-        <ion-thumbnail slot="end" class="logoThumbnail">
-          <ion-img [src]="configurations.appLogoURL || app.getIcon()"></ion-img>
-        </ion-thumbnail>
-        <input #appLogoInput type="file" accept="image/*" style="display: none" (change)="uploadAppLogo($event)" />
-        <ion-button slot="end" fill="clear" color="medium" *ngIf="canModifyOptions()" (click)="appLogoInput.click()">
-          <ion-icon name="cloud-upload-outline" slot="icon-only"></ion-icon>
-        </ion-button>
-        <ion-button slot="end" fill="clear" color="danger" (click)="resetAppLogo()" *ngIf="canModifyOptions() && configurations.appLogoURL">
-          <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
-        </ion-button>
-      </ion-item>
-
-      <!-- App Logo Dark Mode -->
-      <ion-item>
-        <ion-label class="ion-text-wrap">
-          {{ 'CONFIGURATIONS.APP_LOGO_DARK' | translate }}
-          <p>{{ 'CONFIGURATIONS.APP_LOGO_DARK_I' | translate }}</p>
-        </ion-label>
-        <ion-thumbnail slot="end" class="logoThumbnail darkThumbnail">
-          <ion-img [src]="configurations.appLogoURLDarkMode || app.getIcon(true)"></ion-img>
-        </ion-thumbnail>
-        <input #appLogoDarkModeInput type="file" accept="image/*" style="display: none" (change)="uploadAppLogo($event, true)" />
-        <ion-button slot="end" fill="clear" color="medium" *ngIf="canModifyOptions()" (click)="appLogoDarkModeInput.click()">
-          <ion-icon name="cloud-upload-outline" slot="icon-only"></ion-icon>
-        </ion-button>
-        <ion-button slot="end" fill="clear" color="danger" (click)="resetAppLogo(true)" *ngIf="canModifyOptions() && configurations.appLogoURLDarkMode">
-          <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
-        </ion-button>
-      </ion-item>
-
-
-      <!-- Timezone -->
-      <ion-item>
-        <ion-label position="stacked">{{ 'CONFIGURATIONS.TIMEZONE_OF_REFERENCE' | translate }}</ion-label>
-        <ion-select interface="popover" [disabled]="!canModifyOptions()" [(ngModel)]="configurations.timezone" (ionChange)="updateConfigurations()">
-          <ion-select-option *ngFor="let tz of timezones" [value]="tz">{{ tz }}</ion-select-option>
-        </ion-select>
-      </ion-item>
-
-      <!-- Page Sections Order (Users with full configurations rights) -->
-      <ion-list-header *ngIf="canReorderPageSections()">
-        <ion-label>
-          <h2>{{ 'CONFIGURATIONS.PAGE_SECTIONS_ORDER' | translate }}</h2>
-          <p>{{ 'CONFIGURATIONS.PAGE_SECTIONS_ORDER_I' | translate }}</p>
-        </ion-label>
-      </ion-list-header>
-      <ion-reorder-group *ngIf="canReorderPageSections()" [disabled]="false" (ionItemReorder)="reorderPageSections($event)">
-        <ion-item *ngFor="let section of pageSections">
-          <ion-label>{{ 'CONFIGURATIONS.PAGE_SECTIONS.' + section | translate }}</ion-label>
-          <ion-reorder slot="end"></ion-reorder>
+        <!-- Master Switch -->
+        <ion-item>
+          <ion-label class="ion-text-wrap">
+            {{ 'CONFIGURATIONS.GUEST_ACCESS_ENABLED' | translate }}
+            <p>{{ 'CONFIGURATIONS.GUEST_ACCESS_ENABLED_I' | translate }}</p>
+          </ion-label>
+          <ion-toggle
+            slot="end"
+            [disabled]="!canModifyGuests()"
+            [(ngModel)]="configurations.guestAccessEnabled"
+            (ionChange)="updateConfigurations()"
+          ></ion-toggle>
         </ion-item>
-      </ion-reorder-group>
-    </ion-list>
+
+        <!-- Default Expiration (Days) -->
+        <ion-item>
+          <ion-label position="stacked">{{ 'CONFIGURATIONS.GUEST_DEFAULT_EXPIRATION' | translate }}</ion-label>
+          <ion-input
+            type="number"
+            min="1"
+            max="365"
+            [readonly]="!canModifyGuests()"
+            [(ngModel)]="configurations.guestAccessDefaultExpirationDays"
+            (ionChange)="updateConfigurations()"
+          ></ion-input>
+        </ion-item>
+
+        <!-- Require Purpose -->
+        <ion-item>
+          <ion-label class="ion-text-wrap">
+            {{ 'CONFIGURATIONS.GUEST_REQUIRE_PURPOSE' | translate }}
+            <p>{{ 'CONFIGURATIONS.GUEST_REQUIRE_PURPOSE_I' | translate }}</p>
+          </ion-label>
+          <ion-toggle
+            slot="end"
+            [disabled]="!canModifyGuests()"
+            [(ngModel)]="configurations.guestAccessRequirePurpose"
+            (ionChange)="updateConfigurations()"
+          ></ion-toggle>
+        </ion-item>
+
+        <!-- Defaults -->
+        <ion-list-header class="ion-padding-top">
+          <ion-label>
+            <h2>{{ 'CONFIGURATIONS.GUEST_DEFAULTS_TITLE' | translate }}</h2>
+            <p>{{ 'CONFIGURATIONS.GUEST_DEFAULTS_I' | translate }}</p>
+          </ion-label>
+        </ion-list-header>
+
+        <ion-item>
+          <ion-checkbox
+            slot="start"
+            [disabled]="!canModifyGuests()"
+            [checked]="isGuestRequestTypeAllowed('INVOICE_REIMBURSEMENT')"
+            (ionChange)="toggleGuestRequestType('INVOICE_REIMBURSEMENT')"
+          ></ion-checkbox>
+          <ion-label>{{ 'REQUESTS.TYPES.INVOICE_REIMBURSEMENT' | translate }}</ion-label>
+        </ion-item>
+
+        <ion-item>
+          <ion-checkbox
+            slot="start"
+            [disabled]="!canModifyGuests()"
+            [checked]="isGuestRequestTypeAllowed('DELEGATION_SETTLEMENT')"
+            (ionChange)="toggleGuestRequestType('DELEGATION_SETTLEMENT')"
+          ></ion-checkbox>
+          <ion-label>{{ 'REQUESTS.TYPES.DELEGATION_SETTLEMENT' | translate }}</ion-label>
+        </ion-item>
+
+        <ion-item>
+          <ion-checkbox
+            slot="start"
+            [disabled]="!canModifyGuests()"
+            [checked]="isGuestRequestTypeAllowed('INVOICE_TO_PAY')"
+            (ionChange)="toggleGuestRequestType('INVOICE_TO_PAY')"
+          ></ion-checkbox>
+          <ion-label>{{ 'REQUESTS.TYPES.INVOICE_TO_PAY' | translate }}</ion-label>
+        </ion-item>
+
+        <ion-item>
+          <ion-checkbox
+            slot="start"
+            [disabled]="!canModifyGuests()"
+            [checked]="isGuestRequestTypeAllowed('ADVANCE_PAYMENT')"
+            (ionChange)="toggleGuestRequestType('ADVANCE_PAYMENT')"
+          ></ion-checkbox>
+          <ion-label>{{ 'REQUESTS.TYPES.ADVANCE_PAYMENT' | translate }}</ion-label>
+        </ion-item>
+
+        <!-- Default Guest Instructions -->
+        <ion-item button detail (click)="changeGuestInstructions()" [disabled]="!canModifyGuests()">
+          <ion-label class="ion-text-wrap">
+            <h2>{{ 'CONFIGURATIONS.GUEST_INSTRUCTIONS' | translate }}</h2>
+            <p>{{ 'CONFIGURATIONS.GUEST_INSTRUCTIONS_I' | translate }}</p>
+          </ion-label>
+        </ion-item>
+      </ion-list>
+
+      <!-- Active Invitations & Links List -->
+      <ion-list class="aList">
+        <ion-list-header class="ion-padding-top">
+          <ion-label>
+            <h2>{{ 'CONFIGURATIONS.GUEST_INVITATIONS' | translate }}</h2>
+            <p>{{ 'CONFIGURATIONS.GUEST_INVITATIONS_I' | translate }}</p>
+          </ion-label>
+          <ion-button size="small" *ngIf="canModifyGuests()" (click)="openCreateGuestInviteModal()">
+            <ion-icon name="add-outline" slot="start"></ion-icon>
+            {{ 'CONFIGURATIONS.GENERATE_GUEST_LINK' | translate }}
+          </ion-button>
+        </ion-list-header>
+
+        <!-- Search and Status Filter Toolbar -->
+        <div class="guestFilterToolbar">
+          <ion-searchbar
+            [(ngModel)]="guestSearchQuery"
+            [placeholder]="'CONFIGURATIONS.SEARCH_GUESTS_PLACEHOLDER' | translate"
+            [debounce]="200"
+          ></ion-searchbar>
+          <ion-segment [(ngModel)]="guestFilterStatus" class="guestFilterSegment">
+            <ion-segment-button value="ALL">
+              <ion-label>{{ 'CONFIGURATIONS.FILTER_ALL' | translate }}</ion-label>
+            </ion-segment-button>
+            <ion-segment-button value="ACTIVE">
+              <ion-label>{{ 'CONFIGURATIONS.STATUS_ACTIVE' | translate }}</ion-label>
+            </ion-segment-button>
+            <ion-segment-button value="USED">
+              <ion-label>{{ 'CONFIGURATIONS.STATUS_USED' | translate }}</ion-label>
+            </ion-segment-button>
+            <ion-segment-button value="EXPIRED">
+              <ion-label>{{ 'CONFIGURATIONS.STATUS_EXPIRED' | translate }}</ion-label>
+            </ion-segment-button>
+            <ion-segment-button value="REVOKED">
+              <ion-label>{{ 'CONFIGURATIONS.STATUS_REVOKED' | translate }}</ion-label>
+            </ion-segment-button>
+          </ion-segment>
+        </div>
+
+        <!-- Empty State -->
+        <ion-item class="noElements" *ngIf="filteredGuestInvitations.length === 0">
+          <ion-label>{{ 'CONFIGURATIONS.NO_GUEST_INVITATIONS' | translate }}</ion-label>
+        </ion-item>
+
+        <!-- Invitations List -->
+        <ion-item *ngFor="let invite of filteredGuestInvitations" class="guestInviteItem">
+          <ion-label class="ion-text-wrap">
+            <div class="guestInviteHeader">
+              <span class="guestName">{{ invite.guestName }}</span>
+              <span class="status-chip" [ngClass]="'status-' + getGuestStatus(invite).toLowerCase()">
+                {{ 'CONFIGURATIONS.STATUS_' + getGuestStatus(invite) | translate }}
+              </span>
+            </div>
+
+            <div class="guestInviteMeta">
+              <span>{{ invite.guestEmail }}</span>
+              <span *ngIf="invite.position"> · <em>{{ invite.position }}</em></span>
+              <span *ngIf="invite.purpose"> · <span class="guestPurpose">{{ invite.purpose }}</span></span>
+              <span *ngIf="invite.maxAmount"> · <strong>{{ invite.maxAmount }} PLN max</strong></span>
+              <span *ngIf="invite.instructions && (invite.instructions.en || invite.instructions.pl)"> · <ion-badge color="medium" mode="ios">{{ 'CONFIGURATIONS.GUEST_HAS_CUSTOM_INSTRUCTIONS' | translate }}</ion-badge></span>
+            </div>
+
+            <div class="guestInviteMeta">
+              <span>{{ 'CONFIGURATIONS.GUEST_EXPIRATION' | translate }}: {{ invite.expiresAt | date:'dd.MM.yyyy' }}</span>
+              <span *ngIf="invite.createdBy"> · {{ invite.createdBy }}</span>
+            </div>
+
+            <div class="guestInviteMeta" *ngIf="invite.submittedRequestId">
+              <ion-button
+                fill="clear"
+                size="small"
+                color="primary"
+                class="guestRequestLinkBtn ion-no-padding"
+                (click)="viewGuestRequest(invite.submittedRequestId)"
+              >
+                <ion-icon name="document-text-outline" slot="start"></ion-icon>
+                {{ 'CONFIGURATIONS.VIEW_SUBMITTED_REQUEST' | translate }}: #{{ invite.submittedRequestId }}
+              </ion-button>
+            </div>
+          </ion-label>
+
+          <!-- Actions -->
+          <div slot="end" class="guestActionButtons">
+            <!-- Copy Link -->
+            <ion-button
+              fill="clear"
+              color="primary"
+              [title]="'CONFIGURATIONS.COPY_LINK' | translate"
+              (click)="copyGuestLink(invite)"
+            >
+              <ion-icon name="copy-outline" slot="icon-only"></ion-icon>
+            </ion-button>
+
+            <!-- Edit (Active, Expired, Revoked) -->
+            <ion-button
+              fill="clear"
+              color="primary"
+              *ngIf="canModifyGuests() && getGuestStatus(invite) !== 'USED'"
+              [title]="'CONFIGURATIONS.EDIT_INVITE' | translate"
+              (click)="openEditGuestInviteModal(invite)"
+            >
+              <ion-icon name="create-outline" slot="icon-only"></ion-icon>
+            </ion-button>
+
+            <!-- Change Validity (Active or Expired) -->
+            <ion-button
+              fill="clear"
+              color="medium"
+              *ngIf="canModifyGuests() && (getGuestStatus(invite) === 'ACTIVE' || getGuestStatus(invite) === 'EXPIRED')"
+              [title]="'CONFIGURATIONS.CHANGE_VALIDITY' | translate"
+              (click)="changeGuestInviteValidity(invite)"
+            >
+              <ion-icon name="calendar-outline" slot="icon-only"></ion-icon>
+            </ion-button>
+
+            <!-- Revoke (Active) -->
+            <ion-button
+              fill="clear"
+              color="warning"
+              *ngIf="canModifyGuests() && getGuestStatus(invite) === 'ACTIVE'"
+              [title]="'CONFIGURATIONS.REVOKE_INVITE' | translate"
+              (click)="revokeGuestInvite(invite)"
+            >
+              <ion-icon name="ban-outline" slot="icon-only"></ion-icon>
+            </ion-button>
+
+            <!-- Restore / Unrevoke (Revoked) -->
+            <ion-button
+              fill="clear"
+              color="success"
+              *ngIf="canModifyGuests() && getGuestStatus(invite) === 'REVOKED'"
+              [title]="'CONFIGURATIONS.UNREVOKE_INVITE' | translate"
+              (click)="unrevokeGuestInvite(invite)"
+            >
+              <ion-icon name="checkmark-circle-outline" slot="icon-only"></ion-icon>
+            </ion-button>
+
+            <!-- Delete -->
+            <ion-button
+              fill="clear"
+              color="danger"
+              *ngIf="canModifyGuests()"
+              (click)="deleteGuestInvite(invite)"
+            >
+              <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
+            </ion-button>
+          </div>
+        </ion-item>
+      </ion-list>
+    </div>
 
     <!-- SUBTAB: USERS -->
     <ion-list class="aList" *ngIf="pageSection === 'USERS'">
@@ -316,6 +462,120 @@
           {{ 'COMMON.OPEN' | translate }}
         </ion-button>
       </ion-list-header>
+    </ion-list>
+
+    <!-- SUBTAB: OPTIONS -->
+    <ion-list class="aList" *ngIf="pageSection === 'OPTIONS'">
+      <ion-list-header>
+        <ion-label>
+          <h2>{{ 'CONFIGURATIONS.DISPLAY_OPTIONS' | translate }}</h2>
+          <p>{{ 'CONFIGURATIONS.DISPLAY_OPTIONS_I' | translate }}</p>
+        </ion-label>
+      </ion-list-header>
+
+      <!-- App Title (English) -->
+      <ion-item>
+        <ion-label position="stacked">{{ 'CONFIGURATIONS.APP_TITLE_EN' | translate }}</ion-label>
+        <ion-input readonly [(ngModel)]="configurations.appTitle.en"></ion-input>
+        <ion-button slot="end" fill="clear" color="medium" class="ion-margin-top" *ngIf="canModifyOptions()" (click)="changeAppTitle('en')">
+          <ion-icon name="pencil" slot="icon-only"></ion-icon>
+        </ion-button>
+      </ion-item>
+
+      <!-- App Title (Polish) -->
+      <ion-item>
+        <ion-label position="stacked">{{ 'CONFIGURATIONS.APP_TITLE_PL' | translate }}</ion-label>
+        <ion-input readonly [(ngModel)]="configurations.appTitle.pl"></ion-input>
+        <ion-button slot="end" fill="clear" color="medium" class="ion-margin-top" *ngIf="canModifyOptions()" (click)="changeAppTitle('pl')">
+          <ion-icon name="pencil" slot="icon-only"></ion-icon>
+        </ion-button>
+      </ion-item>
+
+      <!-- App Subtitle (English) -->
+      <ion-item>
+        <ion-label position="stacked">{{ 'CONFIGURATIONS.APP_SUBTITLE_EN' | translate }}</ion-label>
+        <ion-input readonly [(ngModel)]="configurations.appSubtitle.en"></ion-input>
+        <ion-button slot="end" fill="clear" color="medium" class="ion-margin-top" *ngIf="canModifyOptions()" (click)="changeAppSubtitle('en')">
+          <ion-icon name="pencil" slot="icon-only"></ion-icon>
+        </ion-button>
+      </ion-item>
+
+      <!-- App Subtitle (Polish) -->
+      <ion-item>
+        <ion-label position="stacked">{{ 'CONFIGURATIONS.APP_SUBTITLE_PL' | translate }}</ion-label>
+        <ion-input readonly [(ngModel)]="configurations.appSubtitle.pl"></ion-input>
+        <ion-button slot="end" fill="clear" color="medium" class="ion-margin-top" *ngIf="canModifyOptions()" (click)="changeAppSubtitle('pl')">
+          <ion-icon name="pencil" slot="icon-only"></ion-icon>
+        </ion-button>
+      </ion-item>
+
+      <!-- Support Email -->
+      <ion-item>
+        <ion-label position="stacked">{{ 'CONFIGURATIONS.SUPPORT_EMAIL' | translate }}</ion-label>
+        <ion-input readonly [(ngModel)]="configurations.supportEmail"></ion-input>
+        <ion-button slot="end" fill="clear" color="medium" class="ion-margin-top" *ngIf="canModifyOptions()" (click)="changeSupportEmail()">
+          <ion-icon name="pencil" slot="icon-only"></ion-icon>
+        </ion-button>
+      </ion-item>
+
+      <!-- App Logo Light Mode -->
+      <ion-item>
+        <ion-label class="ion-text-wrap">
+          {{ 'CONFIGURATIONS.APP_LOGO_LIGHT' | translate }}
+          <p>{{ 'CONFIGURATIONS.APP_LOGO_LIGHT_I' | translate }}</p>
+        </ion-label>
+        <ion-thumbnail slot="end" class="logoThumbnail">
+          <ion-img [src]="configurations.appLogoURL || app.getIcon()"></ion-img>
+        </ion-thumbnail>
+        <input #appLogoInput type="file" accept="image/*" style="display: none" (change)="uploadAppLogo($event)" />
+        <ion-button slot="end" fill="clear" color="medium" *ngIf="canModifyOptions()" (click)="appLogoInput.click()">
+          <ion-icon name="cloud-upload-outline" slot="icon-only"></ion-icon>
+        </ion-button>
+        <ion-button slot="end" fill="clear" color="danger" (click)="resetAppLogo()" *ngIf="canModifyOptions() && configurations.appLogoURL">
+          <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
+        </ion-button>
+      </ion-item>
+
+      <!-- App Logo Dark Mode -->
+      <ion-item>
+        <ion-label class="ion-text-wrap">
+          {{ 'CONFIGURATIONS.APP_LOGO_DARK' | translate }}
+          <p>{{ 'CONFIGURATIONS.APP_LOGO_DARK_I' | translate }}</p>
+        </ion-label>
+        <ion-thumbnail slot="end" class="logoThumbnail darkThumbnail">
+          <ion-img [src]="configurations.appLogoURLDarkMode || app.getIcon(true)"></ion-img>
+        </ion-thumbnail>
+        <input #appLogoDarkModeInput type="file" accept="image/*" style="display: none" (change)="uploadAppLogo($event, true)" />
+        <ion-button slot="end" fill="clear" color="medium" *ngIf="canModifyOptions()" (click)="appLogoDarkModeInput.click()">
+          <ion-icon name="cloud-upload-outline" slot="icon-only"></ion-icon>
+        </ion-button>
+        <ion-button slot="end" fill="clear" color="danger" (click)="resetAppLogo(true)" *ngIf="canModifyOptions() && configurations.appLogoURLDarkMode">
+          <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
+        </ion-button>
+      </ion-item>
+
+
+      <!-- Timezone -->
+      <ion-item>
+        <ion-label position="stacked">{{ 'CONFIGURATIONS.TIMEZONE_OF_REFERENCE' | translate }}</ion-label>
+        <ion-select interface="popover" [disabled]="!canModifyOptions()" [(ngModel)]="configurations.timezone" (ionChange)="updateConfigurations()">
+          <ion-select-option *ngFor="let tz of timezones" [value]="tz">{{ tz }}</ion-select-option>
+        </ion-select>
+      </ion-item>
+
+      <!-- Page Sections Order (Users with full configurations rights) -->
+      <ion-list-header *ngIf="canReorderPageSections()">
+        <ion-label>
+          <h2>{{ 'CONFIGURATIONS.PAGE_SECTIONS_ORDER' | translate }}</h2>
+          <p>{{ 'CONFIGURATIONS.PAGE_SECTIONS_ORDER_I' | translate }}</p>
+        </ion-label>
+      </ion-list-header>
+      <ion-reorder-group *ngIf="canReorderPageSections()" [disabled]="false" (ionItemReorder)="reorderPageSections($event)">
+        <ion-item *ngFor="let section of pageSections">
+          <ion-label>{{ 'CONFIGURATIONS.PAGE_SECTIONS.' + section | translate }}</ion-label>
+          <ion-reorder slot="end"></ion-reorder>
+        </ion-item>
+      </ion-reorder-group>
     </ion-list>
   </div>
 </ion-content>

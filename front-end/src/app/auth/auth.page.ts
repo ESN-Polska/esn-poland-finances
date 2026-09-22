@@ -1,5 +1,7 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { ToastController } from '@ionic/angular';
+import { TranslateService } from '@ngx-translate/core';
 import { environment as env } from '@env';
 import { AppService } from '../app.service';
 
@@ -12,12 +14,19 @@ export class AuthPage implements OnInit {
   @Input() token?: string;
 
   public isProcessing = false;
+  public isGuestLogin = false;
+  public guestErrorKey: string | null = null;
+  public get guestErrorNotice(): string | null {
+    return this.guestErrorKey ? this.translate.instant(this.guestErrorKey) : null;
+  }
   public version = env.idea?.app?.version || '1.0.0';
 
   constructor(
     public appService: AppService,
     private route: ActivatedRoute,
-    private router: Router
+    private router: Router,
+    private toastCtrl: ToastController,
+    private translate: TranslateService
   ) {}
 
   public async ngOnInit(): Promise<void> {
@@ -25,8 +34,39 @@ export class AuthPage implements OnInit {
 
     // Check token from @Input (routed parameter) or snapshot queryParams
     const queryToken = this.token || this.route.snapshot.queryParamMap.get('token');
+    const guestToken = this.route.snapshot.queryParamMap.get('guestToken');
 
-    if (queryToken) {
+    if (guestToken) {
+      this.isGuestLogin = true;
+      this.isProcessing = true;
+      try {
+        await this.appService.loginWithGuestToken(guestToken);
+        await this.router.navigate(['/t/requests/submit'], { replaceUrl: true });
+        return;
+      } catch (err: any) {
+        console.error('Failed to process guest authentication', err);
+        this.isProcessing = false;
+        const rawErr =
+          err?.error?.message ||
+          err?.error?.error ||
+          (typeof err?.error === 'string' ? err.error : '') ||
+          err?.message ||
+          '';
+        const msg = String(rawErr).toLowerCase();
+
+        if (msg.includes('revoked')) {
+          this.guestErrorKey = 'AUTH.GUEST_ERROR_REVOKED';
+        } else if (msg.includes('expired')) {
+          this.guestErrorKey = 'AUTH.GUEST_ERROR_EXPIRED';
+        } else if (msg.includes('used') || msg.includes('already')) {
+          this.guestErrorKey = 'AUTH.GUEST_ERROR_USED';
+        } else if (msg.includes('disabled')) {
+          this.guestErrorKey = 'AUTH.GUEST_ERROR_DISABLED';
+        } else {
+          this.guestErrorKey = 'AUTH.GUEST_ERROR_INVALID';
+        }
+      }
+    } else if (queryToken) {
       this.isProcessing = true;
       try {
         await this.appService.setToken(queryToken);

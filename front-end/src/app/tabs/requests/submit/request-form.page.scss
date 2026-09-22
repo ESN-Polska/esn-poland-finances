@@ -127,6 +127,63 @@
   }
 }
 
+/* Guest Notice Banner */
+.guestNoticeBanner {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  background: rgba(0, 174, 239, 0.08);
+  border: 1px solid rgba(0, 174, 239, 0.3);
+  border-left: 4px solid var(--esn-cyan, #00aeef);
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin-bottom: 24px;
+
+  .guestBannerIcon {
+    font-size: 1.8rem;
+    color: var(--esn-cyan, #00aeef);
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .guestBannerContent {
+    .guestBannerTitle {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text-dark);
+      margin: 0 0 4px 0;
+    }
+
+    .guestBannerSubtitle {
+      font-size: 0.95rem;
+      color: var(--text-dark);
+      margin: 0 0 6px 0;
+      line-height: 1.45;
+    }
+
+    .guestLimit {
+      font-size: 0.9rem;
+      color: var(--esn-cyan, #00aeef);
+      margin: 4px 0 8px 0;
+    }
+
+    .guestInstructionsBox {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 8px 12px;
+      margin-top: 8px;
+
+      p {
+        margin: 0;
+        font-size: 0.85rem;
+        color: var(--text-medium);
+        line-height: 1.4;
+      }
+    }
+  }
+}
+
 /* Form Cards */
 .mainForm {
   display: flex;

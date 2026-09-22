@@ -31,6 +31,7 @@ export class ProfilePage implements OnInit {
   ) {}
 
   public openAccountsProfile(userId?: string): void {
+    if (this.app.currentUser?.isGuest || userId?.startsWith('guest_')) return;
     if (userId) {
       window.open(`https://accounts.esn.org/user/${encodeURIComponent(userId)}`, '_blank', 'noopener,noreferrer');
     }

@@ -356,6 +356,16 @@
             font-weight: 700;
             font-size: 0.85rem;
             border-radius: 50%;
+
+            &.guestAvatar {
+              background: #fdf2f8;
+              color: #be185d;
+              border: 1px solid #fbcfe8;
+
+              ion-icon {
+                font-size: 1.15rem;
+              }
+            }
           }
         }
 
@@ -365,7 +375,7 @@
           .userNameRow {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
             flex-wrap: wrap;
 
             .userName {
@@ -373,6 +383,26 @@
               font-weight: 600;
               color: var(--text-dark);
               margin: 0;
+            }
+
+            .openAccountsBtn {
+              --padding-start: 2px;
+              --padding-end: 2px;
+              width: 24px;
+              height: 24px;
+              min-height: 24px;
+              color: var(--text-medium);
+              margin: 0;
+              transition: color 0.15s ease, transform 0.15s ease;
+
+              &:hover {
+                color: #00aeef;
+                transform: translateY(-1px);
+              }
+
+              ion-icon {
+                font-size: 1rem;
+              }
             }
           }
 
@@ -393,7 +423,8 @@
         .userItemEnd {
           display: flex;
           align-items: center;
-          gap: 12px;
+          margin-left: 12px;
+          flex-shrink: 0;
 
           .desktopLoginTime {
             text-align: right;
@@ -415,22 +446,8 @@
             }
           }
 
-          .openAccountsBtn {
-            --padding-start: 6px;
-            --padding-end: 6px;
-            height: 32px;
-            color: var(--text-medium);
-            margin: 0;
-            transition: color 0.15s ease, transform 0.15s ease;
-
-            &:hover {
-              color: #00aeef;
-              transform: translateY(-1px);
-            }
-
-            ion-icon {
-              font-size: 1.15rem;
-            }
+          .mobileOpenBtn {
+            display: none;
           }
         }
       }
@@ -627,11 +644,15 @@
             overflow: hidden;
 
             .userNameRow {
-              gap: 6px;
+              gap: 4px;
 
               .userName {
                 font-size: 0.9rem;
                 line-height: 1.25;
+              }
+
+              .desktopOpenBtn {
+                display: none !important;
               }
 
               .userRoleChip {
@@ -670,6 +691,7 @@
           }
 
           .userItemEnd {
+            display: flex;
             margin-left: 8px;
             gap: 0;
 
@@ -678,6 +700,7 @@
             }
 
             .openAccountsBtn {
+              display: flex;
               width: 36px;
               height: 36px;
               --padding-start: 0;
@@ -732,6 +755,20 @@ body.dark {
   }
 
   .userItem {
+    .avatarInitials.guestAvatar {
+      background: rgba(236, 72, 153, 0.2) !important;
+      color: #f472b6 !important;
+      border: 1px solid rgba(244, 114, 182, 0.4) !important;
+    }
+
+    .userNameRow .openAccountsBtn {
+      color: #94a3b8;
+
+      &:hover {
+        color: #38bdf8;
+      }
+    }
+
     .userItemEnd .openAccountsBtn {
       background: rgba(0, 174, 239, 0.15);
       color: #38bdf8;

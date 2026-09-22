@@ -218,3 +218,109 @@ body.dark {
     border-color: rgba(255, 255, 255, 0.1);
   }
 }
+
+/* GUEST ACCESS STYLES */
+.guestFilterToolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+
+  ion-searchbar {
+    --background: var(--bg-card);
+    --border-radius: 10px;
+    --box-shadow: none;
+    border: 1px solid var(--border-color);
+    padding: 0;
+  }
+
+  .guestFilterSegment {
+    --background: var(--bg-card);
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    padding: 2px;
+
+    ion-segment-button {
+      --color: var(--text-medium);
+      --color-checked: var(--esn-cyan);
+      --indicator-color: var(--bg-body);
+      --border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      min-height: 32px;
+    }
+  }
+}
+
+.guestInviteItem {
+  --padding-top: 12px;
+  --padding-bottom: 12px;
+
+  .guestInviteHeader {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+
+    .guestName {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text-dark);
+    }
+  }
+
+  .guestInviteMeta {
+    font-size: 0.85rem;
+    color: var(--text-medium);
+    margin-top: 4px;
+
+    .guestPurpose {
+      color: var(--text-dark);
+      font-weight: 500;
+    }
+  }
+
+  .guestActionButtons {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+}
+
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+
+  &.status-active {
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+  }
+
+  &.status-used {
+    background: rgba(14, 165, 233, 0.15);
+    color: #0ea5e9;
+  }
+
+  &.status-expired {
+    background: rgba(245, 158, 11, 0.15);
+    color: #f59e0b;
+  }
+
+  &.status-revoked {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+  }
+}
+
+.guestRequestLinkBtn {
+  font-weight: 600;
+  text-transform: none;
+  font-size: 0.85rem;
+}
+

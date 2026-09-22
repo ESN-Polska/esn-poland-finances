@@ -47,9 +47,34 @@ export class RequestFormPage implements OnInit {
     private router: Router,
     private toastCtrl: ToastController,
     private translate: TranslateService,
-    private appService: AppService,
+    public appService: AppService,
     private requestsService: RequestsService
   ) {}
+
+  public get allowedRequestTypes(): FinancialRequestType[] {
+    const user = this.appService.currentUser;
+    if (user?.isGuest) {
+      if (user.guestAllowedRequestTypes && user.guestAllowedRequestTypes.length > 0) {
+        return user.guestAllowedRequestTypes as FinancialRequestType[];
+      }
+      return ['INVOICE_REIMBURSEMENT', 'DELEGATION_SETTLEMENT'];
+    }
+    return ['INVOICE_TO_PAY', 'INVOICE_REIMBURSEMENT', 'ADVANCE_PAYMENT', 'DELEGATION_SETTLEMENT'];
+  }
+
+  public isTypeAllowed(type: FinancialRequestType): boolean {
+    return this.allowedRequestTypes.includes(type);
+  }
+
+  public get isPositionLocked(): boolean {
+    const user = this.appService.currentUser;
+    return !!(user?.isGuest && user?.guestPosition?.trim());
+  }
+
+  public get isSourceOfFundingLocked(): boolean {
+    const user = this.appService.currentUser;
+    return !!(user?.isGuest && user?.guestDefaultSourceOfFunding?.trim());
+  }
 
   public async ngOnInit(): Promise<void> {
     const year = this.route.snapshot.paramMap.get('year');
@@ -118,10 +143,15 @@ export class RequestFormPage implements OnInit {
     const user = this.appService.currentUser;
     const defaultBank = await this.appService.getDefaultBankDetails();
 
+    const allowed = this.allowedRequestTypes;
+    const defaultType: FinancialRequestType = allowed.includes('INVOICE_REIMBURSEMENT')
+      ? 'INVOICE_REIMBURSEMENT'
+      : (allowed[0] || 'INVOICE_REIMBURSEMENT');
+
     this.request = {
-      position: '',
-      sourceOfFunding: '',
-      requestType: 'INVOICE_TO_PAY',
+      position: user?.isGuest ? (user.guestPosition || '') : '',
+      sourceOfFunding: user?.isGuest ? (user.guestDefaultSourceOfFunding || '') : '',
+      requestType: user?.isGuest ? defaultType : 'INVOICE_TO_PAY',
       currency: 'PLN',
       totalGrossAmount: 0,
       totalVatAmount: 0,
@@ -139,7 +169,9 @@ export class RequestFormPage implements OnInit {
         ? 'INTERNATIONAL'
         : 'DOMESTIC';
 
-    this.addDocumentItem();
+    if (this.request.requestType === 'INVOICE_TO_PAY' || this.request.requestType === 'INVOICE_REIMBURSEMENT') {
+      this.addDocumentItem();
+    }
   }
 
   public get requestDisplayId(): string {
@@ -517,6 +549,18 @@ export class RequestFormPage implements OnInit {
   }
 
   private validateForSubmission(): boolean {
+    const user = this.appService.currentUser;
+    if (user?.isGuest) {
+      if (!this.isTypeAllowed(this.request.requestType as FinancialRequestType)) {
+        this.showToast('CONFIGURATIONS.GUEST_TYPE_NOT_ALLOWED', 'danger');
+        return false;
+      }
+      if (user.guestMaxAmount && Number(this.request.totalGrossAmount) > user.guestMaxAmount) {
+        this.showToast('CONFIGURATIONS.GUEST_LIMIT_EXCEEDED', 'danger', { amount: user.guestMaxAmount });
+        return false;
+      }
+    }
+
     if (!this.request.position?.trim()) return false;
     if (!this.request.sourceOfFunding?.trim()) return false;
 
@@ -586,6 +630,16 @@ export class RequestFormPage implements OnInit {
     }
 
     return true;
+  }
+
+  public get guestInstructionsText(): string {
+    const userInst = this.appService.currentUser?.guestInstructions;
+    const globalInst = this.appService.configurations?.guestAccessInstructions;
+    const inst = (userInst && (userInst.pl || userInst.en)) ? userInst : globalInst;
+    if (!inst) return '';
+    return this.appService.currentLanguage === 'pl'
+      ? (inst.pl || inst.en || '')
+      : (inst.en || inst.pl || '');
   }
 
   public goBack(): void {

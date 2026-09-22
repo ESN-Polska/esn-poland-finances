@@ -38,8 +38,9 @@
     <div
       class="menuUserCard"
       *ngIf="app.currentUser as user"
-      (click)="openAccountsProfile(user.userId)"
-      [title]="'USER.VIEW_ON_ACCOUNTS' | translate"
+      (click)="!user.isGuest && openAccountsProfile(user.userId)"
+      [title]="!user.isGuest ? ('USER.VIEW_ON_ACCOUNTS' | translate) : ''"
+      [style.cursor]="user.isGuest ? 'default' : 'pointer'"
     >
       <div class="menuAvatarWrapper">
         <img
@@ -60,7 +61,7 @@
             {{ app.getUserRoleName(user) }}
           </span>
         </div>
-        <div class="menuUserSub">
+        <div class="menuUserSub" *ngIf="!user.isGuest">
           <span class="accountsLink">
             <ion-icon name="open-outline"></ion-icon>
             {{ 'USER.VIEW_ON_ACCOUNTS' | translate }}
@@ -343,7 +344,7 @@
                   <span>{{ 'TABS.CONFIGURATIONS' | translate }}</span>
                 </div>
 
-                <div class="popoverMenuItem" (click)="openAccountsProfile(user.userId)">
+                <div class="popoverMenuItem" *ngIf="!user.isGuest" (click)="openAccountsProfile(user.userId)">
                   <ion-icon name="open-outline"></ion-icon>
                   <span>{{ 'USER.VIEW_ON_ACCOUNTS' | translate }}</span>
                 </div>

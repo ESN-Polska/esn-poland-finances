@@ -192,6 +192,25 @@
         }
       }
 
+      .guestBadge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        padding: 2px 8px;
+        border-radius: 6px;
+        background: #f5f3ff;
+        color: #7c3aed;
+        border: 1px solid rgba(124, 58, 237, 0.25);
+
+        ion-icon {
+          font-size: 0.85rem;
+        }
+      }
+
       .requestTypeBadge {
         font-size: 0.75rem;
         font-weight: 600;

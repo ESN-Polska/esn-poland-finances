@@ -1,6 +1,7 @@
 import { DynamoDB, HandledError, ResourceController } from 'idea-aws';
 import { randomUUID } from 'crypto';
 import { FinancialRequest } from '../models/financial-request.model';
+import { Configurations } from '../models/configurations.model';
 import { User } from '../models/user.model';
 
 const DDB_TABLES = {
@@ -87,6 +88,15 @@ class RequestsHandler extends ResourceController {
     const status = body.status || 'DRAFT';
     const year = new Date().getFullYear();
 
+    if (user.isGuest) {
+      if (user.guestAllowedRequestTypes?.length && body.requestType && !user.guestAllowedRequestTypes.includes(body.requestType)) {
+        throw new HandledError('Request type not allowed for this guest invitation');
+      }
+      if (user.guestMaxAmount && Number(body.totalGrossAmount || 0) > user.guestMaxAmount) {
+        throw new HandledError(`Total gross amount exceeds guest limit of ${user.guestMaxAmount} PLN`);
+      }
+    }
+
     let sequenceNumber: number | undefined;
     let requestId: string;
 
@@ -109,6 +119,9 @@ class RequestsHandler extends ResourceController {
       section: user.section || user.sectionCode || (user.country ? 'ESN ' + user.country : ''),
       country: user.country || '',
       extendedRoles: user.extendedRoles || [],
+      isGuest: !!user.isGuest,
+      guestInvitationId: user.guestInvitationId,
+      guestPurpose: user.guestPurpose,
       status,
       statusHistory: [
         {
@@ -130,6 +143,10 @@ class RequestsHandler extends ResourceController {
       TableName: DDB_TABLES.requests,
       Item: JSON.parse(JSON.stringify(request))
     });
+
+    if (request.status === 'SUBMITTED' && user.isGuest && user.guestInvitationId) {
+      await this.markGuestInvitationUsed(user.guestInvitationId, request.requestId);
+    }
 
     return request;
   }
@@ -163,6 +180,15 @@ class RequestsHandler extends ResourceController {
 
     const updates = this.body || {};
     const updatedStatus = updates.status || existing.status;
+
+    if (user.isGuest) {
+      if (user.guestAllowedRequestTypes?.length && updates.requestType && !user.guestAllowedRequestTypes.includes(updates.requestType)) {
+        throw new HandledError('Request type not allowed for this guest invitation');
+      }
+      if (user.guestMaxAmount && updates.totalGrossAmount && Number(updates.totalGrossAmount) > user.guestMaxAmount) {
+        throw new HandledError(`Total gross amount exceeds guest limit of ${user.guestMaxAmount} PLN`);
+      }
+    }
 
     let targetRequestId = existing.requestId;
     let targetYear = existing.year;
@@ -218,6 +244,10 @@ class RequestsHandler extends ResourceController {
       }).catch(err => {
         this.logger.error('Failed to cleanup old draft item after submission', err);
       });
+
+      if (user.isGuest && (user.guestInvitationId || existing.guestInvitationId)) {
+        await this.markGuestInvitationUsed(user.guestInvitationId || existing.guestInvitationId!, updated.requestId);
+      }
     }
 
     return updated;
@@ -283,6 +313,32 @@ class RequestsHandler extends ResourceController {
       return maxSeq + 1;
     } catch {
       return 1;
+    }
+  }
+
+  private async markGuestInvitationUsed(guestInvitationId: string, requestId: string): Promise<void> {
+    if (!DDB_TABLES.configurations || !guestInvitationId) return;
+    try {
+      const data = await ddb.get({
+        TableName: DDB_TABLES.configurations,
+        Key: { PK: Configurations.PK }
+      });
+      if (!data) return;
+      const configurations = new Configurations(data);
+      const invite = (configurations.guestInvitations || []).find(inv => inv.id === guestInvitationId);
+      if (invite) {
+        if (!invite.isMultiUse) {
+          invite.status = 'USED';
+        }
+        invite.submittedRequestId = requestId;
+        invite.submittedAt = new Date().toISOString();
+        await ddb.put({
+          TableName: DDB_TABLES.configurations,
+          Item: JSON.parse(JSON.stringify(configurations))
+        });
+      }
+    } catch (err) {
+      this.logger.error('Failed to update guest invitation status', err);
     }
   }
 }

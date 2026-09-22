@@ -35,6 +35,7 @@
           <button
             type="button"
             class="accountsLinkBtn"
+            *ngIf="!user.isGuest"
             (click)="openAccountsProfile(user.userId)"
             [title]="'USER.VIEW_ON_ACCOUNTS' | translate"
           >
@@ -60,12 +61,12 @@
           <span class="fieldValue">{{ user.getDisplayName() }}</span>
         </div>
 
-        <div class="infoField" *ngIf="user.section">
+        <div class="infoField" *ngIf="user.section && !user.isGuest">
           <span class="fieldLabel">{{ 'USER.SECTION' | translate }}</span>
           <span class="fieldValue">{{ user.section}}</span>
         </div>
 
-        <div class="infoField" *ngIf="user.country">
+        <div class="infoField" *ngIf="user.country && !user.isGuest">
           <span class="fieldLabel">{{ 'USER.COUNTRY' | translate }}</span>
           <span class="fieldValue">{{ user.country }}</span>
         </div>
