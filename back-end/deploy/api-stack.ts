@@ -13,6 +13,8 @@ import * as S3 from 'aws-cdk-lib/aws-s3';
 import * as S3Deployment from 'aws-cdk-lib/aws-s3-deployment';
 import { Subscription, SubscriptionProtocol, Topic } from 'aws-cdk-lib/aws-sns';
 import { SnsEventSource } from 'aws-cdk-lib/aws-lambda-event-sources';
+import { Rule, Schedule } from 'aws-cdk-lib/aws-events';
+import { LambdaFunction as LambdaFunctionTarget } from 'aws-cdk-lib/aws-events-targets';
 
 export interface ApiProps extends cdk.StackProps {
   project: string;
@@ -194,13 +196,21 @@ export class ApiStack extends cdk.Stack {
               integration,
               authorizer: httpAuthorizer
             });
-          } else if (path === '/login') {
+          } else if (path === '/login' || path === '/contributors') {
             this.httpApi.addRoutes({
               path,
-              methods: [ApiGwAlpha.HttpMethod.GET, ApiGwAlpha.HttpMethod.POST],
+              methods: [ApiGwAlpha.HttpMethod.GET],
               integration,
               authorizer: undefined
             });
+            if (path === '/login') {
+              this.httpApi.addRoutes({
+                path,
+                methods: [ApiGwAlpha.HttpMethod.POST],
+                integration,
+                authorizer: undefined
+              });
+            }
           } else {
             const isPublic = path === '/public-info';
             this.httpApi.addRoutes({
@@ -277,7 +287,16 @@ export class ApiStack extends cdk.Stack {
       this.functions['sesNotifications'].addEventSource(new SnsEventSource(topic));
     }
 
-    // 9. Custom Domain API Mapping
+    // 9. Scheduled rule to refresh GitHub contributors daily
+    if (this.functions['refreshContributors']) {
+      const rule = new Rule(this, 'EventRuleRefreshContributors', {
+        ruleName: `${props.project}-${props.stage}-refreshContributors`,
+        schedule: Schedule.rate(Duration.days(1))
+      });
+      rule.addTarget(new LambdaFunctionTarget(this.functions['refreshContributors']));
+    }
+
+    // 10. Custom Domain API Mapping
     new ApiGw.CfnApiMapping(this, 'HttpApiMapping', {
       domainName: props.apiDomain,
       apiId: this.httpApi.httpApiId,

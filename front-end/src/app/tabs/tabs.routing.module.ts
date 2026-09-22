@@ -31,6 +31,10 @@ const routes: Routes = [
       {
         path: 'configurations',
         loadChildren: () => import('./configurations/configurations.module').then((m) => m.ConfigurationsModule)
+      },
+      {
+        path: 'credits',
+        loadComponent: () => import('./credits/credits.page').then((m) => m.CreditsPage)
       }
     ]
   }

@@ -269,5 +269,22 @@
         </div>
       </form>
     </div>
+
+    <!-- About Card -->
+    <div class="profileCard">
+      <div class="cardHeader">
+        <div>
+          <h2 class="cardTitle">{{ 'PROFILE.ABOUT' | translate }}</h2>
+        </div>
+      </div>
+
+      <ion-list lines="none" class="aboutList">
+        <ion-item button detail lines="none" class="aboutItem" (click)="openCredits()">
+          <ion-icon name="document-text-outline" slot="start"></ion-icon>
+          <ion-label>{{ 'PROFILE.CREDITS_AND_LICENSE' | translate }}</ion-label>
+        </ion-item>
+      </ion-list>
+    </div>
   </div>
 </ion-content>
+
