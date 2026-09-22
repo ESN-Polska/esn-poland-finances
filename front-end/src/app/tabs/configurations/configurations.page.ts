@@ -9,6 +9,7 @@ import { RoleEditorComponent } from './roleEditor.component';
 import { UserRoleMappingsComponent } from './userRoleMappings.component';
 import { GuestInviteModalComponent } from './guestInviteModal.component';
 import { GuestInstructionsModalComponent } from './guestInstructionsModal.component';
+import { AppLockMessageModalComponent } from './appLockMessageModal.component';
 import { EmailTemplateComponent } from './emailTemplate/emailTemplate.component';
 
 import {
@@ -321,6 +322,50 @@ export class ConfigurationsPage implements OnInit {
       ]
     });
     await alert.present();
+  }
+
+  async toggleAppLock(): Promise<void> {
+    const targetState = !this.configurations.appLocked;
+    const confirmMessage = targetState
+      ? this.translate.instant('CONFIGURATIONS.APP_LOCK_CONFIRM')
+      : this.translate.instant('CONFIGURATIONS.APP_UNLOCK_CONFIRM');
+
+    const alert = await this.alertCtrl.create({
+      header: this.translate.instant('CONFIGURATIONS.APP_LOCK'),
+      message: confirmMessage,
+      buttons: [
+        {
+          text: this.translate.instant('COMMON.CANCEL'),
+          role: 'cancel'
+        },
+        {
+          text: this.translate.instant('COMMON.CONFIRM'),
+          handler: async () => {
+            const updated = new Configurations(this.configurations);
+            updated.appLocked = targetState;
+            await this.updateConfigurations(updated);
+          }
+        }
+      ]
+    });
+    await alert.present();
+  }
+
+  async changeAppLockMessage(): Promise<void> {
+    const modal = await this.modalCtrl.create({
+      component: AppLockMessageModalComponent,
+      componentProps: {
+        message: this.configurations.appLockMessage
+      }
+    });
+
+    await modal.present();
+    const { data } = await modal.onWillDismiss();
+    if (data?.message) {
+      const updated = new Configurations(this.configurations);
+      updated.appLockMessage = data.message;
+      await this.updateConfigurations(updated);
+    }
   }
 
   async uploadAppLogo(event: any, darkMode = false): Promise<void> {

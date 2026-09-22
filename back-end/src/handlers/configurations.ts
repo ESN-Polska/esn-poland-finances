@@ -439,7 +439,9 @@ class ConfigurationsRC extends ResourceController {
       'guestAccessDefaultExpirationDays',
       'guestAccessInstructions',
       'guestAccessRequirePurpose',
-      'guestInvitations'
+      'guestInvitations',
+      'appLocked',
+      'appLockMessage'
     ].filter(field => JSON.stringify(this.body[field]) !== JSON.stringify((this.configurations as any)[field]));
 
     if (!changedFields.length) return;
@@ -474,7 +476,9 @@ class ConfigurationsRC extends ResourceController {
       'appLogoURLDarkMode',
       'organisationLogoURL',
       'timezone',
-      'usersOriginDisplay'
+      'usersOriginDisplay',
+      'appLocked',
+      'appLockMessage'
     ];
 
     const userFields = [

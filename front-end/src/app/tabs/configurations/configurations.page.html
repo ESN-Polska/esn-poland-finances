@@ -648,15 +648,49 @@
           <ion-select-option *ngFor="let tz of timezones" [value]="tz">{{ tz }}</ion-select-option>
         </ion-select>
       </ion-item>
+    </ion-list>
 
-      <!-- Page Sections Order (Users with full configurations rights) -->
-      <ion-list-header *ngIf="canReorderPageSections()">
+    <!-- SUBTAB: OPTIONS - APPLICATION LOCKING -->
+    <ion-list class="aList" *ngIf="pageSection === 'OPTIONS'">
+      <ion-list-header>
+        <ion-label>
+          <h2>{{ 'CONFIGURATIONS.APP_LOCK_SECTION' | translate }}</h2>
+          <p>{{ 'CONFIGURATIONS.APP_LOCK_SECTION_I' | translate }}</p>
+        </ion-label>
+      </ion-list-header>
+
+      <!-- App Lock Toggle -->
+      <ion-item>
+        <ion-label class="ion-text-wrap">
+          {{ 'CONFIGURATIONS.APP_LOCK' | translate }}
+          <p>{{ 'CONFIGURATIONS.APP_LOCK_I' | translate }}</p>
+        </ion-label>
+        <ion-toggle
+          slot="end"
+          [disabled]="!canModifyOptions()"
+          [checked]="configurations.appLocked"
+          (click)="$event.preventDefault(); toggleAppLock()"
+        ></ion-toggle>
+      </ion-item>
+
+      <!-- Default Lock Message (works the same as default guest instructions) -->
+      <ion-item button detail (click)="changeAppLockMessage()" [disabled]="!canModifyOptions()">
+        <ion-label class="ion-text-wrap">
+          <h2>{{ 'CONFIGURATIONS.APP_LOCK_MESSAGE' | translate }}</h2>
+          <p>{{ 'CONFIGURATIONS.APP_LOCK_MESSAGE_I' | translate }}</p>
+        </ion-label>
+      </ion-item>
+    </ion-list>
+
+    <!-- SUBTAB: OPTIONS - PAGE SECTIONS ORDER (Users with full configurations rights) -->
+    <ion-list class="aList" *ngIf="pageSection === 'OPTIONS' && canReorderPageSections()">
+      <ion-list-header>
         <ion-label>
           <h2>{{ 'CONFIGURATIONS.PAGE_SECTIONS_ORDER' | translate }}</h2>
           <p>{{ 'CONFIGURATIONS.PAGE_SECTIONS_ORDER_I' | translate }}</p>
         </ion-label>
       </ion-list-header>
-      <ion-reorder-group *ngIf="canReorderPageSections()" [disabled]="false" (ionItemReorder)="reorderPageSections($event)">
+      <ion-reorder-group [disabled]="false" (ionItemReorder)="reorderPageSections($event)">
         <ion-item *ngFor="let section of pageSections">
           <ion-label>{{ 'CONFIGURATIONS.PAGE_SECTIONS.' + section | translate }}</ion-label>
           <ion-reorder slot="end"></ion-reorder>

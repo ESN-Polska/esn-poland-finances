@@ -10,6 +10,7 @@ import { RoleEditorComponent } from './roleEditor.component';
 import { UserRoleMappingsComponent } from './userRoleMappings.component';
 import { GuestInviteModalComponent } from './guestInviteModal.component';
 import { GuestInstructionsModalComponent } from './guestInstructionsModal.component';
+import { AppLockMessageModalComponent } from './appLockMessageModal.component';
 import { EmailTemplateComponent } from './emailTemplate/emailTemplate.component';
 
 @NgModule({
@@ -26,6 +27,7 @@ import { EmailTemplateComponent } from './emailTemplate/emailTemplate.component'
     UserRoleMappingsComponent,
     GuestInviteModalComponent,
     GuestInstructionsModalComponent,
+    AppLockMessageModalComponent,
     EmailTemplateComponent
   ]
 })
