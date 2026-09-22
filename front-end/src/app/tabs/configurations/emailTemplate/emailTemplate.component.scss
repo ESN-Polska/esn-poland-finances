@@ -114,18 +114,29 @@
     padding: 12px 16px;
     border-radius: 8px;
     display: flex;
-    align-items: center;
-    gap: 8px;
+    flex-direction: column;
+    gap: 6px;
     font-size: 14px;
+
+    .previewMetaRow {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+    }
 
     .previewSubjectLabel {
       font-weight: 600;
       color: var(--ion-color-step-600, #64748b);
+      min-width: 65px;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
     }
 
     .previewSubjectText {
       font-weight: 700;
       color: var(--ion-color-step-900, #0f172a);
+      word-break: break-word;
     }
   }
 
@@ -214,7 +225,7 @@
       }
 
       a {
-        color: #00aeef;
+        color: var(--ion-color-primary, #00aeef);
       }
     }
   }

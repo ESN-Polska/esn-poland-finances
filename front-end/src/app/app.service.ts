@@ -18,8 +18,11 @@ const THEME_PREFERENCE_STORAGE_KEY = 'themePreference';
 const DEFAULT_BANK_KEY = 'user_default_bank';
 
 const APP_ICON_DEFAULT = 'assets/icons/icon.svg';
+const ORGANISATION_LOGO_DEFAULT = 'assets/images/esn-poland-logo.png';
 
 export type ThemePreference = 'auto' | 'dark' | 'light';
+export type AccentColor = 'default' | 'cyan' | 'pink' | 'green' | 'orange' | 'darkBlue';
+const ACCENT_COLOR_STORAGE_KEY = 'accentColor';
 
 @Injectable({
   providedIn: 'root'
@@ -37,6 +40,7 @@ export class AppService {
   public impersonatedPersonaTitle = '';
 
   public themePreference: ThemePreference = 'auto';
+  public accentColor: AccentColor = 'default';
   private darkMode = false;
 
   private userSubject = new BehaviorSubject<User | null>(null);
@@ -56,6 +60,8 @@ export class AppService {
     this.themePreference = this.loadStoredThemePreference();
     this.updateDarkMode();
     this.listenToSystemColorScheme();
+    this.accentColor = this.loadStoredAccentColor();
+    this.updateAccentColor();
 
     this.translate.onLangChange.subscribe(() => {
       this.updateTitle();
@@ -181,6 +187,13 @@ export class AppService {
       return this.configurations?.appLogoURLDarkMode || this.configurations?.appLogoURL || APP_ICON_DEFAULT;
     }
     return this.configurations?.appLogoURL || APP_ICON_DEFAULT;
+  }
+
+  /**
+   * Get the active organisation logo.
+   */
+  public getOrganisationLogo(): string {
+    return this.configurations?.organisationLogoURL || ORGANISATION_LOGO_DEFAULT;
   }
 
   /**
@@ -397,8 +410,8 @@ export class AppService {
     return this.configurations?.getAppTitle(this.currentLanguage) || '';
   }
 
-  public getAppSubtitle(): string {
-    return this.configurations?.getAppSubtitle(this.currentLanguage) || '';
+  public getAppOrganisation(): string {
+    return this.configurations?.getAppOrganisation(this.currentLanguage) || '';
   }
 
   public updateTitle(): void {
@@ -496,6 +509,36 @@ export class AppService {
 
   public isInDarkMode(): boolean {
     return this.darkMode;
+  }
+
+  private loadStoredAccentColor(): AccentColor {
+    try {
+      const saved = localStorage.getItem(ACCENT_COLOR_STORAGE_KEY) as AccentColor;
+      if (['default', 'cyan', 'pink', 'green', 'orange', 'darkBlue'].includes(saved)) {
+        return saved;
+      }
+    } catch (_) {}
+    return 'default';
+  }
+
+  public setAccentColor(color: AccentColor): void {
+    if (this.accentColor === color) return;
+    this.accentColor = color;
+    try {
+      localStorage.setItem(ACCENT_COLOR_STORAGE_KEY, color);
+    } catch (_) {}
+    this.updateAccentColor();
+  }
+
+  private updateAccentColor(): void {
+    if (typeof document === 'undefined') return;
+    const classList = document.body.classList;
+    ['accent-cyan', 'accent-pink', 'accent-green', 'accent-orange', 'accent-darkBlue'].forEach(c =>
+      classList.remove(c)
+    );
+    if (this.accentColor && this.accentColor !== 'default') {
+      classList.add(`accent-${this.accentColor}`);
+    }
   }
 
   public startLoginFlow(): void {

@@ -3,7 +3,8 @@ import {
   AppPermission,
   Configurations,
   DEFAULT_CONFIGURATION_PAGE_SECTIONS_ORDER,
-  EmailTemplates
+  EmailTemplates,
+  formatSenderName
 } from '../models/configurations.model';
 import { User } from '../models/user.model';
 import { isEmailInBlockList } from './sesNotifications';
@@ -131,6 +132,9 @@ class ConfigurationsRC extends ResourceController {
       if (this.configurations?.appLogoURLDarkMode && newConfigurations.appLogoURLDarkMode !== this.configurations.appLogoURLDarkMode) {
         await this.deleteOldS3File(this.configurations.appLogoURLDarkMode);
       }
+      if (this.configurations?.organisationLogoURL && newConfigurations.organisationLogoURL !== this.configurations.organisationLogoURL) {
+        await this.deleteOldS3File(this.configurations.organisationLogoURL);
+      }
     }
 
     this.configurations = newConfigurations;
@@ -253,6 +257,7 @@ class ConfigurationsRC extends ResourceController {
 
     const templateName = this.getSESTemplateName(emailTemplate);
     const isEnglish = emailTemplate.endsWith('_EN');
+    const senderName = formatSenderName(this.configurations?.getAppTitle(isEnglish ? 'en' : 'pl') || 'ESN Poland');
     const templateData = {
       user: this.user ? this.user.getDisplayName() : 'User',
       title: isEnglish ? 'National Assembly Reimbursement' : 'Zjazd Krajowy',
@@ -275,7 +280,10 @@ class ConfigurationsRC extends ResourceController {
         toAddresses: [toEmail],
         template: `${templateName}-${STAGE}`,
         templateData
-      }, SES_CONFIG);
+      }, {
+        ...SES_CONFIG,
+        sourceName: senderName
+      });
     } catch (error: any) {
       this.logger.error('Sending test email failed', error, { template: `${templateName}-${STAGE}` });
       throw new HandledError(`Sending failed: ${error?.message || 'SES error'}`);
@@ -285,8 +293,8 @@ class ConfigurationsRC extends ResourceController {
   private async resetEmailTemplate(emailTemplate: EmailTemplates): Promise<void> {
     const templateName = this.getSESTemplateName(emailTemplate);
     const defaultSubjects: Record<EmailTemplates, string> = {
-      [EmailTemplates.GUEST_INVITATION_PL]: 'Zaproszenie do złożenia wniosku finansowego (ESN Polska)',
-      [EmailTemplates.GUEST_INVITATION_EN]: 'Invitation to submit financial request (ESN Poland)',
+      [EmailTemplates.GUEST_INVITATION_PL]: 'Zaproszenie do złożenia wniosku finansowego',
+      [EmailTemplates.GUEST_INVITATION_EN]: 'Invitation to submit financial request',
       [EmailTemplates.REQUEST_SUBMITTED_PL]: 'Potwierdzenie złożenia wniosku finansowego {{requestId}}',
       [EmailTemplates.REQUEST_SUBMITTED_EN]: 'Financial request submitted {{requestId}}',
       [EmailTemplates.REQUEST_CHANGES_REQUESTED_PL]: 'Wymagane poprawki do wniosku finansowego {{requestId}}',
@@ -329,6 +337,11 @@ class ConfigurationsRC extends ResourceController {
 
     const guestLink = `${BASE_URL}/auth?guestToken=${encodeURIComponent(invite.id)}`;
     const expiryDate = invite.expiresAt ? new Date(invite.expiresAt).toLocaleDateString('pl-PL') : '';
+    const senderName = formatSenderName(this.configurations?.getAppTitle(lang) || 'ESN Poland');
+    const sesParams = {
+      ...SES_CONFIG,
+      sourceName: senderName
+    };
 
     if (subject && content) {
       // Send customized email (rendered HTML or direct text)
@@ -336,7 +349,7 @@ class ConfigurationsRC extends ResourceController {
         toAddresses: [invite.guestEmail],
         subject,
         html: content
-      }, SES_CONFIG);
+      }, sesParams);
     } else {
       // Send templated email
       const templateEnum = lang === 'en' ? EmailTemplates.GUEST_INVITATION_EN : EmailTemplates.GUEST_INVITATION_PL;
@@ -354,7 +367,7 @@ class ConfigurationsRC extends ResourceController {
           toAddresses: [invite.guestEmail],
           template: `${templateName}-${STAGE}`,
           templateData
-        }, SES_CONFIG);
+        }, sesParams);
       } catch (err: any) {
         if (String(err).includes('does not exist') || err?.name === 'NotFoundException') {
           await this.resetEmailTemplate(templateEnum);
@@ -362,7 +375,7 @@ class ConfigurationsRC extends ResourceController {
             toAddresses: [invite.guestEmail],
             template: `${templateName}-${STAGE}`,
             templateData
-          }, SES_CONFIG);
+          }, sesParams);
         } else {
           throw err;
         }
@@ -394,13 +407,14 @@ class ConfigurationsRC extends ResourceController {
 
     const changedFields = [
       'appTitle',
-      'appSubtitle',
+      'appOrganisation',
       'homeWelcomeTitle',
       'homeWelcomeSubtitle',
       'homeNotice',
       'supportEmail',
       'appLogoURL',
       'appLogoURLDarkMode',
+      'organisationLogoURL',
       'timezone',
       'usersOriginDisplay',
       'configurationPageSectionsOrder',
@@ -440,13 +454,14 @@ class ConfigurationsRC extends ResourceController {
 
     const optionFields = [
       'appTitle',
-      'appSubtitle',
+      'appOrganisation',
       'homeWelcomeTitle',
       'homeWelcomeSubtitle',
       'homeNotice',
       'supportEmail',
       'appLogoURL',
       'appLogoURLDarkMode',
+      'organisationLogoURL',
       'timezone',
       'usersOriginDisplay'
     ];

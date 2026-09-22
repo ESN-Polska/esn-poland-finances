@@ -260,16 +260,16 @@ export class ConfigurationsPage implements OnInit {
     await alert.present();
   }
 
-  async changeAppSubtitle(lang: 'en' | 'pl' = 'en'): Promise<void> {
+  async changeAppOrganisation(lang: 'en' | 'pl' = 'en'): Promise<void> {
     const isPl = lang === 'pl';
-    const headerKey = isPl ? 'CONFIGURATIONS.APP_SUBTITLE_PL' : 'CONFIGURATIONS.APP_SUBTITLE_EN';
-    const placeholderKey = isPl ? 'CONFIGURATIONS.APP_SUBTITLE_PL_PLACEHOLDER' : 'CONFIGURATIONS.APP_SUBTITLE_EN_PLACEHOLDER';
-    const currentVal = (this.configurations.appSubtitle as any)?.[lang] || '';
+    const headerKey = isPl ? 'CONFIGURATIONS.APP_ORGANISATION_PL' : 'CONFIGURATIONS.APP_ORGANISATION_EN';
+    const placeholderKey = isPl ? 'CONFIGURATIONS.APP_ORGANISATION_PL_PLACEHOLDER' : 'CONFIGURATIONS.APP_ORGANISATION_EN_PLACEHOLDER';
+    const currentVal = (this.configurations.appOrganisation as any)?.[lang] || '';
     const alert = await this.alertCtrl.create({
       header: this.translate.instant(headerKey),
       inputs: [
         {
-          name: 'appSubtitle',
+          name: 'appOrganisation',
           type: 'text',
           value: currentVal,
           placeholder: this.translate.instant(placeholderKey)
@@ -281,10 +281,10 @@ export class ConfigurationsPage implements OnInit {
           text: this.translate.instant('COMMON.CONFIRM'),
           handler: async data => {
             const updated = new Configurations(this.configurations);
-            if (!updated.appSubtitle || typeof updated.appSubtitle === 'string') {
-              updated.appSubtitle = { en: '', pl: '' };
+            if (!updated.appOrganisation || typeof updated.appOrganisation === 'string') {
+              updated.appOrganisation = { en: '', pl: '' };
             }
-            updated.appSubtitle[lang] = data.appSubtitle?.trim() || '';
+            updated.appOrganisation[lang] = data.appOrganisation?.trim() || '';
             await this.updateConfigurations(updated);
           }
         }
@@ -357,6 +357,42 @@ export class ConfigurationsPage implements OnInit {
             } else {
               updated.appLogoURL = '';
             }
+            await this.updateConfigurations(updated);
+          }
+        }
+      ]
+    });
+    await alert.present();
+  }
+
+  async uploadOrganisationLogo(event: any): Promise<void> {
+    const file = event.target?.files?.[0];
+    if (!file) return;
+
+    const loading = await this.loadingCtrl.create({ message: this.translate.instant('COMMON.UPLOADING') });
+    await loading.present();
+    try {
+      const imageURI = await this.mediaService.uploadImage(file);
+      const updated = new Configurations(this.configurations);
+      updated.organisationLogoURL = this.app.getImageURLByURI(imageURI);
+      await this.updateConfigurations(updated);
+    } finally {
+      await loading.dismiss();
+      event.target.value = '';
+    }
+  }
+
+  async resetOrganisationLogo(): Promise<void> {
+    const alert = await this.alertCtrl.create({
+      header: this.translate.instant('CONFIGURATIONS.RESET_ORGANISATION_LOGO'),
+      message: this.translate.instant('CONFIGURATIONS.RESET_ORGANISATION_LOGO_I'),
+      buttons: [
+        { text: this.translate.instant('COMMON.CANCEL'), role: 'cancel' },
+        {
+          text: this.translate.instant('COMMON.RESET'),
+          handler: async () => {
+            const updated = new Configurations(this.configurations);
+            updated.organisationLogoURL = '';
             await this.updateConfigurations(updated);
           }
         }

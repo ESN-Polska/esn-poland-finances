@@ -181,7 +181,7 @@
         <ion-img [src]="app.getIcon(app.isInDarkMode())" class="mobileHeaderLogo"></ion-img>
         <div class="mobileBrandTexts">
           <span class="mobileAppTitle">{{ app.getAppTitle() }}</span>
-          <span class="mobileAppSubtitle">{{ app.getAppSubtitle() }}</span>
+          <span class="mobileAppSubtitle">{{ app.getAppOrganisation() }}</span>
         </div>
       </div>
     </ion-buttons>
@@ -205,7 +205,7 @@
         <ion-img [src]="app.getIcon(app.isInDarkMode())" class="desktopHeaderLogo"></ion-img>
         <div class="desktopBrandTexts">
           <span class="desktopAppTitle">{{ app.getAppTitle() }}</span>
-          <span class="desktopAppSubtitle">{{ app.getAppSubtitle() }}</span>
+          <span class="desktopAppSubtitle">{{ app.getAppOrganisation() }}</span>
         </div>
       </div>
 
