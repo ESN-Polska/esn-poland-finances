@@ -57,7 +57,7 @@
       >
         <div class="metricTop">
           <span class="metricLabel">{{ 'REQUESTS.STATUSES.IN_REVIEW' | translate }}</span>
-          <ion-icon name="eye-outline"></ion-icon>
+          <ion-icon name="search-outline"></ion-icon>
         </div>
         <div class="metricValue">{{ inReviewCount }}</div>
       </div>
@@ -207,7 +207,7 @@
         <tbody>
           <tr
             *ngFor="let req of filteredRequests"
-            (click)="viewRequest(req.requestId)"
+            (click)="openRequest(req)"
             class="tableRow"
           >
             <!-- ID -->
@@ -229,9 +229,6 @@
               <div class="applicantInfo">
                 <div class="applicantNameRow">
                   <span class="applicantName">{{ req.userDisplayName || req.userId }}</span>
-                  <span class="sectionPill" *ngIf="req.getSectionOrCountry()">
-                    {{ req.getSectionOrCountry() }}
-                  </span>
                 </div>
                 <span class="applicantEmail">{{ req.userEmail }}</span>
               </div>
@@ -260,30 +257,20 @@
             <!-- Actions -->
             <td class="actionsCell" (click)="$event.stopPropagation()">
               <div class="rowActions">
-                <ion-button
-                  fill="clear"
-                  size="small"
-                  class="actionBtn viewActionBtn"
-                  (click)="viewRequest(req.requestId)"
-                  [title]="'COMMON.VIEW' | translate"
-                >
-                  <ion-icon slot="icon-only" name="eye-outline"></ion-icon>
-                </ion-button>
-
                 <!-- Manager Actions -->
                 <ng-container *ngIf="canManage">
-                  <!-- In Review -->
+                  <!-- Review Button -->
                   <ion-button
-                    *ngIf="req.status === 'SUBMITTED'"
+                    *ngIf="req.status !== 'DRAFT'"
                     fill="outline"
                     size="small"
                     color="primary"
                     class="actionBtn"
-                    (click)="takeInReview(req, $event)"
-                    [title]="'REQUESTS.MANAGE_PANEL.START_REVIEW' | translate"
+                    (click)="reviewRequest(req.requestId, $event)"
+                    [title]="'REQUESTS.REVIEW_PANEL.REVIEW_REQUEST' | translate"
                   >
-                    <ion-icon slot="start" name="search-outline"></ion-icon>
-                    {{ 'REQUESTS.STATUSES.IN_REVIEW' | translate }}
+                    <ion-icon slot="start" name="shield-checkmark-outline"></ion-icon>
+                    {{ 'REQUESTS.REVIEW_PANEL.REVIEW_REQUEST' | translate }}
                   </ion-button>
 
                   <!-- Approve -->
@@ -351,7 +338,7 @@
       <div
         class="manageCard"
         *ngFor="let req of filteredRequests"
-        (click)="viewRequest(req.requestId)"
+        (click)="openRequest(req)"
       >
         <div class="cardHeaderRow">
           <div class="idSection">
@@ -371,9 +358,6 @@
             <span class="name">{{ req.userDisplayName || req.userId }}</span>
             <span class="email">{{ req.userEmail }}</span>
           </div>
-          <span class="sectionPill" *ngIf="req.getSectionOrCountry()">
-            {{ req.getSectionOrCountry() }}
-          </span>
         </div>
 
         <div class="cardMetaRow">
@@ -394,20 +378,16 @@
 
         <!-- Card Actions -->
         <div class="cardActionsRow" (click)="$event.stopPropagation()">
-          <ion-button fill="clear" size="small" (click)="viewRequest(req.requestId)">
-            <ion-icon slot="start" name="eye-outline"></ion-icon>
-            {{ 'COMMON.VIEW' | translate }}
-          </ion-button>
-
           <ng-container *ngIf="canManage">
             <ion-button
-              *ngIf="req.status === 'SUBMITTED'"
+              *ngIf="req.status !== 'DRAFT'"
               fill="outline"
               size="small"
               color="primary"
-              (click)="takeInReview(req, $event)"
+              (click)="reviewRequest(req.requestId, $event)"
             >
-              {{ 'REQUESTS.STATUSES.IN_REVIEW' | translate }}
+              <ion-icon slot="start" name="shield-checkmark-outline"></ion-icon>
+              {{ 'REQUESTS.REVIEW_PANEL.REVIEW_REQUEST' | translate }}
             </ion-button>
 
             <ion-button

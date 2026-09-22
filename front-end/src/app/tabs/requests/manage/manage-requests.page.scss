@@ -177,7 +177,7 @@
     }
 
     &.metricSubmitted ion-icon { color: #f59e0b; }
-    &.metricInReview ion-icon { color: #00aeef; }
+    &.metricInReview ion-icon { color: var(--ion-color-primary, #00aeef); }
     &.metricChanges ion-icon { color: #ea580c; }
     &.metricApproved ion-icon { color: #10b981; }
     &.metricPaid ion-icon { color: #059669; }
@@ -468,8 +468,9 @@
             }
 
             .sectionPill {
-              background: rgba(0, 43, 73, 0.08);
-              color: var(--text-dark);
+              background: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.08);
+              color: var(--ion-color-primary, #00aeef);
+              border: 1px solid rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.16);
               font-size: 0.72rem;
               font-weight: 600;
               padding: 2px 7px;
@@ -658,8 +659,9 @@
         }
 
         .sectionPill {
-          background: rgba(0, 43, 73, 0.08);
-          color: var(--text-dark);
+          background: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.08);
+          color: var(--ion-color-primary, #00aeef);
+          border: 1px solid rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.16);
           font-size: 0.72rem;
           font-weight: 600;
           padding: 2px 7px;

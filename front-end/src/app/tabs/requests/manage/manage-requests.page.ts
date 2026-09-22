@@ -36,8 +36,7 @@ export class ManageRequestsPage implements OnInit {
     'CHANGES_REQUESTED',
     'APPROVED',
     'PAID',
-    'REJECTED',
-    'DRAFT'
+    'REJECTED'
   ];
 
   public readonly allTypes: FinancialRequestType[] = [
@@ -67,6 +66,19 @@ export class ManageRequestsPage implements OnInit {
       user.isAuditor ||
       user.hasPermission(AppPermission.REQUESTS.PARENT) ||
       user.hasPermission(AppPermission.REQUESTS.EXPORT)
+    );
+  }
+
+  public get canAccessManage(): boolean {
+    const user = this.appService.currentUser;
+    if (!user) return false;
+    return (
+      user.isAdministrator ||
+      user.isManager ||
+      user.isAuditor ||
+      user.hasPermission(AppPermission.REQUESTS.VIEW_ALL) ||
+      user.hasPermission(AppPermission.REQUESTS.MANAGE) ||
+      user.hasPermission(AppPermission.REQUESTS.PARENT)
     );
   }
 
@@ -121,17 +133,27 @@ export class ManageRequestsPage implements OnInit {
   ) {}
 
   public async ngOnInit(): Promise<void> {
+    if (!this.canAccessManage) {
+      await this.showToast('REQUESTS.ACCESS_DENIED', 'danger');
+      this.router.navigate(['/t/requests']);
+      return;
+    }
     await this.loadRequests();
   }
 
   public async ionViewWillEnter(): Promise<void> {
+    if (!this.canAccessManage) {
+      this.router.navigate(['/t/requests']);
+      return;
+    }
     await this.loadRequests();
   }
 
   public async loadRequests(): Promise<void> {
     this.isLoading = true;
     try {
-      this.allRequests = await this.requestsService.loadAllRequests();
+      const loaded = await this.requestsService.loadAllRequests();
+      this.allRequests = (loaded || []).filter((r) => r.status !== 'DRAFT');
       this.extractAvailableYears();
       this.applyFilters();
     } catch (err) {
@@ -237,6 +259,28 @@ export class ManageRequestsPage implements OnInit {
       this.router.navigate(['/t/requests/view', year, seq]);
     } else {
       this.router.navigate(['/t/requests/view', encodeURIComponent(requestId)]);
+    }
+  }
+
+  public reviewRequest(requestId: string, event?: Event): void {
+    if (event) event.stopPropagation();
+    if (!this.canManage) {
+      this.viewRequest(requestId);
+      return;
+    }
+    const [seq, year] = requestId.split('/');
+    if (year && seq) {
+      this.router.navigate(['/t/requests/review', year, seq]);
+    } else {
+      this.router.navigate(['/t/requests/review', encodeURIComponent(requestId)]);
+    }
+  }
+
+  public openRequest(req: FinancialRequest): void {
+    if (this.canManage && req.status !== 'DRAFT') {
+      this.reviewRequest(req.requestId);
+    } else {
+      this.viewRequest(req.requestId);
     }
   }
 

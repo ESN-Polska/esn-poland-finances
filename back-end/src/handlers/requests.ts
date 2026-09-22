@@ -1,4 +1,4 @@
-import { DynamoDB, HandledError, ResourceController, SES } from 'idea-aws';
+import { DynamoDB, HandledError, ResourceController, S3, SES } from 'idea-aws';
 import { randomUUID } from 'crypto';
 import { FinancialRequest } from '../models/financial-request.model';
 import { AppPermission, Configurations, EmailTemplates, formatSenderName } from '../models/configurations.model';
@@ -17,15 +17,45 @@ const DDB_TABLES = {
   requests: process.env.DDB_TABLE_financial_requests || 'esn-poland-finances-dev-financial_requests',
   configurations: process.env.DDB_TABLE_configurations
 };
+const S3_BUCKET_MEDIA = process.env.S3_BUCKET_MEDIA || 'esn-poland-finances-media';
+const S3_ASSETS_FOLDER = process.env.S3_ASSETS_FOLDER || `assets/${STAGE}`;
 
 const ddb = new DynamoDB();
 const ses = new SES();
+const s3 = new S3();
 
 export const handler = (ev: any, _: any, cb: any): Promise<void> => new RequestsHandler(ev, cb).handleRequest();
 
 class RequestsHandler extends ResourceController {
   constructor(event: any, callback: any) {
-    super(event, callback);
+    super(event, callback, { resourceId: 'id' });
+  }
+
+  protected async getResource(): Promise<any> {
+    return this.getResources();
+  }
+
+  protected async postResources(): Promise<any> {
+    return this.postResource();
+  }
+
+  protected async patchResources(): Promise<any> {
+    return this.patchResource();
+  }
+
+  protected async deleteResources(): Promise<any> {
+    return this.deleteResource();
+  }
+
+  private getRequestId(): string | undefined {
+    if (this.pathParameters?.year && this.pathParameters?.id) {
+      return `${decodeURIComponent(this.pathParameters.id)}/${decodeURIComponent(this.pathParameters.year)}`;
+    }
+    const id = this.pathParameters?.id || this.queryParams?.id || this.body?.requestId;
+    if (id) {
+      return decodeURIComponent(id);
+    }
+    return undefined;
   }
 
   /**
@@ -37,15 +67,14 @@ class RequestsHandler extends ResourceController {
       user.isAdministrator ||
       user.isManager ||
       user.isAuditor ||
-      user.hasPermission(AppPermission.REQUESTS.PARENT) ||
       user.hasPermission(AppPermission.REQUESTS.VIEW_ALL) ||
       user.hasPermission(AppPermission.REQUESTS.MANAGE) ||
-      user.hasPermission(AppPermission.REQUESTS.EXPORT);
+      user.hasPermission(AppPermission.REQUESTS.PARENT);
 
-    const requestId = this.pathParameters?.id;
+    const requestId = this.getRequestId();
 
     if (requestId) {
-      const decodedId = decodeURIComponent(requestId);
+      const decodedId = requestId;
       const raw = await ddb.get({
         TableName: DDB_TABLES.requests,
         Key: { requestId: decodedId }
@@ -56,7 +85,8 @@ class RequestsHandler extends ResourceController {
       }
 
       const request = new FinancialRequest(raw);
-      if (!canViewAll && request.userId !== user.userId.toLowerCase()) {
+      const isOwner = (request.userId || '').toLowerCase() === (user.userId || '').toLowerCase();
+      if (!canViewAll && !isOwner) {
         throw new HandledError('Access denied');
       }
 
@@ -72,6 +102,7 @@ class RequestsHandler extends ResourceController {
         TableName: DDB_TABLES.requests
       });
       return items
+        .filter((x: any) => x.status !== 'DRAFT')
         .map((x: any) => new FinancialRequest(x))
         .sort((a: FinancialRequest, b: FinancialRequest) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     }
@@ -87,7 +118,9 @@ class RequestsHandler extends ResourceController {
         },
         ScanIndexForward: false
       });
-      return items.map((x: any) => new FinancialRequest(x));
+      return items
+        .map((x: any) => new FinancialRequest(x))
+        .sort((a: FinancialRequest, b: FinancialRequest) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     } catch (err) {
       this.logger.error('Failed to query user requests by index', err);
       // Fallback scan with filter
@@ -98,7 +131,9 @@ class RequestsHandler extends ResourceController {
           ':uid': user.userId.toLowerCase()
         }
       });
-      return items.map((x: any) => new FinancialRequest(x));
+      return items
+        .map((x: any) => new FinancialRequest(x))
+        .sort((a: FinancialRequest, b: FinancialRequest) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     }
   }
 
@@ -184,10 +219,10 @@ class RequestsHandler extends ResourceController {
    */
   protected async patchResource(): Promise<any> {
     const user = this.getAuthenticatedUser();
-    const requestId = this.pathParameters?.id;
+    const requestId = this.getRequestId();
     if (!requestId) throw new HandledError('Missing requestId parameter');
 
-    const decodedId = decodeURIComponent(requestId);
+    const decodedId = requestId;
     const raw = await ddb.get({
       TableName: DDB_TABLES.requests,
       Key: { requestId: decodedId }
@@ -196,7 +231,7 @@ class RequestsHandler extends ResourceController {
     if (!raw) throw new HandledError('Request not found');
     const existing = new FinancialRequest(raw);
 
-    const isOwner = existing.userId === user.userId.toLowerCase();
+    const isOwner = (existing.userId || '').toLowerCase() === (user.userId || '').toLowerCase();
     const canManage =
       user.isAdministrator ||
       user.isManager ||
@@ -306,10 +341,10 @@ class RequestsHandler extends ResourceController {
    */
   protected async deleteResource(): Promise<any> {
     const user = this.getAuthenticatedUser();
-    const requestId = this.pathParameters?.id;
+    const requestId = this.getRequestId();
     if (!requestId) throw new HandledError('Missing requestId parameter');
 
-    const decodedId = decodeURIComponent(requestId);
+    const decodedId = requestId;
     const raw = await ddb.get({
       TableName: DDB_TABLES.requests,
       Key: { requestId: decodedId }
@@ -318,7 +353,8 @@ class RequestsHandler extends ResourceController {
     if (!raw) throw new HandledError('Request not found');
     const existing = new FinancialRequest(raw);
 
-    if (!user.isAdministrator && existing.userId !== user.userId.toLowerCase()) {
+    const isOwner = (existing.userId || '').toLowerCase() === (user.userId || '').toLowerCase();
+    if (!user.isAdministrator && !isOwner) {
       throw new HandledError('Access denied');
     }
 
@@ -505,14 +541,51 @@ class RequestsHandler extends ResourceController {
       const configurations = await this.getConfigurations();
       const senderName = formatSenderName(configurations.getAppTitle(lang) || 'ESN Poland');
 
-      await ses.sendTemplatedEmail({
-        toAddresses: [request.userEmail],
-        template: `${templateName}-${STAGE}`,
-        templateData
-      }, {
-        ...SES_CONFIG,
-        sourceName: senderName
-      });
+      try {
+        await ses.sendTemplatedEmail({
+          toAddresses: [request.userEmail],
+          template: `${templateName}-${STAGE}`,
+          templateData
+        }, {
+          ...SES_CONFIG,
+          sourceName: senderName
+        });
+      } catch (err: any) {
+        if (err?.name === 'NotFoundException' || err?.message?.includes('does not exist')) {
+          this.logger.warn(`Template ${templateName}-${STAGE} not found in SES, initializing from S3`, { templateName });
+          const defaultSubjects: { [key: string]: string } = {
+            'notify-guest-invitation-pl': 'Zaproszenie do złożenia wniosku finansowego',
+            'notify-guest-invitation-en': 'Invitation to submit a financial request',
+            'notify-request-submitted-pl': 'Nowy wniosek finansowy {{requestId}} został złożony',
+            'notify-request-submitted-en': 'New financial request {{requestId}} submitted',
+            'notify-request-changes-requested-pl': 'Wymagane poprawki we wniosku finansowym {{requestId}}',
+            'notify-request-changes-requested-en': 'Changes requested for financial request {{requestId}}',
+            'notify-request-approved-pl': 'Wniosek finansowy {{requestId}} został zatwierdzony',
+            'notify-request-approved-en': 'Financial request {{requestId}} approved',
+            'notify-request-paid-pl': 'Wypłata środków dla wniosku finansowego {{requestId}}',
+            'notify-request-paid-en': 'Payment processed for financial request {{requestId}}',
+            'notify-request-rejected-pl': 'Wniosek finansowy {{requestId}} został odrzucony',
+            'notify-request-rejected-en': 'Financial request {{requestId}} rejected'
+          };
+          const subject = defaultSubjects[templateName] || templateName;
+          const content = await s3.getObjectAsText({
+            bucket: S3_BUCKET_MEDIA,
+            key: `${S3_ASSETS_FOLDER}/${templateName}.hbs`
+          });
+          await ses.setTemplate(`${templateName}-${STAGE}`, subject, content, true);
+          await ses.sendTemplatedEmail({
+            toAddresses: [request.userEmail],
+            template: `${templateName}-${STAGE}`,
+            templateData
+          }, {
+            ...SES_CONFIG,
+            sourceName: senderName
+          });
+          this.logger.info(`Successfully initialized ${templateName}-${STAGE} from S3 and sent email`);
+        } else {
+          throw err;
+        }
+      }
     } catch (err) {
       // Non-blocking error handling: log error but don't fail the request operation
       this.logger.error('Failed to send request update email notification', err, {

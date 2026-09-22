@@ -8,6 +8,7 @@ import { RequestsRoutingModule } from './requests.routing.module';
 import { RequestsPage } from './requests.page';
 import { RequestFormPage } from './submit/request-form.page';
 import { RequestViewPage } from './view/request-view.page';
+import { RequestReviewPage } from './review/request-review.page';
 import { ManageRequestsPage } from './manage/manage-requests.page';
 
 @NgModule({
@@ -15,6 +16,7 @@ import { ManageRequestsPage } from './manage/manage-requests.page';
     RequestsPage,
     RequestFormPage,
     RequestViewPage,
+    RequestReviewPage,
     ManageRequestsPage
   ],
   imports: [

@@ -1,0 +1,563 @@
+<ion-content class="request-review-content ion-padding">
+  <div class="review-container" *ngIf="request && !isLoading">
+
+    <!-- Top Navigation Bar -->
+    <div class="top-nav-bar">
+      <div class="nav-left">
+        <button class="back-link-btn" (click)="goBack()">
+          <ion-icon name="arrow-back-outline"></ion-icon>
+          <span>{{ 'REQUESTS.REVIEW_PANEL.BACK_TO_MANAGE' | translate }}</span>
+        </button>
+      </div>
+
+      <div class="top-actions">
+        <!-- Switch to applicant / standard view -->
+        <button
+          class="btn-outline"
+          (click)="navigateToView()"
+          [title]="'REQUESTS.REVIEW_PANEL.SWITCH_TO_VIEW' | translate"
+        >
+          <ion-icon name="eye-outline"></ion-icon>
+          <span>{{ 'REQUESTS.REVIEW_PANEL.SWITCH_TO_VIEW' | translate }}</span>
+        </button>
+
+        <!-- Export CSV -->
+        <button
+          *ngIf="canExport"
+          class="btn-outline"
+          (click)="exportCurrentRequest()"
+        >
+          <ion-icon name="download-outline"></ion-icon>
+          <span>{{ 'REQUESTS.MANAGE_PANEL.EXPORT_CSV' | translate }}</span>
+        </button>
+
+        <!-- Review Mode Badge (Aligned to the right) -->
+        <div class="review-mode-pill">
+          <ion-icon name="shield-checkmark-outline"></ion-icon>
+          <span>{{ 'REQUESTS.REVIEW_PANEL.BADGE' | translate }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sticky Review Decision Bar -->
+    <div class="review-decision-card">
+      <div class="decision-left">
+        <div class="request-id-row">
+          <span class="decision-id" [class.isDraftPlaceholder]="request.isDraft">{{ request.displayId }}</span>
+          <span class="guest-badge" *ngIf="request.isGuest">
+            <ion-icon name="person-outline"></ion-icon>
+            {{ 'CONFIGURATIONS.GUEST_BADGE' | translate }}
+          </span>
+          <span class="status-badge status-{{ request.status | lowercase }}">
+            {{ 'REQUESTS.STATUSES.' + request.status | translate }}
+          </span>
+        </div>
+
+        <div class="decision-applicant-meta">
+          <span class="applicant-name">{{ request.userDisplayName || request.userId }}</span>
+          <span class="divider-dot" *ngIf="getSubmitterSection()">•</span>
+          <span class="applicant-section" *ngIf="getSubmitterSection()">{{ getSubmitterSection() }}</span>
+          <span class="divider-dot">•</span>
+          <span class="request-type-tag">{{ ('REQUESTS.TYPES_SHORT.' + request.requestType) | translate }}</span>
+        </div>
+      </div>
+
+      <div class="decision-amount-box">
+        <span class="amount-title">{{ 'REQUESTS.TOTAL_GROSS' | translate }}</span>
+        <div class="amount-val-group">
+          <span class="amount-val">{{ request.totalGrossAmount | number:'1.2-2' }}</span>
+          <span class="amount-curr">{{ request.currency }}</span>
+          <button
+            class="copy-mini-btn"
+            (click)="copyToClipboard(request.totalGrossAmount.toFixed(2), 'amount')"
+            [title]="'REQUESTS.REVIEW_PANEL.COPY_AMOUNT' | translate"
+          >
+            <ion-icon [name]="copiedField === 'amount' ? 'checkmark-outline' : 'copy-outline'"></ion-icon>
+          </button>
+        </div>
+        <span class="vat-sub" *ngIf="request.totalVatAmount > 0">
+          VAT: {{ request.totalVatAmount | number:'1.2-2' }} {{ request.currency }}
+        </span>
+      </div>
+
+      <div class="decision-actions-group">
+        <!-- Approve -->
+        <ion-button
+          *ngIf="request.status === 'SUBMITTED' || request.status === 'IN_REVIEW'"
+          fill="solid"
+          color="success"
+          size="default"
+          class="decision-btn approve-btn"
+          [disabled]="isUpdatingStatus"
+          (click)="promptApprove()"
+        >
+          <ion-icon slot="start" name="checkmark-circle-outline"></ion-icon>
+          {{ 'REQUESTS.STATUSES.APPROVED' | translate }}
+        </ion-button>
+
+        <!-- Request Changes -->
+        <ion-button
+          *ngIf="request.status === 'SUBMITTED' || request.status === 'IN_REVIEW'"
+          fill="outline"
+          color="warning"
+          size="default"
+          class="decision-btn changes-btn"
+          [disabled]="isUpdatingStatus"
+          (click)="promptRequestChanges()"
+        >
+          <ion-icon slot="start" name="create-outline"></ion-icon>
+          {{ 'REQUESTS.STATUSES.CHANGES_REQUESTED' | translate }}
+        </ion-button>
+
+        <!-- Mark Paid (when APPROVED) -->
+        <ion-button
+          *ngIf="request.status === 'APPROVED'"
+          fill="solid"
+          color="tertiary"
+          size="default"
+          class="decision-btn paid-btn"
+          [disabled]="isUpdatingStatus"
+          (click)="promptMarkPaid()"
+        >
+          <ion-icon slot="start" name="cash-outline"></ion-icon>
+          {{ 'REQUESTS.STATUSES.PAID' | translate }}
+        </ion-button>
+
+        <!-- Reject -->
+        <ion-button
+          *ngIf="request.status !== 'PAID' && request.status !== 'REJECTED'"
+          fill="clear"
+          color="danger"
+          size="default"
+          class="decision-btn reject-btn"
+          [disabled]="isUpdatingStatus"
+          (click)="promptReject()"
+        >
+          <ion-icon slot="start" name="close-circle-outline"></ion-icon>
+          {{ 'REQUESTS.STATUSES.REJECTED' | translate }}
+        </ion-button>
+      </div>
+    </div>
+
+    <!-- Active Review Status Banner -->
+    <div class="review-status-banner" *ngIf="request.status === 'IN_REVIEW'">
+      <ion-icon name="search-outline"></ion-icon>
+      <div class="banner-body">
+        <strong>{{ 'REQUESTS.STATUSES.IN_REVIEW' | translate }}:</strong>
+        <span>{{ 'REQUESTS.REVIEW_PANEL.SUBTITLE' | translate }}</span>
+      </div>
+    </div>
+
+    <!-- Changes Requested Banner if applicable -->
+    <div class="alert-box alert-changes-requested" *ngIf="request.status === 'CHANGES_REQUESTED'">
+      <div class="alert-icon">
+        <ion-icon name="alert-circle-outline"></ion-icon>
+      </div>
+      <div class="alert-body">
+        <h3 class="alert-title">{{ 'REQUESTS.CHANGES_REQUESTED_TITLE' | translate }}</h3>
+        <p class="alert-message">{{ 'REQUESTS.CHANGES_REQUESTED_DESC' | translate }}</p>
+        <div class="remarks-quote" *ngIf="request.adminRemarks">
+          <strong>{{ 'REQUESTS.ADMIN_REMARKS' | translate }}:</strong>
+          <p>{{ request.adminRemarks }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Rejection Banner if applicable -->
+    <div class="alert-box alert-rejected" *ngIf="request.status === 'REJECTED'">
+      <div class="alert-icon">
+        <ion-icon name="close-circle-outline"></ion-icon>
+      </div>
+      <div class="alert-body">
+        <h3 class="alert-title">{{ 'REQUESTS.STATUSES.REJECTED' | translate }}</h3>
+        <p class="alert-message">{{ 'REQUESTS.REJECTED_NOTICE' | translate }}</p>
+        <div class="remarks-quote" *ngIf="request.adminRemarks">
+          <strong>{{ 'REQUESTS.REJECTION_REASON' | translate }}:</strong>
+          <p>{{ request.adminRemarks }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Grid -->
+    <div class="details-grid">
+      <!-- Left Column: Verification & Documents -->
+      <div class="details-main">
+
+        <!-- General Info Section -->
+        <div class="section-card">
+          <div class="section-header">
+            <div class="header-icon-title">
+              <ion-icon name="information-circle-outline"></ion-icon>
+              <h3>{{ 'REQUESTS.GENERAL_INFO' | translate }}</h3>
+            </div>
+            <span class="type-pill-header">{{ 'REQUESTS.TYPES.' + request.requestType | translate }}</span>
+          </div>
+
+          <div class="info-grid">
+            <div class="info-cell">
+              <span class="cell-lbl">{{ 'REQUESTS.POSITION' | translate }}</span>
+              <span class="cell-val">{{ request.position }}</span>
+            </div>
+            <div class="info-cell">
+              <span class="cell-lbl">{{ 'REQUESTS.SOURCE_OF_FUNDING' | translate }}</span>
+              <span class="cell-val">{{ request.sourceOfFunding }}</span>
+            </div>
+            <div class="info-cell" *ngIf="request.submittedAt">
+              <span class="cell-lbl">{{ 'REQUESTS.SUBMITTED_ON' | translate }}</span>
+              <span class="cell-val">{{ request.submittedAt | date:'dd.MM.yyyy, HH:mm' }}</span>
+            </div>
+            <div class="info-cell full-width" *ngIf="request.additionalRemarks">
+              <span class="cell-lbl">{{ 'REQUESTS.ADDITIONAL_REMARKS' | translate }}</span>
+              <span class="cell-val preserve-text">{{ request.additionalRemarks }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Invoices & Documents Inspector (Types A & B) -->
+        <div
+          class="section-card"
+          *ngIf="request.requestType === 'INVOICE_TO_PAY' || request.requestType === 'INVOICE_REIMBURSEMENT'"
+        >
+          <div class="section-header">
+            <div class="header-icon-title">
+              <ion-icon name="document-text-outline"></ion-icon>
+              <h3>{{ 'REQUESTS.DOCUMENTS_LIST' | translate }} ({{ request.documents?.length || 0 }})</h3>
+            </div>
+          </div>
+
+          <div class="doc-list">
+            <div class="doc-card" *ngFor="let doc of request.documents; let idx = index">
+              <div class="doc-card-header">
+                <div class="doc-title-row">
+                  <span class="doc-idx">{{ 'REQUESTS.DOCUMENT_ITEM' | translate }} #{{ idx + 1 }}</span>
+                  <span class="doc-seller" *ngIf="doc.issuedBy">{{ doc.issuedBy }}</span>
+                </div>
+                <div class="doc-amount-badge">
+                  <span>{{ doc.grossAmount | number:'1.2-2' }} {{ doc.currency }}</span>
+                  <small *ngIf="doc.vatAmount > 0">(VAT: {{ doc.vatAmount | number:'1.2-2' }})</small>
+                </div>
+              </div>
+
+              <div class="doc-details-grid">
+                <div class="info-cell">
+                  <span class="cell-lbl">{{ 'REQUESTS.DOC_INVOICE_NUMBER' | translate }}</span>
+                  <div class="copy-field-row">
+                    <span class="cell-val font-semibold">{{ doc.invoiceNumber }}</span>
+                    <button
+                      class="copy-mini-btn"
+                      (click)="copyToClipboard(doc.invoiceNumber, 'inv_' + idx)"
+                      [title]="'REQUESTS.REVIEW_PANEL.COPY_INVOICE_NUM' | translate"
+                    >
+                      <ion-icon [name]="copiedField === 'inv_' + idx ? 'checkmark-outline' : 'copy-outline'"></ion-icon>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="info-cell" *ngIf="doc.ksefNumber">
+                  <span class="cell-lbl">{{ 'REQUESTS.DOC_KSEF_NUMBER' | translate }}</span>
+                  <div class="copy-field-row">
+                    <span class="cell-val font-mono">{{ doc.ksefNumber }}</span>
+                    <button
+                      class="copy-mini-btn"
+                      (click)="copyToClipboard(doc.ksefNumber, 'ksef_' + idx)"
+                      [title]="'REQUESTS.REVIEW_PANEL.COPY_SUCCESS' | translate"
+                    >
+                      <ion-icon [name]="copiedField === 'ksef_' + idx ? 'checkmark-outline' : 'copy-outline'"></ion-icon>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="info-cell">
+                  <span class="cell-lbl">{{ 'REQUESTS.DOC_ISSUED_ON' | translate }}</span>
+                  <span class="cell-val">{{ doc.issuedOn | date:'dd.MM.yyyy' }}</span>
+                </div>
+
+                <div class="info-cell" *ngIf="doc.paymentDeadline">
+                  <span class="cell-lbl">{{ 'REQUESTS.DOC_PAYMENT_DEADLINE' | translate }}</span>
+                  <span class="cell-val font-semibold">{{ doc.paymentDeadline | date:'dd.MM.yyyy' }}</span>
+                </div>
+
+                <div class="info-cell" *ngIf="doc.paidOn">
+                  <span class="cell-lbl">{{ 'REQUESTS.DOC_PAID_ON' | translate }}</span>
+                  <span class="cell-val">{{ doc.paidOn | date:'dd.MM.yyyy' }}</span>
+                </div>
+
+                <div class="info-cell full-width" *ngIf="doc.bankAccountDetails">
+                  <span class="cell-lbl">{{ 'REQUESTS.DOC_BANK_ACCOUNT' | translate }}</span>
+                  <div class="copy-field-row">
+                    <span class="cell-val font-mono">{{ doc.bankAccountDetails }}</span>
+                    <button
+                      class="copy-mini-btn"
+                      (click)="copyToClipboard(doc.bankAccountDetails, 'bank_' + idx)"
+                      [title]="'REQUESTS.REVIEW_PANEL.COPY_IBAN' | translate"
+                    >
+                      <ion-icon [name]="copiedField === 'bank_' + idx ? 'checkmark-outline' : 'copy-outline'"></ion-icon>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="info-cell full-width" *ngIf="doc.explanation">
+                  <span class="cell-lbl">{{ 'REQUESTS.DOC_EXPLANATION' | translate }}</span>
+                  <span class="cell-val">{{ doc.explanation }}</span>
+                </div>
+              </div>
+
+              <!-- Attachments for this invoice -->
+              <div class="attachments-list" *ngIf="doc.attachment || doc.proofOfPaymentAttachment">
+                <div class="attachment-item" *ngIf="doc.attachment">
+                  <ion-icon name="document-attach-outline"></ion-icon>
+                  <div class="att-meta">
+                    <span class="att-name">{{ doc.attachment.fileName }}</span>
+                    <span class="att-sub">{{ (doc.attachment.fileSize / 1024) | number:'1.0-1' }} KB</span>
+                  </div>
+                </div>
+
+                <div class="attachment-item" *ngIf="doc.proofOfPaymentAttachment">
+                  <ion-icon name="checkmark-done-circle-outline"></ion-icon>
+                  <div class="att-meta">
+                    <span class="att-name">{{ 'REQUESTS.PROOF_OF_PAYMENT' | translate }}: {{ doc.proofOfPaymentAttachment.fileName }}</span>
+                    <span class="att-sub">{{ (doc.proofOfPaymentAttachment.fileSize / 1024) | number:'1.0-1' }} KB</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Advance Payment Details (Type C) -->
+        <div class="section-card" *ngIf="request.requestType === 'ADVANCE_PAYMENT'">
+          <div class="section-header">
+            <div class="header-icon-title">
+              <ion-icon name="cash-outline"></ion-icon>
+              <h3>{{ 'REQUESTS.ADVANCE_DETAILS' | translate }}</h3>
+            </div>
+          </div>
+          <div class="info-grid">
+            <div class="info-cell">
+              <span class="cell-lbl">{{ 'REQUESTS.REQUESTED_AMOUNT' | translate }}</span>
+              <span class="cell-val font-semibold">{{ request.requestedAmountPLN | number:'1.2-2' }} PLN</span>
+            </div>
+            <div class="info-cell full-width" *ngIf="request.explanationAndBudget">
+              <span class="cell-lbl">{{ 'REQUESTS.EXPLANATION_BUDGET' | translate }}</span>
+              <span class="cell-val preserve-text">{{ request.explanationAndBudget }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Delegation Settlement Details (Type D) -->
+        <div class="section-card" *ngIf="request.requestType === 'DELEGATION_SETTLEMENT'">
+          <div class="section-header">
+            <div class="header-icon-title">
+              <ion-icon name="airplane-outline"></ion-icon>
+              <h3>{{ 'REQUESTS.DELEGATION_DETAILS' | translate }}</h3>
+            </div>
+          </div>
+          <div class="info-grid">
+            <div class="info-cell">
+              <span class="cell-lbl">{{ 'REQUESTS.DELEGATION_TOTAL_SETTLEMENT' | translate }}</span>
+              <span class="cell-val font-semibold">{{ request.totalGrossAmount | number:'1.2-2' }} PLN</span>
+            </div>
+            <div class="info-cell full-width" *ngIf="request.delegationFormAttachment">
+              <span class="cell-lbl">{{ 'REQUESTS.DELEGATION_SIGNED_FORM' | translate }}</span>
+              <div class="attachment-item mt-1">
+                <ion-icon name="document-text-outline"></ion-icon>
+                <div class="att-meta">
+                  <span class="att-name">{{ request.delegationFormAttachment.fileName }}</span>
+                  <span class="att-sub">{{ (request.delegationFormAttachment.fileSize / 1024) | number:'1.0-1' }} KB</span>
+                </div>
+              </div>
+            </div>
+            <div class="info-cell full-width" *ngIf="request.ticketAttachments && request.ticketAttachments.length > 0">
+              <span class="cell-lbl">{{ 'REQUESTS.TICKETS_ATTACHMENTS' | translate }} ({{ request.ticketAttachments.length }})</span>
+              <div class="attachments-list mt-1">
+                <div class="attachment-item" *ngFor="let t of request.ticketAttachments">
+                  <ion-icon name="ticket-outline"></ion-icon>
+                  <div class="att-meta">
+                    <span class="att-name">{{ t.fileName }}</span>
+                    <span class="att-sub">{{ (t.fileSize / 1024) | number:'1.0-1' }} KB</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Payout Bank Details, Submitter, Progress & History -->
+      <div class="details-sidebar">
+
+        <!-- Payout Bank Account Details (with quick copy) -->
+        <div class="section-card payout-card" *ngIf="request.requestType !== 'INVOICE_TO_PAY'">
+          <div class="section-header">
+            <div class="header-icon-title">
+              <ion-icon name="card-outline"></ion-icon>
+              <h3>{{ 'REQUESTS.REVIEW_PANEL.PAYOUT_VERIFICATION' | translate }}</h3>
+            </div>
+          </div>
+          <div class="info-grid single-col">
+            <div class="info-cell">
+              <span class="cell-lbl">{{ 'REQUESTS.ACCOUNT_HOLDER_NAME' | translate }}</span>
+              <div class="copy-field-row">
+                <span class="cell-val font-semibold">{{ request.accountHolderName }}</span>
+                <button
+                  class="copy-mini-btn"
+                  (click)="copyToClipboard(request.accountHolderName, 'holder')"
+                  [title]="'REQUESTS.REVIEW_PANEL.COPY_SUCCESS' | translate"
+                >
+                  <ion-icon [name]="copiedField === 'holder' ? 'checkmark-outline' : 'copy-outline'"></ion-icon>
+                </button>
+              </div>
+            </div>
+
+            <div class="info-cell">
+              <span class="cell-lbl">{{ 'REQUESTS.ACCOUNT_HOLDER_ADDRESS' | translate }}</span>
+              <span class="cell-val">{{ request.accountHolderAddress }}</span>
+            </div>
+
+            <div class="info-cell">
+              <span class="cell-lbl">{{ (request.swiftBic ? 'REQUESTS.IBAN' : 'REQUESTS.BANK_ACCOUNT_NUMBER') | translate }}</span>
+              <div class="copy-field-row iban-highlight-row">
+                <span class="cell-val font-mono iban-text">{{ request.iban }}</span>
+                <button
+                  class="btn-copy-iban"
+                  (click)="copyToClipboard(request.iban, 'iban')"
+                  [title]="'REQUESTS.REVIEW_PANEL.COPY_IBAN' | translate"
+                >
+                  <ion-icon [name]="copiedField === 'iban' ? 'checkmark-outline' : 'copy-outline'"></ion-icon>
+                  <span>{{ (copiedField === 'iban' ? 'REQUESTS.REVIEW_PANEL.COPY_SUCCESS' : 'REQUESTS.REVIEW_PANEL.COPY_IBAN') | translate }}</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="info-cell" *ngIf="request.swiftBic">
+              <span class="cell-lbl">{{ 'REQUESTS.SWIFT_BIC' | translate }}</span>
+              <div class="copy-field-row">
+                <span class="cell-val font-mono">{{ request.swiftBic }}</span>
+                <button
+                  class="copy-mini-btn"
+                  (click)="copyToClipboard(request.swiftBic, 'bic')"
+                  [title]="'REQUESTS.REVIEW_PANEL.COPY_SUCCESS' | translate"
+                >
+                  <ion-icon [name]="copiedField === 'bic' ? 'checkmark-outline' : 'copy-outline'"></ion-icon>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Direct seller notice if INVOICE_TO_PAY -->
+        <div class="section-card payout-card" *ngIf="request.requestType === 'INVOICE_TO_PAY'">
+          <div class="section-header">
+            <div class="header-icon-title">
+              <ion-icon name="card-outline"></ion-icon>
+              <h3>{{ 'REQUESTS.PAYOUT_BANK_ACCOUNT' | translate }}</h3>
+            </div>
+          </div>
+          <p class="seller-notice-view">
+            {{ 'REQUESTS.DIRECT_SELLER_PAYMENT_NOTE' | translate }}
+          </p>
+        </div>
+
+        <!-- Submitter Profile Card -->
+        <div class="section-card">
+          <div class="section-header">
+            <div class="header-icon-title">
+              <ion-icon name="person-outline"></ion-icon>
+              <h3>{{ 'REQUESTS.SUBMITTER_PROFILE' | translate }}</h3>
+            </div>
+          </div>
+          <div
+            class="user-summary"
+            [class.clickable-user]="!request.isGuest"
+            (click)="!request.isGuest && openAccountsProfile(request.userId)"
+            [title]="!request.isGuest ? ('USER.VIEW_ON_ACCOUNTS' | translate) : ''"
+          >
+            <div class="user-avatar-circle" [class.guest-avatar]="request.isGuest">
+              <img
+                *ngIf="request.userAvatarURL && !avatarError && !request.isGuest"
+                [src]="request.userAvatarURL"
+                (error)="avatarError = true"
+                class="user-avatar-img"
+                alt="Submitter avatar"
+              />
+              <span *ngIf="!request.userAvatarURL || avatarError || request.isGuest">
+                {{ request.userDisplayName?.charAt(0) || 'G' }}
+              </span>
+            </div>
+            <div class="user-meta">
+              <div class="user-name-row">
+                <span class="user-name">{{ request.userDisplayName }}</span>
+                <span class="guest-pill" *ngIf="request.isGuest">{{ 'CONFIGURATIONS.GUEST_BADGE' | translate }}</span>
+                <ion-icon *ngIf="!request.isGuest" name="open-outline" class="user-external-icon"></ion-icon>
+              </div>
+              <span class="user-email">{{ request.userEmail }}</span>
+              <span class="user-section" *ngIf="!request.isGuest && getSubmitterSection()">{{ getSubmitterSection() }}</span>
+              <span class="guest-purpose" *ngIf="request.isGuest && request.guestPurpose">
+                <strong>{{ 'CONFIGURATIONS.GUEST_PURPOSE' | translate }}:</strong> {{ request.guestPurpose }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Progression Stepper -->
+        <div class="section-card" *ngIf="request.status !== 'DRAFT'">
+          <div class="section-header">
+            <div class="header-icon-title">
+              <ion-icon name="git-branch-outline"></ion-icon>
+              <h3>{{ 'REQUESTS.STATUS_PROGRESS' | translate }}</h3>
+            </div>
+          </div>
+          <div class="stepper-wrapper">
+            <div class="stepper">
+              <div
+                *ngFor="let step of statusSteps; let i = index"
+                class="step-item"
+                [ngClass]="getStepStatus(step.key)"
+              >
+                <div class="step-circle">
+                  <ion-icon *ngIf="getStepStatus(step.key) === 'completed'" name="checkmark-outline"></ion-icon>
+                  <ion-icon *ngIf="getStepStatus(step.key) === 'active'" name="radio-button-on-outline"></ion-icon>
+                  <span *ngIf="getStepStatus(step.key) === 'pending'">{{ i + 1 }}</span>
+                  <ion-icon *ngIf="getStepStatus(step.key) === 'rejected'" name="close-outline"></ion-icon>
+                </div>
+                <span class="step-label">{{ step.label | translate }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Status History Timeline -->
+        <div class="section-card" *ngIf="request.statusHistory && request.statusHistory.length > 0">
+          <div class="section-header">
+            <div class="header-icon-title">
+              <ion-icon name="time-outline"></ion-icon>
+              <h3>{{ 'REQUESTS.STATUS_HISTORY' | translate }}</h3>
+            </div>
+          </div>
+          <div class="history-timeline">
+            <div class="history-item" *ngFor="let h of request.statusHistory">
+              <div class="history-bullet"></div>
+              <div class="history-content">
+                <div class="history-header">
+                  <span class="history-status status-{{ h.status | lowercase }}">
+                    {{ 'REQUESTS.STATUSES.' + h.status | translate }}
+                  </span>
+                  <span class="history-date">{{ h.timestamp | date:'dd.MM.yyyy, HH:mm' }}</span>
+                </div>
+                <span class="history-user">{{ h.updatedBy }}</span>
+                <p class="history-note" *ngIf="h.comment">{{ h.comment }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div class="loading-state" *ngIf="isLoading">
+    <ion-spinner name="crescent" color="primary"></ion-spinner>
+    <p>{{ 'COMMON.LOADING' | translate }}</p>
+  </div>
+</ion-content>
