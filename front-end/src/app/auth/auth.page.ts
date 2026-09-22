@@ -16,6 +16,18 @@ export class AuthPage implements OnInit {
   public isProcessing = false;
   public isGuestLogin = false;
   public guestErrorKey: string | null = null;
+
+  public get isAppLocked(): boolean {
+    return !!this.appService.configurations?.appLocked;
+  }
+
+  public get appLockMessage(): string {
+    return (
+      this.appService.configurations?.getAppLockMessage(this.currentLang) ||
+      this.translate.instant('AUTH.APP_LOCKED_TITLE')
+    );
+  }
+
   public get guestErrorNotice(): string | null {
     return this.guestErrorKey ? this.translate.instant(this.guestErrorKey) : null;
   }
@@ -32,11 +44,26 @@ export class AuthPage implements OnInit {
   public async ngOnInit(): Promise<void> {
     await this.appService.init();
 
+    // Check for error parameters (e.g. redirected from backend when app is locked)
+    const queryError = this.route.snapshot.queryParamMap.get('error');
+    if (queryError === 'app_locked') {
+      const toast = await this.toastCtrl.create({
+        message: this.translate.instant('AUTH.APP_LOCKED_NON_ADMIN_ERROR'),
+        duration: 5000,
+        color: 'warning',
+        position: 'bottom'
+      });
+      await toast.present();
+    }
+
     // Check token from @Input (routed parameter) or snapshot queryParams
     const queryToken = this.token || this.route.snapshot.queryParamMap.get('token');
     const guestToken = this.route.snapshot.queryParamMap.get('guestToken');
 
     if (guestToken) {
+      if (this.isAppLocked) {
+        return;
+      }
       this.isGuestLogin = true;
       this.isProcessing = true;
       try {

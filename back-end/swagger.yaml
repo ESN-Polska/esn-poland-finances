@@ -66,8 +66,13 @@ paths:
               schema:
                 type: string
               description: Front-end redirect URL with JWT token query parameter
-        400:
-          $ref: '#/components/responses/BadParameters'
+  /contributors:
+    get:
+      summary: Get cached repository contributors
+      tags: [Contributors]
+      responses:
+        200:
+          $ref: '#/components/responses/Contributors'
 
   /configurations:
     get:
@@ -202,6 +207,76 @@ paths:
         404:
           $ref: '#/components/responses/NotFound'
 
+  /requests/{year}/{id}:
+    parameters:
+      - name: year
+        in: path
+        description: Request calendar year (e.g. 2026)
+        required: true
+        schema:
+          type: integer
+      - name: id
+        in: path
+        description: Request sequential number (e.g. 1)
+        required: true
+        schema:
+          type: integer
+    get:
+      summary: Get a financial request by year and sequence number
+      description: Fetch full request details by year and ID. Allowed for the creator, auditors, managers, administrators, or users with requests permissions.
+      tags: [Requests]
+      security:
+        - AuthFunction: []
+      responses:
+        200:
+          $ref: '#/components/responses/FinancialRequest'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        403:
+          $ref: '#/components/responses/Forbidden'
+        404:
+          $ref: '#/components/responses/NotFound'
+    patch:
+      summary: Update a financial request by year and sequence number
+      description: Modify an existing request. Allowed for creator when status is DRAFT or CHANGES_REQUESTED, or for managers/administrators with requests.manage permission.
+      tags: [Requests]
+      security:
+        - AuthFunction: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FinancialRequestUpdate'
+      responses:
+        200:
+          $ref: '#/components/responses/FinancialRequest'
+        400:
+          $ref: '#/components/responses/BadParameters'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        403:
+          $ref: '#/components/responses/Forbidden'
+        404:
+          $ref: '#/components/responses/NotFound'
+    delete:
+      summary: Delete a draft financial request by year and sequence number
+      description: Permanently delete a financial request. Only draft requests can be deleted.
+      tags: [Requests]
+      security:
+        - AuthFunction: []
+      responses:
+        200:
+          $ref: '#/components/responses/OperationCompleted'
+        400:
+          $ref: '#/components/responses/BadParameters'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        403:
+          $ref: '#/components/responses/Forbidden'
+        404:
+          $ref: '#/components/responses/NotFound'
+
   /users:
     get:
       summary: Search or list users
@@ -296,6 +371,21 @@ components:
       description: Bearer JSON Web Token issued upon successful CAS login
 
   schemas:
+    Contributor:
+      type: object
+      properties:
+        login:
+          type: string
+        html_url:
+          type: string
+        avatar_url:
+          type: string
+        contributions:
+          type: integer
+        name:
+          type: string
+          nullable: true
+
     LocalizedText:
       type: object
       description: Localized text in supported languages
@@ -448,6 +538,12 @@ components:
           type: string
           description: Date of the resolution adopting this document revision (YYYY-MM-DD)
           example: "2026-09-21"
+        appLocked:
+          type: boolean
+          description: Whether the application is temporarily locked to disable logins
+          example: false
+        appLockMessage:
+          $ref: '#/components/schemas/LocalizedText'
 
     RoleAssignmentSource:
       type: object
@@ -965,6 +1061,15 @@ components:
           example: Unauthorized
 
   responses:
+    Contributors:
+      description: Cached repository contributors
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/Contributor'
+
     OperationCompleted:
       description: Operation completed successfully
       content:

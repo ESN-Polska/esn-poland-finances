@@ -190,8 +190,8 @@ export interface HomeNotice {
 
 export const DEFAULT_CONFIGURATIONS = {
   appTitle: {
-    en: 'Online Financial System',
-    pl: 'Internetowy System Finansowy'
+    en: 'ESN Poland Finances app',
+    pl: 'ESN Poland Finances app'
   },
   appOrganisation: {
     en: 'ESN Poland Federation',
@@ -239,7 +239,12 @@ export const DEFAULT_CONFIGURATIONS = {
     pl: 'Prosimy o dołączenie wszystkich faktur, biletów podróżnych oraz potwierdzeń płatności. Upewnij się, że dane konta bankowego są poprawne.'
   },
   guestAccessRequirePurpose: true,
-  guestInvitations: [] as GuestInvitation[]
+  guestInvitations: [] as GuestInvitation[],
+  appLocked: false,
+  appLockMessage: {
+    en: 'The application is temporarily locked for maintenance. Please check back later.',
+    pl: 'Aplikacja jest tymczasowo zablokowana z powodu prac konserwacyjnych. Prosimy spróbować później.'
+  }
 };
 
 /**
@@ -307,6 +312,11 @@ export class Configurations extends Resource {
   guestAccessRequirePurpose: boolean;
   /** Active and historical guest invitations. */
   guestInvitations: GuestInvitation[];
+
+  /** Master switch to temporarily lock the application and disable logins. */
+  appLocked: boolean;
+  /** Message displayed on the sign-in page when the application is locked. */
+  appLockMessage: LocalizedText;
 
   constructor(data?: any) {
     super();
@@ -473,6 +483,20 @@ export class Configurations extends Resource {
       submittedAt: this.clean(inv.submittedAt, String),
       lastAccessedAt: this.clean(inv.lastAccessedAt, String)
     }));
+
+    this.appLocked =
+      x.appLocked !== undefined
+        ? Boolean(x.appLocked)
+        : DEFAULT_CONFIGURATIONS.appLocked;
+    const defaultLockMessage = DEFAULT_CONFIGURATIONS.appLockMessage;
+    if (typeof x.appLockMessage === 'string') {
+      this.appLockMessage = { en: x.appLockMessage, pl: x.appLockMessage };
+    } else {
+      this.appLockMessage = {
+        en: this.clean(x.appLockMessage?.en, String, defaultLockMessage.en),
+        pl: this.clean(x.appLockMessage?.pl, String, defaultLockMessage.pl)
+      };
+    }
   }
 
   getAppTitle(lang: string = 'en'): string {
@@ -514,6 +538,11 @@ export class Configurations extends Resource {
     return !!this.homeNotice?.active && !!(this.homeNotice?.text?.en?.trim() || this.homeNotice?.text?.pl?.trim());
   }
 
+  getAppLockMessage(lang: string = 'en'): string {
+    if (typeof this.appLockMessage === 'string') return this.appLockMessage;
+    return (this.appLockMessage as any)?.[lang] || this.appLockMessage?.en || this.appLockMessage?.pl || '';
+  }
+
   safeLoad(newData: any, safeData: any): void {
     super.safeLoad(newData, safeData);
     this.PK = Configurations.PK;
@@ -531,6 +560,8 @@ export class Configurations extends Resource {
     this.guestAccessInstructions = safeData.guestAccessInstructions;
     this.guestAccessRequirePurpose = safeData.guestAccessRequirePurpose;
     this.guestInvitations = safeData.guestInvitations;
+    this.appLocked = safeData.appLocked !== undefined ? Boolean(safeData.appLocked) : DEFAULT_CONFIGURATIONS.appLocked;
+    this.appLockMessage = safeData.appLockMessage || DEFAULT_CONFIGURATIONS.appLockMessage;
   }
 
   hasAdminGroup(): boolean {

@@ -92,6 +92,36 @@ class Login extends ResourceController {
       User.applyConfigurationPermissions(user, configurations);
       this.logger.info('ESN Accounts login successful', { userId: user.userId, section: user.sectionCode });
 
+      if (configurations.appLocked && !user.isAdministrator) {
+        this.logger.warn('Login rejected: application is locked', { userId: user.userId });
+        const acceptsJson = (this.event.headers?.accept || '').includes('application/json');
+        if (acceptsJson && !this.queryParams.redirect) {
+          this.returnStatusCode = 403;
+          throw new HandledError('The application is temporarily locked');
+        }
+        let appURL = APP_URL;
+        if (this.queryParams.localhost) {
+          const local = String(this.queryParams.localhost);
+          const isLocalHost =
+            /^\d+$/.test(local) ||
+            /^(localhost|127\.0\.0\.1)(:\d+)?$/.test(local) ||
+            /^192\.168\.\d{1,3}\.\d{1,3}(:\d+)?$/.test(local) ||
+            /^10\.\d{1,3}\.\d{1,3}(:\d+)?$/.test(local) ||
+            /^172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}(:\d+)?$/.test(local);
+
+          if (isLocalHost) {
+            appURL = local.includes(':') || local.includes('.') ? `http://${local}` : `http://localhost:${local}`;
+          }
+        }
+        this.callback(null, {
+          statusCode: 302,
+          headers: {
+            Location: `${appURL}/auth?error=app_locked`
+          }
+        });
+        return;
+      }
+
       // Persist user to DynamoDB
       if (DDB_TABLES.users) {
         try {
@@ -166,6 +196,9 @@ class Login extends ResourceController {
 
   private async handleGuestLogin(guestToken: string): Promise<any> {
     const configurations = await this.loadConfigurations();
+    if (configurations.appLocked) {
+      throw new HandledError('The application is temporarily locked');
+    }
     if (!configurations.guestAccessEnabled) {
       throw new HandledError('Guest access is currently disabled');
     }

@@ -60,8 +60,28 @@
           <p class="guestErrorDesc">{{ guestErrorKey | translate }}</p>
         </div>
 
-        <!-- Standard Login Button (hidden if guest link error notice is displayed) -->
-        <div *ngIf="!isProcessing && !guestErrorKey" class="action-section">
+        <!-- App Locked Notice (replaces login button) -->
+        <div *ngIf="!isProcessing && !guestErrorKey && isAppLocked" class="appLockedCard">
+          <div class="appLockedIcon">
+            <ion-icon name="lock-closed-outline"></ion-icon>
+          </div>
+          <h3 class="appLockedTitle">{{ 'AUTH.APP_LOCKED_TITLE' | translate }}</h3>
+          <p class="appLockedDesc">{{ appLockMessage }}</p>
+
+          <div class="admin-bypass-container">
+            <ion-button
+              fill="clear"
+              size="small"
+              class="admin-login-toggle-btn"
+              (click)="login()"
+            >
+              {{ 'AUTH.ADMIN_SIGN_IN' | translate }}
+            </ion-button>
+          </div>
+        </div>
+
+        <!-- Standard Login Button (hidden if guest link error notice is displayed or app is locked) -->
+        <div *ngIf="!isProcessing && !guestErrorKey && !isAppLocked" class="action-section">
           <ion-button
             expand="block"
             class="login-button"

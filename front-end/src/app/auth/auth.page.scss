@@ -222,3 +222,61 @@ p.version {
     line-height: 1.5;
   }
 }
+
+.appLockedCard {
+  background: rgba(var(--ion-color-warning-rgb, 255, 196, 9), 0.08);
+  border: 1px solid rgba(var(--ion-color-warning-rgb, 255, 196, 9), 0.35);
+  border-radius: 12px;
+  padding: 24px 20px;
+  text-align: center;
+  margin: 16px 0 8px 0;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+
+  .appLockedIcon {
+    font-size: 2.6rem;
+    color: var(--ion-color-warning, #e0ac08);
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: center;
+  }
+
+  .appLockedTitle {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--text-dark, #222428);
+    margin: 0 0 10px 0;
+    letter-spacing: -0.01em;
+  }
+
+  .appLockedDesc {
+    font-size: 0.92rem;
+    color: var(--text-dark, #222428);
+    margin: 0;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .admin-bypass-container {
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px dashed rgba(var(--ion-color-warning-rgb, 255, 196, 9), 0.35);
+
+    .admin-login-toggle-btn {
+      --color: var(--text-medium);
+      font-size: 0.82rem;
+      font-weight: 500;
+      text-transform: none;
+      margin: 0 auto;
+
+      ion-icon {
+        font-size: 1.05rem;
+        margin-right: 4px;
+      }
+
+      &:hover {
+        --color: var(--text-dark);
+      }
+    }
+  }
+}
