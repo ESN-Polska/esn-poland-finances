@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #1e293b; background-color: #f8fafc; margin: 0; padding: 24px; }
+      .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03); border: 1px solid #e2e8f0; }
+      .header { background: #b91c1c; color: #ffffff; padding: 24px 32px; text-align: left; }
+      .header h1 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
+      .header p { margin: 4px 0 0 0; font-size: 13px; opacity: 0.9; }
+      .content { padding: 32px; }
+      .danger-box { background: #fef2f2; border-left: 4px solid #ef4444; padding: 14px 18px; margin: 20px 0; border-radius: 0 8px 8px 0; font-size: 14px; color: #991b1b; }
+      .details-table { width: 100%; margin: 16px 0; border-collapse: collapse; }
+      .details-table td { padding: 8px 0; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
+      .details-table td.label { color: #64748b; width: 40%; }
+      .details-table td.value { font-weight: 600; text-align: right; }
+      .btn { display: inline-block; background-color: #ef4444; color: #ffffff !important; font-weight: 600; text-decoration: none; padding: 12px 28px; border-radius: 8px; margin: 20px 0; text-align: center; }
+      .footer { padding: 20px 32px; background: #f8fafc; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; text-align: center; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>ESN Polska &bull; Finanse</h1>
+        <p>Wniosek odrzucony</p>
+      </div>
+      <div class="content">
+        <p>Dzień dobry <b>{{user}}</b>,</p>
+        
+        <div class="danger-box">
+          Twój wniosek finansowy <b>{{requestId}}</b> został odrzucony przez Zespół Finansowy.
+        </div>
+
+        {{#if message}}
+        <p style="font-size: 14px; color: #475569;">
+          <b>Uzasadnienie odrzucenia:</b><br />
+          {{message}}
+        </p>
+        {{/if}}
+
+        <table class="details-table">
+          <tr>
+            <td class="label">Numer wniosku:</td>
+            <td class="value">{{requestId}}</td>
+          </tr>
+          <tr>
+            <td class="label">Typ wniosku:</td>
+            <td class="value">{{title}}</td>
+          </tr>
+          <tr>
+            <td class="label">Kwota wniosku:</td>
+            <td class="value">{{detail}}</td>
+          </tr>
+        </table>
+
+        <p style="text-align: center;">
+          <a href="{{url}}" class="btn" target="_blank">Zobacz wniosek</a>
+        </p>
+
+        <p style="color: #64748b; font-size: 13px;">
+          W razie wątpliwości lub pytań prosimy o kontakt ze Skarbnikiem lub Zespołem Finansowym.
+        </p>
+      </div>
+      <div class="footer">
+        Związek stowarzyszeń ESN Polska<br />
+        Automatyczne powiadomienie &bull; <a href="{{url}}" style="color: #00aeef;">{{url}}</a>
+      </div>
+    </div>
+  </body>
+</html>

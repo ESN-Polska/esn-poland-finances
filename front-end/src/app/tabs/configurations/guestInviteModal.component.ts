@@ -1,8 +1,9 @@
 import { Component, Input, OnInit } from '@angular/core';
-import { ModalController, ToastController } from '@ionic/angular';
+import { LoadingController, ModalController, ToastController } from '@ionic/angular';
 import { TranslateService } from '@ngx-translate/core';
 import { Configurations, FinancialRequestType, GuestInvitation } from '@models/configurations.model';
 import { AppService } from '@app/app.service';
+import { ConfigurationsService } from './configurations.service';
 
 @Component({
   selector: 'app-guest-invite-modal',
@@ -45,10 +46,18 @@ export class GuestInviteModalComponent implements OnInit {
   public generatedLink = '';
   public isCreatedStep = false;
 
+  public emailGuestOnDone = true;
+  public guestEmailLang: 'pl' | 'en' = 'pl';
+  public customizeEmail = false;
+  public guestEmailSubject = '';
+  public guestEmailMessage = '';
+
   constructor(
     private modalCtrl: ModalController,
     private toastCtrl: ToastController,
+    private loadingCtrl: LoadingController,
     private translate: TranslateService,
+    private configurationsService: ConfigurationsService,
     public app: AppService
   ) {}
 
@@ -81,10 +90,13 @@ export class GuestInviteModalComponent implements OnInit {
       return;
     }
 
+    this.guestEmailLang = this.translate.currentLang === 'en' ? 'en' : 'pl';
+
     if (this.existingInvite) {
       this.createdInvitation = this.existingInvite;
       this.generatedLink = this.buildGuestLink(this.existingInvite.id);
       this.isCreatedStep = true;
+      this.initDefaultEmailText();
       return;
     }
 
@@ -191,6 +203,7 @@ export class GuestInviteModalComponent implements OnInit {
     this.createdInvitation = newInvite;
     this.generatedLink = this.buildGuestLink(id);
     this.isCreatedStep = true;
+    this.initDefaultEmailText();
   }
 
   public buildGuestLink(tokenId: string): string {
@@ -239,7 +252,61 @@ export class GuestInviteModalComponent implements OnInit {
     }
   }
 
-  public dismiss(): void {
+  public initDefaultEmailText(): void {
+    if (!this.createdInvitation) return;
+    const d = new Date(this.createdInvitation.expiresAt);
+    const expiresFormatted = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`;
+
+    if (this.guestEmailLang === 'pl') {
+      this.guestEmailSubject = 'Zaproszenie do złożenia wniosku finansowego (ESN Polska)';
+      this.guestEmailMessage = `Dzień dobry ${this.createdInvitation.guestName},\n\nZostałeś/aś zaproszony/a do złożenia wniosku o zwrot kosztów w ramach „${this.createdInvitation.purpose}” w Internetowym Systemie Finansowym Związku stowarzyszeń ESN Polska.\n\nAby złożyć wniosek, przejdź pod poniższy bezpieczny link:\n${this.generatedLink}\n\nLink jest ważny do ${expiresFormatted}.\n\nZ poważaniem,\nZespół Finansowy ESN Polska`;
+    } else {
+      this.guestEmailSubject = 'Invitation to submit financial request (ESN Poland)';
+      this.guestEmailMessage = `Hello ${this.createdInvitation.guestName},\n\nYou have been invited to submit your reimbursement request for "${this.createdInvitation.purpose}" through the Online Financial System of the ESN Poland Federation.\n\nPlease use the following secure link to submit your reimbursement:\n${this.generatedLink}\n\nThis link is valid until ${expiresFormatted}.\n\nBest regards,\nESN Poland Federation Finance Team`;
+    }
+  }
+
+  public onGuestLangChange(): void {
+    this.initDefaultEmailText();
+  }
+
+  public async dismiss(): Promise<void> {
+    if (this.emailGuestOnDone && this.createdInvitation) {
+      const loading = await this.loadingCtrl.create({
+        message: this.translate.instant('COMMON.SENDING')
+      });
+      await loading.present();
+      try {
+        await this.configurationsService.sendGuestInvitationEmail({
+          inviteId: this.createdInvitation.id,
+          lang: this.guestEmailLang,
+          subject: this.customizeEmail && this.guestEmailSubject.trim() ? this.guestEmailSubject.trim() : undefined,
+          content: this.customizeEmail && this.guestEmailMessage.trim() ? this.guestEmailMessage.trim().replace(/\n/g, '<br />') : undefined
+        });
+
+        const toast = await this.toastCtrl.create({
+          message: this.translate.instant('CONFIGURATIONS.GUEST_EMAIL_SENT', {
+            email: this.createdInvitation.guestEmail
+          }),
+          duration: 3500,
+          color: 'success',
+          position: 'bottom'
+        });
+        await toast.present();
+      } catch (err: any) {
+        console.error('Failed to send guest invitation email', err);
+        const toast = await this.toastCtrl.create({
+          message: this.translate.instant('CONFIGURATIONS.GUEST_EMAIL_FAILED'),
+          duration: 4000,
+          color: 'danger',
+          position: 'bottom'
+        });
+        await toast.present();
+      } finally {
+        await loading.dismiss();
+      }
+    }
+
     this.modalCtrl.dismiss({ invitation: this.createdInvitation });
   }
 

@@ -130,6 +130,99 @@
   }
 }
 
+.emailGuestCard {
+  margin: 0 0 24px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  box-shadow: none;
+  background: var(--bg-body);
+  text-align: left;
+
+  ion-card-content {
+    padding: 12px 16px;
+  }
+
+  .emailToggleItem {
+    --padding-start: 0;
+    --inner-padding-end: 0;
+    --background: transparent;
+
+    ion-icon {
+      font-size: 1.5rem;
+      margin-right: 12px;
+    }
+
+    h3 {
+      font-weight: 600;
+      font-size: 0.95rem;
+      margin: 0 0 4px;
+    }
+
+    p {
+      font-size: 0.8rem;
+      color: var(--text-medium);
+      margin: 0;
+    }
+  }
+
+  .emailOptionsWrapper {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-color);
+
+    .langSelectRow {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      gap: 12px;
+
+      .langSelectLabel {
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: var(--text-medium);
+        white-space: nowrap;
+      }
+
+      .guestLangSegment {
+        max-width: 260px;
+        --background: var(--surface-color, rgba(0, 0, 0, 0.04));
+
+        ion-segment-button {
+          min-height: 32px;
+          font-size: 0.8rem;
+        }
+      }
+    }
+
+    .customizeToggleItem {
+      --padding-start: 0;
+      --inner-padding-end: 0;
+      --background: transparent;
+      font-size: 0.85rem;
+
+      p {
+        font-size: 0.75rem;
+        color: var(--text-medium);
+      }
+    }
+
+    .customEmailEditor {
+      margin-top: 8px;
+      padding: 12px;
+      border-radius: 8px;
+      background: var(--surface-color, #f9fafb);
+      border: 1px solid var(--border-color);
+
+      ion-item {
+        --background: transparent;
+        --padding-start: 0;
+        --inner-padding-end: 0;
+      }
+    }
+  }
+}
+
 .doneWrapper {
   margin-top: 16px;
 }

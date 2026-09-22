@@ -10,6 +10,7 @@ import { RoleEditorComponent } from './roleEditor.component';
 import { UserRoleMappingsComponent } from './userRoleMappings.component';
 import { GuestInviteModalComponent } from './guestInviteModal.component';
 import { GuestInstructionsModalComponent } from './guestInstructionsModal.component';
+import { EmailTemplateComponent } from './emailTemplate/emailTemplate.component';
 
 @NgModule({
   imports: [
@@ -24,7 +25,8 @@ import { GuestInstructionsModalComponent } from './guestInstructionsModal.compon
     RoleEditorComponent,
     UserRoleMappingsComponent,
     GuestInviteModalComponent,
-    GuestInstructionsModalComponent
+    GuestInstructionsModalComponent,
+    EmailTemplateComponent
   ]
 })
 export class ConfigurationsModule {}

@@ -1,15 +1,25 @@
-import { DynamoDB, HandledError, ResourceController } from 'idea-aws';
+import { DynamoDB, HandledError, ResourceController, SES } from 'idea-aws';
 import { randomUUID } from 'crypto';
 import { FinancialRequest } from '../models/financial-request.model';
-import { Configurations } from '../models/configurations.model';
+import { Configurations, EmailTemplates } from '../models/configurations.model';
 import { User } from '../models/user.model';
+import { isEmailInBlockList } from './sesNotifications';
 
+const STAGE = process.env.STAGE || 'dev';
+const APP_DOMAIN = process.env.APP_DOMAIN || 'finances.esn-poland.link';
+const BASE_URL = `https://${APP_DOMAIN}`;
+const SES_CONFIG = {
+  source: process.env.SES_SOURCE_ADDRESS || 'no-reply@esn-poland.link',
+  sourceArn: process.env.SES_IDENTITY_ARN,
+  region: process.env.SES_REGION
+};
 const DDB_TABLES = {
   requests: process.env.DDB_TABLE_financial_requests || 'esn-poland-finances-dev-financial_requests',
   configurations: process.env.DDB_TABLE_configurations
 };
 
 const ddb = new DynamoDB();
+const ses = new SES();
 
 export const handler = (ev: any, _: any, cb: any): Promise<void> => new RequestsHandler(ev, cb).handleRequest();
 
@@ -144,8 +154,11 @@ class RequestsHandler extends ResourceController {
       Item: JSON.parse(JSON.stringify(request))
     });
 
-    if (request.status === 'SUBMITTED' && user.isGuest && user.guestInvitationId) {
-      await this.markGuestInvitationUsed(user.guestInvitationId, request.requestId);
+    if (request.status === 'SUBMITTED') {
+      if (user.isGuest && user.guestInvitationId) {
+        await this.markGuestInvitationUsed(user.guestInvitationId, request.requestId);
+      }
+      await this.sendRequestNotificationEmail(request, 'SUBMITTED', 'Initial submission');
     }
 
     return request;
@@ -250,6 +263,15 @@ class RequestsHandler extends ResourceController {
       }
     }
 
+    // Send email notification on status transition or reviewer comments
+    if (existing.status !== updatedStatus || updates.historyNote) {
+      await this.sendRequestNotificationEmail(
+        updated,
+        updatedStatus,
+        updates.historyNote || newHistoryEntry.comment
+      );
+    }
+
     return updated;
   }
 
@@ -339,6 +361,116 @@ class RequestsHandler extends ResourceController {
       }
     } catch (err) {
       this.logger.error('Failed to update guest invitation status', err);
+    }
+  }
+
+  private getTemplateForStatus(status: string, lang: 'pl' | 'en' = 'pl'): EmailTemplates {
+    if (lang === 'en') {
+      switch (status) {
+        case 'SUBMITTED':
+          return EmailTemplates.REQUEST_SUBMITTED_EN;
+        case 'CHANGES_REQUESTED':
+          return EmailTemplates.REQUEST_CHANGES_REQUESTED_EN;
+        case 'APPROVED':
+          return EmailTemplates.REQUEST_APPROVED_EN;
+        case 'PAID':
+          return EmailTemplates.REQUEST_PAID_EN;
+        case 'REJECTED':
+          return EmailTemplates.REQUEST_REJECTED_EN;
+        default:
+          return EmailTemplates.REQUEST_STATUS_UPDATED_EN;
+      }
+    } else {
+      switch (status) {
+        case 'SUBMITTED':
+          return EmailTemplates.REQUEST_SUBMITTED_PL;
+        case 'CHANGES_REQUESTED':
+          return EmailTemplates.REQUEST_CHANGES_REQUESTED_PL;
+        case 'APPROVED':
+          return EmailTemplates.REQUEST_APPROVED_PL;
+        case 'PAID':
+          return EmailTemplates.REQUEST_PAID_PL;
+        case 'REJECTED':
+          return EmailTemplates.REQUEST_REJECTED_PL;
+        default:
+          return EmailTemplates.REQUEST_STATUS_UPDATED_PL;
+      }
+    }
+  }
+
+  private getSESTemplateName(emailTemplate: EmailTemplates): string {
+    switch (emailTemplate) {
+      case EmailTemplates.REQUEST_SUBMITTED_PL:
+        return 'notify-request-submitted-pl';
+      case EmailTemplates.REQUEST_SUBMITTED_EN:
+        return 'notify-request-submitted-en';
+      case EmailTemplates.REQUEST_CHANGES_REQUESTED_PL:
+        return 'notify-request-changes-requested-pl';
+      case EmailTemplates.REQUEST_CHANGES_REQUESTED_EN:
+        return 'notify-request-changes-requested-en';
+      case EmailTemplates.REQUEST_APPROVED_PL:
+        return 'notify-request-approved-pl';
+      case EmailTemplates.REQUEST_APPROVED_EN:
+        return 'notify-request-approved-en';
+      case EmailTemplates.REQUEST_PAID_PL:
+        return 'notify-request-paid-pl';
+      case EmailTemplates.REQUEST_PAID_EN:
+        return 'notify-request-paid-en';
+      case EmailTemplates.REQUEST_REJECTED_PL:
+        return 'notify-request-rejected-pl';
+      case EmailTemplates.REQUEST_REJECTED_EN:
+        return 'notify-request-rejected-en';
+      case EmailTemplates.REQUEST_STATUS_UPDATED_PL:
+        return 'notify-request-status-updated-pl';
+      case EmailTemplates.REQUEST_STATUS_UPDATED_EN:
+        return 'notify-request-status-updated-en';
+      default:
+        return 'notify-request-status-updated-pl';
+    }
+  }
+
+  private async sendRequestNotificationEmail(
+    request: FinancialRequest,
+    targetStatus: string,
+    comment?: string
+  ): Promise<void> {
+    if (!request.userEmail || targetStatus === 'DRAFT') return;
+
+    try {
+      if (await isEmailInBlockList(request.userEmail)) {
+        this.logger.warn('Skipping email notification, recipient is in blocklist', { email: request.userEmail });
+        return;
+      }
+
+      const userLang = ((request as any).language || (request as any).preferredLanguage || '').toLowerCase();
+      const lang: 'pl' | 'en' = userLang === 'en' || (request.country && request.country.toLowerCase() !== 'poland') ? 'en' : 'pl';
+      const templateEnum = this.getTemplateForStatus(targetStatus, lang);
+      const templateName = this.getSESTemplateName(templateEnum);
+      const totalAmount = `${Number(request.totalGrossAmount || 0).toFixed(2)} ${request.currency || 'PLN'}`;
+      const requestUrl = `${BASE_URL}/t/requests/view/${encodeURIComponent(request.requestId)}`;
+
+      const templateData = {
+        user: request.userDisplayName || request.userId,
+        requestId: request.requestId,
+        title: request.requestType || 'Financial Request',
+        detail: totalAmount,
+        url: requestUrl,
+        message: comment || '',
+        status: targetStatus
+      };
+
+      await ses.sendTemplatedEmail({
+        toAddresses: [request.userEmail],
+        template: `${templateName}-${STAGE}`,
+        templateData
+      }, SES_CONFIG);
+    } catch (err) {
+      // Non-blocking error handling: log error but don't fail the request operation
+      this.logger.error('Failed to send request update email notification', err, {
+        requestId: request.requestId,
+        targetStatus,
+        email: request.userEmail
+      });
     }
   }
 }

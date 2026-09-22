@@ -9,6 +9,7 @@ import { RoleEditorComponent } from './roleEditor.component';
 import { UserRoleMappingsComponent } from './userRoleMappings.component';
 import { GuestInviteModalComponent } from './guestInviteModal.component';
 import { GuestInstructionsModalComponent } from './guestInstructionsModal.component';
+import { EmailTemplateComponent } from './emailTemplate/emailTemplate.component';
 
 import {
   AppPermission,
@@ -18,7 +19,9 @@ import {
   DEFAULT_CONFIGURATION_PAGE_SECTIONS_ORDER,
   BuiltInRole,
   GuestInvitation,
-  FinancialRequestType
+  FinancialRequestType,
+  EmailTemplates,
+  EmailTemplateTypes
 } from '@models/configurations.model';
 import { User } from '@models/user.model';
 
@@ -28,6 +31,9 @@ import { User } from '@models/user.model';
   styleUrls: ['./configurations.page.scss']
 })
 export class ConfigurationsPage implements OnInit {
+  public EmailTemplates = EmailTemplates;
+  public EmailTemplateTypes = EmailTemplateTypes;
+
   configurations: Configurations =
     this.app?.configurations || new Configurations({ PK: Configurations.PK });
 
@@ -116,6 +122,9 @@ export class ConfigurationsPage implements OnInit {
     if (section === 'GUESTS') {
       return user.hasPermission(AppPermission.CONFIGURATIONS.GUESTS);
     }
+    if (section === 'TEMPLATES') {
+      return user.hasPermission(AppPermission.CONFIGURATIONS.TEMPLATES);
+    }
     return false;
   }
 
@@ -141,6 +150,14 @@ export class ConfigurationsPage implements OnInit {
     if (user.isAdministrator) return true;
     if (user.isAuditor) return false;
     return user.hasPermission(AppPermission.CONFIGURATIONS.GUESTS);
+  }
+
+  canModifyTemplates(): boolean {
+    const user = this.app.currentUser;
+    if (!user) return false;
+    if (user.isAdministrator) return true;
+    if (user.isAuditor) return false;
+    return user.hasPermission(AppPermission.CONFIGURATIONS.TEMPLATES);
   }
 
   canUsePreview(): boolean {
@@ -195,6 +212,14 @@ export class ConfigurationsPage implements OnInit {
     } finally {
       await loading.dismiss();
     }
+  }
+
+  async openTemplateEmailModal(templateType: EmailTemplateTypes | EmailTemplates): Promise<void> {
+    const modal = await this.modalCtrl.create({
+      component: EmailTemplateComponent,
+      componentProps: { templateType }
+    });
+    await modal.present();
   }
 
   //

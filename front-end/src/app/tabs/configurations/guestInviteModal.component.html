@@ -233,6 +233,56 @@
           </ion-card-content>
         </ion-card>
 
+        <!-- Email Guest Option Card -->
+        <ion-card class="emailGuestCard">
+          <ion-card-content>
+            <ion-item lines="none" class="emailToggleItem">
+              <ion-icon name="mail-outline" slot="start" color="primary"></ion-icon>
+              <ion-label class="ion-text-wrap">
+                <h3>{{ 'CONFIGURATIONS.EMAIL_GUEST_ON_DONE' | translate }}</h3>
+                <p>{{ 'CONFIGURATIONS.EMAIL_GUEST_ON_DONE_I' | translate:{ email: createdInvitation.guestEmail } }}</p>
+              </ion-label>
+              <ion-toggle slot="end" [(ngModel)]="emailGuestOnDone"></ion-toggle>
+            </ion-item>
+
+            <div *ngIf="emailGuestOnDone" class="emailOptionsWrapper">
+              <!-- Language Selection -->
+              <div class="langSelectRow">
+                <span class="langSelectLabel">{{ 'CONFIGURATIONS.GUEST_EMAIL_LANG' | translate }}:</span>
+                <ion-segment [(ngModel)]="guestEmailLang" (ionChange)="onGuestLangChange()" class="guestLangSegment">
+                  <ion-segment-button value="pl">
+                    <ion-label>Polski (PL)</ion-label>
+                  </ion-segment-button>
+                  <ion-segment-button value="en">
+                    <ion-label>English (EN)</ion-label>
+                  </ion-segment-button>
+                </ion-segment>
+              </div>
+
+              <!-- Customize Email Toggle -->
+              <ion-item lines="none" class="customizeToggleItem">
+                <ion-label class="ion-text-wrap">
+                  {{ 'CONFIGURATIONS.CUSTOMIZE_GUEST_EMAIL' | translate }}
+                  <p>{{ 'CONFIGURATIONS.CUSTOMIZE_GUEST_EMAIL_I' | translate }}</p>
+                </ion-label>
+                <ion-toggle slot="end" [(ngModel)]="customizeEmail"></ion-toggle>
+              </ion-item>
+
+              <!-- Custom Subject & Message Editor -->
+              <div *ngIf="customizeEmail" class="customEmailEditor">
+                <ion-item class="ion-margin-bottom">
+                  <ion-label position="stacked">{{ 'EMAIL_TEMPLATE.SUBJECT' | translate }}</ion-label>
+                  <ion-input [(ngModel)]="guestEmailSubject"></ion-input>
+                </ion-item>
+                <ion-item>
+                  <ion-label position="stacked">{{ 'EMAIL_TEMPLATE.MESSAGE' | translate }}</ion-label>
+                  <ion-textarea [rows]="6" [autoGrow]="true" [(ngModel)]="guestEmailMessage"></ion-textarea>
+                </ion-item>
+              </div>
+            </div>
+          </ion-card-content>
+        </ion-card>
+
         <div class="doneWrapper">
           <ion-button expand="block" color="success" (click)="dismiss()">
             {{ 'COMMON.DONE' | translate }}

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #1e293b; background-color: #f8fafc; margin: 0; padding: 24px; }
+      .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03); border: 1px solid #e2e8f0; }
+      .header { background: #002f6c; color: #ffffff; padding: 24px 32px; text-align: left; }
+      .header h1 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
+      .header p { margin: 4px 0 0 0; font-size: 13px; opacity: 0.85; }
+      .content { padding: 32px; }
+      .greeting { font-size: 16px; font-weight: 600; margin-bottom: 16px; }
+      .info-box { background: #f0fdf4; border-left: 4px solid #22c55e; padding: 14px 18px; margin: 20px 0; border-radius: 0 8px 8px 0; font-size: 14px; }
+      .btn { display: inline-block; background-color: #00aeef; color: #ffffff !important; font-weight: 600; text-decoration: none; padding: 12px 28px; border-radius: 8px; margin: 20px 0; text-align: center; }
+      .footer { padding: 20px 32px; background: #f8fafc; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; text-align: center; }
+      .note { font-size: 13px; color: #64748b; margin-top: 16px; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>ESN Poland &bull; Finances</h1>
+        <p>Online Financial System</p>
+      </div>
+      <div class="content">
+        <div class="greeting">Hello {{user}},</div>
+        <p>You have been invited to submit your financial request for: <b>{{title}}</b>.</p>
+        
+        {{#if message}}
+        <div class="info-box">
+          {{message}}
+        </div>
+        {{/if}}
+
+        <p>To fill in your request and upload supporting receipts/invoices, please click the secure link below:</p>
+        
+        <p style="text-align: center;">
+          <a href="{{url}}" class="btn" target="_blank">Open Request Form</a>
+        </p>
+
+        <p class="note">
+          This link is valid until: <b>{{detail}}</b>.<br />
+          If the button does not work, copy and paste the following URL into your browser:<br />
+          <a href="{{url}}" style="color: #00aeef; word-break: break-all;">{{url}}</a>
+        </p>
+      </div>
+      <div class="footer">
+        ESN Poland Federation &bull; Audit Commission & Finance Team<br />
+        This is an automated notification. Please do not reply directly to this email.
+      </div>
+    </div>
+  </body>
+</html>

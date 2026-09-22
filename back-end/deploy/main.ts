@@ -20,7 +20,8 @@ const apiResources: ResourceController[] = [
   { name: 'requests', paths: ['/requests', '/requests/{id}'] },
   { name: 'configurations', paths: ['/configurations'] },
   { name: 'users', paths: ['/users', '/users/{userId}'] },
-  { name: 'media', paths: ['/media'] }
+  { name: 'media', paths: ['/media'] },
+  { name: 'sesNotifications' }
 ];
 
 //
@@ -48,6 +49,10 @@ const tables: { [tableName: string]: DDBTable } = {
         sortKey: { name: 'createdAt', type: DDB.AttributeType.STRING }
       }
     ]
+  },
+  idea_emailsBlocklist: {
+    PK: { name: 'email', type: DDB.AttributeType.STRING },
+    expiresAtField: 'expiresAt'
   }
 };
 
