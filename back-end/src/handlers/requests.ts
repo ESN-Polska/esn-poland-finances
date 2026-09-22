@@ -1,7 +1,7 @@
 import { DynamoDB, HandledError, ResourceController, SES } from 'idea-aws';
 import { randomUUID } from 'crypto';
 import { FinancialRequest } from '../models/financial-request.model';
-import { Configurations, EmailTemplates } from '../models/configurations.model';
+import { Configurations, EmailTemplates, formatSenderName } from '../models/configurations.model';
 import { User } from '../models/user.model';
 import { isEmailInBlockList } from './sesNotifications';
 
@@ -429,6 +429,26 @@ class RequestsHandler extends ResourceController {
     }
   }
 
+  private configurations: Configurations | null = null;
+
+  private async getConfigurations(): Promise<Configurations> {
+    if (this.configurations) return this.configurations;
+    if (!DDB_TABLES.configurations) {
+      this.configurations = new Configurations({ PK: Configurations.PK });
+      return this.configurations;
+    }
+    try {
+      const data = await ddb.get({
+        TableName: DDB_TABLES.configurations,
+        Key: { PK: Configurations.PK }
+      });
+      this.configurations = new Configurations(data || { PK: Configurations.PK });
+    } catch (err) {
+      this.configurations = new Configurations({ PK: Configurations.PK });
+    }
+    return this.configurations;
+  }
+
   private async sendRequestNotificationEmail(
     request: FinancialRequest,
     targetStatus: string,
@@ -459,11 +479,17 @@ class RequestsHandler extends ResourceController {
         status: targetStatus
       };
 
+      const configurations = await this.getConfigurations();
+      const senderName = formatSenderName(configurations.getAppTitle(lang) || 'ESN Poland');
+
       await ses.sendTemplatedEmail({
         toAddresses: [request.userEmail],
         template: `${templateName}-${STAGE}`,
         templateData
-      }, SES_CONFIG);
+      }, {
+        ...SES_CONFIG,
+        sourceName: senderName
+      });
     } catch (err) {
       // Non-blocking error handling: log error but don't fail the request operation
       this.logger.error('Failed to send request update email notification', err, {
