@@ -9,7 +9,7 @@
         <div>
           <h1 class="pageTitle">
             {{ (isEditMode ? 'REQUESTS.EDIT_TITLE' : 'REQUESTS.NEW_TITLE') | translate }}
-            <span *ngIf="isEditMode" class="idBadge">{{ request.requestId }}</span>
+            <span *ngIf="isEditMode" class="idBadge" [class.isDraftPlaceholder]="isDraft">{{ requestDisplayId }}</span>
           </h1>
           <p class="pageSubtitle">{{ 'REQUESTS.FORM_SUBTITLE' | translate }}</p>
         </div>

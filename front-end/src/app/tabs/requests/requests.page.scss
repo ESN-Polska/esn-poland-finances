@@ -184,6 +184,12 @@
         font-weight: 700;
         font-family: monospace;
         color: var(--text-dark);
+
+        &.isDraftPlaceholder {
+          color: var(--text-medium);
+          opacity: 0.75;
+          font-weight: 600;
+        }
       }
 
       .requestTypeBadge {

@@ -140,6 +140,17 @@ export class RequestsService {
         throw new Error('This request is locked and cannot be modified');
       }
 
+      let targetRequestId = existing.requestId;
+      let targetYear = existing.year || new Date().getFullYear();
+      let targetSeqNumber = existing.sequenceNumber;
+
+      if (existing.status === 'DRAFT' && targetStatus === 'SUBMITTED') {
+        const nextId = await this.generateNextRequestId(targetYear);
+        targetRequestId = nextId.requestId;
+        targetSeqNumber = nextId.sequenceNumber;
+        targetYear = nextId.year;
+      }
+
       // Calculate totals
       let totals = { totalGrossAmount: 0, totalVatAmount: 0 };
       if (payload.documents && payload.documents.length > 0) {
@@ -152,10 +163,17 @@ export class RequestsService {
         ...rawList[existingIndex],
         ...payload,
         ...totals,
+        requestId: targetRequestId,
+        year: targetYear,
+        sequenceNumber: targetSeqNumber,
         userAvatarURL: rawList[existingIndex]?.userAvatarURL || user.avatarURL || '',
         status: targetStatus,
         updatedAt: now
       };
+
+      if (targetStatus === 'SUBMITTED' && !updatedData.submittedAt) {
+        updatedData.submittedAt = now;
+      }
 
       // Add status history entry if status changed
       if (existing.status !== targetStatus) {
@@ -176,7 +194,19 @@ export class RequestsService {
       return new FinancialRequest(updatedData);
     } else {
       // Creating brand new request
-      const nextId = await this.generateNextRequestId();
+      const year = new Date().getFullYear();
+      let sequenceNumber: number | undefined;
+      let requestId: string;
+
+      if (targetStatus === 'SUBMITTED') {
+        const nextId = await this.generateNextRequestId(year);
+        sequenceNumber = nextId.sequenceNumber;
+        requestId = nextId.requestId;
+      } else {
+        const rand = Math.random().toString(36).substring(2, 8);
+        requestId = `draft_${Date.now()}_${rand}`;
+      }
+
       let totals = { totalGrossAmount: 0, totalVatAmount: 0 };
       if (payload.documents && payload.documents.length > 0) {
         totals = this.calculateTotals(payload.documents);
@@ -186,9 +216,9 @@ export class RequestsService {
 
       const newRequestData: any = {
         ...payload,
-        requestId: nextId.requestId,
-        year: nextId.year,
-        sequenceNumber: nextId.sequenceNumber,
+        requestId,
+        year,
+        sequenceNumber,
         userId: user.userId,
         userDisplayName: user.getDisplayName(),
         userEmail: user.email,
@@ -201,6 +231,7 @@ export class RequestsService {
         currency: payload.currency || 'PLN',
         createdAt: now,
         updatedAt: now,
+        submittedAt: targetStatus === 'SUBMITTED' ? now : undefined,
         statusHistory: [
           {
             status: targetStatus,

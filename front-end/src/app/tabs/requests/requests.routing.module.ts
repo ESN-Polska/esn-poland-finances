@@ -15,8 +15,16 @@ const routes: Routes = [
     component: RequestFormPage
   },
   {
+    path: 'edit/:id',
+    component: RequestFormPage
+  },
+  {
     path: 'edit/:year/:id',
     component: RequestFormPage
+  },
+  {
+    path: 'view/:id',
+    component: RequestViewPage
   },
   {
     path: 'view/:year/:id',

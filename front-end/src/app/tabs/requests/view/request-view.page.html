@@ -68,7 +68,7 @@
     <div class="header-card">
       <div class="header-top">
         <div class="title-group">
-          <div class="request-id-badge">{{ request.requestId }}</div>
+          <div class="request-id-badge" [class.isDraftPlaceholder]="request.isDraft">{{ request.displayId }}</div>
           <span class="status-badge status-{{ request.status | lowercase }}">
             {{ 'REQUESTS.STATUSES.' + request.status | translate }}
           </span>
@@ -88,9 +88,13 @@
       </div>
 
       <div class="meta-row">
-        <div class="meta-item">
+        <div class="meta-item" *ngIf="request.submittedAt">
           <span class="meta-lbl">{{ 'REQUESTS.SUBMITTED_ON' | translate }}:</span>
-          <span class="meta-val">{{ (request.submittedAt || request.createdAt) | date:'dd.MM.yyyy' }}</span>
+          <span class="meta-val">{{ request.submittedAt | date:'dd.MM.yyyy' }}</span>
+        </div>
+        <div class="meta-item" *ngIf="!request.submittedAt && request.createdAt">
+          <span class="meta-lbl">{{ 'REQUESTS.CREATED_AT' | translate }}:</span>
+          <span class="meta-val">{{ request.createdAt | date:'dd.MM.yyyy' }}</span>
         </div>
         <div class="meta-item" *ngIf="request.updatedAt && request.updatedAt !== request.createdAt">
           <span class="meta-lbl">{{ 'REQUESTS.LAST_UPDATED' | translate }}:</span>

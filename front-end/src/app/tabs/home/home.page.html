@@ -51,7 +51,7 @@
       <div class="latestRequestCard" (click)="viewRequest(latestRequest.requestId)">
         <div class="cardHeader">
           <div class="requestIdent">
-            <span class="requestId">{{ latestRequest.requestId }}</span>
+            <span class="requestId" [class.isDraftPlaceholder]="latestRequest.isDraft">{{ latestRequest.displayId }}</span>
             <span class="requestTypeBadge">{{ ('REQUESTS.TYPES.' + latestRequest.requestType) | translate }}</span>
           </div>
           <span class="statusBadge" [ngClass]="'status-' + latestRequest.status.toLowerCase()">

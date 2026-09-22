@@ -45,6 +45,12 @@
         padding: 2px 8px;
         border-radius: 6px;
         font-size: 0.95rem;
+
+        &.isDraftPlaceholder {
+          background: rgba(0, 0, 0, 0.05);
+          color: var(--text-medium);
+          opacity: 0.8;
+        }
       }
     }
 

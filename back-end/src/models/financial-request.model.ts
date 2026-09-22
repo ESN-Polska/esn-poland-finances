@@ -54,9 +54,9 @@ export interface StatusHistoryEntry {
 }
 
 export class FinancialRequest extends Resource {
-  requestId: string; // e.g. "1/2026"
+  requestId: string; // e.g. "1/2026" or "draft_uuid"
   year: number;
-  sequenceNumber: number;
+  sequenceNumber?: number;
 
   userId: string;
   userDisplayName: string;
@@ -114,7 +114,7 @@ export class FinancialRequest extends Resource {
     super.load(x);
     this.requestId = this.clean(x.requestId, String);
     this.year = this.clean(x.year, Number, new Date().getFullYear());
-    this.sequenceNumber = this.clean(x.sequenceNumber, Number, 1);
+    this.sequenceNumber = this.clean(x.sequenceNumber, Number);
 
     this.userId = this.clean(x.userId, String)?.toLowerCase();
     this.userDisplayName = this.clean(x.userDisplayName, String);
@@ -155,6 +155,22 @@ export class FinancialRequest extends Resource {
     this.submittedAt = this.clean(x.submittedAt, String);
     this.createdAt = this.clean(x.createdAt, String, new Date().toISOString());
     this.updatedAt = this.clean(x.updatedAt, String, new Date().toISOString());
+  }
+
+  get isDraft(): boolean {
+    return this.status === 'DRAFT';
+  }
+
+  get isNumbered(): boolean {
+    return this.status !== 'DRAFT' && typeof this.sequenceNumber === 'number';
+  }
+
+  get displayId(): string {
+    if (this.isDraft || !this.sequenceNumber) {
+      const y = this.year || new Date(this.createdAt || Date.now()).getFullYear();
+      return `—/${y}`;
+    }
+    return this.requestId;
   }
 
   canEdit(): boolean {
