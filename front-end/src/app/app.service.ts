@@ -287,8 +287,9 @@ export class AppService {
     impersonated.isAuditor = true;
     impersonated.canManageFinances = false;
     impersonated.permissions = [
-      AppPermission.FINANCIAL_REQUESTS.VIEW_ALL,
-      AppPermission.FINANCIAL_REQUESTS.EXPORT
+      AppPermission.REQUESTS.VIEW_ALL,
+      AppPermission.REQUESTS.EXPORT,
+      AppPermission.HOME.STATISTICS
     ];
     impersonated.customRoleIds = [];
     this.userSubject.next(impersonated);

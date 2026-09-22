@@ -77,7 +77,7 @@
     <div class="profileCard">
       <div class="cardHeader">
         <div>
-          <h2 class="cardTitle">{{ 'COMMON.APPEARANCE' | translate }}</h2>
+          <h2 class="cardTitle">{{ 'PROFILE.APPEARANCE' | translate }}</h2>
         </div>
       </div>
 
@@ -120,7 +120,7 @@
             (ionChange)="app.setAccentColor($event.detail.value)"
           >
             <div slot="label" class="accentSelectLabel">
-              <span>{{ 'COMMON.ACCENT_COLOR' | translate }}</span>
+              <span>{{ 'PROFILE.ACCENT_COLOR' | translate }}</span>
               <ion-icon
                 id="accentHintTrigger"
                 name="information-circle-outline"
@@ -131,7 +131,7 @@
                 (click)="$event.stopPropagation(); $event.preventDefault(); accentHintPopover.present($event)"
               ></ion-icon>
             </div>
-            <ion-select-option value="default">{{ 'COMMON.ACCENT_DEFAULT' | translate }}</ion-select-option>
+            <ion-select-option value="default">{{ 'PROFILE.ACCENT_DEFAULT' | translate }}</ion-select-option>
             <ion-select-option value="cyan">ESN Cyan</ion-select-option>
             <ion-select-option value="pink">ESN Magenta</ion-select-option>
             <ion-select-option value="green">ESN Green</ion-select-option>
@@ -147,7 +147,7 @@
             <ng-template>
               <ion-content class="ion-padding">
                 <p style="margin: 0; font-size: 0.88em; line-height: 1.4;">
-                  {{ 'COMMON.ACCENT_DEFAULT_HINT' | translate }}
+                  {{ 'PROFILE.ACCENT_DEFAULT_HINT' | translate }}
                 </p>
               </ion-content>
             </ng-template>
