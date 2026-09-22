@@ -73,7 +73,8 @@ export class RequestsPage implements OnInit {
 
       const matchesSearch =
         !q ||
-        req.requestId?.toLowerCase().includes(q) ||
+        req.displayId?.toLowerCase().includes(q) ||
+        (req.status !== 'DRAFT' && req.requestId?.toLowerCase().includes(q)) ||
         req.position?.toLowerCase().includes(q) ||
         req.sourceOfFunding?.toLowerCase().includes(q) ||
         req.documents?.some(

@@ -1,4 +1,5 @@
 import { DynamoDB, HandledError, ResourceController } from 'idea-aws';
+import { randomUUID } from 'crypto';
 import { FinancialRequest } from '../models/financial-request.model';
 import { User } from '../models/user.model';
 
@@ -83,10 +84,18 @@ class RequestsHandler extends ResourceController {
   protected async postResource(): Promise<any> {
     const user = this.getAuthenticatedUser();
     const body = this.body || {};
-
+    const status = body.status || 'DRAFT';
     const year = new Date().getFullYear();
-    const sequenceNumber = await this.getNextSequenceNumber(year);
-    const requestId = `${sequenceNumber}/${year}`;
+
+    let sequenceNumber: number | undefined;
+    let requestId: string;
+
+    if (status === 'SUBMITTED') {
+      sequenceNumber = await this.getNextSequenceNumber(year);
+      requestId = `${sequenceNumber}/${year}`;
+    } else {
+      requestId = `draft_${randomUUID().replace(/-/g, '')}`;
+    }
 
     const request = new FinancialRequest({
       ...body,
@@ -100,13 +109,13 @@ class RequestsHandler extends ResourceController {
       section: user.section || user.sectionCode || (user.country ? 'ESN ' + user.country : ''),
       country: user.country || '',
       extendedRoles: user.extendedRoles || [],
-      status: body.status || 'DRAFT',
+      status,
       statusHistory: [
         {
-          status: body.status || 'DRAFT',
+          status,
           timestamp: new Date().toISOString(),
           updatedBy: user.getDisplayName() || user.userId,
-          comment: body.status === 'SUBMITTED' ? 'Initial submission' : 'Draft created'
+          comment: status === 'SUBMITTED' ? 'Initial submission' : 'Draft created'
         }
       ],
       createdAt: new Date().toISOString(),
@@ -155,19 +164,37 @@ class RequestsHandler extends ResourceController {
     const updates = this.body || {};
     const updatedStatus = updates.status || existing.status;
 
+    let targetRequestId = existing.requestId;
+    let targetYear = existing.year;
+    let targetSeqNumber = existing.sequenceNumber;
+    let isTransitioningFromDraftToSubmitted = false;
+
+    if (existing.status === 'DRAFT' && updatedStatus === 'SUBMITTED') {
+      isTransitioningFromDraftToSubmitted = true;
+      targetYear = new Date().getFullYear();
+      targetSeqNumber = await this.getNextSequenceNumber(targetYear);
+      targetRequestId = `${targetSeqNumber}/${targetYear}`;
+    }
+
     const newHistoryEntry = {
       status: updatedStatus,
       timestamp: new Date().toISOString(),
       updatedBy: user.getDisplayName() || user.userId,
-      comment: updates.historyNote || (updatedStatus === 'SUBMITTED' ? 'Resubmitted after corrections' : 'Updated')
+      comment:
+        updates.historyNote ||
+        (updatedStatus === 'SUBMITTED'
+          ? isTransitioningFromDraftToSubmitted
+            ? 'Initial submission'
+            : 'Resubmitted after corrections'
+          : 'Updated')
     };
 
     const updated = new FinancialRequest({
       ...existing,
       ...updates,
-      requestId: existing.requestId, // ID cannot change
-      year: existing.year,
-      sequenceNumber: existing.sequenceNumber,
+      requestId: targetRequestId,
+      year: targetYear,
+      sequenceNumber: targetSeqNumber,
       userId: existing.userId,
       status: updatedStatus,
       statusHistory: [...(existing.statusHistory || []), newHistoryEntry],
@@ -182,6 +209,16 @@ class RequestsHandler extends ResourceController {
       TableName: DDB_TABLES.requests,
       Item: JSON.parse(JSON.stringify(updated))
     });
+
+    // If migrating from draft to submitted, delete old unnumbered draft item
+    if (isTransitioningFromDraftToSubmitted) {
+      await ddb.delete({
+        TableName: DDB_TABLES.requests,
+        Key: { requestId: existing.requestId }
+      }).catch(err => {
+        this.logger.error('Failed to cleanup old draft item after submission', err);
+      });
+    }
 
     return updated;
   }

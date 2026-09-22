@@ -142,6 +142,18 @@ export class RequestFormPage implements OnInit {
     this.addDocumentItem();
   }
 
+  public get requestDisplayId(): string {
+    if (this.request.status === 'DRAFT' || !this.request.sequenceNumber) {
+      const y = this.request.year || new Date(this.request.createdAt || Date.now()).getFullYear();
+      return `—/${y}`;
+    }
+    return this.request.requestId || '';
+  }
+
+  public get isDraft(): boolean {
+    return this.request.status === 'DRAFT';
+  }
+
   public selectType(type: FinancialRequestType): void {
     this.request.requestType = type;
     if (
