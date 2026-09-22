@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { ToastController } from '@ionic/angular';
+import { ModalController, ToastController } from '@ionic/angular';
 import { TranslateService } from '@ngx-translate/core';
 import { User } from '@models/user.model';
 import { AppService } from '../../app.service';
@@ -27,8 +27,15 @@ export class ProfilePage implements OnInit {
   constructor(
     public app: AppService,
     private toastCtrl: ToastController,
+    private modalCtrl: ModalController,
     private translate: TranslateService
   ) {}
+
+  public async openCredits(): Promise<void> {
+    const { CreditsPage } = await import('../credits/credits.page');
+    const modal = await this.modalCtrl.create({ component: CreditsPage, cssClass: 'creditsModal' });
+    await modal.present();
+  }
 
   public openAccountsProfile(userId?: string): void {
     if (this.app.currentUser?.isGuest || userId?.startsWith('guest_')) return;

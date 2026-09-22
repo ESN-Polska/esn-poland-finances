@@ -17,9 +17,11 @@ import { parameters, stages, Stage, DOMAIN, PROD_CUSTOM_DOMAIN } from './environ
 const apiResources: ResourceController[] = [
   { name: 'auth', isAuthFunction: true },
   { name: 'login', paths: ['/login'] },
-  { name: 'requests', paths: ['/requests', '/requests/{id}'] },
+  { name: 'requests', paths: ['/requests', '/requests/{id}', '/requests/{year}/{id}'] },
   { name: 'configurations', paths: ['/configurations'] },
   { name: 'users', paths: ['/users', '/users/{userId}'] },
+  { name: 'contributors', paths: ['/contributors'] },
+  { name: 'refreshContributors' },
   { name: 'media', paths: ['/media'] },
   { name: 'sesNotifications' }
 ];
@@ -30,6 +32,9 @@ const apiResources: ResourceController[] = [
 
 const tables: { [tableName: string]: DDBTable } = {
   configurations: {
+    PK: { name: 'PK', type: DDB.AttributeType.STRING }
+  },
+  contributors: {
     PK: { name: 'PK', type: DDB.AttributeType.STRING }
   },
   users: {

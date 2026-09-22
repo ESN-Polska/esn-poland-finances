@@ -286,5 +286,15 @@ ion-popover.accentHintPopover {
   --max-width: 90vw;
 }
 
-
-
+/*
+ * Credits Modal (matching esn-poland-assembly)
+ * -------------------------------------------
+ */
+ion-modal.creditsModal {
+  @media only screen and (min-width: 768px) {
+    --width: 700px;
+    --height: 85vh;
+    --max-height: 880px;
+    --border-radius: 12px;
+  }
+}
