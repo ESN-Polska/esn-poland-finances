@@ -1,0 +1,134 @@
+<ion-header>
+  <ion-toolbar color="ideaToolbar">
+    <ion-buttons slot="start">
+      <ion-button [title]="'COMMON.CLOSE' | translate" (click)="close()">
+        <ion-icon name="close-circle-outline" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>{{ ('CONFIGURATIONS.EMAIL_TEMPLATES_TYPES.' + resolvedTemplateType) | translate }}</ion-title>
+    <ion-buttons slot="end">
+      <ion-button [title]="'COMMON.SAVE' | translate" (click)="save()" color="primary">
+        <ion-icon name="checkmark-circle-outline" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+
+  <ion-toolbar class="optionsToolbar">
+    <div class="toolbarSegments">
+      <!-- Language Selector Segment -->
+      <ion-segment [value]="currentLang" (ionChange)="onLangSegmentChange($event)" class="langSegment">
+        <ion-segment-button value="en">
+          <ion-label>EN</ion-label>
+        </ion-segment-button>
+        <ion-segment-button value="pl">
+          <ion-label>PL</ion-label>
+        </ion-segment-button>
+      </ion-segment>
+
+      <!-- View Mode Segment -->
+      <ion-segment [(ngModel)]="viewMode" class="modeSegment">
+        <ion-segment-button value="code">
+          <ion-label>
+            <ion-icon name="code-slash-outline"></ion-icon>
+            {{ 'EMAIL_TEMPLATE.MODE_CODE' | translate }}
+          </ion-label>
+        </ion-segment-button>
+        <ion-segment-button value="preview">
+          <ion-label>
+            <ion-icon name="eye-outline"></ion-icon>
+            {{ 'EMAIL_TEMPLATE.MODE_PREVIEW' | translate }}
+          </ion-label>
+        </ion-segment-button>
+      </ion-segment>
+    </div>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="templateModalContent">
+  <div class="maxWidthContainer ion-padding">
+    <!-- CODE EDITING VIEW -->
+    <div *ngIf="viewMode === 'code'">
+      <ion-list class="aList">
+        <ion-list-header>
+          <ion-label>
+            <h2>{{ 'EMAIL_TEMPLATE.VARIABLES_ALLOWED' | translate }}</h2>
+            <p>{{ 'EMAIL_TEMPLATE.VARIABLES_DESC' | translate }}</p>
+          </ion-label>
+        </ion-list-header>
+
+        <div class="variablesList">
+          <div class="variableChip" *ngFor="let v of variables">
+            <code>{{ '{{' + v.code + '}}' }}</code>
+            <span class="varDesc">{{ v.description }}</span>
+          </div>
+        </div>
+
+        <ion-item [class.fieldHasError]="hasFieldAnError('subject')" class="ion-margin-top">
+          <ion-label position="stacked">{{ 'EMAIL_TEMPLATE.SUBJECT' | translate }} ({{ currentLang.toUpperCase() }}) *</ion-label>
+          <ion-input [(ngModel)]="subject" (ngModelChange)="onSubjectChange()" [placeholder]="'EMAIL_TEMPLATE.SUBJECT_PLACEHOLDER' | translate"></ion-input>
+        </ion-item>
+
+        <ion-item [class.fieldHasError]="hasFieldAnError('content')" class="ion-margin-top contentItem">
+          <ion-label position="stacked">{{ 'EMAIL_TEMPLATE.CONTENT' | translate }} (HTML &bull; {{ currentLang.toUpperCase() }}) *</ion-label>
+          <ion-textarea
+            [(ngModel)]="content"
+            (ngModelChange)="onContentChange()"
+            [rows]="14"
+            [autoGrow]="false"
+            class="codeEditor"
+            placeholder="<html><body>...</body></html>"
+          ></ion-textarea>
+        </ion-item>
+      </ion-list>
+
+      <ion-row class="ion-margin-top actionButtonsRow">
+        <ion-col size="12" size-sm="6">
+          <ion-button size="small" expand="block" color="danger" fill="outline" (click)="askAndResetTemplate()">
+            <ion-icon name="trash-outline" slot="start"></ion-icon>
+            {{ 'EMAIL_TEMPLATE.RESET' | translate }}
+          </ion-button>
+        </ion-col>
+        <ion-col size="12" size-sm="6">
+          <input
+            id="sesHtmlFileInput"
+            type="file"
+            accept=".html,.hbs"
+            style="display: none"
+            (change)="loadTemplateFromFile($event.target)"
+          />
+          <ion-button size="small" expand="block" fill="outline" color="medium" (click)="browseHTMLFile()">
+            <ion-icon name="folder-open-outline" slot="start"></ion-icon>
+            {{ 'EMAIL_TEMPLATE.CONTENT_FROM_FILE' | translate }}
+          </ion-button>
+        </ion-col>
+        <ion-col size="12" size-sm="6">
+          <ion-button size="small" expand="block" fill="outline" color="medium" (click)="downloadTemplate()">
+            <ion-icon name="cloud-download-outline" slot="start"></ion-icon>
+            {{ 'EMAIL_TEMPLATE.DOWNLOAD_TEMPLATE' | translate }}
+          </ion-button>
+        </ion-col>
+        <ion-col size="12" size-sm="6">
+          <ion-button size="small" expand="block" color="primary" (click)="askAndSendTestEmailWithCurrentTemplate()">
+            <ion-icon name="paper-plane-outline" slot="start"></ion-icon>
+            {{ 'EMAIL_TEMPLATE.TEST_TEMPLATE' | translate }}
+          </ion-button>
+        </ion-col>
+      </ion-row>
+    </div>
+
+    <!-- LIVE HTML PREVIEW VIEW -->
+    <div *ngIf="viewMode === 'preview'" class="previewWrapper">
+      <div class="previewSubjectBanner">
+        <span class="previewSubjectLabel">{{ 'EMAIL_TEMPLATE.SUBJECT' | translate }}:</span>
+        <span class="previewSubjectText">{{ subject || ('EMAIL_TEMPLATE.NO_SUBJECT' | translate) }}</span>
+      </div>
+
+      <div class="previewNotice">
+        <ion-icon name="information-circle-outline"></ion-icon>
+        {{ 'EMAIL_TEMPLATE.PREVIEW_NOTICE' | translate }}
+      </div>
+
+      <div class="emailPreviewFrame" [innerHTML]="previewHtml"></div>
+    </div>
+  </div>
+</ion-content>

@@ -7,10 +7,42 @@ export const DEFAULT_TIMEZONE = 'Europe/Warsaw';
 export const DEFAULT_CONFIGURATION_PAGE_SECTIONS_ORDER = [
   'GUESTS',
   'USERS',
+  'TEMPLATES',
   'OPTIONS'
 ] as const;
 
 export type ConfigurationPageSection = (typeof DEFAULT_CONFIGURATION_PAGE_SECTIONS_ORDER)[number];
+
+export enum EmailTemplateTypes {
+  GUEST_INVITATION = 'GUEST_INVITATION',
+  REQUEST_SUBMITTED = 'REQUEST_SUBMITTED',
+  REQUEST_CHANGES_REQUESTED = 'REQUEST_CHANGES_REQUESTED',
+  REQUEST_APPROVED = 'REQUEST_APPROVED',
+  REQUEST_PAID = 'REQUEST_PAID',
+  REQUEST_REJECTED = 'REQUEST_REJECTED',
+  REQUEST_STATUS_UPDATED = 'REQUEST_STATUS_UPDATED'
+}
+
+export enum EmailTemplates {
+  GUEST_INVITATION_PL = 'GUEST_INVITATION_PL',
+  GUEST_INVITATION_EN = 'GUEST_INVITATION_EN',
+  REQUEST_SUBMITTED_PL = 'REQUEST_SUBMITTED_PL',
+  REQUEST_SUBMITTED_EN = 'REQUEST_SUBMITTED_EN',
+  REQUEST_CHANGES_REQUESTED_PL = 'REQUEST_CHANGES_REQUESTED_PL',
+  REQUEST_CHANGES_REQUESTED_EN = 'REQUEST_CHANGES_REQUESTED_EN',
+  REQUEST_APPROVED_PL = 'REQUEST_APPROVED_PL',
+  REQUEST_APPROVED_EN = 'REQUEST_APPROVED_EN',
+  REQUEST_PAID_PL = 'REQUEST_PAID_PL',
+  REQUEST_PAID_EN = 'REQUEST_PAID_EN',
+  REQUEST_REJECTED_PL = 'REQUEST_REJECTED_PL',
+  REQUEST_REJECTED_EN = 'REQUEST_REJECTED_EN',
+  REQUEST_STATUS_UPDATED_PL = 'REQUEST_STATUS_UPDATED_PL',
+  REQUEST_STATUS_UPDATED_EN = 'REQUEST_STATUS_UPDATED_EN'
+}
+
+export const getEmailTemplateKey = (type: EmailTemplateTypes, lang: 'pl' | 'en'): EmailTemplates => {
+  return `${type}_${lang.toUpperCase()}` as EmailTemplates;
+};
 
 export const AppPermission = {
   HOME: {
@@ -34,6 +66,7 @@ export const AppPermission = {
     PARENT: 'configurations',
     GUESTS: 'configurations.guests',
     USERS: 'configurations.users',
+    TEMPLATES: 'configurations.templates',
     OPTIONS: 'configurations.options'
   }
 } as const;

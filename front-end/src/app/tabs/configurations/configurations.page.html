@@ -464,6 +464,82 @@
       </ion-list-header>
     </ion-list>
 
+    <!-- SUBTAB: SES TEMPLATES -->
+    <ion-list class="aList" *ngIf="pageSection === 'TEMPLATES'">
+      <ion-list-header>
+        <ion-label>
+          <h2>{{ 'CONFIGURATIONS.EMAIL_TEMPLATES' | translate }}</h2>
+          <p>{{ 'CONFIGURATIONS.EMAIL_TEMPLATES_I' | translate }}</p>
+        </ion-label>
+      </ion-list-header>
+
+      <!-- Guest Invitations Category Header -->
+      <ion-item-divider class="categoryDivider">
+        <ion-label>{{ 'CONFIGURATIONS.EMAIL_CATEGORIES.GUESTS' | translate }}</ion-label>
+      </ion-item-divider>
+
+      <ion-item button detail (click)="openTemplateEmailModal(EmailTemplateTypes.GUEST_INVITATION)">
+        <ion-icon name="mail-outline" slot="start" color="primary"></ion-icon>
+        <ion-label class="ion-text-wrap">
+          <h3>{{ 'CONFIGURATIONS.EMAIL_TEMPLATES_TYPES.GUEST_INVITATION' | translate }}</h3>
+          <p>{{ 'CONFIGURATIONS.EMAIL_TEMPLATES_TYPES.GUEST_INVITATION_I' | translate }}</p>
+        </ion-label>
+      </ion-item>
+
+      <!-- Requests Category Header -->
+      <ion-item-divider class="categoryDivider">
+        <ion-label>{{ 'CONFIGURATIONS.EMAIL_CATEGORIES.REQUESTS' | translate }}</ion-label>
+      </ion-item-divider>
+
+      <ion-item button detail (click)="openTemplateEmailModal(EmailTemplateTypes.REQUEST_SUBMITTED)">
+        <ion-icon name="send-outline" slot="start" color="primary"></ion-icon>
+        <ion-label class="ion-text-wrap">
+          <h3>{{ 'CONFIGURATIONS.EMAIL_TEMPLATES_TYPES.REQUEST_SUBMITTED' | translate }}</h3>
+          <p>{{ 'CONFIGURATIONS.EMAIL_TEMPLATES_TYPES.REQUEST_SUBMITTED_I' | translate }}</p>
+        </ion-label>
+      </ion-item>
+
+      <ion-item button detail (click)="openTemplateEmailModal(EmailTemplateTypes.REQUEST_CHANGES_REQUESTED)">
+        <ion-icon name="alert-circle-outline" slot="start" color="warning"></ion-icon>
+        <ion-label class="ion-text-wrap">
+          <h3>{{ 'CONFIGURATIONS.EMAIL_TEMPLATES_TYPES.REQUEST_CHANGES_REQUESTED' | translate }}</h3>
+          <p>{{ 'CONFIGURATIONS.EMAIL_TEMPLATES_TYPES.REQUEST_CHANGES_REQUESTED_I' | translate }}</p>
+        </ion-label>
+      </ion-item>
+
+      <ion-item button detail (click)="openTemplateEmailModal(EmailTemplateTypes.REQUEST_APPROVED)">
+        <ion-icon name="checkmark-circle-outline" slot="start" color="success"></ion-icon>
+        <ion-label class="ion-text-wrap">
+          <h3>{{ 'CONFIGURATIONS.EMAIL_TEMPLATES_TYPES.REQUEST_APPROVED' | translate }}</h3>
+          <p>{{ 'CONFIGURATIONS.EMAIL_TEMPLATES_TYPES.REQUEST_APPROVED_I' | translate }}</p>
+        </ion-label>
+      </ion-item>
+
+      <ion-item button detail (click)="openTemplateEmailModal(EmailTemplateTypes.REQUEST_PAID)">
+        <ion-icon name="cash-outline" slot="start" color="success"></ion-icon>
+        <ion-label class="ion-text-wrap">
+          <h3>{{ 'CONFIGURATIONS.EMAIL_TEMPLATES_TYPES.REQUEST_PAID' | translate }}</h3>
+          <p>{{ 'CONFIGURATIONS.EMAIL_TEMPLATES_TYPES.REQUEST_PAID_I' | translate }}</p>
+        </ion-label>
+      </ion-item>
+
+      <ion-item button detail (click)="openTemplateEmailModal(EmailTemplateTypes.REQUEST_REJECTED)">
+        <ion-icon name="close-circle-outline" slot="start" color="danger"></ion-icon>
+        <ion-label class="ion-text-wrap">
+          <h3>{{ 'CONFIGURATIONS.EMAIL_TEMPLATES_TYPES.REQUEST_REJECTED' | translate }}</h3>
+          <p>{{ 'CONFIGURATIONS.EMAIL_TEMPLATES_TYPES.REQUEST_REJECTED_I' | translate }}</p>
+        </ion-label>
+      </ion-item>
+
+      <ion-item button detail (click)="openTemplateEmailModal(EmailTemplateTypes.REQUEST_STATUS_UPDATED)">
+        <ion-icon name="refresh-circle-outline" slot="start" color="medium"></ion-icon>
+        <ion-label class="ion-text-wrap">
+          <h3>{{ 'CONFIGURATIONS.EMAIL_TEMPLATES_TYPES.REQUEST_STATUS_UPDATED' | translate }}</h3>
+          <p>{{ 'CONFIGURATIONS.EMAIL_TEMPLATES_TYPES.REQUEST_STATUS_UPDATED_I' | translate }}</p>
+        </ion-label>
+      </ion-item>
+    </ion-list>
+
     <!-- SUBTAB: OPTIONS -->
     <ion-list class="aList" *ngIf="pageSection === 'OPTIONS'">
       <ion-list-header>

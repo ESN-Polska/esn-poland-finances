@@ -1,0 +1,265 @@
+.templateModalContent {
+  --background: var(--ion-background-color, #f8fafc);
+}
+
+.optionsToolbar {
+  --background: var(--ion-color-step-50, #f1f5f9);
+  padding: 4px 12px;
+
+  .toolbarSegments {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    max-width: 700px;
+    margin: 0 auto;
+
+    .langSegment {
+      width: 110px;
+      min-width: 100px;
+      max-width: 120px;
+      flex: 0 0 auto;
+
+      ion-segment-button {
+        --indicator-color: var(--ion-color-primary, #00aeef);
+        min-height: 30px;
+        min-width: 44px;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+      }
+    }
+
+    .modeSegment {
+      max-width: 280px;
+      flex: 0 1 280px;
+
+      ion-segment-button {
+        --indicator-color: var(--ion-color-primary, #00aeef);
+        min-height: 32px;
+
+        ion-label {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          font-size: 13px;
+          font-weight: 600;
+        }
+      }
+    }
+  }
+}
+
+.variablesList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 16px 16px 16px;
+
+  .variableChip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--ion-color-step-100, #f1f5f9);
+    border: 1px solid var(--ion-color-step-200, #e2e8f0);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+
+    code {
+      font-family: monospace;
+      font-weight: 700;
+      color: var(--ion-color-primary, #00aeef);
+      background: transparent;
+      padding: 0;
+    }
+
+    .varDesc {
+      color: var(--ion-color-step-600, #64748b);
+    }
+  }
+}
+
+.contentItem {
+  .codeEditor {
+    font-family: 'Fira Code', 'Courier New', Courier, monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    background: var(--ion-color-step-50, #ffffff);
+    padding: 8px;
+    border-radius: 6px;
+    min-height: 280px;
+  }
+}
+
+.fieldHasError {
+  --highlight-color-focused: var(--ion-color-danger, #ef4444);
+  border-bottom: 2px solid var(--ion-color-danger, #ef4444);
+}
+
+.actionButtonsRow {
+  margin-top: 20px;
+}
+
+.previewWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  .previewSubjectBanner {
+    background: var(--ion-color-step-100, #f1f5f9);
+    border: 1px solid var(--ion-color-step-200, #e2e8f0);
+    padding: 12px 16px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+
+    .previewSubjectLabel {
+      font-weight: 600;
+      color: var(--ion-color-step-600, #64748b);
+    }
+
+    .previewSubjectText {
+      font-weight: 700;
+      color: var(--ion-color-step-900, #0f172a);
+    }
+  }
+
+  .previewNotice {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--ion-color-step-500, #64748b);
+    font-style: italic;
+  }
+
+  .emailPreviewFrame {
+    background: #f8fafc;
+    color: #1e293b !important;
+    --color: #1e293b;
+    --ion-text-color: #1e293b;
+    --ion-text-color-rgb: 30, 41, 59;
+    --text-dark: #1e293b;
+    border: 1px solid var(--ion-color-step-250, #cbd5e1);
+    border-radius: 12px;
+    padding: 24px 16px;
+    min-height: 420px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    overflow-x: auto;
+
+    ::ng-deep {
+      color: #1e293b;
+
+      .container {
+        background: #ffffff;
+        color: #1e293b;
+      }
+
+      p, div, span, td, th, b, strong, em, i, li, ul, ol, h1, h2, h3, h4, h5, h6, label {
+        --color: #1e293b;
+        --ion-text-color: #1e293b;
+        color: inherit;
+      }
+
+      .header {
+        color: #ffffff;
+        * {
+          color: inherit;
+        }
+      }
+
+      .btn {
+        color: #ffffff !important;
+      }
+
+      .footer {
+        color: #64748b;
+        * {
+          color: inherit;
+        }
+      }
+
+      .note {
+        color: #64748b;
+        * {
+          color: inherit;
+        }
+      }
+
+      .success-box {
+        color: #166534;
+        * {
+          color: inherit;
+        }
+      }
+
+      .info-box {
+        color: #1e293b;
+        * {
+          color: inherit;
+        }
+      }
+
+      .details-table td.label {
+        color: #64748b;
+      }
+
+      .details-table td.value {
+        color: #1e293b;
+      }
+
+      a {
+        color: #00aeef;
+      }
+    }
+  }
+}
+
+body.dark {
+  .emailPreviewFrame {
+    background: #f8fafc;
+    color: #1e293b !important;
+    --color: #1e293b;
+    --ion-text-color: #1e293b;
+    --text-dark: #1e293b;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+
+    ::ng-deep {
+      color: #1e293b;
+
+      .container {
+        background: #ffffff;
+        color: #1e293b;
+      }
+
+      p, div, span, td, th, b, strong, em, i, li, ul, ol, h1, h2, h3, h4, h5, h6, label {
+        --color: #1e293b;
+        --ion-text-color: #1e293b;
+        color: inherit;
+      }
+    }
+  }
+
+  .previewSubjectBanner {
+    background: #1e1e1e;
+    border-color: rgba(255, 255, 255, 0.08);
+
+    .previewSubjectLabel {
+      color: #94a3b8;
+    }
+
+    .previewSubjectText {
+      color: #f8fafc;
+    }
+  }
+
+  .previewNotice {
+    color: #94a3b8;
+  }
+}

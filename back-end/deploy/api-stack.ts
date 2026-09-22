@@ -9,6 +9,10 @@ import * as ApiGwAlpha from '@aws-cdk/aws-apigatewayv2-alpha';
 import * as ApiGwAlphaIntegrations from '@aws-cdk/aws-apigatewayv2-integrations-alpha';
 import * as ApiGwAlphaAuthorizers from '@aws-cdk/aws-apigatewayv2-authorizers-alpha';
 import * as DDB from 'aws-cdk-lib/aws-dynamodb';
+import * as S3 from 'aws-cdk-lib/aws-s3';
+import * as S3Deployment from 'aws-cdk-lib/aws-s3-deployment';
+import { Subscription, SubscriptionProtocol, Topic } from 'aws-cdk-lib/aws-sns';
+import { SnsEventSource } from 'aws-cdk-lib/aws-lambda-event-sources';
 
 export interface ApiProps extends cdk.StackProps {
   project: string;
@@ -60,6 +64,9 @@ export class ApiStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: ApiProps) {
     super(scope, id, props);
 
+    const region = cdk.Stack.of(this).region;
+    const domainName = props.apiDomain.split('.').slice(-2).join('.');
+
     // 1. Create DynamoDB Tables
     for (const [tableName, tableDef] of Object.entries(props.tables)) {
       const fullTableName = `${props.project}-${props.stage}-${tableName}`;
@@ -90,9 +97,12 @@ export class ApiStack extends cdk.Stack {
       APP_DOMAIN: props.appDomain,
       SES_IDENTITY_ARN: props.ses.identityArn,
       SES_NOTIFICATION_TOPIC_ARN: props.ses.notificationTopicArn,
+      SES_SOURCE_ADDRESS: `no-reply@${domainName}`,
+      SES_REGION: region,
       LOG_LEVEL: props.lambdaLogLevel,
       S3_BUCKET_MEDIA: `${props.project}-media`,
-      S3_IMAGES_FOLDER: `images/${props.stage}`
+      S3_IMAGES_FOLDER: `images/${props.stage}`,
+      S3_ASSETS_FOLDER: `assets/${props.stage}`
     };
     for (const [tableName, table] of Object.entries(this.ddbTables)) {
       lambdaEnv[`DDB_TABLE_${tableName}`] = table.tableName;
@@ -210,12 +220,22 @@ export class ApiStack extends cdk.Stack {
       }
     }
 
-    // 6. Common IAM Policies (Systems Manager / SSM parameter access for JWT secrets)
+    // 6. Common IAM Policies (Systems Manager & SES access)
     const accessSystemsManagerPolicy = new IAM.Policy(this, 'AccessSystemsManager', {
       statements: [
         new IAM.PolicyStatement({
           effect: IAM.Effect.ALLOW,
           actions: ['ssm:GetParameter', 'ssm:GetParameters'],
+          resources: ['*']
+        })
+      ]
+    });
+
+    const accessSESPolicy = new IAM.Policy(this, 'ManageSES', {
+      statements: [
+        new IAM.PolicyStatement({
+          effect: IAM.Effect.ALLOW,
+          actions: ['ses:*'],
           resources: ['*']
         })
       ]
@@ -230,12 +250,34 @@ export class ApiStack extends cdk.Stack {
       }
     }
 
-    // Attach SSM policy to all functions
+    // Attach SSM & SES policy to all functions
     for (const fn of Object.values(this.functions)) {
-      if (fn.role) fn.role.attachInlinePolicy(accessSystemsManagerPolicy);
+      if (fn.role) {
+        fn.role.attachInlinePolicy(accessSystemsManagerPolicy);
+        fn.role.attachInlinePolicy(accessSESPolicy);
+      }
     }
 
-    // 7. Custom Domain API Mapping
+    // 7. Deploy default email templates to S3 media bucket
+    const mediaBucket = S3.Bucket.fromBucketName(this, 'MediaBucketAssetsRef', `${props.project}-media`);
+    new S3Deployment.BucketDeployment(this, 'SESAssetsDeployment', {
+      sources: [S3Deployment.Source.asset('assets')],
+      destinationBucket: mediaBucket,
+      destinationKeyPrefix: `assets/${props.stage}`
+    });
+
+    // 8. Hook SES bounce topic to sesNotifications handler
+    if (this.functions['sesNotifications']) {
+      const topic = Topic.fromTopicArn(this, 'SESTopicToHandleSESBounces', props.ses.notificationTopicArn);
+      new Subscription(this, 'SESSubscriptionToHandleSESBounces', {
+        topic,
+        protocol: SubscriptionProtocol.LAMBDA,
+        endpoint: this.functions['sesNotifications'].functionArn
+      });
+      this.functions['sesNotifications'].addEventSource(new SnsEventSource(topic));
+    }
+
+    // 9. Custom Domain API Mapping
     new ApiGw.CfnApiMapping(this, 'HttpApiMapping', {
       domainName: props.apiDomain,
       apiId: this.httpApi.httpApiId,

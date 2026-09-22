@@ -1,14 +1,31 @@
-import { DynamoDB, HandledError, ResourceController, S3 } from 'idea-aws';
-import { AppPermission, Configurations, DEFAULT_CONFIGURATION_PAGE_SECTIONS_ORDER } from '../models/configurations.model';
+import { DynamoDB, HandledError, ResourceController, S3, SES } from 'idea-aws';
+import {
+  AppPermission,
+  Configurations,
+  DEFAULT_CONFIGURATION_PAGE_SECTIONS_ORDER,
+  EmailTemplates
+} from '../models/configurations.model';
 import { User } from '../models/user.model';
+import { isEmailInBlockList } from './sesNotifications';
 
 const PROJECT = process.env.PROJECT || 'esn-poland-finances';
+const STAGE = process.env.STAGE || 'dev';
+const APP_DOMAIN = process.env.APP_DOMAIN || 'finances.esn-poland.link';
+const BASE_URL = `https://${APP_DOMAIN}`;
 const S3_BUCKET_MEDIA = process.env.S3_BUCKET_MEDIA || `${PROJECT}-media`;
+const S3_ASSETS_FOLDER = process.env.S3_ASSETS_FOLDER || `assets/${STAGE}`;
+const SES_CONFIG = {
+  source: process.env.SES_SOURCE_ADDRESS || 'no-reply@esn-poland.link',
+  sourceArn: process.env.SES_IDENTITY_ARN,
+  region: process.env.SES_REGION
+};
 const DDB_TABLES = {
   configurations: process.env.DDB_TABLE_configurations
 };
+
 const ddb = new DynamoDB();
 const s3 = new S3();
+const ses = new SES();
 
 export const handler = (ev: any, _: any, cb: any): Promise<void> => new ConfigurationsRC(ev, cb).handleRequest();
 
@@ -18,7 +35,7 @@ class ConfigurationsRC extends ResourceController {
 
   constructor(event: any, callback: any) {
     super(event, callback);
-    // GET /configurations is public; PUT is protected by authorizer
+    // GET /configurations is public; PUT/PATCH are protected by authorizer
     this.user = event.requestContext?.authorizer?.lambda?.user
       ? new User(event.requestContext.authorizer.lambda.user)
       : null;
@@ -120,6 +137,241 @@ class ConfigurationsRC extends ResourceController {
     return this.configurations;
   }
 
+  /**
+   * PATCH /configurations
+   * Handles SES templates management & sending guest invitation emails
+   */
+  protected async patchResources(): Promise<any> {
+    if (!this.user) {
+      throw new HandledError('Unauthorized');
+    }
+
+    const action = this.body?.action;
+
+    // Guest invitation sending can be performed by users with GUESTS permission
+    if (action === 'SEND_GUEST_INVITATION_EMAIL') {
+      if (!this.user.isAdministrator && !this.user.hasPermission(AppPermission.CONFIGURATIONS.GUESTS)) {
+        throw new HandledError('Unauthorized');
+      }
+      return await this.sendGuestInvitationEmail(this.body);
+    }
+
+    // All other template management requires TEMPLATES permission
+    if (!this.user.isAdministrator && !this.user.hasPermission(AppPermission.CONFIGURATIONS.TEMPLATES)) {
+      throw new HandledError('Unauthorized');
+    }
+
+    switch (action) {
+      case 'GET_EMAIL_TEMPLATE':
+        return await this.getEmailTemplate(this.body.template);
+      case 'SET_EMAIL_TEMPLATE':
+        return await this.setEmailTemplate(this.body.template, this.body.subject, this.body.content);
+      case 'RESET_EMAIL_TEMPLATE':
+        return await this.resetEmailTemplate(this.body.template);
+      case 'TEST_EMAIL_TEMPLATE':
+        return await this.testEmailTemplate(this.body.template);
+      default:
+        throw new HandledError('Unsupported action');
+    }
+  }
+
+  private getSESTemplateName(emailTemplate: EmailTemplates): string {
+    switch (emailTemplate) {
+      case EmailTemplates.GUEST_INVITATION_PL:
+        return 'notify-guest-invitation-pl';
+      case EmailTemplates.GUEST_INVITATION_EN:
+        return 'notify-guest-invitation-en';
+      case EmailTemplates.REQUEST_SUBMITTED_PL:
+        return 'notify-request-submitted-pl';
+      case EmailTemplates.REQUEST_SUBMITTED_EN:
+        return 'notify-request-submitted-en';
+      case EmailTemplates.REQUEST_CHANGES_REQUESTED_PL:
+        return 'notify-request-changes-requested-pl';
+      case EmailTemplates.REQUEST_CHANGES_REQUESTED_EN:
+        return 'notify-request-changes-requested-en';
+      case EmailTemplates.REQUEST_APPROVED_PL:
+        return 'notify-request-approved-pl';
+      case EmailTemplates.REQUEST_APPROVED_EN:
+        return 'notify-request-approved-en';
+      case EmailTemplates.REQUEST_PAID_PL:
+        return 'notify-request-paid-pl';
+      case EmailTemplates.REQUEST_PAID_EN:
+        return 'notify-request-paid-en';
+      case EmailTemplates.REQUEST_REJECTED_PL:
+        return 'notify-request-rejected-pl';
+      case EmailTemplates.REQUEST_REJECTED_EN:
+        return 'notify-request-rejected-en';
+      case EmailTemplates.REQUEST_STATUS_UPDATED_PL:
+        return 'notify-request-status-updated-pl';
+      case EmailTemplates.REQUEST_STATUS_UPDATED_EN:
+        return 'notify-request-status-updated-en';
+      default:
+        throw new HandledError("Template doesn't exist");
+    }
+  }
+
+  private async getEmailTemplate(emailTemplate: EmailTemplates): Promise<{ subject: string; content: string }> {
+    const templateName = this.getSESTemplateName(emailTemplate);
+    try {
+      const template = await ses.getTemplate(`${templateName}-${STAGE}`);
+      return { subject: template.Subject || '', content: template.Html || '' };
+    } catch (error) {
+      // If not yet present in SES, load default .hbs from S3 assets and initialize
+      await this.resetEmailTemplate(emailTemplate);
+      const template = await ses.getTemplate(`${templateName}-${STAGE}`);
+      return { subject: template.Subject || '', content: template.Html || '' };
+    }
+  }
+
+  private async setEmailTemplate(emailTemplate: EmailTemplates, subject: string, content: string): Promise<void> {
+    if (!subject || !subject.trim()) throw new HandledError('Missing subject');
+    if (!content || !content.trim()) throw new HandledError('Missing content');
+
+    const templateName = this.getSESTemplateName(emailTemplate);
+
+    // Validate template syntax using SES testTemplate before saving
+    try {
+      await ses.testTemplate(`${templateName}-${STAGE}`, {
+        user: 'Jan Kowalski',
+        title: 'Example Purpose',
+        detail: '150.00 PLN',
+        url: BASE_URL,
+        message: 'Example Message',
+        requestId: '1/2026',
+        status: 'SUBMITTED'
+      });
+    } catch (err: any) {
+      this.logger.warn('Syntax test warning for template', err);
+    }
+
+    await ses.setTemplate(`${templateName}-${STAGE}`, subject, content, true);
+  }
+
+  private async testEmailTemplate(emailTemplate: EmailTemplates): Promise<void> {
+    const toEmail = this.user?.email;
+    if (!toEmail) throw new HandledError('User email not found');
+
+    const templateName = this.getSESTemplateName(emailTemplate);
+    const isEnglish = emailTemplate.endsWith('_EN');
+    const templateData = {
+      user: this.user ? this.user.getDisplayName() : 'User',
+      title: isEnglish ? 'National Assembly Reimbursement' : 'Zjazd Krajowy',
+      detail: '250.00 PLN',
+      url: `${BASE_URL}/t/requests`,
+      message: isEnglish ? 'This is an example notification message.' : 'To jest przykładowa treść wiadomości.',
+      requestId: '1/2026',
+      status: 'SUBMITTED'
+    };
+
+    try {
+      await ses.testTemplate(`${templateName}-${STAGE}`, templateData);
+    } catch (error) {
+      this.logger.warn('Testing template syntax failed', error, { template: `${templateName}-${STAGE}` });
+      throw new HandledError('Bad template syntax');
+    }
+
+    try {
+      await ses.sendTemplatedEmail({
+        toAddresses: [toEmail],
+        template: `${templateName}-${STAGE}`,
+        templateData
+      }, SES_CONFIG);
+    } catch (error: any) {
+      this.logger.error('Sending test email failed', error, { template: `${templateName}-${STAGE}` });
+      throw new HandledError(`Sending failed: ${error?.message || 'SES error'}`);
+    }
+  }
+
+  private async resetEmailTemplate(emailTemplate: EmailTemplates): Promise<void> {
+    const templateName = this.getSESTemplateName(emailTemplate);
+    const defaultSubjects: Record<EmailTemplates, string> = {
+      [EmailTemplates.GUEST_INVITATION_PL]: 'Zaproszenie do złożenia wniosku finansowego (ESN Polska)',
+      [EmailTemplates.GUEST_INVITATION_EN]: 'Invitation to submit financial request (ESN Poland)',
+      [EmailTemplates.REQUEST_SUBMITTED_PL]: 'Potwierdzenie złożenia wniosku finansowego {{requestId}}',
+      [EmailTemplates.REQUEST_SUBMITTED_EN]: 'Financial request submitted {{requestId}}',
+      [EmailTemplates.REQUEST_CHANGES_REQUESTED_PL]: 'Wymagane poprawki do wniosku finansowego {{requestId}}',
+      [EmailTemplates.REQUEST_CHANGES_REQUESTED_EN]: 'Changes requested for financial request {{requestId}}',
+      [EmailTemplates.REQUEST_APPROVED_PL]: 'Wniosek finansowy {{requestId}} został zatwierdzony',
+      [EmailTemplates.REQUEST_APPROVED_EN]: 'Financial request {{requestId}} approved',
+      [EmailTemplates.REQUEST_PAID_PL]: 'Wypłata środków dla wniosku finansowego {{requestId}}',
+      [EmailTemplates.REQUEST_PAID_EN]: 'Payment processed for financial request {{requestId}}',
+      [EmailTemplates.REQUEST_REJECTED_PL]: 'Wniosek finansowy {{requestId}} został odrzucony',
+      [EmailTemplates.REQUEST_REJECTED_EN]: 'Financial request {{requestId}} rejected',
+      [EmailTemplates.REQUEST_STATUS_UPDATED_PL]: 'Aktualizacja statusu wniosku {{requestId}}',
+      [EmailTemplates.REQUEST_STATUS_UPDATED_EN]: 'Status update for financial request {{requestId}}'
+    };
+
+    const subject = defaultSubjects[emailTemplate] || templateName;
+    const content = await s3.getObjectAsText({
+      bucket: S3_BUCKET_MEDIA,
+      key: `${S3_ASSETS_FOLDER}/${templateName}.hbs`
+    });
+
+    await ses.setTemplate(`${templateName}-${STAGE}`, subject, content, true);
+  }
+
+  private async sendGuestInvitationEmail(params: {
+    inviteId: string;
+    lang?: 'pl' | 'en';
+    subject?: string;
+    content?: string;
+  }): Promise<{ success: boolean; message?: string }> {
+    const { inviteId, lang = 'pl', subject, content } = params;
+    if (!inviteId) throw new HandledError('Missing inviteId');
+
+    const invite = (this.configurations?.guestInvitations || []).find(i => i.id === inviteId);
+    if (!invite) throw new HandledError('Guest invitation not found');
+    if (!invite.guestEmail) throw new HandledError('Guest invitation has no email');
+
+    if (await isEmailInBlockList(invite.guestEmail)) {
+      throw new HandledError('Recipient email is blocked due to previous bounces');
+    }
+
+    const guestLink = `${BASE_URL}/auth?guestToken=${encodeURIComponent(invite.id)}`;
+    const expiryDate = invite.expiresAt ? new Date(invite.expiresAt).toLocaleDateString('pl-PL') : '';
+
+    if (subject && content) {
+      // Send customized email (rendered HTML or direct text)
+      await ses.sendEmail({
+        toAddresses: [invite.guestEmail],
+        subject,
+        html: content
+      }, SES_CONFIG);
+    } else {
+      // Send templated email
+      const templateEnum = lang === 'en' ? EmailTemplates.GUEST_INVITATION_EN : EmailTemplates.GUEST_INVITATION_PL;
+      const templateName = this.getSESTemplateName(templateEnum);
+      const templateData = {
+        user: invite.guestName,
+        title: invite.purpose || 'ESN Polska',
+        detail: expiryDate,
+        url: guestLink,
+        message: invite.instructions?.[lang] || ''
+      };
+
+      try {
+        await ses.sendTemplatedEmail({
+          toAddresses: [invite.guestEmail],
+          template: `${templateName}-${STAGE}`,
+          templateData
+        }, SES_CONFIG);
+      } catch (err: any) {
+        if (String(err).includes('does not exist') || err?.name === 'NotFoundException') {
+          await this.resetEmailTemplate(templateEnum);
+          await ses.sendTemplatedEmail({
+            toAddresses: [invite.guestEmail],
+            template: `${templateName}-${STAGE}`,
+            templateData
+          }, SES_CONFIG);
+        } else {
+          throw err;
+        }
+      }
+    }
+
+    return { success: true };
+  }
+
   private async deleteOldS3File(fileUrl?: string): Promise<void> {
     if (!fileUrl) return;
     try {
@@ -177,6 +429,7 @@ class ConfigurationsRC extends ResourceController {
         if (section === 'OPTIONS') return this.user!.hasPermission(AppPermission.CONFIGURATIONS.OPTIONS);
         if (section === 'USERS') return this.user!.hasPermission(AppPermission.CONFIGURATIONS.USERS);
         if (section === 'GUESTS') return this.user!.hasPermission(AppPermission.CONFIGURATIONS.GUESTS);
+        if (section === 'TEMPLATES') return this.user!.hasPermission(AppPermission.CONFIGURATIONS.TEMPLATES);
         return false;
       });
 
