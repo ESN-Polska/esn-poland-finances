@@ -24,6 +24,23 @@
   </head>
 
   <body>
+    <script>
+      (function () {
+        try {
+          var pref = localStorage.getItem('themePreference') || 'auto';
+          var isDark = pref === 'dark' || (pref === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          if (isDark) {
+            document.body.classList.add('dark');
+            document.documentElement.style.colorScheme = 'dark';
+          } else {
+            document.body.classList.remove('dark');
+            document.documentElement.style.colorScheme = 'light';
+          }
+          var ac = localStorage.getItem('accentColor');
+          if (ac && ac !== 'default') document.body.classList.add('accent-' + ac);
+        } catch (_) {}
+      })();
+    </script>
     <app-root></app-root>
   </body>
 </html>
