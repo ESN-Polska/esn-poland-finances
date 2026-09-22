@@ -44,6 +44,22 @@ export const getEmailTemplateKey = (type: EmailTemplateTypes, lang: 'pl' | 'en')
   return `${type}_${lang.toUpperCase()}` as EmailTemplates;
 };
 
+export const formatSenderName = (name: string): string => {
+  if (!name) return '';
+  const trimmed = name.trim();
+  // If contains non-ASCII characters, encode using RFC 2047 MIME encoded-word syntax
+  if (/[^\x00-\x7F]/.test(trimmed)) {
+    const base64 = typeof (globalThis as any).Buffer !== 'undefined'
+      ? (globalThis as any).Buffer.from(trimmed, 'utf-8').toString('base64')
+      : btoa(unescape(encodeURIComponent(trimmed)));
+    return `=?UTF-8?B?${base64}?=`;
+  }
+  if (/[,;"]/.test(trimmed) && !trimmed.startsWith('"')) {
+    return `"${trimmed.replace(/"/g, '\\"')}"`;
+  }
+  return trimmed;
+};
+
 export const AppPermission = {
   HOME: {
     PARENT: 'home',
@@ -180,7 +196,7 @@ export const DEFAULT_CONFIGURATIONS = {
     en: 'Online Financial System',
     pl: 'Internetowy System Finansowy'
   },
-  appSubtitle: {
+  appOrganisation: {
     en: 'ESN Poland Federation',
     pl: 'Związek stowarzyszeń ESN Polska'
   },
@@ -203,6 +219,7 @@ export const DEFAULT_CONFIGURATIONS = {
   supportEmail: '',
   appLogoURL: '',
   appLogoURLDarkMode: '',
+  organisationLogoURL: '',
   timezone: DEFAULT_TIMEZONE,
   configurationPageSectionsOrder: DEFAULT_CONFIGURATION_PAGE_SECTIONS_ORDER,
   administratorsIds: [] as string[],
@@ -248,8 +265,8 @@ export class Configurations extends Resource {
 
   /** The name/title of the platform in supported languages. */
   appTitle: LocalizedText;
-  /** The subtitle of the platform in supported languages. */
-  appSubtitle: LocalizedText;
+  /** The organisation name in supported languages. */
+  appOrganisation: LocalizedText;
   /** Home page welcome title in supported languages. */
   homeWelcomeTitle: LocalizedText;
   /** Home page welcome subtitle in supported languages. */
@@ -262,6 +279,8 @@ export class Configurations extends Resource {
   appLogoURL: string;
   /** The logo of the platform in dark mode (CDN URL). */
   appLogoURLDarkMode: string;
+  /** The logo of the organisation used across exported documents (CDN URL). */
+  organisationLogoURL: string;
   /** The timezone to use for dates and deadlines. */
   timezone: string;
   /** Order of configuration subtabs. */
@@ -327,13 +346,13 @@ export class Configurations extends Resource {
       };
     }
 
-    const defaultSubtitle = DEFAULT_CONFIGURATIONS.appSubtitle;
-    if (typeof x.appSubtitle === 'string') {
-      this.appSubtitle = { en: x.appSubtitle, pl: x.appSubtitle };
+    const defaultOrganisation = DEFAULT_CONFIGURATIONS.appOrganisation;
+    if (typeof x.appOrganisation === 'string') {
+      this.appOrganisation = { en: x.appOrganisation, pl: x.appOrganisation };
     } else {
-      this.appSubtitle = {
-        en: this.clean(x.appSubtitle?.en, String, defaultSubtitle.en),
-        pl: this.clean(x.appSubtitle?.pl, String, defaultSubtitle.pl)
+      this.appOrganisation = {
+        en: this.clean(x.appOrganisation?.en, String, defaultOrganisation.en),
+        pl: this.clean(x.appOrganisation?.pl, String, defaultOrganisation.pl)
       };
     }
 
@@ -374,6 +393,7 @@ export class Configurations extends Resource {
     this.supportEmail = this.clean(x.supportEmail, String, DEFAULT_CONFIGURATIONS.supportEmail);
     this.appLogoURL = this.clean(x.appLogoURL, String);
     this.appLogoURLDarkMode = this.clean(x.appLogoURLDarkMode, String);
+    this.organisationLogoURL = this.clean(x.organisationLogoURL, String);
     this.timezone = this.clean(x.timezone, String, DEFAULT_TIMEZONE);
 
     const configuredSections = this.cleanArray(x.configurationPageSectionsOrder, String) as ConfigurationPageSection[];
@@ -463,9 +483,13 @@ export class Configurations extends Resource {
     return (this.appTitle as any)?.[lang] || this.appTitle?.en || this.appTitle?.pl || '';
   }
 
-  getAppSubtitle(lang: string = 'en'): string {
-    if (typeof this.appSubtitle === 'string') return this.appSubtitle;
-    return (this.appSubtitle as any)?.[lang] || this.appSubtitle?.en || this.appSubtitle?.pl || '';
+  getAppOrganisation(lang: string = 'en'): string {
+    if (typeof this.appOrganisation === 'string') return this.appOrganisation;
+    return (this.appOrganisation as any)?.[lang] || this.appOrganisation?.en || this.appOrganisation?.pl || '';
+  }
+
+  getOrganisationLogo(): string {
+    return this.organisationLogoURL || '';
   }
 
   getRulesWarningText(lang: string = 'en'): string {

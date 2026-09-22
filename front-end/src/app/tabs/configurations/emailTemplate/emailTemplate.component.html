@@ -119,8 +119,14 @@
     <!-- LIVE HTML PREVIEW VIEW -->
     <div *ngIf="viewMode === 'preview'" class="previewWrapper">
       <div class="previewSubjectBanner">
-        <span class="previewSubjectLabel">{{ 'EMAIL_TEMPLATE.SUBJECT' | translate }}:</span>
-        <span class="previewSubjectText">{{ subject || ('EMAIL_TEMPLATE.NO_SUBJECT' | translate) }}</span>
+        <div class="previewMetaRow">
+          <span class="previewSubjectLabel">{{ 'EMAIL_TEMPLATE.FROM' | translate }}:</span>
+          <span class="previewSubjectText">{{ senderDisplayName }} &lt;no-reply&#64;esn-poland.link&gt;</span>
+        </div>
+        <div class="previewMetaRow">
+          <span class="previewSubjectLabel">{{ 'EMAIL_TEMPLATE.SUBJECT' | translate }}:</span>
+          <span class="previewSubjectText">{{ subject || ('EMAIL_TEMPLATE.NO_SUBJECT' | translate) }}</span>
+        </div>
       </div>
 
       <div class="previewNotice">

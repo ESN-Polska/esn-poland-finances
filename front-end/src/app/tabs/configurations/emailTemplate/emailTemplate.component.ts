@@ -56,6 +56,10 @@ export class EmailTemplateComponent implements OnInit {
     return getEmailTemplateKey(this.resolvedTemplateType, this.currentLang);
   }
 
+  public get senderDisplayName(): string {
+    return this.app.configurations?.getAppTitle(this.currentLang) || 'ESN Poland';
+  }
+
   async ngOnInit(): Promise<void> {
     if (this.template && (this.template.endsWith('_PL') || this.template.endsWith('_EN'))) {
       this.currentLang = this.template.endsWith('_PL') ? 'pl' : 'en';

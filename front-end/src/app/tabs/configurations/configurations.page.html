@@ -1,6 +1,6 @@
 <ion-header class="ion-no-border">
   <ion-toolbar class="configSubnavToolbar">
-    <ion-segment [(ngModel)]="pageSection">
+    <ion-segment [scrollable]="true" [(ngModel)]="pageSection">
       <ng-container *ngFor="let section of pageSections">
         <ion-segment-button *ngIf="canAccessPageSection(section)" [value]="section">
           <ion-label>{{ 'CONFIGURATIONS.PAGE_SECTIONS.' + section | translate }}</ion-label>
@@ -567,20 +567,20 @@
         </ion-button>
       </ion-item>
 
-      <!-- App Subtitle (English) -->
+      <!-- App Organisation (English) -->
       <ion-item>
-        <ion-label position="stacked">{{ 'CONFIGURATIONS.APP_SUBTITLE_EN' | translate }}</ion-label>
-        <ion-input readonly [(ngModel)]="configurations.appSubtitle.en"></ion-input>
-        <ion-button slot="end" fill="clear" color="medium" class="ion-margin-top" *ngIf="canModifyOptions()" (click)="changeAppSubtitle('en')">
+        <ion-label position="stacked">{{ 'CONFIGURATIONS.APP_ORGANISATION_EN' | translate }}</ion-label>
+        <ion-input readonly [(ngModel)]="configurations.appOrganisation.en"></ion-input>
+        <ion-button slot="end" fill="clear" color="medium" class="ion-margin-top" *ngIf="canModifyOptions()" (click)="changeAppOrganisation('en')">
           <ion-icon name="pencil" slot="icon-only"></ion-icon>
         </ion-button>
       </ion-item>
 
-      <!-- App Subtitle (Polish) -->
+      <!-- App Organisation (Polish) -->
       <ion-item>
-        <ion-label position="stacked">{{ 'CONFIGURATIONS.APP_SUBTITLE_PL' | translate }}</ion-label>
-        <ion-input readonly [(ngModel)]="configurations.appSubtitle.pl"></ion-input>
-        <ion-button slot="end" fill="clear" color="medium" class="ion-margin-top" *ngIf="canModifyOptions()" (click)="changeAppSubtitle('pl')">
+        <ion-label position="stacked">{{ 'CONFIGURATIONS.APP_ORGANISATION_PL' | translate }}</ion-label>
+        <ion-input readonly [(ngModel)]="configurations.appOrganisation.pl"></ion-input>
+        <ion-button slot="end" fill="clear" color="medium" class="ion-margin-top" *ngIf="canModifyOptions()" (click)="changeAppOrganisation('pl')">
           <ion-icon name="pencil" slot="icon-only"></ion-icon>
         </ion-button>
       </ion-item>
@@ -626,6 +626,24 @@
           <ion-icon name="cloud-upload-outline" slot="icon-only"></ion-icon>
         </ion-button>
         <ion-button slot="end" fill="clear" color="danger" (click)="resetAppLogo(true)" *ngIf="canModifyOptions() && configurations.appLogoURLDarkMode">
+          <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
+        </ion-button>
+      </ion-item>
+
+      <!-- Organisation Logo -->
+      <ion-item>
+        <ion-label class="ion-text-wrap">
+          {{ 'CONFIGURATIONS.ORGANISATION_LOGO' | translate }}
+          <p>{{ 'CONFIGURATIONS.ORGANISATION_LOGO_I' | translate }}</p>
+        </ion-label>
+        <ion-thumbnail slot="end" class="logoThumbnail">
+          <ion-img [src]="configurations.organisationLogoURL || app.getOrganisationLogo()"></ion-img>
+        </ion-thumbnail>
+        <input #organisationLogoInput type="file" accept="image/*" style="display: none" (change)="uploadOrganisationLogo($event)" />
+        <ion-button slot="end" fill="clear" color="medium" *ngIf="canModifyOptions()" (click)="organisationLogoInput.click()">
+          <ion-icon name="cloud-upload-outline" slot="icon-only"></ion-icon>
+        </ion-button>
+        <ion-button slot="end" fill="clear" color="danger" (click)="resetOrganisationLogo()" *ngIf="canModifyOptions() && configurations.organisationLogoURL">
           <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
         </ion-button>
       </ion-item>

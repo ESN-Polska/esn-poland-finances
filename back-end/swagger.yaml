@@ -375,7 +375,7 @@ components:
           example: "1"
         appTitle:
           $ref: '#/components/schemas/LocalizedText'
-        appSubtitle:
+        appOrganisation:
           $ref: '#/components/schemas/LocalizedText'
         homeWelcomeTitle:
           $ref: '#/components/schemas/LocalizedText'
@@ -392,6 +392,9 @@ components:
         appLogoURLDarkMode:
           type: string
           example: https://media.finances.esn-poland.link/images/dev/logo-dark.png
+        organisationLogoURL:
+          type: string
+          example: https://media.finances.esn-poland.link/images/dev/organisation-logo.png
         timezone:
           type: string
           example: Europe/Warsaw

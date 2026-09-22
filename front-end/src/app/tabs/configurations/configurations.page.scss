@@ -8,24 +8,42 @@
   border-bottom: 1px solid var(--border-color);
   padding: 8px 16px;
 
+  @media (max-width: 576px) {
+    padding: 6px 8px;
+  }
+
   ion-segment {
     background: var(--bg-body);
     border-radius: 10px;
     padding: 3px;
-    max-width: 480px;
+    width: max-content;
+    max-width: 100%;
     margin: 0 auto;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
 
     ion-segment-button {
       --color: var(--text-medium);
-      --color-checked: var(--esn-cyan);
+      --color-checked: var(--ion-color-primary, var(--esn-cyan));
       --indicator-color: var(--bg-card);
       --indicator-box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
       --border-radius: 8px;
       font-weight: 600;
       min-height: 38px;
+      min-width: auto;
+      --padding-start: 14px;
+      --padding-end: 14px;
       text-transform: none;
       letter-spacing: 0;
       transition: all 0.2s ease;
+      white-space: nowrap;
+
+      ion-label {
+        white-space: nowrap;
+      }
     }
   }
 }
@@ -167,7 +185,7 @@
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.06em;
-      color: var(--esn-cyan, #00aeef);
+      color: var(--ion-color-primary, #00aeef);
       margin: 0;
     }
   }
@@ -284,7 +302,7 @@ body.dark {
 
     ion-segment-button {
       --color: var(--text-medium);
-      --color-checked: var(--esn-cyan);
+      --color-checked: var(--ion-color-primary, var(--esn-cyan));
       --indicator-color: var(--bg-body);
       --border-radius: 8px;
       font-size: 0.82rem;

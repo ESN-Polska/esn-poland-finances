@@ -66,7 +66,7 @@
     }
 
     ion-checkbox {
-      --color-checked: var(--esn-cyan);
+      --color-checked: var(--ion-color-primary, var(--esn-cyan));
       margin-right: 12px;
     }
 
