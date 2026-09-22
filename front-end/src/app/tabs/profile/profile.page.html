@@ -73,6 +73,89 @@
       </div>
     </div>
 
+    <!-- Appearance Card -->
+    <div class="profileCard">
+      <div class="cardHeader">
+        <div>
+          <h2 class="cardTitle">{{ 'COMMON.APPEARANCE' | translate }}</h2>
+        </div>
+      </div>
+
+      <ion-list lines="none" class="appearanceList">
+        <ion-item lines="none" class="themeProfileItem">
+          <ion-icon [name]="app.getThemeIcon()" slot="start"></ion-icon>
+          <ion-select
+            [label]="'COMMON.THEME' | translate"
+            interface="popover"
+            justify="space-between"
+            [value]="app.themePreference"
+            (ionChange)="app.setThemePreference($event.detail.value)"
+          >
+            <ion-select-option value="auto">{{ 'COMMON.THEME_AUTO' | translate }}</ion-select-option>
+            <ion-select-option value="light">{{ 'COMMON.THEME_LIGHT' | translate }}</ion-select-option>
+            <ion-select-option value="dark">{{ 'COMMON.THEME_DARK' | translate }}</ion-select-option>
+          </ion-select>
+        </ion-item>
+
+        <ion-item lines="none" class="themeProfileItem">
+          <ion-icon name="globe-outline" slot="start"></ion-icon>
+          <ion-select
+            [label]="'COMMON.LANGUAGE' | translate"
+            interface="popover"
+            justify="space-between"
+            [value]="app.currentLanguage"
+            (ionChange)="app.setLanguage($event.detail.value)"
+          >
+            <ion-select-option value="en">{{ 'COMMON.ENGLISH' | translate }}</ion-select-option>
+            <ion-select-option value="pl">{{ 'COMMON.POLISH' | translate }}</ion-select-option>
+          </ion-select>
+        </ion-item>
+
+        <ion-item lines="none" class="themeProfileItem">
+          <ion-icon name="color-palette-outline" slot="start"></ion-icon>
+          <ion-select
+            interface="popover"
+            justify="space-between"
+            [value]="app.accentColor"
+            (ionChange)="app.setAccentColor($event.detail.value)"
+          >
+            <div slot="label" class="accentSelectLabel">
+              <span>{{ 'COMMON.ACCENT_COLOR' | translate }}</span>
+              <ion-icon
+                id="accentHintTrigger"
+                name="information-circle-outline"
+                class="accentHintIcon"
+                (pointerdown)="$event.stopPropagation(); $event.preventDefault()"
+                (mousedown)="$event.stopPropagation(); $event.preventDefault()"
+                (touchstart)="$event.stopPropagation()"
+                (click)="$event.stopPropagation(); $event.preventDefault(); accentHintPopover.present($event)"
+              ></ion-icon>
+            </div>
+            <ion-select-option value="default">{{ 'COMMON.ACCENT_DEFAULT' | translate }}</ion-select-option>
+            <ion-select-option value="cyan">ESN Cyan</ion-select-option>
+            <ion-select-option value="pink">ESN Magenta</ion-select-option>
+            <ion-select-option value="green">ESN Green</ion-select-option>
+            <ion-select-option value="orange">ESN Orange</ion-select-option>
+            <ion-select-option value="darkBlue">ESN Dark Blue</ion-select-option>
+          </ion-select>
+          <ion-popover
+            #accentHintPopover
+            trigger="accentHintTrigger"
+            triggerAction="click"
+            class="accentHintPopover"
+          >
+            <ng-template>
+              <ion-content class="ion-padding">
+                <p style="margin: 0; font-size: 0.88em; line-height: 1.4;">
+                  {{ 'COMMON.ACCENT_DEFAULT_HINT' | translate }}
+                </p>
+              </ion-content>
+            </ng-template>
+          </ion-popover>
+        </ion-item>
+      </ion-list>
+    </div>
+
     <!-- Default Payout Bank Details Card -->
     <div class="profileCard">
       <div class="cardHeader">

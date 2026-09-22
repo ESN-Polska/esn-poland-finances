@@ -109,7 +109,7 @@
       margin: 0;
 
       &:hover {
-        --color: #00aeef;
+        --color: var(--ion-color-primary, #00aeef);
       }
     }
   }
@@ -134,10 +134,10 @@
     justify-content: center;
 
     .submitRequestBtn {
-      --background: #00aeef;
-      --background-hover: #0099d2;
-      --background-activated: #0087ba;
-      --color: #ffffff;
+      --background: var(--ion-color-primary, #00aeef);
+      --background-hover: var(--ion-color-primary-shade, #0099d2);
+      --background-activated: var(--ion-color-primary-tint, #0087ba);
+      --color: var(--ion-color-primary-contrast, #ffffff);
       --border-radius: 8px;
       font-size: 1rem;
       font-weight: 600;
@@ -210,8 +210,8 @@
           font-weight: 600;
           padding: 2px 8px;
           border-radius: 6px;
-          background: rgba(0, 174, 239, 0.1);
-          color: var(--esn-cyan);
+          background: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.1);
+          color: var(--ion-color-primary, var(--esn-cyan));
         }
       }
     }
@@ -254,7 +254,7 @@
       .viewDetailsLink {
         font-size: 0.85rem;
         font-weight: 600;
-        color: #00aeef;
+        color: var(--ion-color-primary, #00aeef);
       }
     }
   }
@@ -285,7 +285,7 @@
       transition: color 0.15s ease, transform 0.15s ease;
 
       &:hover {
-        color: #00aeef;
+        color: var(--ion-color-primary, #00aeef);
       }
 
       ion-icon {
@@ -311,7 +311,7 @@
       display: flex;
       justify-content: center;
       padding: 32px 0;
-      color: #00aeef;
+      color: var(--ion-color-primary, #00aeef);
     }
 
     .emptyUsersState {
@@ -351,8 +351,8 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            background: #00aeef;
-            color: #ffffff;
+            background: var(--ion-color-primary, #00aeef);
+            color: var(--ion-color-primary-contrast, #ffffff);
             font-weight: 700;
             font-size: 0.85rem;
             border-radius: 50%;
@@ -396,7 +396,7 @@
               transition: color 0.15s ease, transform 0.15s ease;
 
               &:hover {
-                color: #00aeef;
+                color: var(--ion-color-primary, #00aeef);
                 transform: translateY(-1px);
               }
 
@@ -706,11 +706,11 @@
               --padding-start: 0;
               --padding-end: 0;
               border-radius: 8px;
-              background: rgba(0, 174, 239, 0.08);
-              color: #00aeef;
+              background: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.08);
+              color: var(--ion-color-primary, #00aeef);
 
               &:active {
-                background: rgba(0, 174, 239, 0.22);
+                background: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.22);
                 transform: scale(0.94);
               }
 
@@ -765,16 +765,16 @@ body.dark {
       color: #94a3b8;
 
       &:hover {
-        color: #38bdf8;
+        color: var(--ion-color-primary, #38bdf8);
       }
     }
 
     .userItemEnd .openAccountsBtn {
-      background: rgba(0, 174, 239, 0.15);
-      color: #38bdf8;
+      background: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.15);
+      color: var(--ion-color-primary, #38bdf8);
 
       &:active {
-        background: rgba(0, 174, 239, 0.3);
+        background: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.3);
       }
     }
   }

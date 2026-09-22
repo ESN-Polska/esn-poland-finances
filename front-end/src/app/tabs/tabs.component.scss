@@ -484,7 +484,7 @@ ion-menu {
 
     &:hover {
       transform: translateY(-1px);
-      border-color: var(--esn-cyan, #00aeef);
+      border-color: var(--ion-color-primary, #00aeef);
     }
 
     .menuAvatarWrapper {
@@ -495,7 +495,8 @@ ion-menu {
       display: flex;
       align-items: center;
       justify-content: center;
-      background: var(--esn-cyan, #00aeef);
+      background: var(--ion-color-primary, #00aeef);
+      color: var(--ion-color-primary-contrast, #ffffff);
       flex-shrink: 0;
 
       .menuAvatarImg {
@@ -507,7 +508,7 @@ ion-menu {
       .menuAvatarInitial {
         font-size: 1.15rem;
         font-weight: 700;
-        color: #ffffff;
+        color: var(--ion-color-primary-contrast, #ffffff);
       }
     }
 
@@ -583,17 +584,17 @@ ion-menu {
 
       ion-icon {
         font-size: 1.25rem;
-        color: var(--esn-cyan, #00aeef);
+        color: var(--ion-color-primary, #00aeef);
         flex-shrink: 0;
       }
 
       &:hover {
-        background: rgba(0, 174, 239, 0.08);
+        background: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.08);
       }
 
       &.active {
-        background: rgba(0, 174, 239, 0.14);
-        color: var(--esn-cyan, #00aeef);
+        background: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.14);
+        color: var(--ion-color-primary, #00aeef);
         font-weight: 700;
       }
     }
@@ -611,8 +612,8 @@ ion-menu {
       transition: all 0.15s ease;
 
       &:hover {
-        border-color: var(--esn-cyan, #00aeef);
-        background: rgba(0, 174, 239, 0.04);
+        border-color: var(--ion-color-primary, #00aeef);
+        background: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.04);
       }
 
       .settingLeft {
@@ -625,15 +626,15 @@ ion-menu {
 
         ion-icon {
           font-size: 1.15rem;
-          color: var(--esn-cyan, #00aeef);
+          color: var(--ion-color-primary, #00aeef);
         }
       }
 
       .settingValue {
         font-size: 0.8rem;
         font-weight: 600;
-        color: var(--esn-cyan, #00aeef);
-        background: rgba(0, 174, 239, 0.1);
+        color: var(--ion-color-primary, #00aeef);
+        background: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.1);
         padding: 3px 8px;
         border-radius: 6px;
       }
@@ -657,7 +658,7 @@ ion-menu {
           padding: 2px 4px;
 
           &.active {
-            color: var(--esn-cyan, #00aeef);
+            color: var(--ion-color-primary, #00aeef);
             font-weight: 700;
           }
         }
@@ -732,7 +733,8 @@ ion-popover.desktopUserPopover {
       width: 40px;
       height: 40px;
       border-radius: 50%;
-      background: var(--esn-cyan, #00aeef);
+      background: var(--ion-color-primary, #00aeef);
+      color: var(--ion-color-primary-contrast, #ffffff);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -748,7 +750,7 @@ ion-popover.desktopUserPopover {
       .popoverAvatarInitial {
         font-size: 1.1rem;
         font-weight: 700;
-        color: #ffffff;
+        color: var(--ion-color-primary-contrast, #ffffff);
       }
     }
 
@@ -807,13 +809,13 @@ ion-popover.desktopUserPopover {
 
       ion-icon {
         font-size: 1.15rem;
-        color: var(--esn-cyan, #00aeef);
+        color: var(--ion-color-primary, #00aeef);
         flex-shrink: 0;
       }
 
       &:hover {
-        background: rgba(0, 174, 239, 0.08);
-        color: var(--esn-cyan, #00aeef);
+        background: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.08);
+        color: var(--ion-color-primary, #00aeef);
       }
 
       &.logoutItem {

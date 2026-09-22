@@ -68,10 +68,10 @@
     gap: 12px;
 
     .downloadBtn {
-      --background: #00aeef;
-      --background-hover: #0099d2;
-      --background-activated: #0087ba;
-      --color: #ffffff;
+      --background: var(--ion-color-primary, #00aeef);
+      --background-hover: var(--ion-color-primary-shade, #0099d2);
+      --background-activated: var(--ion-color-primary-tint, #0087ba);
+      --color: var(--ion-color-primary-contrast, #ffffff);
       --border-radius: 8px;
       font-size: 1rem;
       font-weight: 600;
