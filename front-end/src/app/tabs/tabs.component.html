@@ -84,20 +84,20 @@
 
       <div
         class="menuNavItem"
-        [class.active]="isCurrentRoute('/t/requests')"
-        (click)="navigateAndClose(['/t/requests'])"
-      >
-        <ion-icon name="document-text-outline"></ion-icon>
-        <span>{{ 'TABS.REQUESTS' | translate }}</span>
-      </div>
-
-      <div
-        class="menuNavItem"
         [class.active]="isCurrentRoute('/t/rules')"
         (click)="navigateAndClose(['/t/rules'])"
       >
         <ion-icon name="book-outline"></ion-icon>
         <span>{{ 'TABS.RULES' | translate }}</span>
+      </div>
+
+      <div
+        class="menuNavItem"
+        [class.active]="isCurrentRoute('/t/requests')"
+        (click)="navigateAndClose(['/t/requests'])"
+      >
+        <ion-icon name="document-text-outline"></ion-icon>
+        <span>{{ 'TABS.REQUESTS' | translate }}</span>
       </div>
 
       <div

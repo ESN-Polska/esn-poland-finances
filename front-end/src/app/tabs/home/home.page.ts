@@ -123,6 +123,12 @@ export class HomePage implements OnInit {
       const users = await this.usersService.getAll();
       this.accessedUsers = (users || [])
         .filter(u => !!u.lastLoginAt)
+        .map(u => {
+          if (this.app.configurations) {
+            User.applyConfigurationPermissions(u, this.app.configurations);
+          }
+          return u;
+        })
         .sort((a, b) => new Date(b.lastLoginAt).getTime() - new Date(a.lastLoginAt).getTime());
       this.applyUsersFilter();
     } catch (err) {

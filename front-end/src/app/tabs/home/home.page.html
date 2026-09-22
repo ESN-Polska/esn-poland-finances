@@ -82,12 +82,17 @@
     <!-- Access Statistics (esn-poland-assembly dashboard style) -->
     <div *ngIf="canViewStatistics()" class="statisticsSection">
       <div class="sectionHeader">
-        <div class="sectionTitleWrap">
-          <h2 class="sectionTitle">{{ 'HOME.STATISTICS_TITLE' | translate }}</h2>
-          <span class="userCountBadge" *ngIf="!isLoadingUsers">
-            {{ accessedUsers.length }} {{ (accessedUsers.length === 1 ? 'HOME.USER_ACCESSED' : 'HOME.USERS_ACCESSED') | translate }}
-          </span>
-        </div>
+        <h2 class="sectionTitle">{{ 'HOME.STATISTICS_TITLE' | translate }}</h2>
+        <ion-button
+          fill="clear"
+          size="small"
+          class="refreshStatsBtn"
+          (click)="loadAccessStatistics()"
+          [disabled]="isLoadingUsers"
+          [title]="'COMMON.REFRESH' | translate"
+        >
+          <ion-icon name="refresh-outline" slot="icon-only"></ion-icon>
+        </ion-button>
       </div>
 
       <div class="statisticsCard">
@@ -120,13 +125,35 @@
                 {{ (u.firstName?.[0] || u.userId?.[0] || '').toUpperCase() }}{{ (u.lastName?.[0] || '').toUpperCase() }}
               </div>
             </ion-avatar>
-            <ion-label>
-              <h3 class="userName">{{ u.getDisplayName() }}</h3>
-              <p class="userOrigin">{{ getUserOrigin(u) }}</p>
+            <ion-label class="userLabel">
+              <div class="userNameRow">
+                <h3 class="userName">{{ u.getDisplayName() }}</h3>
+                <span
+                  *ngIf="app.hasElevatedRole(u)"
+                  class="userRoleChip role-{{ app.getUserRoleKey(u).toLowerCase() }}"
+                >
+                  {{ app.getUserRoleName(u) }}
+                </span>
+              </div>
+              <p class="userOrigin" *ngIf="getUserOrigin(u)">{{ getUserOrigin(u) }}</p>
+              <div class="mobileLoginTime">
+                <ion-icon name="time-outline"></ion-icon>
+                <span>{{ formatLoginDate(u.lastLoginAt) }}</span>
+              </div>
             </ion-label>
-            <div slot="end" class="loginTime">
-              <span class="timeLabel">{{ 'HOME.LAST_ACCESS' | translate }}:</span>
-              <span class="timeValue">{{ formatLoginDate(u.lastLoginAt) }}</span>
+            <div slot="end" class="userItemEnd">
+              <div class="desktopLoginTime">
+                <span class="timeLabel">{{ 'HOME.LAST_ACCESS' | translate }}:</span>
+                <span class="timeValue">{{ formatLoginDate(u.lastLoginAt) }}</span>
+              </div>
+              <ion-button
+                fill="clear"
+                class="openAccountsBtn"
+                (click)="$event.stopPropagation(); app.openUserProfileById(u.userId)"
+                [title]="'COMMON.OPEN' | translate"
+              >
+                <ion-icon name="open-outline" slot="icon-only"></ion-icon>
+              </ion-button>
             </div>
           </ion-item>
         </ion-list>

@@ -27,6 +27,7 @@
     "ADD": "Dodaj",
     "OPEN": "Otwórz",
     "UPDATE": "Aktualizuj",
+    "REFRESH": "Odśwież",
     "OPERATION_FAILED": "Operacja nie powiodła się",
     "OPERATION_SUCCESSFUL": "Operacja powiodła się",
     "SELECT": "Wybierz"

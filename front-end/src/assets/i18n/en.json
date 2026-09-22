@@ -27,6 +27,7 @@
     "ADD": "Add",
     "OPEN": "Open",
     "UPDATE": "Update",
+    "REFRESH": "Refresh",
     "OPERATION_FAILED": "Operation failed",
     "OPERATION_SUCCESSFUL": "Operation successful",
     "SELECT": "Select"
