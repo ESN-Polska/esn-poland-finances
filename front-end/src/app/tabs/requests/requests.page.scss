@@ -363,6 +363,18 @@
         font-size: 1.25rem;
         font-weight: 700;
         color: var(--text-dark);
+
+        &.mixedAmountTag {
+          font-size: 1.1rem;
+          display: inline-flex;
+          align-items: baseline;
+          gap: 6px;
+
+          .dividerDot {
+            color: var(--text-medium);
+            font-weight: normal;
+          }
+        }
       }
     }
 

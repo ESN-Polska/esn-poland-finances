@@ -118,8 +118,13 @@
         <div class="cardBottom">
           <div class="amountContainer">
             <span class="amountLabel">{{ 'REQUESTS.TOTAL_AMOUNT' | translate }}:</span>
-            <span class="amountNumber">
+            <span class="amountNumber" *ngIf="!req.isMixedCurrency()">
               {{ req.totalGrossAmount | number:'1.2-2' }} {{ req.currency }}
+            </span>
+            <span class="amountNumber mixedAmountTag" *ngIf="req.isMixedCurrency()">
+              <span>{{ req.getGrossAmountPLN() | number:'1.2-2' }} PLN</span>
+              <span class="dividerDot">·</span>
+              <span>{{ req.getGrossAmountEUR() | number:'1.2-2' }} EUR</span>
             </span>
           </div>
 
