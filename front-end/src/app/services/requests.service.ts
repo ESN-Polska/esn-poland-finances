@@ -609,7 +609,7 @@ export class RequestsService {
             status: targetStatus,
             timestamp: now,
             updatedBy: user.getDisplayName(),
-            comment: targetStatus === 'SUBMITTED' ? 'Submitted by applicant' : 'Draft saved'
+            comment: targetStatus === 'SUBMITTED' ? 'REQUESTS.HISTORY_COMMENTS.SUBMITTED_BY_APPLICANT' : 'REQUESTS.HISTORY_COMMENTS.DRAFT_SAVED'
           }
         ];
       }
@@ -655,7 +655,7 @@ export class RequestsService {
             status: targetStatus,
             timestamp: now,
             updatedBy: user.getDisplayName(),
-            comment: targetStatus === 'SUBMITTED' ? 'Submitted by applicant' : 'Initial draft created'
+            comment: targetStatus === 'SUBMITTED' ? 'REQUESTS.HISTORY_COMMENTS.SUBMITTED_BY_APPLICANT' : 'REQUESTS.HISTORY_COMMENTS.DRAFT_CREATED'
           }
         ]
       };
