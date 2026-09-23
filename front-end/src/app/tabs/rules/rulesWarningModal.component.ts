@@ -1,6 +1,6 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { ModalController } from '@ionic/angular';
-import { LocalizedText } from '@models/configurations.model';
+import { DEFAULT_CONFIGURATIONS, LocalizedText } from '@models/configurations.model';
 
 @Component({
   selector: 'app-rules-warning-modal',
@@ -77,8 +77,8 @@ export class RulesWarningModalComponent implements OnInit {
   constructor(private modalCtrl: ModalController) {}
 
   ngOnInit(): void {
-    this.warningEn = this.currentWarningText?.en || '';
-    this.warningPl = this.currentWarningText?.pl || '';
+    this.warningEn = this.currentWarningText?.en || DEFAULT_CONFIGURATIONS.rulesWarningText.en;
+    this.warningPl = this.currentWarningText?.pl || DEFAULT_CONFIGURATIONS.rulesWarningText.pl;
   }
 
   close(): void {

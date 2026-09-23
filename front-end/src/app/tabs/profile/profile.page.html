@@ -51,14 +51,14 @@
           <span class="fieldValue">{{ user.email }}</span>
         </div>
 
-        <div class="infoField" *ngIf="user.section && !user.isGuest">
-          <span class="fieldLabel">{{ 'USER.SECTION' | translate }}</span>
-          <span class="fieldValue">{{ user.section }}</span>
-        </div>
-
         <div class="infoField" *ngIf="user.country && !user.isGuest">
           <span class="fieldLabel">{{ 'USER.COUNTRY' | translate }}</span>
           <span class="fieldValue">{{ user.country }}</span>
+        </div>
+
+        <div class="infoField" *ngIf="user.section && !user.isGuest">
+          <span class="fieldLabel">{{ 'USER.SECTION' | translate }}</span>
+          <span class="fieldValue">{{ user.section }}</span>
         </div>
       </div>
     </div>

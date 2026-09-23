@@ -34,18 +34,22 @@ import { DEFAULT_CONFIGURATIONS, LocalizedText } from '@models/configurations.mo
 
           <ion-item>
             <ion-label position="stacked">{{ 'HOME.WELCOME_TITLE_EN' | translate }}</ion-label>
-            <ion-input
+            <ion-textarea
               [(ngModel)]="titleEn"
+              [autoGrow]="true"
+              [rows]="1"
               [placeholder]="'HOME.WELCOME_TITLE_EN_PLACEHOLDER' | translate"
-            ></ion-input>
+            ></ion-textarea>
           </ion-item>
 
           <ion-item>
             <ion-label position="stacked">{{ 'HOME.WELCOME_TITLE_PL' | translate }}</ion-label>
-            <ion-input
+            <ion-textarea
               [(ngModel)]="titlePl"
+              [autoGrow]="true"
+              [rows]="1"
               [placeholder]="'HOME.WELCOME_TITLE_PL_PLACEHOLDER' | translate"
-            ></ion-input>
+            ></ion-textarea>
           </ion-item>
 
           <!-- Subtitle Section -->
