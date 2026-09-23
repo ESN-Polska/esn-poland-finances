@@ -46,24 +46,14 @@
       </div>
 
       <div class="profileGrid">
-        <div class="infoField">
-          <span class="fieldLabel">{{ 'USER.USERNAME' | translate }}</span>
-          <span class="fieldValue">{{ user.userId }}</span>
-        </div>
-
         <div class="infoField" *ngIf="user.email">
           <span class="fieldLabel">{{ 'USER.EMAIL' | translate }}</span>
           <span class="fieldValue">{{ user.email }}</span>
         </div>
 
-        <div class="infoField" *ngIf="user.getDisplayName()">
-          <span class="fieldLabel">{{ 'USER.NAME' | translate }}</span>
-          <span class="fieldValue">{{ user.getDisplayName() }}</span>
-        </div>
-
         <div class="infoField" *ngIf="user.section && !user.isGuest">
           <span class="fieldLabel">{{ 'USER.SECTION' | translate }}</span>
-          <span class="fieldValue">{{ user.section}}</span>
+          <span class="fieldValue">{{ user.section }}</span>
         </div>
 
         <div class="infoField" *ngIf="user.country && !user.isGuest">

@@ -311,7 +311,7 @@
         </ion-item>
       </ng-container>
 
-      <!-- Automatic Role Assignments (CAS patterns) -->
+      <!-- Automatic Role Assignments (OAuth patterns) -->
       <ion-list-header class="ion-padding-top">
         <ion-label>
           <h2>{{ 'CONFIGURATIONS.AUTOMATIC_ROLE_ASSIGNMENTS' | translate }}</h2>
@@ -451,11 +451,11 @@
         </ion-button>
       </ion-item>
 
-      <!-- CAS Matched Users -->
+      <!-- ESN Accounts Matched Users -->
       <ion-list-header class="ion-padding-top">
         <ion-label>
-          <h2>{{ 'CONFIGURATIONS.CAS_MATCHED_USERS' | translate }}</h2>
-          <p>{{ 'CONFIGURATIONS.CAS_MATCHED_USERS_I' | translate }}</p>
+          <h2>{{ 'CONFIGURATIONS.OAUTH_MATCHED_USERS' | translate }}</h2>
+          <p>{{ 'CONFIGURATIONS.OAUTH_MATCHED_USERS_I' | translate }}</p>
         </ion-label>
         <ion-button size="small" (click)="openUserRoleMappings()">
           <ion-icon name="open-outline" slot="start"></ion-icon>

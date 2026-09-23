@@ -18,7 +18,7 @@ import { User } from '@models/user.model';
             <ion-icon name="close-circle-outline" slot="icon-only"></ion-icon>
           </ion-button>
         </ion-buttons>
-        <ion-title>{{ 'CONFIGURATIONS.CAS_MATCHED_USERS' | translate }}</ion-title>
+        <ion-title>{{ 'CONFIGURATIONS.OAUTH_MATCHED_USERS' | translate }}</ion-title>
         <ion-buttons slot="end">
           <ion-button
             [title]="'CONFIGURATIONS.REFRESH_ROLE_MAPPINGS' | translate"
@@ -45,7 +45,7 @@ import { User } from '@models/user.model';
             </button>
           </div>
           <div class="casFilterWrapper">
-            <span class="filterLabel">{{ 'CONFIGURATIONS.FILTER_CAS_PERMISSION' | translate }}:</span>
+            <span class="filterLabel">{{ 'CONFIGURATIONS.FILTER_OAUTH_ROLE' | translate }}:</span>
             <ion-select
               interface="popover"
               class="filterSelect"
@@ -68,7 +68,7 @@ import { User } from '@models/user.model';
             <ion-label><ion-skeleton-text animated></ion-skeleton-text></ion-label>
           </ion-item>
           <ion-item class="noElements" *ngIf="users && !filteredUsers.length">
-            <ion-label>{{ 'CONFIGURATIONS.NO_CAS_MATCHED_USERS' | translate }}</ion-label>
+            <ion-label>{{ 'CONFIGURATIONS.NO_OAUTH_MATCHED_USERS' | translate }}</ion-label>
           </ion-item>
           <ion-item *ngFor="let user of filteredUsers">
             <ion-label class="ion-text-wrap">
