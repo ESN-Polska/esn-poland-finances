@@ -66,6 +66,8 @@
         font-size: 0.95rem;
         line-height: 1.45;
         font-weight: 500;
+        white-space: pre-line;
+        overflow-wrap: break-word;
       }
     }
   }
@@ -120,6 +122,8 @@
     color: var(--text-dark);
     margin: 0 0 10px 0;
     letter-spacing: -0.01em;
+    white-space: pre-line;
+    overflow-wrap: break-word;
   }
 
   .welcomeSubtitle {
@@ -127,6 +131,8 @@
     color: var(--text-medium);
     margin: 0 0 24px 0;
     line-height: 1.5;
+    white-space: pre-line;
+    overflow-wrap: break-word;
   }
 
   .primaryActionWrapper {
