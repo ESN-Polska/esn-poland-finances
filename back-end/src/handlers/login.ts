@@ -1,16 +1,16 @@
 import { default as Axios } from 'axios';
-import { parseStringPromise } from 'xml2js';
 import { sign } from 'jsonwebtoken';
 import { DynamoDB, HandledError, ResourceController, SystemsManager } from 'idea-aws';
 
 import { User } from '../models/user.model';
 import { Configurations } from '../models/configurations.model';
 
-const CAS_URL = 'https://accounts.esn.org/cas';
+const OAUTH_TOKEN_URL = 'https://accounts.esn.org/oauth/token';
+const OAUTH_USERINFO_URL = 'https://accounts.esn.org/oauth/v1/userinfo';
 const JWT_EXPIRE_TIME = '7 days';
 
 const PROJECT = process.env.PROJECT || 'esn-poland-finances';
-const APP_DOMAIN = process.env.APP_DOMAIN || 'finances.esn-poland.link';
+const APP_DOMAIN = process.env.APP_DOMAIN || 'finances.esn.pl';
 const APP_URL = `https://${APP_DOMAIN}`;
 
 const DDB_TABLES = {
@@ -44,146 +44,33 @@ class Login extends ResourceController {
       return this.handleGuestLogin(guestToken);
     }
 
-    const ticket = this.queryParams?.ticket;
-    if (!ticket) {
-      throw new HandledError('Missing ticket or guestToken parameter');
+    const code = this.queryParams?.code;
+    if (code) {
+      const codeVerifier = this.queryParams?.codeVerifier || this.queryParams?.code_verifier;
+      const redirectUri = this.queryParams?.redirectUri || this.queryParams?.redirect_uri;
+      return this.handleOAuthLogin(code, codeVerifier, redirectUri);
     }
 
+    // When requested without parameters (frontend initializing login flow), return public OAuth config from SSM
+    const stage = this.stage || process.env.STAGE || 'dev';
+    const clientIdParam = `/${PROJECT}/${stage}/oauth/client_id`;
+    let clientId: string | null = null;
     try {
-      // Build CAS service validation URL
-      const localhost = this.queryParams.localhost ? `?localhost=${this.queryParams.localhost}` : '';
-      const serviceURL = this.queryParams.service || `https://${this.host}/${this.stage}/login${localhost}`;
-      const validationURL = `${CAS_URL}/serviceValidate?service=${encodeURIComponent(serviceURL)}&ticket=${encodeURIComponent(ticket)}`;
-
-      const ticketValidation = await Axios.get(validationURL);
-      const jsonWithUserData = await parseStringPromise(ticketValidation.data);
-      this.logger.debug('CAS ticket validated and parsed', { ticket: jsonWithUserData });
-
-      const success = !!jsonWithUserData?.['cas:serviceResponse']?.['cas:authenticationSuccess'];
-      if (!success) {
-        this.logger.warn('CAS ticket validation unsuccessful', { response: ticketValidation.data });
-        throw new HandledError('Login failed');
-      }
-
-      const data = jsonWithUserData['cas:serviceResponse']['cas:authenticationSuccess'][0];
-      const attributes = data['cas:attributes']?.[0] || {};
-      const userId = String(data['cas:user']?.[0] || '').toLowerCase();
-
-      if (!userId) {
-        throw new HandledError('Missing user identity from CAS');
-      }
-
-      const configurations = await this.loadOrInitConfigurations(userId);
-
-      const user = new User({
-        userId,
-        email: attributes['cas:mail']?.[0] || '',
-        sectionCode: attributes['cas:sc']?.[0] || '',
-        firstName: attributes['cas:first']?.[0] || '',
-        lastName: attributes['cas:last']?.[0] || '',
-        roles: attributes['cas:roles'] || [],
-        extendedRoles: attributes['cas:extended_roles'] || [],
-        section: attributes['cas:section']?.[0] || '',
-        country: attributes['cas:country']?.[0] || '',
-        avatarURL: attributes['cas:picture']?.[0] || '',
-        lastLoginAt: new Date().toISOString(),
-        isAdministrator: false
-      });
-      User.applyConfigurationPermissions(user, configurations);
-      this.logger.info('ESN Accounts login successful', { userId: user.userId, section: user.sectionCode });
-
-      if (configurations.appLocked && !user.isAdministrator) {
-        this.logger.warn('Login rejected: application is locked', { userId: user.userId });
-        const acceptsJson = (this.event.headers?.accept || '').includes('application/json');
-        if (acceptsJson && !this.queryParams.redirect) {
-          this.returnStatusCode = 403;
-          throw new HandledError('The application is temporarily locked');
-        }
-        let appURL = APP_URL;
-        if (this.queryParams.localhost) {
-          const local = String(this.queryParams.localhost);
-          const isLocalHost =
-            /^\d+$/.test(local) ||
-            /^(localhost|127\.0\.0\.1)(:\d+)?$/.test(local) ||
-            /^192\.168\.\d{1,3}\.\d{1,3}(:\d+)?$/.test(local) ||
-            /^10\.\d{1,3}\.\d{1,3}(:\d+)?$/.test(local) ||
-            /^172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}(:\d+)?$/.test(local);
-
-          if (isLocalHost) {
-            appURL = local.includes(':') || local.includes('.') ? `http://${local}` : `http://localhost:${local}`;
-          }
-        }
-        this.callback(null, {
-          statusCode: 302,
-          headers: {
-            Location: `${appURL}/auth?error=app_locked`
-          }
-        });
-        return;
-      }
-
-      // Persist user to DynamoDB
-      if (DDB_TABLES.users) {
-        try {
-          await ddb.put({
-            TableName: DDB_TABLES.users,
-            Item: {
-              userId: user.userId,
-              email: user.email,
-              firstName: user.firstName,
-              lastName: user.lastName,
-              name: user.getDisplayName(),
-              section: user.section,
-              sectionCode: user.sectionCode,
-              country: user.country,
-              avatarURL: user.avatarURL,
-              roles: user.roles,
-              extendedRoles: user.extendedRoles,
-              isAdministrator: user.isAdministrator,
-              canManageFinances: user.canManageFinances,
-              lastLoginAt: user.lastLoginAt
-            }
-          });
-        } catch (dbErr) {
-          this.logger.error('Failed to persist user to DynamoDB', dbErr);
-        }
-      }
-
-      const userData = JSON.parse(JSON.stringify(user));
-      const secret = await getJwtSecret();
-      const token = sign(userData, secret, { expiresIn: JWT_EXPIRE_TIME });
-
-      // Return JSON if caller explicitly requested application/json and not redirecting
-      const acceptsJson = (this.event.headers?.accept || '').includes('application/json');
-      if (acceptsJson && !this.queryParams.redirect) {
-        return { token, user: userData };
-      }
-
-      // Default browser redirect to the front-end with token
-      let appURL = APP_URL;
-      if (this.queryParams.localhost) {
-        const local = String(this.queryParams.localhost);
-        const isLocalHost =
-          /^\d+$/.test(local) ||
-          /^(localhost|127\.0\.0\.1)(:\d+)?$/.test(local) ||
-          /^192\.168\.\d{1,3}\.\d{1,3}(:\d+)?$/.test(local) ||
-          /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d+)?$/.test(local) ||
-          /^172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}(:\d+)?$/.test(local);
-
-        if (isLocalHost) {
-          appURL = local.includes(':') || local.includes('.') ? `http://${local}` : `http://localhost:${local}`;
-        }
-      }
-      this.callback(null, {
-        statusCode: 302,
-        headers: {
-          Location: `${appURL}/auth?token=${token}`
-        }
-      });
+      clientId = await systemsManager.getSecretByName(clientIdParam);
     } catch (err) {
-      this.logger.error('CAS validation error', err);
-      throw new HandledError('Login failed');
+      this.logger.error('Failed to load OAuth clientId from SSM', { clientIdParam, err });
     }
+
+    const origin = (this.event.headers?.origin || this.event.headers?.Origin || '') as string;
+    const isLocalOrigin = origin.includes('localhost') || origin.includes('127.0.0.1');
+    const defaultRedirectUri = (!isLocalOrigin && origin) ? `${origin.replace(/\/+$/, '')}/auth` : `${APP_URL}/auth`;
+
+    return {
+      clientId: clientId || '',
+      redirectUri: defaultRedirectUri,
+      authorizeUrl: 'https://accounts.esn.org/oauth/authorize',
+      scope: 'oauth2_access_to_profile_information'
+    };
   }
 
   protected async postResources(): Promise<any> {
@@ -191,7 +78,200 @@ class Login extends ResourceController {
     if (guestToken) {
       return this.handleGuestLogin(guestToken);
     }
-    throw new HandledError('Missing guestToken');
+
+    const code = this.body?.code || this.queryParams?.code;
+    if (code) {
+      const codeVerifier = this.body?.codeVerifier || this.body?.code_verifier || this.queryParams?.codeVerifier;
+      const redirectUri = this.body?.redirectUri || this.body?.redirect_uri || this.queryParams?.redirectUri;
+      return this.handleOAuthLogin(code, codeVerifier, redirectUri);
+    }
+
+    throw new HandledError('Missing code or guestToken');
+  }
+
+  private async handleOAuthLogin(code: string, codeVerifier?: string, redirectUri?: string): Promise<any> {
+    const stage = this.stage || process.env.STAGE || 'dev';
+    const clientIdParam = `/${PROJECT}/${stage}/oauth/client_id`;
+    const clientSecretParam = `/${PROJECT}/${stage}/oauth/client_secret`;
+
+    let clientId: string | null = null;
+    let clientSecret: string | null = null;
+    try {
+      clientId = await systemsManager.getSecretByName(clientIdParam);
+      clientSecret = await systemsManager.getSecretByName(clientSecretParam);
+    } catch (err) {
+      this.logger.error('Failed to load OAuth credentials from SSM', { clientIdParam, err });
+    }
+
+    if (!clientId || !clientSecret) {
+      this.logger.error('Missing OAuth credentials in SSM Parameter Store', { stage });
+      throw new HandledError('OAuth credentials not configured for this environment');
+    }
+
+    const origin = (this.event.headers?.origin || this.event.headers?.Origin || '') as string;
+    const isLocalOrigin = origin.includes('localhost') || origin.includes('127.0.0.1');
+    const defaultRedirectUri = (!isLocalOrigin && origin) ? `${origin.replace(/\/+$/, '')}/auth` : `${APP_URL}/auth`;
+    const effectiveRedirectUri = redirectUri || defaultRedirectUri;
+
+    let accessToken: string;
+    try {
+      const params = new URLSearchParams();
+      params.append('grant_type', 'authorization_code');
+      params.append('client_id', clientId);
+      params.append('client_secret', clientSecret);
+      params.append('code', code);
+      params.append('redirect_uri', effectiveRedirectUri);
+      if (codeVerifier) {
+        params.append('code_verifier', codeVerifier);
+      }
+
+      this.logger.info('Exchanging OAuth authorization code with ESN Accounts', {
+        effectiveRedirectUri,
+        hasCodeVerifier: !!codeVerifier
+      });
+
+      const tokenRes = await Axios.post(OAUTH_TOKEN_URL, params.toString(), {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+      });
+
+      accessToken = tokenRes.data?.access_token;
+      if (!accessToken) {
+        this.logger.error('Missing access token in OAuth token response', { response: tokenRes.data });
+        throw new HandledError('OAuth login failed: missing access token');
+      }
+    } catch (err: any) {
+      const errorDetails = err?.response?.data || err?.message || err;
+      this.logger.error('OAuth token exchange failed', { error: errorDetails });
+      throw new HandledError('Login failed during OAuth token exchange');
+    }
+
+    let userInfo: any;
+    try {
+      const userInfoRes = await Axios.get(OAUTH_USERINFO_URL, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      userInfo = userInfoRes.data || {};
+      this.logger.info('OAuth userinfo fetched successfully', {
+        keys: Object.keys(userInfo),
+        userId: userInfo.sub
+      });
+    } catch (err: any) {
+      const errorDetails = err?.response?.data || err?.message || err;
+      this.logger.error('OAuth userinfo fetch failed', { error: errorDetails });
+      throw new HandledError('Failed to fetch user profile from ESN Accounts');
+    }
+
+    const userId = String(userInfo.sub).toLowerCase().trim();
+
+    if (!userId) {
+      this.logger.error('Missing user identity from OAuth userinfo', { userInfo });
+      throw new HandledError('Missing user identity from ESN Accounts');
+    }
+
+    const configurations = await this.loadOrInitConfigurations(userId);
+
+    const email = userInfo.esn_email || userInfo.email || '';
+    const firstName = userInfo.given_name || '';
+    const lastName = userInfo.family_name || '';
+
+    const sectionGroup = Array.isArray(userInfo.detailed_groups)
+      ? userInfo.detailed_groups.find((g: any) => g.type === 'section')
+      : null;
+    const countryGroup = Array.isArray(userInfo.detailed_groups)
+      ? userInfo.detailed_groups.find((g: any) => g.type === 'country')
+      : null;
+
+    const sectionCode = sectionGroup?.scope || '';
+    const section = sectionGroup?.label || '';
+    const country = countryGroup?.label || '';
+    const avatarURL = userInfo.picture || '';
+
+    let extractedRoles: string[] = [];
+    const rawRoles = userInfo.groups || userInfo.roles || userInfo.extended_roles || userInfo.oauth_roles || [];
+    if (Array.isArray(rawRoles)) {
+      extractedRoles = rawRoles.map((r: any) => (typeof r === 'string' ? r : r?.name || String(r)));
+    } else if (typeof rawRoles === 'object' && rawRoles !== null) {
+      extractedRoles = Object.values(rawRoles).map((r: any) => (typeof r === 'string' ? r : r?.name || String(r)));
+    } else if (typeof rawRoles === 'string') {
+      extractedRoles = rawRoles.split(/[\s,]+/);
+    }
+    extractedRoles = extractedRoles.map(r => (typeof r === 'string' ? r.trim() : '')).filter(Boolean);
+    extractedRoles = extractedRoles.filter((item, idx) => extractedRoles.indexOf(item) === idx);
+
+    const user = new User({
+      userId,
+      email,
+      sectionCode,
+      firstName,
+      lastName,
+      roles: extractedRoles,
+      extendedRoles: extractedRoles,
+      section,
+      country,
+      avatarURL,
+      lastLoginAt: new Date().toISOString(),
+      isAdministrator: false
+    });
+    User.applyConfigurationPermissions(user, configurations);
+    this.logger.info('ESN Accounts OAuth login successful', { userId: user.userId, section: user.sectionCode });
+
+    if (configurations.appLocked && !user.isAdministrator) {
+      this.logger.warn('Login rejected: application is locked', { userId: user.userId });
+      const acceptsJson = (this.event.headers?.accept || '').includes('application/json');
+      if (this.httpMethod === 'POST' || (acceptsJson && !this.queryParams?.redirect)) {
+        this.returnStatusCode = 403;
+        throw new HandledError('The application is temporarily locked');
+      }
+      this.callback(null, {
+        statusCode: 302,
+        headers: {
+          Location: `${APP_URL}/auth?error=app_locked`
+        }
+      });
+      return;
+    }
+
+    if (DDB_TABLES.users) {
+      try {
+        await ddb.put({
+          TableName: DDB_TABLES.users,
+          Item: {
+            userId: user.userId,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            name: user.getDisplayName(),
+            section: user.section,
+            sectionCode: user.sectionCode,
+            country: user.country,
+            avatarURL: user.avatarURL,
+            roles: user.roles,
+            extendedRoles: user.extendedRoles,
+            isAdministrator: user.isAdministrator,
+            canManageFinances: user.canManageFinances,
+            lastLoginAt: user.lastLoginAt
+          }
+        });
+      } catch (dbErr) {
+        this.logger.error('Failed to persist user to DynamoDB', dbErr);
+      }
+    }
+
+    const userData = JSON.parse(JSON.stringify(user));
+    const secret = await getJwtSecret();
+    const token = sign(userData, secret, { expiresIn: JWT_EXPIRE_TIME });
+
+    const acceptsJson = (this.event.headers?.accept || '').includes('application/json');
+    if (this.httpMethod === 'POST' || (acceptsJson && !this.queryParams?.redirect)) {
+      return { token, user: userData };
+    }
+
+    this.callback(null, {
+      statusCode: 302,
+      headers: {
+        Location: `${APP_URL}/auth?token=${token}`
+      }
+    });
   }
 
   private async handleGuestLogin(guestToken: string): Promise<any> {
@@ -311,7 +391,7 @@ class Login extends ResourceController {
         /^\d+$/.test(local) ||
         /^(localhost|127\.0\.0\.1)(:\d+)?$/.test(local) ||
         /^192\.168\.\d{1,3}\.\d{1,3}(:\d+)?$/.test(local) ||
-        /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d+)?$/.test(local) ||
+        /^10\.\d{1,3}\.\d{1,3}(:\d+)?$/.test(local) ||
         /^172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}(:\d+)?$/.test(local);
 
       if (isLocalHost) {

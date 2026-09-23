@@ -542,7 +542,21 @@ export class AppService {
     }
   }
 
-  public startLoginFlow(): void {
+  public async startLoginFlow(): Promise<void> {
+    // Dynamically retrieve OAuth config from backend (which securely loads clientId from SSM)
+    let oauthConfig: any;
+    try {
+      oauthConfig = await this.api.getResource('login');
+    } catch (err) {
+      console.error('Failed to load OAuth config from server', err);
+      throw err;
+    }
+
+    const clientId = oauthConfig?.clientId;
+    if (!clientId) {
+      throw new Error('OAuth Client ID not configured on server');
+    }
+
     const hostname = window.location.hostname;
     const isLocal =
       hostname === 'localhost' ||
@@ -552,13 +566,83 @@ export class AppService {
       hostname.startsWith('10.') ||
       /^172\.(1[6-9]|2\d|3[0-1])\./.test(hostname);
 
+    const redirectUri = oauthConfig?.redirectUri || `${window.location.origin}/auth`;
+    const authorizeUrl = oauthConfig?.authorizeUrl || 'https://accounts.esn.org/oauth/authorize';
+    const scope = oauthConfig?.scope || 'oauth2_access_to_profile_information';
+
     const port = window.location.port || '8100';
     const localHost = window.location.port ? window.location.host : `${hostname}:${port}`;
-    const localhostParam = isLocal ? `?localhost=${localHost}` : '';
-    const apiLoginURL = `https://${env.idea.api.url}/${env.idea.api.stage}/login`;
-    const casLoginUrl = `https://accounts.esn.org/cas/login?service=${encodeURIComponent(apiLoginURL + localhostParam)}`;
 
-    window.location.href = casLoginUrl;
+    const codeVerifier = this.generateCodeVerifier();
+    const codeChallenge = await this.generateCodeChallenge(codeVerifier);
+
+    sessionStorage.setItem('oauth_verifier', codeVerifier);
+    sessionStorage.setItem('oauth_redirect_uri', redirectUri);
+
+    let state = this.generateRandomString(16);
+    if (isLocal) {
+      state = `local:${localHost}`;
+      sessionStorage.setItem('oauth_localhost', localHost);
+    }
+
+    const authUrl = `${authorizeUrl}?` +
+      `response_type=code` +
+      `&client_id=${encodeURIComponent(clientId)}` +
+      `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+      `&scope=${encodeURIComponent(scope)}` +
+      `&code_challenge=${encodeURIComponent(codeChallenge)}` +
+      `&code_challenge_method=S256` +
+      `&state=${encodeURIComponent(state)}`;
+
+    window.location.href = authUrl;
+  }
+
+  public async loginWithOAuthCode(code: string, codeVerifier?: string, redirectUri?: string): Promise<User | null> {
+    const res: any = await this.api.postResource('login', {
+      body: {
+        code,
+        codeVerifier,
+        redirectUri
+      }
+    });
+    if (res?.token) {
+      return await this.setToken(res.token);
+    }
+    throw new Error('Authentication failed: no token returned');
+  }
+
+  private generateRandomString(length = 64): string {
+    const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
+    let result = '';
+    const randomValues = new Uint8Array(length);
+    window.crypto.getRandomValues(randomValues);
+    for (let i = 0; i < length; i++) {
+      result += charset[randomValues[i] % charset.length];
+    }
+    return result;
+  }
+
+  private generateCodeVerifier(): string {
+    return this.generateRandomString(64);
+  }
+
+  private async generateCodeChallenge(verifier: string): Promise<string> {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(verifier);
+    const digest = await window.crypto.subtle.digest('SHA-256', data);
+    return this.base64UrlEncode(digest);
+  }
+
+  private base64UrlEncode(buffer: ArrayBuffer): string {
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary)
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
   }
 
   private parseTokenPayload(token: string): any {

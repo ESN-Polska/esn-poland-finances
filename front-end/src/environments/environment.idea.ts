@@ -25,6 +25,9 @@ export const environment = {
   stage: STAGE,
   apiDomain: parameters.apiDomain,
   apiUrl: 'https://'.concat(parameters.apiDomain),
-  mediaUrl: 'https://'.concat(parameters.mediaDomain),
+  oauth: {
+    authorizeUrl: 'https://accounts.esn.org/oauth/authorize',
+    scope: 'oauth2_access_to_profile_information'
+  },
   parameters
 };

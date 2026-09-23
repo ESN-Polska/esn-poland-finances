@@ -117,7 +117,7 @@ for (const [stageName, stageConfig] of Object.entries(activeStages)) {
     },
     removalPolicy: stageConfig.destroyDataOnDelete ? cdk.RemovalPolicy.DESTROY : cdk.RemovalPolicy.RETAIN,
     lambdaLogLevel: stageConfig.logLevel || 'INFO',
-    appDomain: stageConfig.domain
+    appDomain: stageConfig.alternativeDomains?.[0] || stageConfig.domain
   });
 
   // Front-End Static Hosting Stack

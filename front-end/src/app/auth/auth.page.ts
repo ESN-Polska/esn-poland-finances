@@ -56,11 +56,69 @@ export class AuthPage implements OnInit {
       await toast.present();
     }
 
+    // Check for OAuth error returned by ESN Accounts
+    const oauthError = this.route.snapshot.queryParamMap.get('error');
+    if (oauthError && oauthError !== 'app_locked') {
+      const toast = await this.toastCtrl.create({
+        message: this.translate.instant('AUTH.LOGIN_FAILED'),
+        duration: 5000,
+        color: 'danger',
+        position: 'bottom'
+      });
+      await toast.present();
+    }
+
     // Check token from @Input (routed parameter) or snapshot queryParams
     const queryToken = this.token || this.route.snapshot.queryParamMap.get('token');
     const guestToken = this.route.snapshot.queryParamMap.get('guestToken');
+    const code = this.route.snapshot.queryParamMap.get('code');
+    const state = this.route.snapshot.queryParamMap.get('state');
 
-    if (guestToken) {
+    if (code) {
+      if (this.isAppLocked) {
+        return;
+      }
+
+      // If returning to dev callback from a localhost session, bounce to localhost
+      if (
+        state &&
+        state.startsWith('local:') &&
+        typeof window !== 'undefined' &&
+        window.location.hostname !== 'localhost' &&
+        window.location.hostname !== '127.0.0.1'
+      ) {
+        const localTarget = state.replace('local:', '');
+        const verifier = sessionStorage.getItem('oauth_verifier') || '';
+        window.location.href = `http://${localTarget}/auth?code=${encodeURIComponent(code)}&v=${encodeURIComponent(verifier)}`;
+        return;
+      }
+
+      this.isProcessing = true;
+      try {
+        const codeVerifier =
+          this.route.snapshot.queryParamMap.get('v') ||
+          sessionStorage.getItem('oauth_verifier') ||
+          undefined;
+        const redirectUri = sessionStorage.getItem('oauth_redirect_uri') || undefined;
+
+        await this.appService.loginWithOAuthCode(code, codeVerifier, redirectUri);
+        sessionStorage.removeItem('oauth_verifier');
+        sessionStorage.removeItem('oauth_redirect_uri');
+        sessionStorage.removeItem('oauth_localhost');
+        await this.router.navigate(['/'], { replaceUrl: true });
+        return;
+      } catch (err: any) {
+        console.error('Failed to process OAuth code authentication', err);
+        this.isProcessing = false;
+        const toast = await this.toastCtrl.create({
+          message: this.translate.instant('AUTH.LOGIN_FAILED'),
+          duration: 5000,
+          color: 'danger',
+          position: 'bottom'
+        });
+        await toast.present();
+      }
+    } else if (guestToken) {
       if (this.isAppLocked) {
         return;
       }

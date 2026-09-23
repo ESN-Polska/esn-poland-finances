@@ -74,19 +74,28 @@ export class User extends Resource {
     }
   }
 
-  /** Match scoped CAS pattern (supporting * wildcard) against user's extendedRoles */
-  static matchesExtendedCASPermission(user: User, permission: string): boolean {
-    const roles = user.extendedRoles || [];
-    const normalizedPermission = permission.toLowerCase().trim();
+  /** Match role pattern (supporting * wildcard, e.g. PL:country-*, *:section-treasurer) against user's extendedRoles/roles */
+  static matchesRolePattern(user: User, pattern: string): boolean {
+    const roles = (user.extendedRoles && user.extendedRoles.length > 0) ? user.extendedRoles : (user.roles || []);
+    const normalizedPattern = pattern.toLowerCase().trim();
     return roles.some(userRole =>
-      new RegExp(`^${normalizedPermission.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*')}$`).test(
+      new RegExp(`^${normalizedPattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*')}$`).test(
         String(userRole).toLowerCase().trim()
       )
     );
   }
 
+  /** Alias for backward compatibility */
+  static matchesExtendedCASPermission(user: User, permission: string): boolean {
+    return User.matchesRolePattern(user, permission);
+  }
+
+  static hasAnyRole(user: User, patterns: string[]): boolean {
+    return (patterns || []).some(p => User.matchesRolePattern(user, p));
+  }
+
   static hasAnyCASPermission(user: User, permissions: string[]): boolean {
-    return (permissions || []).some(p => User.matchesExtendedCASPermission(user, p));
+    return User.hasAnyRole(user, permissions);
   }
 
   /**
