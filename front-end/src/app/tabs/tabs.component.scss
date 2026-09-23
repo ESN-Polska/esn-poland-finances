@@ -369,12 +369,18 @@ ion-tabs.desktopTabs {
   top: 0;
   left: 0;
   right: 0;
-  height: calc(56px + env(safe-area-inset-top, 0px));
   padding-top: env(safe-area-inset-top, 0px);
   box-sizing: border-box;
   z-index: 10005 !important;
   pointer-events: auto !important;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+  background: var(--ion-color-ideaToolbar, #222428);
+
+  .mobileImpersonationBanner {
+    box-shadow: none;
+    border-radius: 0;
+    margin: 0;
+  }
 
   ion-toolbar {
     --color: #ffffff;
@@ -407,22 +413,24 @@ ion-tabs.desktopTabs {
         overflow: hidden;
 
         .mobileAppTitle {
-          font-size: 0.92rem;
+          font-size: clamp(0.82rem, 3.6vw, 0.92rem);
           font-weight: 700;
           color: #ffffff;
           line-height: 1.2;
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
+          max-width: 100%;
         }
 
         .mobileAppSubtitle {
-          font-size: 0.7rem;
+          font-size: clamp(0.64rem, 2.8vw, 0.7rem);
           color: rgba(255, 255, 255, 0.75);
           line-height: 1.2;
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
+          max-width: 100%;
         }
       }
     }
@@ -454,6 +462,17 @@ ion-tabs.mobileTabs {
   height: 100%;
   box-sizing: border-box;
   padding-top: calc(56px + env(safe-area-inset-top, 0px));
+}
+
+:host.has-impersonation {
+  ion-tabs.mobileTabs {
+    padding-top: calc(56px + 40px + env(safe-area-inset-top, 0px));
+  }
+
+  ion-menu {
+    top: calc(56px + 40px + env(safe-area-inset-top, 0px)) !important;
+    height: calc(100% - 56px - 40px - env(safe-area-inset-top, 0px)) !important;
+  }
 }
 
 /* Mobile Slide-Out Drawer (ion-menu) */
@@ -673,7 +692,7 @@ ion-menu {
   }
 
   .menuLogoutWrapper {
-    padding: 0 16px 28px 16px;
+    padding: 0 16px calc(24px + env(safe-area-inset-bottom, 0px)) 16px;
     margin-top: 10px;
 
     .menuLogoutBtn {

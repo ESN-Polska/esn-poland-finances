@@ -1,6 +1,7 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { ModalController } from '@ionic/angular';
 import { DEFAULT_CONFIGURATIONS, LocalizedText } from '@models/configurations.model';
+import { AppService } from '@app/app.service';
 
 @Component({
   selector: 'app-home-text-modal',
@@ -32,7 +33,7 @@ import { DEFAULT_CONFIGURATIONS, LocalizedText } from '@models/configurations.mo
             </ion-label>
           </ion-list-header>
 
-          <ion-item>
+          <ion-item *ngIf="app.isLanguageAvailable('en')">
             <ion-label position="stacked">{{ 'HOME.WELCOME_TITLE_EN' | translate }}</ion-label>
             <ion-textarea
               [(ngModel)]="titleEn"
@@ -42,7 +43,7 @@ import { DEFAULT_CONFIGURATIONS, LocalizedText } from '@models/configurations.mo
             ></ion-textarea>
           </ion-item>
 
-          <ion-item>
+          <ion-item *ngIf="app.isLanguageAvailable('pl')">
             <ion-label position="stacked">{{ 'HOME.WELCOME_TITLE_PL' | translate }}</ion-label>
             <ion-textarea
               [(ngModel)]="titlePl"
@@ -60,7 +61,7 @@ import { DEFAULT_CONFIGURATIONS, LocalizedText } from '@models/configurations.mo
             </ion-label>
           </ion-list-header>
 
-          <ion-item>
+          <ion-item *ngIf="app.isLanguageAvailable('en')">
             <ion-label position="stacked">{{ 'HOME.WELCOME_SUBTITLE_EN' | translate }}</ion-label>
             <ion-textarea
               [(ngModel)]="subtitleEn"
@@ -70,7 +71,7 @@ import { DEFAULT_CONFIGURATIONS, LocalizedText } from '@models/configurations.mo
             ></ion-textarea>
           </ion-item>
 
-          <ion-item>
+          <ion-item *ngIf="app.isLanguageAvailable('pl')">
             <ion-label position="stacked">{{ 'HOME.WELCOME_SUBTITLE_PL' | translate }}</ion-label>
             <ion-textarea
               [(ngModel)]="subtitlePl"
@@ -106,7 +107,7 @@ export class HomeTextModalComponent implements OnInit {
   subtitleEn = '';
   subtitlePl = '';
 
-  constructor(private modalCtrl: ModalController) {}
+  constructor(private modalCtrl: ModalController, public app: AppService) {}
 
   ngOnInit(): void {
     this.titleEn = this.currentTitle?.en || DEFAULT_CONFIGURATIONS.homeWelcomeTitle.en;

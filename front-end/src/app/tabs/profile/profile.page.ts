@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { ModalController, ToastController } from '@ionic/angular';
+import { ActionSheetController, ModalController, ToastController } from '@ionic/angular';
 import { TranslateService } from '@ngx-translate/core';
 import { User } from '@models/user.model';
 import { AppService } from '../../app.service';
@@ -26,10 +26,54 @@ export class ProfilePage implements OnInit {
 
   constructor(
     public app: AppService,
+    private actionSheetCtrl: ActionSheetController,
     private toastCtrl: ToastController,
     private modalCtrl: ModalController,
     private translate: TranslateService
   ) {}
+
+  public async openSupportContact(): Promise<void> {
+    const email = this.app.configurations?.supportEmail?.trim();
+    if (!email) return;
+
+    const actionSheet = await this.actionSheetCtrl.create({
+      header: this.translate.instant('SUPPORT.TITLE'),
+      subHeader: email,
+      buttons: [
+        {
+          text: this.translate.instant('SUPPORT.ACTION_SEND'),
+          icon: 'mail-outline',
+          handler: () => {
+            const appTitle = this.app.configurations?.getAppTitle(this.app.currentLanguage) || 'ESN Finances';
+            const userIdentifier = this.user ? `${this.user.getDisplayName()} (@${this.user.userId})` : 'User';
+            const subject = encodeURIComponent(`[${appTitle}] Support Request - ${userIdentifier}`);
+            window.location.href = `mailto:${email}?subject=${subject}`;
+          }
+        },
+        {
+          text: this.translate.instant('SUPPORT.ACTION_COPY'),
+          icon: 'copy-outline',
+          handler: () => {
+            if (navigator?.clipboard?.writeText) {
+              navigator.clipboard.writeText(email).then(() => {
+                this.showToast('SUPPORT.EMAIL_COPIED', 'success');
+              }).catch(() => {
+                this.showToast('SUPPORT.EMAIL_COPIED', 'success');
+              });
+            } else {
+              this.showToast('SUPPORT.EMAIL_COPIED', 'success');
+            }
+          }
+        },
+        {
+          text: this.translate.instant('COMMON.CANCEL'),
+          icon: 'close-outline',
+          role: 'cancel'
+        }
+      ]
+    });
+    await actionSheet.present();
+  }
 
   public async openCredits(): Promise<void> {
     const { CreditsPage } = await import('../credits/credits.page');

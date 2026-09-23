@@ -1,4 +1,4 @@
-import { Component, HostListener } from '@angular/core';
+import { Component, HostBinding, HostListener } from '@angular/core';
 import { Router } from '@angular/router';
 import { MenuController } from '@ionic/angular';
 import { AppPermission } from '@models/configurations.model';
@@ -12,6 +12,11 @@ import { AppService } from '../app.service';
 export class TabsComponent {
   public avatarError = false;
   public isMenuOpen = false;
+
+  @HostBinding('class.has-impersonation')
+  public get hasImpersonation(): boolean {
+    return this.app.isImpersonating;
+  }
 
   constructor(
     public app: AppService,

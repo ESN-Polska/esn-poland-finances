@@ -10,7 +10,7 @@
         <ion-icon slot="icon-only" [name]="appService.getThemeIcon()"></ion-icon>
       </ion-button>
 
-      <div class="lang-selector">
+      <div class="lang-selector" *ngIf="!appService.isLanguageForced()">
         <button
           type="button"
           class="lang-btn"
@@ -58,6 +58,17 @@
           </div>
           <h3 class="guestErrorTitle">{{ 'AUTH.GUEST_LINK_UNAVAILABLE' | translate }}</h3>
           <p class="guestErrorDesc">{{ guestErrorKey | translate }}</p>
+
+          <div class="auth-support-container" *ngIf="supportEmail">
+            <button type="button" class="auth-support-btn" (click)="openSupportContact()">
+              <ion-icon name="help-buoy-outline" class="support-btn-icon"></ion-icon>
+              <div class="support-btn-text">
+                <span class="support-btn-title">{{ 'SUPPORT.TITLE' | translate }}</span>
+                <span class="support-btn-email">{{ supportEmail }}</span>
+              </div>
+              <ion-icon name="chevron-forward-outline" class="support-btn-arrow"></ion-icon>
+            </button>
+          </div>
         </div>
 
         <!-- App Locked Notice (replaces login button) -->
@@ -67,6 +78,17 @@
           </div>
           <h3 class="appLockedTitle">{{ 'AUTH.APP_LOCKED_TITLE' | translate }}</h3>
           <p class="appLockedDesc">{{ appLockMessage }}</p>
+
+          <div class="auth-support-container" *ngIf="supportEmail">
+            <button type="button" class="auth-support-btn" (click)="openSupportContact()">
+              <ion-icon name="help-buoy-outline" class="support-btn-icon"></ion-icon>
+              <div class="support-btn-text">
+                <span class="support-btn-title">{{ 'SUPPORT.TITLE' | translate }}</span>
+                <span class="support-btn-email">{{ supportEmail }}</span>
+              </div>
+              <ion-icon name="chevron-forward-outline" class="support-btn-arrow"></ion-icon>
+            </button>
+          </div>
 
           <div class="admin-bypass-container">
             <ion-button
