@@ -132,6 +132,38 @@
   .primaryActionWrapper {
     display: flex;
     justify-content: center;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+
+    .readRulesBtn {
+      --border-color: var(--ion-color-primary, #00aeef);
+      --border-width: 1.5px;
+      --border-radius: 8px;
+      --color: var(--ion-color-primary, #00aeef);
+      font-size: 1rem;
+      font-weight: 600;
+      height: 48px;
+      min-width: 190px;
+      text-transform: none;
+      --box-shadow: none !important;
+      box-shadow: none !important;
+      outline: none !important;
+      margin: 0;
+      transition: all 0.2s ease;
+
+      &:hover {
+        --border-color: var(--ion-color-primary-shade, #0099d2);
+        --color: var(--ion-color-primary-shade, #0099d2);
+        --background: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.08);
+      }
+
+      ion-icon {
+        font-size: 1.25rem;
+        margin-right: 8px;
+        color: var(--ion-color-primary, #00aeef);
+      }
+    }
 
     .submitRequestBtn {
       --background: var(--ion-color-primary, #00aeef);
@@ -237,6 +269,17 @@
           font-size: 1.05rem;
           font-weight: 700;
           color: var(--text-dark);
+
+          &.mixedAmountTag {
+            display: inline-flex;
+            align-items: baseline;
+            gap: 6px;
+
+            .dividerDot {
+              color: var(--text-medium);
+              font-weight: normal;
+            }
+          }
         }
 
         .dateValue {

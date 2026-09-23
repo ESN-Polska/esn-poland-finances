@@ -260,6 +260,10 @@ export class HomePage implements OnInit {
     }
   }
 
+  public goToRules(): void {
+    this.router.navigate(['/t/rules']);
+  }
+
   public goToSubmit(): void {
     this.router.navigate(['/t/requests/submit']);
   }

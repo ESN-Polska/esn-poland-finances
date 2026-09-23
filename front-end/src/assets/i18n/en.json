@@ -72,6 +72,7 @@
     "LOGOUT": "Log out"
   },
   "HOME": {
+    "READ_RULES": "Read Rules",
     "SUBMIT_REQUEST": "Submit Request",
     "RECENT_ACTIVITY": "Recent Activity",
     "NO_RECENT_ACTIVITY": "No financial requests submitted yet.",
@@ -182,7 +183,7 @@
       "SUBTITLE": "Review, process, and audit all federation financial requests",
       "AUDITOR_BADGE": "Auditor Mode",
       "AUDITOR_NOTICE": "You have read-only access to inspect and export all financial requests across the federation.",
-      "TOTAL_APPROVED_PAID": "Approved & Paid",
+      "TOTAL_PAID_OUT": "Paid Out",
       "SEARCH_PLACEHOLDER": "Search by ID, applicant, section, funding source, or invoice...",
       "SHOWING_RESULTS": "Showing {{current}} of {{total}} requests",
       "RESET_FILTERS": "Reset filters",
@@ -238,6 +239,7 @@
     "TOTAL_NET_AMOUNT": "Total Net Amount",
     "TOTAL_GROSS_AMOUNT": "Total Gross Amount",
     "TOTAL_VAT_AMOUNT": "Total VAT Amount",
+    "MIXED_CURRENCY_SUMMARY": "Mixed Currencies Summary",
     "SUBMITTED_ON": "Submitted on",
     "LAST_UPDATED": "Last updated",
     "CREATED_AT": "Created on",
@@ -318,10 +320,10 @@
     "NO_REQUESTS_FOUND": "No financial requests found",
     "NO_REQUESTS_DESC": "You haven't submitted any financial requests yet.",
     "TYPES": {
-      "INVOICE_TO_PAY": "Submit an invoice to be paid",
-      "INVOICE_REIMBURSEMENT": "Submit an invoice to be reimbursed",
-      "ADVANCE_PAYMENT": "Submit an advance payment request",
-      "DELEGATION_SETTLEMENT": "Submit a delegation to be settled"
+      "INVOICE_TO_PAY": "Payment request",
+      "INVOICE_REIMBURSEMENT": "Reimbursement request",
+      "ADVANCE_PAYMENT": "Advance request",
+      "DELEGATION_SETTLEMENT": "Delegation settlement"
     },
     "TYPES_SHORT": {
       "INVOICE_TO_PAY": "Pay",
@@ -330,16 +332,16 @@
       "DELEGATION_SETTLEMENT": "Delegation"
     },
     "TYPES_DESC": {
-      "INVOICE_TO_PAY": "For federation invoices that should be transferred directly to the vendor's bank account.",
+      "INVOICE_TO_PAY": "For invoices that should be transferred directly to the vendor's bank account.",
       "INVOICE_REIMBURSEMENT": "For expenses paid with personal funds that require reimbursement to your account.",
-      "ADVANCE_PAYMENT": "Request advance funds for planned official federation expenditures.",
-      "DELEGATION_SETTLEMENT": "Settle official travel expenses, mileage and per diems."
+      "ADVANCE_PAYMENT": "Request advance funds for planned expenditures.",
+      "DELEGATION_SETTLEMENT": "Settle travel expenses, mileage and per diems."
     },
     "STATUSES": {
       "DRAFT": "Draft",
       "SUBMITTED": "Submitted",
       "IN_REVIEW": "In Review",
-      "CHANGES_REQUESTED": "Changes Requested",
+      "CHANGES_REQUESTED": "Corrections",
       "APPROVED": "Approved",
       "PAID": "Paid",
       "REJECTED": "Rejected"

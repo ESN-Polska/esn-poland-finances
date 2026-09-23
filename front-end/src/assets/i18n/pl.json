@@ -72,6 +72,7 @@
     "LOGOUT": "Wyloguj się"
   },
   "HOME": {
+    "READ_RULES": "Przeczytaj zasady",
     "SUBMIT_REQUEST": "Złóż wniosek",
     "RECENT_ACTIVITY": "Ostatnia aktywność",
     "NO_RECENT_ACTIVITY": "Brak złożonych wniosków finansowych.",
@@ -183,7 +184,7 @@
       "SUBTITLE": "Weryfikuj, przetwarzaj i audytuj wszystkie wnioski finansowe stowarzyszenia",
       "AUDITOR_BADGE": "Tryb Audytora",
       "AUDITOR_NOTICE": "Posiadasz uprawnienia tylko do odczytu umożliwiające przeglądanie oraz eksport wszystkich wniosków finansowych.",
-      "TOTAL_APPROVED_PAID": "Zatwierdzone i wypłacone",
+      "TOTAL_PAID_OUT": "Wypłacone",
       "SEARCH_PLACEHOLDER": "Szukaj po ID, wnioskodawcy, sekcji, źródle finansowania lub fakturze...",
       "SHOWING_RESULTS": "Wyświetlono {{current}} z {{total}} wniosków",
       "RESET_FILTERS": "Wyczyść filtry",
@@ -239,6 +240,7 @@
     "TOTAL_NET_AMOUNT": "Łączna kwota netto",
     "TOTAL_GROSS_AMOUNT": "Łączna kwota brutto",
     "TOTAL_VAT_AMOUNT": "Łączna kwota VAT",
+    "MIXED_CURRENCY_SUMMARY": "Podsumowanie walut (PLN i EUR)",
     "SUBMITTED_ON": "Złożono",
     "LAST_UPDATED": "Ostatnia modyfikacja",
     "CREATED_AT": "Data utworzenia",
@@ -319,28 +321,28 @@
     "NO_REQUESTS_FOUND": "Nie znaleziono wniosków finansowych",
     "NO_REQUESTS_DESC": "Nie złożyłeś(-aś) jeszcze żadnego wniosku finansowego.",
     "TYPES": {
-      "INVOICE_TO_PAY": "Zgłoś fakturę do opłacenia",
-      "INVOICE_REIMBURSEMENT": "Zgłoś fakturę do zwrotu",
-      "ADVANCE_PAYMENT": "Złóż wniosek o zaliczkę",
-      "DELEGATION_SETTLEMENT": "Zgłoś delegację do rozliczenia"
+      "INVOICE_TO_PAY": "Wniosek o płatność",
+      "INVOICE_REIMBURSEMENT": "Wniosek o zwrot",
+      "ADVANCE_PAYMENT": "Wniosek o zaliczkę",
+      "DELEGATION_SETTLEMENT": "Rozliczenie delegacji"
     },
     "TYPES_SHORT": {
-      "INVOICE_TO_PAY": "Opłacenie",
+      "INVOICE_TO_PAY": "Płatność",
       "INVOICE_REIMBURSEMENT": "Zwrot",
       "ADVANCE_PAYMENT": "Zaliczka",
       "DELEGATION_SETTLEMENT": "Delegacja"
     },
     "TYPES_DESC": {
-      "INVOICE_TO_PAY": "Dla faktur wystawionych na federację, które mają zostać opłacone bezpośrednio na rachunek wystawcy.",
+      "INVOICE_TO_PAY": "Dla faktur, które mają zostać opłacone bezpośrednio na rachunek wystawcy.",
       "INVOICE_REIMBURSEMENT": "Dla wydatków opłaconych z prywatnych środków, wymagających zwrotu na Twoje konto.",
-      "ADVANCE_PAYMENT": "Wniosek o zaliczkę finansową na pokrycie planowanych wydatków federacji.",
+      "ADVANCE_PAYMENT": "Wniosek o zaliczkę finansową na pokrycie planowanych wydatków.",
       "DELEGATION_SETTLEMENT": "Rozliczenie kosztów podróży służbowych, diet i przejazdów."
     },
     "STATUSES": {
       "DRAFT": "Wersja robocza",
       "SUBMITTED": "Złożony",
       "IN_REVIEW": "W weryfikacji",
-      "CHANGES_REQUESTED": "Wymagane poprawki",
+      "CHANGES_REQUESTED": "Poprawki",
       "APPROVED": "Zatwierdzony",
       "PAID": "Opłacony",
       "REJECTED": "Odrzucony"
