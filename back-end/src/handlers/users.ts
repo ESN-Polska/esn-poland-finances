@@ -100,7 +100,7 @@ class UsersRC extends ResourceController {
             sources.push({ roleId: role.id, roleName: role.name, matchedExtendedRole: 'manual' });
           }
           (role.extendedRolePatterns || [])
-            .filter(pattern => User.matchesExtendedCASPermission(user, pattern))
+            .filter(pattern => User.matchesRolePattern(user, pattern))
             .forEach(matchedExtendedRole => {
               sources.push({ roleId: role.id, roleName: role.name, matchedExtendedRole });
             });
@@ -108,11 +108,11 @@ class UsersRC extends ResourceController {
         }, [] as { roleId: string; roleName: string; matchedExtendedRole: string }[]);
 
       const builtInSources = (configurations.automaticRoleAssignments || [])
-        .filter(assignment => User.hasAnyCASPermission(user, assignment.extendedRolePatterns))
+        .filter(assignment => User.hasAnyRole(user, assignment.extendedRolePatterns))
         .map(assignment => ({
           roleId: assignment.roleId,
           roleName: assignment.roleId.replace(/_/g, ' '),
-          matchedExtendedRole: assignment.extendedRolePatterns.find(p => User.matchesExtendedCASPermission(user, p)) || ''
+          matchedExtendedRole: assignment.extendedRolePatterns.find(p => User.matchesRolePattern(user, p)) || ''
         }));
 
       return {

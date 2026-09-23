@@ -174,17 +174,31 @@ class Login extends ResourceController {
     const firstName = userInfo.given_name || '';
     const lastName = userInfo.family_name || '';
 
-    const sectionGroup = Array.isArray(userInfo.detailed_groups)
-      ? userInfo.detailed_groups.find((g: any) => g.type === 'section')
-      : null;
-    const countryGroup = Array.isArray(userInfo.detailed_groups)
-      ? userInfo.detailed_groups.find((g: any) => g.type === 'country')
-      : null;
+    const detailedGroups: any[] = Array.isArray(userInfo.detailed_groups)
+      ? userInfo.detailed_groups
+      : typeof userInfo.detailed_groups === 'object' && userInfo.detailed_groups !== null
+      ? Object.values(userInfo.detailed_groups)
+      : [];
+
+    const sectionGroup = detailedGroups.find(
+      (g: any) => String(g?.type || '').toLowerCase() === 'section'
+    );
+    const countryGroup = detailedGroups.find(
+      (g: any) => String(g?.type || '').toLowerCase() === 'country'
+    );
 
     const sectionCode = sectionGroup?.scope || '';
     const section = sectionGroup?.label || '';
     const country = countryGroup?.label || '';
     const avatarURL = userInfo.picture || '';
+
+    this.logger.info('Extracted user attributes from OAuth profile', {
+      userId,
+      email,
+      sectionCode,
+      section,
+      country
+    });
 
     let extractedRoles: string[] = [];
     const rawRoles = userInfo.groups || userInfo.roles || userInfo.extended_roles || userInfo.oauth_roles || [];
