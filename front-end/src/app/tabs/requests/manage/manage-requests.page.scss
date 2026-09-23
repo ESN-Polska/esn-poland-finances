@@ -19,12 +19,12 @@
 
   .headerLeft {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 12px;
 
     .backBtn {
       --color: var(--text-dark);
-      margin: 0;
+      margin: 2px 0 0 0;
       font-size: 1.3rem;
       width: 40px;
       height: 40px;
@@ -419,11 +419,6 @@
         letter-spacing: 0.04em;
         color: var(--text-medium);
         white-space: nowrap;
-
-        &.actionsCol {
-          text-align: right;
-          padding-right: 20px;
-        }
       }
     }
 
@@ -569,31 +564,6 @@
           }
         }
       }
-
-      .actionsCell {
-        text-align: right;
-        padding-right: 16px;
-        white-space: nowrap;
-
-        .rowActions {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-
-          .actionBtn {
-            font-size: 0.82rem;
-            font-weight: 600;
-            text-transform: none;
-            margin: 0;
-            height: 32px;
-          }
-
-          .viewActionBtn {
-            --color: var(--text-medium);
-            font-size: 1.15rem;
-          }
-        }
-      }
     }
   }
 }
@@ -650,6 +620,12 @@
       padding: 16px;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
       cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+
+      &:active {
+        transform: scale(0.985);
+        border-color: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.5);
+      }
 
       .cardHeaderRow {
         display: flex;
@@ -746,66 +722,183 @@
         }
       }
 
-      .cardAmountRow {
+      .cardBottom {
         display: flex;
         align-items: baseline;
-        gap: 6px;
-        margin-bottom: 12px;
+        border-top: 1px solid var(--border-color, #e2e8f0);
+        padding-top: 12px;
+        margin-top: 12px;
 
-        .amountLabel {
-          font-size: 0.88rem;
-          color: var(--text-medium);
-        }
+        .amountContainer {
+          display: flex;
+          align-items: baseline;
+          gap: 6px;
+          flex-wrap: wrap;
 
-        .amountValue {
-          font-size: 1.15rem;
-          font-weight: 700;
-          color: var(--text-dark);
+          .amountLabel {
+            font-size: 0.88rem;
+            color: var(--text-medium);
+          }
 
-          &.mixedMobileAmount {
-            font-size: 1.02rem;
-            display: inline-flex;
-            align-items: baseline;
-            gap: 6px;
+          .amountNumber {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--text-dark);
 
-            .dividerDot {
-              color: var(--text-medium);
-              font-weight: normal;
+            &.mixedAmountTag {
+              font-size: 1.02rem;
+              display: inline-flex;
+              align-items: baseline;
+              gap: 6px;
+
+              .dividerDot {
+                color: var(--text-medium);
+                font-weight: normal;
+              }
             }
           }
         }
       }
+    }
+  }
+}
 
-      .remarksBox {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        background: #f8fafc;
-        border-radius: 6px;
-        padding: 6px 10px;
-        font-size: 0.82rem;
-        color: var(--text-medium);
-        margin-bottom: 12px;
+@media (max-width: 600px) {
+  .manageContainer {
+    margin: 16px auto;
+    padding: 0 12px;
+  }
 
-        ion-icon {
-          color: #64748b;
-        }
+  .panelHeader {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px 10px;
+    margin-bottom: 16px;
+
+    .headerLeft {
+      grid-column: 1;
+      grid-row: 1;
+      gap: 8px;
+      align-items: flex-start;
+
+      .backBtn {
+        width: 34px;
+        height: 34px;
+        font-size: 1.2rem;
+        margin: 0;
       }
 
-      .cardActionsRow {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        flex-wrap: wrap;
-        padding-top: 10px;
-        border-top: 1px solid var(--border-color, #e2e8f0);
+      .panelTitle {
+        font-size: 1.35rem;
+        line-height: 1.2;
+      }
 
-        ion-button {
-          font-size: 0.82rem;
-          font-weight: 600;
-          text-transform: none;
-          margin: 0;
+      .panelSubtitle {
+        font-size: 0.82rem;
+        line-height: 1.35;
+        margin-top: 3px;
+      }
+    }
+
+    .headerRight {
+      display: contents;
+    }
+
+    .refreshBtn {
+      grid-column: 2;
+      grid-row: 1;
+      width: 36px;
+      height: 36px;
+      font-size: 1.2rem;
+      justify-self: end;
+      align-self: start;
+      margin: 0;
+    }
+
+    .exportBtn {
+      grid-column: 1 / -1;
+      grid-row: 2;
+      justify-self: end;
+      height: 32px;
+      font-size: 0.82rem;
+      font-weight: 500;
+      --border-radius: 8px;
+      --border-color: var(--border-color);
+      --color: var(--text-dark);
+      --padding-start: 10px;
+      --padding-end: 12px;
+      margin: 2px 0 0 0;
+
+      ion-icon {
+        font-size: 0.95rem;
+        margin-right: 4px;
+      }
+    }
+  }
+
+  .metricsGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-bottom: 16px;
+
+    .metricFinancials {
+      grid-column: 1 / -1;
+    }
+
+    .metricCard {
+      padding: 8px 10px;
+
+      .metricTop .metricLabel {
+        font-size: 0.68rem;
+      }
+
+      .metricValue {
+        font-size: 1.2rem;
+      }
+    }
+  }
+
+  .toolbarCard {
+    padding: 12px;
+    gap: 12px;
+    margin-bottom: 12px;
+    border-radius: 10px;
+
+    .searchWrapper {
+      min-width: 0;
+      width: 100%;
+    }
+
+    .filterDropdowns {
+      width: 100%;
+      flex-direction: column;
+      gap: 10px;
+
+      .dropdownGroup {
+        width: 100%;
+        justify-content: space-between;
+
+        .filterSelect {
+          flex: 1;
+          min-width: 0;
+          max-width: 65%;
         }
+      }
+    }
+  }
+
+  .mobileCardsWrapper .manageCard {
+    padding: 14px 12px;
+
+    .cardApplicantRow .applicantDetails {
+      min-width: 0;
+      overflow: hidden;
+
+      .name,
+      .email {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
     }
   }
@@ -818,10 +911,4 @@ body.dark {
     border-left-color: #22c55e;
     color: #86efac;
   }
-
-  .manageCard .remarksBox {
-    background: rgba(255, 255, 255, 0.05);
-    color: #cbd5e1;
-  }
-
 }

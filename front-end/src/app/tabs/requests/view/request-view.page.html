@@ -419,7 +419,7 @@
                   <span class="history-date">{{ h.timestamp | date:'dd.MM.yyyy, HH:mm' }}</span>
                 </div>
                 <span class="history-user">{{ h.updatedBy }}</span>
-                <p class="history-note" *ngIf="h.comment">{{ h.comment }}</p>
+                <p class="history-note" *ngIf="h.comment">{{ h.comment | statusComment:h.status }}</p>
               </div>
             </div>
           </div>

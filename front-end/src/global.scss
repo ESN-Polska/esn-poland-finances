@@ -298,3 +298,24 @@ ion-modal.creditsModal {
     --border-radius: 12px;
   }
 }
+
+/*
+ * Mobile Ergonomics & Layout Utilities
+ * -------------------------------------------
+ */
+.break-anywhere {
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
+}
+
+.truncate-text {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.touch-target-44 {
+  min-height: 44px;
+  min-width: 44px;
+}
+

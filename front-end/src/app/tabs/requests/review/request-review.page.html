@@ -6,8 +6,14 @@
       <div class="nav-left">
         <button class="back-link-btn" (click)="goBack()">
           <ion-icon name="arrow-back-outline"></ion-icon>
-          <span>{{ 'REQUESTS.REVIEW_PANEL.BACK_TO_MANAGE' | translate }}</span>
+          <span>{{ 'COMMON.BACK' | translate }}</span>
         </button>
+
+        <!-- Review Mode Badge (Mobile: aligned top-right next to Back to List) -->
+        <div class="review-mode-pill mobile-badge">
+          <ion-icon name="shield-checkmark-outline"></ion-icon>
+          <span>{{ 'REQUESTS.REVIEW_PANEL.BADGE' | translate }}</span>
+        </div>
       </div>
 
       <div class="top-actions">
@@ -31,8 +37,8 @@
           <span>{{ 'REQUESTS.MANAGE_PANEL.EXPORT_CSV' | translate }}</span>
         </button>
 
-        <!-- Review Mode Badge (Aligned to the right) -->
-        <div class="review-mode-pill">
+        <!-- Review Mode Badge (Desktop: aligned to the right) -->
+        <div class="review-mode-pill desktop-badge">
           <ion-icon name="shield-checkmark-outline"></ion-icon>
           <span>{{ 'REQUESTS.REVIEW_PANEL.BADGE' | translate }}</span>
         </div>
@@ -162,15 +168,6 @@
           <ion-icon slot="start" name="close-circle-outline"></ion-icon>
           {{ 'REQUESTS.STATUSES.REJECTED' | translate }}
         </ion-button>
-      </div>
-    </div>
-
-    <!-- Active Review Status Banner -->
-    <div class="review-status-banner" *ngIf="request.status === 'IN_REVIEW'">
-      <ion-icon name="search-outline"></ion-icon>
-      <div class="banner-body">
-        <strong>{{ 'REQUESTS.STATUSES.IN_REVIEW' | translate }}:</strong>
-        <span>{{ 'REQUESTS.REVIEW_PANEL.SUBTITLE' | translate }}</span>
       </div>
     </div>
 
@@ -571,7 +568,7 @@
                   <span class="history-date">{{ h.timestamp | date:'dd.MM.yyyy, HH:mm' }}</span>
                 </div>
                 <span class="history-user">{{ h.updatedBy }}</span>
-                <p class="history-note" *ngIf="h.comment">{{ h.comment }}</p>
+                <p class="history-note" *ngIf="h.comment">{{ h.comment | statusComment:h.status }}</p>
               </div>
             </div>
           </div>

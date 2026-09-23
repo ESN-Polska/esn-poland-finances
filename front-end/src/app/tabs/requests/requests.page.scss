@@ -469,9 +469,17 @@
       font-size: 1.3rem;
     }
 
-    .submitBtn {
+    .headerActions {
       width: 100%;
-      justify-content: center;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+
+      .manageBtn,
+      .submitBtn {
+        width: 100%;
+        justify-content: center;
+      }
     }
   }
 
@@ -514,6 +522,19 @@
     .cardMiddle {
       gap: 12px;
       margin-bottom: 12px;
+    }
+
+    .cardBottom {
+      .amountContainer {
+        width: 100%;
+        justify-content: space-between;
+      }
+
+      .cardActions {
+        width: 100%;
+        justify-content: flex-end;
+        padding-top: 6px;
+      }
     }
   }
 }
