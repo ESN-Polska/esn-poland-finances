@@ -175,7 +175,7 @@ class RequestsHandler extends ResourceController {
       userDisplayName: user.getDisplayName(),
       userEmail: user.email,
       userAvatarURL: user.avatarURL || '',
-      section: user.section || user.sectionCode || (user.country ? 'ESN ' + user.country : ''),
+      section: user.section || user.sectionCode || '',
       country: user.country || '',
       extendedRoles: user.extendedRoles || [],
       isGuest: !!user.isGuest,
