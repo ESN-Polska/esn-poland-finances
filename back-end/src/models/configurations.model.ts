@@ -266,7 +266,7 @@ export class Configurations extends Resource {
   auditorsIds: string[];
   /** Configured custom roles with arbitrary permissions. */
   customRoles: CustomRole[];
-  /** Automatic role assignments matched against CAS extended roles. */
+  /** Automatic role assignments matched against ESN Accounts OAuth extended roles. */
   automaticRoleAssignments: AutomaticRoleAssignment[];
 
   /** The name/title of the platform in supported languages. */

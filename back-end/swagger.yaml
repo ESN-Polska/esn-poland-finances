@@ -15,7 +15,7 @@ externalDocs:
 
 tags:
   - name: Login
-    description: Access the platform via ESN Accounts CAS
+    description: Access the platform via ESN Accounts OAuth 2.0 with PKCE or guest invitation token
   - name: Configurations
     description: The platform's configurations
   - name: Requests
@@ -28,25 +28,31 @@ tags:
 paths:
   /login:
     get:
-      summary: Manage login accepted request from ESN Accounts and return auth token
-      description: Validate the CAS ticket, persist or update user profile, and issue JWT or redirect to front-end
+      summary: Retrieve OAuth configuration or process OAuth/guest login
+      description: Retrieve public OAuth client configuration when called without query parameters, or exchange authorization code / guest token for JWT
       tags: [Login]
       parameters:
-        - name: ticket
+        - name: code
           in: query
-          description: CAS service ticket provided by ESN Accounts
-          required: true
-          schema:
-            type: string
-        - name: service
-          in: query
-          description: Custom service callback URL validated by CAS
+          description: OAuth authorization code from ESN Accounts
           required: false
           schema:
             type: string
-        - name: localhost
+        - name: codeVerifier
           in: query
-          description: Localhost port or hostname for development redirect
+          description: PKCE code verifier matching the code challenge
+          required: false
+          schema:
+            type: string
+        - name: redirectUri
+          in: query
+          description: OAuth redirect URI configured in ESN Accounts
+          required: false
+          schema:
+            type: string
+        - name: guestToken
+          in: query
+          description: External guest invitation token
           required: false
           schema:
             type: string
@@ -58,7 +64,22 @@ paths:
             type: boolean
       responses:
         200:
-          $ref: '#/components/responses/LoginResponse'
+          description: OAuth client parameters or authenticated user session
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/LoginResponse'
+                  - type: object
+                    properties:
+                      clientId:
+                        type: string
+                      redirectUri:
+                        type: string
+                      authorizeUrl:
+                        type: string
+                      scope:
+                        type: string
         302:
           description: Redirect to front-end application with authentication token
           headers:
@@ -66,6 +87,36 @@ paths:
               schema:
                 type: string
               description: Front-end redirect URL with JWT token query parameter
+    post:
+      summary: Authenticate via OAuth authorization code or guest invitation token
+      description: Exchanges PKCE authorization code or guest invitation token for signed JWT and user profile
+      tags: [Login]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: string
+                  description: OAuth authorization code
+                codeVerifier:
+                  type: string
+                  description: PKCE code verifier
+                redirectUri:
+                  type: string
+                  description: Redirect URI
+                guestToken:
+                  type: string
+                  description: Guest invitation ID
+      responses:
+        200:
+          $ref: '#/components/responses/LoginResponse'
+        400:
+          $ref: '#/components/responses/BadParameters'
+        403:
+          $ref: '#/components/responses/Forbidden'
   /contributors:
     get:
       summary: Get cached repository contributors
@@ -368,7 +419,7 @@ components:
       type: apiKey
       name: Authorization
       in: header
-      description: Bearer JSON Web Token issued upon successful CAS login
+      description: Bearer JSON Web Token issued upon successful OAuth 2.0 or guest login
 
   schemas:
     Contributor:

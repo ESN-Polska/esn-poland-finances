@@ -30,9 +30,9 @@ export class User extends Resource {
   country: string;
   /** Avatar URL from ESN Accounts */
   avatarURL: string;
-  /** Legacy CAS roles */
+  /** ESN Accounts roles */
   roles: string[];
-  /** Scoped extended roles (e.g. National.treasurer:PL, Local.treasurer:PL-WAR-SGH) */
+  /** Scoped extended roles (e.g. PL-WAR-SGH:section-treasurer, PL:country-president) */
   extendedRoles: string[];
   /** ISO timestamp of last login */
   lastLoginAt: string;
@@ -120,7 +120,7 @@ export class User extends Resource {
 
     const autoRoleAssignments = configurations.automaticRoleAssignments || [];
     const automaticRoleIds = autoRoleAssignments
-      .filter(assignment => User.hasAnyCASPermission(user, assignment.extendedRolePatterns))
+      .filter(assignment => User.hasAnyRole(user, assignment.extendedRolePatterns))
       .map(assignment => assignment.roleId);
 
     // 1. Evaluate Administrator status
@@ -143,7 +143,7 @@ export class User extends Resource {
 
     // 4. Evaluate Custom Roles
     user.customRoleIds = (configurations.customRoles || [])
-      .filter(role => role.userIds.includes(user.userId) || User.hasAnyCASPermission(user, role.extendedRolePatterns))
+      .filter(role => role.userIds.includes(user.userId) || User.hasAnyRole(user, role.extendedRolePatterns))
       .map(role => role.id);
 
     // 5. Calculate effective permissions
@@ -243,7 +243,7 @@ export class User extends Resource {
     }
     const country = (this.country || '').trim();
     if (country && country !== 'undefined') {
-      return `ESN ${country}`;
+      return country;
     }
     return '';
   }
