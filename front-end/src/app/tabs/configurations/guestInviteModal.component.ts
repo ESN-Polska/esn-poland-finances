@@ -90,7 +90,11 @@ export class GuestInviteModalComponent implements OnInit {
       return;
     }
 
-    this.guestEmailLang = this.translate.currentLang === 'en' ? 'en' : 'pl';
+    if (this.app.isLanguageForced()) {
+      this.guestEmailLang = (this.app.getForcedLanguage() as 'en' | 'pl') || 'en';
+    } else {
+      this.guestEmailLang = this.translate.currentLang === 'en' ? 'en' : 'pl';
+    }
 
     if (this.existingInvite) {
       this.createdInvitation = this.existingInvite;

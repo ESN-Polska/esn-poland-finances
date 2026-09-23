@@ -1,6 +1,7 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { ModalController } from '@ionic/angular';
 import { LocalizedText } from '@models/configurations.model';
+import { AppService } from '@app/app.service';
 
 @Component({
   selector: 'app-lock-message-modal',
@@ -32,7 +33,7 @@ import { LocalizedText } from '@models/configurations.model';
           </ion-list-header>
 
           <!-- English Lock Message -->
-          <ion-item class="instructionItem">
+          <ion-item class="instructionItem" *ngIf="app.isLanguageAvailable('en')">
             <ion-label position="stacked">{{ 'CONFIGURATIONS.APP_LOCK_MESSAGE_EN' | translate }}</ion-label>
             <ion-textarea
               [(ngModel)]="messageEn"
@@ -44,7 +45,7 @@ import { LocalizedText } from '@models/configurations.model';
           </ion-item>
 
           <!-- Polish Lock Message -->
-          <ion-item class="instructionItem ion-margin-top">
+          <ion-item class="instructionItem ion-margin-top" *ngIf="app.isLanguageAvailable('pl')">
             <ion-label position="stacked">{{ 'CONFIGURATIONS.APP_LOCK_MESSAGE_PL' | translate }}</ion-label>
             <ion-textarea
               [(ngModel)]="messagePl"
@@ -88,7 +89,7 @@ export class AppLockMessageModalComponent implements OnInit {
   public messageEn = '';
   public messagePl = '';
 
-  constructor(private modalCtrl: ModalController) {}
+  constructor(private modalCtrl: ModalController, public app: AppService) {}
 
   ngOnInit(): void {
     this.messageEn = this.message?.en || '';

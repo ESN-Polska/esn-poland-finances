@@ -141,7 +141,7 @@
             [placeholder]="'CONFIGURATIONS.SEARCH_GUESTS_PLACEHOLDER' | translate"
             [debounce]="200"
           ></ion-searchbar>
-          <ion-segment [(ngModel)]="guestFilterStatus" class="guestFilterSegment">
+          <ion-segment [scrollable]="true" [(ngModel)]="guestFilterStatus" class="guestFilterSegment">
             <ion-segment-button value="ALL">
               <ion-label>{{ 'CONFIGURATIONS.FILTER_ALL' | translate }}</ion-label>
             </ion-segment-button>
@@ -541,8 +541,26 @@
         </ion-label>
       </ion-list-header>
 
-      <!-- App Title (English) -->
+      <!-- Language Mode (Forced Language) -->
       <ion-item>
+        <ion-label position="stacked">
+          {{ 'CONFIGURATIONS.LANGUAGE_MODE' | translate }}
+        </ion-label>
+        <ion-select
+          interface="popover"
+          [disabled]="!canModifyOptions()"
+          [value]="configurations.forcedLanguage || 'ALL'"
+          (ionChange)="onForcedLanguageChange($event.detail.value)"
+        >
+          <ion-select-option value="ALL">{{ 'CONFIGURATIONS.LANGUAGES.ALL' | translate }}</ion-select-option>
+          <ion-select-option value="en">{{ 'CONFIGURATIONS.LANGUAGES.EN_ONLY' | translate }}</ion-select-option>
+          <ion-select-option value="pl">{{ 'CONFIGURATIONS.LANGUAGES.PL_ONLY' | translate }}</ion-select-option>
+        </ion-select>
+        <ion-note slot="helper">{{ 'CONFIGURATIONS.LANGUAGE_MODE_I' | translate }}</ion-note>
+      </ion-item>
+
+      <!-- App Title (English) -->
+      <ion-item *ngIf="isLanguageAvailable('en')">
         <ion-label position="stacked">{{ 'CONFIGURATIONS.APP_TITLE_EN' | translate }}</ion-label>
         <ion-input readonly [(ngModel)]="configurations.appTitle.en"></ion-input>
         <ion-button slot="end" fill="clear" color="medium" class="ion-margin-top" *ngIf="canModifyOptions()" (click)="changeAppTitle('en')">
@@ -551,7 +569,7 @@
       </ion-item>
 
       <!-- App Title (Polish) -->
-      <ion-item>
+      <ion-item *ngIf="isLanguageAvailable('pl')">
         <ion-label position="stacked">{{ 'CONFIGURATIONS.APP_TITLE_PL' | translate }}</ion-label>
         <ion-input readonly [(ngModel)]="configurations.appTitle.pl"></ion-input>
         <ion-button slot="end" fill="clear" color="medium" class="ion-margin-top" *ngIf="canModifyOptions()" (click)="changeAppTitle('pl')">
@@ -560,7 +578,7 @@
       </ion-item>
 
       <!-- App Organisation (English) -->
-      <ion-item>
+      <ion-item *ngIf="isLanguageAvailable('en')">
         <ion-label position="stacked">{{ 'CONFIGURATIONS.APP_ORGANISATION_EN' | translate }}</ion-label>
         <ion-input readonly [(ngModel)]="configurations.appOrganisation.en"></ion-input>
         <ion-button slot="end" fill="clear" color="medium" class="ion-margin-top" *ngIf="canModifyOptions()" (click)="changeAppOrganisation('en')">
@@ -569,7 +587,7 @@
       </ion-item>
 
       <!-- App Organisation (Polish) -->
-      <ion-item>
+      <ion-item *ngIf="isLanguageAvailable('pl')">
         <ion-label position="stacked">{{ 'CONFIGURATIONS.APP_ORGANISATION_PL' | translate }}</ion-label>
         <ion-input readonly [(ngModel)]="configurations.appOrganisation.pl"></ion-input>
         <ion-button slot="end" fill="clear" color="medium" class="ion-margin-top" *ngIf="canModifyOptions()" (click)="changeAppOrganisation('pl')">

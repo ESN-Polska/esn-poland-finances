@@ -73,7 +73,9 @@ export class EmailTemplateComponent implements OnInit {
   }
 
   async ngOnInit(): Promise<void> {
-    if (this.template && (this.template.endsWith('_PL') || this.template.endsWith('_EN'))) {
+    if (this.app.isLanguageForced()) {
+      this.currentLang = (this.app.getForcedLanguage() as 'en' | 'pl') || 'en';
+    } else if (this.template && (this.template.endsWith('_PL') || this.template.endsWith('_EN'))) {
       this.currentLang = this.template.endsWith('_PL') ? 'pl' : 'en';
     } else {
       this.currentLang = 'en';

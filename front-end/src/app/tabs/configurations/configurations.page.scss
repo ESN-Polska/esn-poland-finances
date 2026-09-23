@@ -51,7 +51,11 @@
 .maxWidthContainer {
   max-width: 900px;
   margin: 0 auto;
-  padding: 24px 16px 48px;
+  padding: 24px 16px calc(48px + env(safe-area-inset-bottom, 0px));
+
+  @media (max-width: 600px) {
+    padding: 16px 12px calc(36px + env(safe-area-inset-bottom, 0px));
+  }
 }
 
 .aList {
@@ -299,6 +303,11 @@ body.dark {
     border-radius: 10px;
     border: 1px solid var(--border-color);
     padding: 2px;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
 
     ion-segment-button {
       --color: var(--text-medium);
@@ -308,6 +317,11 @@ body.dark {
       font-size: 0.82rem;
       font-weight: 600;
       min-height: 32px;
+      white-space: nowrap;
+
+      ion-label {
+        white-space: nowrap;
+      }
     }
   }
 }

@@ -16,7 +16,7 @@
   <ion-toolbar class="optionsToolbar">
     <div class="toolbarSegments">
       <!-- Language Selector Segment -->
-      <ion-segment [value]="currentLang" (ionChange)="onLangSegmentChange($event)" class="langSegment">
+      <ion-segment [value]="currentLang" (ionChange)="onLangSegmentChange($event)" class="langSegment" *ngIf="!app.isLanguageForced()">
         <ion-segment-button value="en">
           <ion-label>EN</ion-label>
         </ion-segment-button>

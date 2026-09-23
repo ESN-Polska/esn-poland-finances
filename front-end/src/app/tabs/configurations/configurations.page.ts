@@ -210,6 +210,9 @@ export class ConfigurationsPage implements OnInit {
       this.configurations = await this.configurationsService.update(newConfigurations);
       this.oauthRoleOptions = this.getActiveOAuthRoleOptions();
       this.app.configurations = this.configurations;
+      if (this.app.isLanguageForced() && this.app.currentLanguage !== this.app.getForcedLanguage()) {
+        await this.app.setLanguage(this.app.getForcedLanguage()!);
+      }
       if (this.app.currentUser && !this.app.isImpersonating) {
         User.applyConfigurationPermissions(this.app.currentUser, this.configurations);
       }
@@ -280,6 +283,23 @@ export class ConfigurationsPage implements OnInit {
   //
   // OPTIONS SUBTAB
   //
+
+  isLanguageAvailable(lang: string): boolean {
+    if (!this.configurations?.forcedLanguage || this.configurations.forcedLanguage === 'ALL') {
+      return true;
+    }
+    return this.configurations.forcedLanguage === lang;
+  }
+
+  async onForcedLanguageChange(newLang: string): Promise<void> {
+    if (this.configurations.forcedLanguage === newLang) return;
+    const updated = new Configurations(this.configurations);
+    updated.forcedLanguage = newLang;
+    const success = await this.updateConfigurations(updated);
+    if (success && newLang !== 'ALL') {
+      await this.app.setLanguage(newLang);
+    }
+  }
 
   async changeAppTitle(lang: 'en' | 'pl' = 'en'): Promise<void> {
     const isPl = lang === 'pl';
