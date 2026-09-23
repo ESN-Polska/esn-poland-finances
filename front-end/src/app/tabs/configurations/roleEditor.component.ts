@@ -4,7 +4,7 @@ import { TranslateService } from '@ngx-translate/core';
 import {
   APP_PERMISSION_TREE,
   AppPermission,
-  CAS_PERMISSION_OPTIONS,
+  OAUTH_ROLE_OPTIONS,
   CustomRole,
   AutomaticRoleAssignment
 } from '@models/configurations.model';
@@ -51,8 +51,8 @@ import {
 
           <ion-list-header>
             <ion-label>
-              <h2>{{ 'CONFIGURATIONS.CAS_PERMISSIONS' | translate }}</h2>
-              <p>{{ 'CONFIGURATIONS.CAS_PERMISSIONS_I' | translate }}</p>
+              <h2>{{ 'CONFIGURATIONS.OAUTH_ROLES' | translate }}</h2>
+              <p>{{ 'CONFIGURATIONS.OAUTH_ROLES_I' | translate }}</p>
             </ion-label>
           </ion-list-header>
           <ion-item *ngFor="let permission of availableRoleOptions">
@@ -60,12 +60,12 @@ import {
             <ion-label class="ion-text-wrap">{{ permission }}</ion-label>
           </ion-item>
           <ion-item>
-            <ion-label position="stacked">{{ 'CONFIGURATIONS.CUSTOM_CAS_PATTERNS' | translate }}</ion-label>
+            <ion-label position="stacked">{{ 'CONFIGURATIONS.CUSTOM_OAUTH_PATTERNS' | translate }}</ion-label>
             <ion-textarea
               [readonly]="readOnly"
               [(ngModel)]="customExtendedRolePatterns"
               [autoGrow]="true"
-              [placeholder]="'CONFIGURATIONS.CUSTOM_CAS_PATTERNS_PLACEHOLDER' | translate"
+              [placeholder]="'CONFIGURATIONS.CUSTOM_OAUTH_PATTERNS_PLACEHOLDER' | translate"
             ></ion-textarea>
           </ion-item>
 
@@ -118,7 +118,7 @@ export class RoleEditorComponent implements OnInit {
   get availableRoleOptions(): string[] {
     return this.casPermissionOptions && this.casPermissionOptions.length > 0
       ? this.casPermissionOptions
-      : CAS_PERMISSION_OPTIONS;
+      : OAUTH_ROLE_OPTIONS;
   }
   selectedCASPermissions: Record<string, boolean> = {};
   selectedAppPermissions: Record<string, boolean> = {};
