@@ -24,6 +24,10 @@ interface HTTPAuthResult {
   };
 }
 
+interface TokenUser extends User {
+  iat?: number;
+}
+
 export const handler = async (event: APIGatewayProxyEventV2): Promise<HTTPAuthResult> => {
   const authorization = event?.headers?.authorization || event?.headers?.Authorization;
   const result: HTTPAuthResult = { isAuthorized: false };
@@ -34,7 +38,21 @@ export const handler = async (event: APIGatewayProxyEventV2): Promise<HTTPAuthRe
 
   const user = await verifyTokenAndGetUser(authorization);
   if (user) {
-    await verifyUserPermissions(user);
+    const configurations = await verifyUserPermissions(user);
+    if (configurations) {
+      // If the app is currently locked, non-administrators are not authorized
+      if (configurations.appLocked && !user.isAdministrator) {
+        return result;
+      }
+      // If the app was locked after this token was issued, the non-administrator session has been revoked
+      if (configurations.appLockedAt && !user.isAdministrator && user.iat) {
+        const lockedAtEpoch = Math.floor(new Date(configurations.appLockedAt).getTime() / 1000);
+        if (user.iat < lockedAtEpoch) {
+          return result;
+        }
+      }
+    }
+
     result.isAuthorized = true;
     result.context = {
       principalId: user.userId,
@@ -51,19 +69,21 @@ const getJwtSecret = async (): Promise<string> => {
   return JWT_SECRET;
 };
 
-const verifyTokenAndGetUser = async (rawHeader: string): Promise<User | null> => {
+const verifyTokenAndGetUser = async (rawHeader: string): Promise<TokenUser | null> => {
   try {
     const token = rawHeader.startsWith('Bearer ') ? rawHeader.slice(7) : rawHeader;
     const secret = await getJwtSecret();
     const payload = verify(token, secret) as JwtPayload;
-    return new User(payload);
+    const user = new User(payload) as TokenUser;
+    user.iat = typeof payload.iat === 'number' ? payload.iat : undefined;
+    return user;
   } catch {
     return null;
   }
 };
 
-const verifyUserPermissions = async (user: User): Promise<void> => {
-  if (!DDB_TABLES.configurations) return;
+const verifyUserPermissions = async (user: User): Promise<Configurations | null> => {
+  if (!DDB_TABLES.configurations) return null;
   try {
     const configData = await ddb.get({
       TableName: DDB_TABLES.configurations,
@@ -72,8 +92,10 @@ const verifyUserPermissions = async (user: User): Promise<void> => {
     if (configData) {
       const configurations = new Configurations(configData);
       User.applyConfigurationPermissions(user, configurations);
+      return configurations;
     }
   } catch {
     // If configurations table cannot be read, preserve user attributes
   }
+  return null;
 };

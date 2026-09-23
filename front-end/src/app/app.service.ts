@@ -4,6 +4,7 @@ import { Storage } from '@ionic/storage-angular';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { TranslateService } from '@ngx-translate/core';
 import { Router } from '@angular/router';
+import { ToastController } from '@ionic/angular';
 import { IDEAApiService } from '@idea-ionic/common';
 
 import { environment as env } from '@env';
@@ -54,6 +55,7 @@ export class AppService {
     private translate: TranslateService,
     private titleService: Title,
     private router: Router,
+    private toastCtrl: ToastController,
     private api: IDEAApiService,
     private configurationsService: ConfigurationsService
   ) {
@@ -62,6 +64,7 @@ export class AppService {
     this.listenToSystemColorScheme();
     this.accentColor = this.loadStoredAccentColor();
     this.updateAccentColor();
+    this.setupLockMonitoring();
 
     this.translate.onLangChange.subscribe(() => {
       this.updateTitle();
@@ -119,6 +122,7 @@ export class AppService {
       if (this.currentUser) {
         User.applyConfigurationPermissions(this.currentUser, this.configurations);
       }
+      await this.checkAppLockForCurrentUser();
     } catch {
       // Keep existing/default configurations if backend is unreachable
     }
@@ -159,12 +163,69 @@ export class AppService {
     return user;
   }
 
-  public async logout(): Promise<void> {
+  public async logout(dueToLock = false): Promise<void> {
     if (this.isImpersonating) {
       this.exitPreview(false);
     }
     await this.clearAuth();
     await this.router.navigate(['/auth'], { replaceUrl: true });
+    if (dueToLock) {
+      const toast = await this.toastCtrl.create({
+        message: this.translate.instant('AUTH.APP_LOCKED_NON_ADMIN_ERROR'),
+        duration: 5000,
+        color: 'warning',
+        position: 'bottom'
+      });
+      await toast.present();
+    }
+  }
+
+  public async checkAppLockForCurrentUser(): Promise<boolean> {
+    if (!this.isAuthenticated || !this.currentUser || this.currentUser.isAdministrator) {
+      return false;
+    }
+
+    const isLocked = Boolean(this.configurations?.appLocked);
+    let isSessionRevoked = false;
+
+    if (this.configurations?.appLockedAt && this.currentToken) {
+      const payload = this.parseTokenPayload(this.currentToken);
+      if (payload?.iat) {
+        const lockedAtEpoch = Math.floor(new Date(this.configurations.appLockedAt).getTime() / 1000);
+        if (payload.iat < lockedAtEpoch) {
+          isSessionRevoked = true;
+        }
+      }
+    }
+
+    if (isLocked || isSessionRevoked) {
+      await this.logout(true);
+      return true;
+    }
+
+    return false;
+  }
+
+  private setupLockMonitoring(): void {
+    if (typeof window === 'undefined') return;
+
+    window.addEventListener('focus', () => {
+      if (this.isAuthenticated && !this.currentUser?.isAdministrator) {
+        this.loadConfigurations();
+      }
+    });
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && this.isAuthenticated && !this.currentUser?.isAdministrator) {
+        this.loadConfigurations();
+      }
+    });
+
+    setInterval(() => {
+      if (this.isAuthenticated && !this.currentUser?.isAdministrator) {
+        this.loadConfigurations();
+      }
+    }, 15000);
   }
 
   public goTo(route: string | any[]): void {
@@ -384,7 +445,7 @@ export class AppService {
     await this._storage?.set(DEFAULT_BANK_KEY, details);
   }
 
-  private async clearAuth(): Promise<void> {
+  public async clearAuth(): Promise<void> {
     this.api.authToken = null as any;
     if (this._storage) {
       await this._storage.remove(TOKEN_KEY);
@@ -581,7 +642,7 @@ export class AppService {
 
     let state = this.generateRandomString(16);
     if (isLocal) {
-      state = `local:${localHost}`;
+      state = `local:${localHost}:${codeVerifier}`;
       sessionStorage.setItem('oauth_localhost', localHost);
     }
 

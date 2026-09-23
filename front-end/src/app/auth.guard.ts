@@ -9,6 +9,12 @@ export const authGuard: CanActivateFn = async () => {
   await appService.init();
 
   if (appService.isAuthenticated) {
+    if (!appService.currentUser?.isAdministrator) {
+      const isLocked = await appService.checkAppLockForCurrentUser();
+      if (isLocked) {
+        return router.createUrlTree(['/auth']);
+      }
+    }
     return true;
   }
 
