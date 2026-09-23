@@ -85,8 +85,14 @@ class ConfigurationsRC extends ResourceController {
     }
 
     const newUpdatedAt = new Date().toISOString();
+    const isLocking = Boolean(this.body?.appLocked && !this.configurations?.appLocked);
+    let appLockedAt = this.configurations?.appLockedAt;
+    if (isLocking || (this.body?.appLocked && !appLockedAt)) {
+      appLockedAt = newUpdatedAt;
+    }
     const newConfigurations = new Configurations({
       ...this.body,
+      appLockedAt,
       PK: Configurations.PK,
       updatedAt: newUpdatedAt
     });
@@ -441,6 +447,7 @@ class ConfigurationsRC extends ResourceController {
       'guestAccessRequirePurpose',
       'guestInvitations',
       'appLocked',
+      'appLockedAt',
       'appLockMessage'
     ].filter(field => JSON.stringify(this.body[field]) !== JSON.stringify((this.configurations as any)[field]));
 
@@ -478,6 +485,7 @@ class ConfigurationsRC extends ResourceController {
       'timezone',
       'usersOriginDisplay',
       'appLocked',
+      'appLockedAt',
       'appLockMessage'
     ];
 

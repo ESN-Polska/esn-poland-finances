@@ -75,10 +75,6 @@ export class AuthPage implements OnInit {
     const state = this.route.snapshot.queryParamMap.get('state');
 
     if (code) {
-      if (this.isAppLocked) {
-        return;
-      }
-
       // If returning to dev callback from a localhost session, bounce to localhost
       if (
         state &&
@@ -87,8 +83,18 @@ export class AuthPage implements OnInit {
         window.location.hostname !== 'localhost' &&
         window.location.hostname !== '127.0.0.1'
       ) {
-        const localTarget = state.replace('local:', '');
-        const verifier = sessionStorage.getItem('oauth_verifier') || '';
+        const raw = state.replace('local:', '');
+        const lastColon = raw.lastIndexOf(':');
+        let localTarget = raw;
+        let verifierFromState = '';
+        if (lastColon !== -1 && raw.length - lastColon - 1 >= 32) {
+          localTarget = raw.substring(0, lastColon);
+          verifierFromState = raw.substring(lastColon + 1);
+        }
+        const verifier =
+          verifierFromState ||
+          sessionStorage.getItem('oauth_verifier') ||
+          '';
         window.location.href = `http://${localTarget}/auth?code=${encodeURIComponent(code)}&v=${encodeURIComponent(verifier)}`;
         return;
       }
@@ -110,10 +116,27 @@ export class AuthPage implements OnInit {
       } catch (err: any) {
         console.error('Failed to process OAuth code authentication', err);
         this.isProcessing = false;
+        sessionStorage.removeItem('oauth_verifier');
+        sessionStorage.removeItem('oauth_redirect_uri');
+        sessionStorage.removeItem('oauth_localhost');
+        await this.router.navigate([], { replaceUrl: true, queryParams: {} });
+
+        const rawErr =
+          err?.error?.message ||
+          err?.error?.error ||
+          (typeof err?.error === 'string' ? err.error : '') ||
+          err?.message ||
+          '';
+        const isLockedErr =
+          err?.status === 403 ||
+          String(rawErr).toLowerCase().includes('locked');
+
         const toast = await this.toastCtrl.create({
-          message: this.translate.instant('AUTH.LOGIN_FAILED'),
+          message: this.translate.instant(
+            isLockedErr ? 'AUTH.APP_LOCKED_NON_ADMIN_ERROR' : 'AUTH.LOGIN_FAILED'
+          ),
           duration: 5000,
-          color: 'danger',
+          color: isLockedErr ? 'warning' : 'danger',
           position: 'bottom'
         });
         await toast.present();
@@ -161,6 +184,12 @@ export class AuthPage implements OnInit {
         this.isProcessing = false;
       }
     } else if (this.appService.isAuthenticated) {
+      if (!this.appService.currentUser?.isAdministrator) {
+        const isLocked = await this.appService.checkAppLockForCurrentUser();
+        if (isLocked) {
+          return;
+        }
+      }
       await this.router.navigate(['/'], { replaceUrl: true });
     }
   }

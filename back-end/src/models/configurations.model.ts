@@ -244,6 +244,7 @@ export const DEFAULT_CONFIGURATIONS = {
   guestAccessRequirePurpose: true,
   guestInvitations: [] as GuestInvitation[],
   appLocked: false,
+  appLockedAt: undefined as string | undefined,
   appLockMessage: {
     en: 'The application is temporarily locked for maintenance. Please check back later.',
     pl: 'Aplikacja jest tymczasowo zablokowana z powodu prac konserwacyjnych. Prosimy spróbować później.'
@@ -319,6 +320,8 @@ export class Configurations extends Resource {
 
   /** Master switch to temporarily lock the application and disable logins. */
   appLocked: boolean;
+  /** ISO timestamp when the application was locked. */
+  appLockedAt?: string;
   /** Message displayed on the sign-in page when the application is locked. */
   appLockMessage: LocalizedText;
   /** Configured ESN Accounts OAuth role options offered as checkboxes in modals. */
@@ -494,6 +497,7 @@ export class Configurations extends Resource {
       x.appLocked !== undefined
         ? Boolean(x.appLocked)
         : DEFAULT_CONFIGURATIONS.appLocked;
+    this.appLockedAt = this.clean(x.appLockedAt, String);
     const defaultLockMessage = DEFAULT_CONFIGURATIONS.appLockMessage;
     if (typeof x.appLockMessage === 'string') {
       this.appLockMessage = { en: x.appLockMessage, pl: x.appLockMessage };
@@ -578,6 +582,7 @@ export class Configurations extends Resource {
     this.guestAccessRequirePurpose = safeData.guestAccessRequirePurpose;
     this.guestInvitations = safeData.guestInvitations;
     this.appLocked = safeData.appLocked !== undefined ? Boolean(safeData.appLocked) : DEFAULT_CONFIGURATIONS.appLocked;
+    this.appLockedAt = safeData.appLockedAt ? String(safeData.appLockedAt) : undefined;
     this.appLockMessage = safeData.appLockMessage || DEFAULT_CONFIGURATIONS.appLockMessage;
     this.oauthRoleOptions = safeData.oauthRoleOptions !== undefined ? safeData.oauthRoleOptions : DEFAULT_CONFIGURATIONS.oauthRoleOptions;
   }
