@@ -251,9 +251,9 @@ export class RequestsService {
         escape(req.isGuest ? 'Yes' : 'No'),
         escape(req.position || ''),
         escape(req.sourceOfFunding || ''),
-        escape(req.totalGrossAmount || 0),
-        escape(req.totalVatAmount || 0),
-        escape(req.currency || 'PLN'),
+        escape(req.isMixedCurrency?.() ? `${req.getGrossAmountPLN()} PLN / ${req.getGrossAmountEUR()} EUR` : (req.totalGrossAmount || 0)),
+        escape(req.isMixedCurrency?.() ? `${req.getVatAmountPLN()} PLN / ${req.getVatAmountEUR()} EUR` : (req.totalVatAmount || 0)),
+        escape(req.isMixedCurrency?.() ? 'PLN / EUR' : (req.currency || 'PLN')),
         escape(req.iban || ''),
         escape(req.swiftBic || ''),
         escape(req.accountHolderName || ''),
@@ -444,15 +444,48 @@ export class RequestsService {
     const rawList: any[] = (await storage.get(REQUESTS_STORAGE_KEY)) || [];
 
     // Calculate totals
-    let totals: { totalGrossAmount: number; totalVatAmount: number };
-    if (payload.documents && payload.documents.length > 0) {
-      totals = this.calculateTotals(payload.documents);
-    } else if (payload.requestType === 'ADVANCE_PAYMENT') {
-      totals = { totalGrossAmount: Number(payload.requestedAmountPLN) || 0, totalVatAmount: 0 };
+    let totals: { totalGrossAmount: number; totalVatAmount: number; currency?: string };
+    if (payload.requestType === 'ADVANCE_PAYMENT') {
+      const advGross = Number(payload.requestedAmountPLN ?? payload.totalGrossAmount) || 0;
+      totals = { totalGrossAmount: advGross, totalVatAmount: 0, currency: 'PLN' };
+    } else if (
+      (payload.requestType === 'INVOICE_TO_PAY' || payload.requestType === 'INVOICE_REIMBURSEMENT') &&
+      payload.documents &&
+      payload.documents.length > 0
+    ) {
+      const plnDocs = payload.documents.filter((d) => (d.currency || 'PLN').toUpperCase() === 'PLN');
+      const eurDocs = payload.documents.filter((d) => (d.currency || '').toUpperCase() === 'EUR');
+
+      const plnTotals = this.calculateTotals(plnDocs);
+      const eurTotals = this.calculateTotals(eurDocs);
+
+      let primaryCurr = payload.currency || 'PLN';
+      if (eurDocs.length > 0 && plnDocs.length === 0) {
+        primaryCurr = 'EUR';
+        totals = {
+          totalGrossAmount: eurTotals.totalGrossAmount,
+          totalVatAmount: eurTotals.totalVatAmount,
+          currency: 'EUR'
+        };
+      } else if (plnDocs.length > 0 && eurDocs.length === 0) {
+        primaryCurr = 'PLN';
+        totals = {
+          totalGrossAmount: plnTotals.totalGrossAmount,
+          totalVatAmount: plnTotals.totalVatAmount,
+          currency: 'PLN'
+        };
+      } else {
+        totals = {
+          totalGrossAmount: Math.round((plnTotals.totalGrossAmount + eurTotals.totalGrossAmount) * 100) / 100,
+          totalVatAmount: Math.round((plnTotals.totalVatAmount + eurTotals.totalVatAmount) * 100) / 100,
+          currency: primaryCurr
+        };
+      }
     } else {
       totals = {
         totalGrossAmount: Number(payload.totalGrossAmount) || 0,
-        totalVatAmount: Number(payload.totalVatAmount) || 0
+        totalVatAmount: Number(payload.totalVatAmount) || 0,
+        currency: payload.currency || 'PLN'
       };
     }
 
@@ -460,8 +493,9 @@ export class RequestsService {
     const requestBody: any = {
       ...payload,
       ...totals,
+      requestedAmountPLN: payload.requestType === 'ADVANCE_PAYMENT' ? totals.totalGrossAmount : payload.requestedAmountPLN,
       status: targetStatus,
-      currency: payload.currency || 'PLN'
+      currency: totals.currency || payload.currency || 'PLN'
     };
 
     let savedReq: FinancialRequest | null = null;

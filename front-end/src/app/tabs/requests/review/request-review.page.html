@@ -64,20 +64,46 @@
 
       <div class="decision-amount-box">
         <span class="amount-title">{{ 'REQUESTS.TOTAL_GROSS' | translate }}</span>
-        <div class="amount-val-group">
-          <span class="amount-val">{{ request.totalGrossAmount | number:'1.2-2' }}</span>
-          <span class="amount-curr">{{ request.currency }}</span>
-          <button
-            class="copy-mini-btn"
-            (click)="copyToClipboard(request.totalGrossAmount.toFixed(2), 'amount')"
-            [title]="'REQUESTS.REVIEW_PANEL.COPY_AMOUNT' | translate"
-          >
-            <ion-icon [name]="copiedField === 'amount' ? 'checkmark-outline' : 'copy-outline'"></ion-icon>
-          </button>
-        </div>
-        <span class="vat-sub" *ngIf="request.totalVatAmount > 0">
-          VAT: {{ request.totalVatAmount | number:'1.2-2' }} {{ request.currency }}
-        </span>
+        <ng-container *ngIf="!request.isMixedCurrency()">
+          <div class="amount-val-group">
+            <span class="amount-val">{{ request.totalGrossAmount | number:'1.2-2' }}</span>
+            <span class="amount-curr">{{ request.currency }}</span>
+            <button
+              class="copy-mini-btn"
+              (click)="copyToClipboard(request.totalGrossAmount.toFixed(2), 'amount')"
+              [title]="'REQUESTS.REVIEW_PANEL.COPY_AMOUNT' | translate"
+            >
+              <ion-icon [name]="copiedField === 'amount' ? 'checkmark-outline' : 'copy-outline'"></ion-icon>
+            </button>
+          </div>
+          <span class="vat-sub" *ngIf="request.totalVatAmount > 0">
+            VAT: {{ request.totalVatAmount | number:'1.2-2' }} {{ request.currency }}
+          </span>
+        </ng-container>
+        <ng-container *ngIf="request.isMixedCurrency()">
+          <div class="amount-val-group">
+            <span class="amount-val">{{ request.getGrossAmountPLN() | number:'1.2-2' }}</span>
+            <span class="amount-curr">PLN</span>
+            <button
+              class="copy-mini-btn"
+              (click)="copyToClipboard(request.getGrossAmountPLN().toFixed(2), 'amount_pln')"
+              [title]="'REQUESTS.REVIEW_PANEL.COPY_AMOUNT' | translate"
+            >
+              <ion-icon [name]="copiedField === 'amount_pln' ? 'checkmark-outline' : 'copy-outline'"></ion-icon>
+            </button>
+          </div>
+          <div class="amount-val-group" style="margin-top: 4px;">
+            <span class="amount-val">{{ request.getGrossAmountEUR() | number:'1.2-2' }}</span>
+            <span class="amount-curr">EUR</span>
+            <button
+              class="copy-mini-btn"
+              (click)="copyToClipboard(request.getGrossAmountEUR().toFixed(2), 'amount_eur')"
+              [title]="'REQUESTS.REVIEW_PANEL.COPY_AMOUNT' | translate"
+            >
+              <ion-icon [name]="copiedField === 'amount_eur' ? 'checkmark-outline' : 'copy-outline'"></ion-icon>
+            </button>
+          </div>
+        </ng-container>
       </div>
 
       <div class="decision-actions-group">

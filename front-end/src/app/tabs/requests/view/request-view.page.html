@@ -110,10 +110,28 @@
 
         <div class="amount-hero">
           <span class="amount-label">{{ 'REQUESTS.TOTAL_GROSS' | translate }}</span>
-          <span class="amount-value">{{ request.totalGrossAmount | number:'1.2-2' }} {{ request.currency }}</span>
-          <span class="vat-sub" *ngIf="request.totalVatAmount > 0">
-            {{ 'REQUESTS.TOTAL_VAT' | translate }}: {{ request.totalVatAmount | number:'1.2-2' }} {{ request.currency }}
-          </span>
+          <ng-container *ngIf="!request.isMixedCurrency()">
+            <span class="amount-value">{{ request.totalGrossAmount | number:'1.2-2' }} {{ request.currency }}</span>
+            <span class="vat-sub" *ngIf="request.totalVatAmount > 0">
+              {{ 'REQUESTS.TOTAL_VAT' | translate }}: {{ request.totalVatAmount | number:'1.2-2' }} {{ request.currency }}
+            </span>
+          </ng-container>
+          <ng-container *ngIf="request.isMixedCurrency()">
+            <div class="mixed-hero-block">
+              <div class="mixed-amount-row">
+                <span class="amount-value">{{ request.getGrossAmountPLN() | number:'1.2-2' }} PLN</span>
+                <span class="vat-sub" *ngIf="request.getVatAmountPLN() > 0">
+                  (VAT: {{ request.getVatAmountPLN() | number:'1.2-2' }} PLN)
+                </span>
+              </div>
+              <div class="mixed-amount-row">
+                <span class="amount-value">{{ request.getGrossAmountEUR() | number:'1.2-2' }} EUR</span>
+                <span class="vat-sub" *ngIf="request.getVatAmountEUR() > 0">
+                  (VAT: {{ request.getVatAmountEUR() | number:'1.2-2' }} EUR)
+                </span>
+              </div>
+            </div>
+          </ng-container>
         </div>
       </div>
 

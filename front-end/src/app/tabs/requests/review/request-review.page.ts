@@ -281,9 +281,13 @@ export class RequestReviewPage implements OnInit {
   public async promptMarkPaid(): Promise<void> {
     if (!this.request || !this.canManage) return;
 
+    const amountDisplay = this.request.isMixedCurrency?.()
+      ? `${this.request.getGrossAmountPLN()} PLN + ${this.request.getGrossAmountEUR()} EUR`
+      : `${this.request.totalGrossAmount} ${this.request.currency}`;
+
     const alert = await this.alertCtrl.create({
       header: this.translate.instant('REQUESTS.MANAGE_PANEL.MARK_PAID_HEADER') || 'Mark as Paid',
-      message: `${this.translate.instant('REQUESTS.MANAGE_PANEL.MARK_PAID_CONFIRM')} ${this.request.displayId} (${this.request.totalGrossAmount} ${this.request.currency})?`,
+      message: `${this.translate.instant('REQUESTS.MANAGE_PANEL.MARK_PAID_CONFIRM')} ${this.request.displayId} (${amountDisplay})?`,
       inputs: [
         {
           name: 'comment',

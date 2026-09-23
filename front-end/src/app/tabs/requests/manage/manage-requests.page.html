@@ -9,7 +9,6 @@
         <div>
           <div class="headerTitleRow">
             <h1 class="panelTitle">{{ 'REQUESTS.MANAGE_PANEL.TITLE' | translate }}</h1>
-            <span class="countBadge">{{ allRequests.length }}</span>
           </div>
           <p class="panelSubtitle">{{ 'REQUESTS.MANAGE_PANEL.SUBTITLE' | translate }}</p>
         </div>
@@ -43,7 +42,7 @@
         [class.active]="selectedStatus === 'SUBMITTED'"
         (click)="setStatusFilter(selectedStatus === 'SUBMITTED' ? 'ALL' : 'SUBMITTED')"
       >
-        <div class="metricTop">
+        <div class="metricTop" [title]="'REQUESTS.STATUSES.SUBMITTED' | translate">
           <span class="metricLabel">{{ 'REQUESTS.STATUSES.SUBMITTED' | translate }}</span>
           <ion-icon name="hourglass-outline"></ion-icon>
         </div>
@@ -55,7 +54,7 @@
         [class.active]="selectedStatus === 'IN_REVIEW'"
         (click)="setStatusFilter(selectedStatus === 'IN_REVIEW' ? 'ALL' : 'IN_REVIEW')"
       >
-        <div class="metricTop">
+        <div class="metricTop" [title]="'REQUESTS.STATUSES.IN_REVIEW' | translate">
           <span class="metricLabel">{{ 'REQUESTS.STATUSES.IN_REVIEW' | translate }}</span>
           <ion-icon name="search-outline"></ion-icon>
         </div>
@@ -67,7 +66,7 @@
         [class.active]="selectedStatus === 'CHANGES_REQUESTED'"
         (click)="setStatusFilter(selectedStatus === 'CHANGES_REQUESTED' ? 'ALL' : 'CHANGES_REQUESTED')"
       >
-        <div class="metricTop">
+        <div class="metricTop" [title]="'REQUESTS.STATUSES.CHANGES_REQUESTED' | translate">
           <span class="metricLabel">{{ 'REQUESTS.STATUSES.CHANGES_REQUESTED' | translate }}</span>
           <ion-icon name="alert-circle-outline"></ion-icon>
         </div>
@@ -79,7 +78,7 @@
         [class.active]="selectedStatus === 'APPROVED'"
         (click)="setStatusFilter(selectedStatus === 'APPROVED' ? 'ALL' : 'APPROVED')"
       >
-        <div class="metricTop">
+        <div class="metricTop" [title]="'REQUESTS.STATUSES.APPROVED' | translate">
           <span class="metricLabel">{{ 'REQUESTS.STATUSES.APPROVED' | translate }}</span>
           <ion-icon name="checkmark-circle-outline"></ion-icon>
         </div>
@@ -91,19 +90,40 @@
         [class.active]="selectedStatus === 'PAID'"
         (click)="setStatusFilter(selectedStatus === 'PAID' ? 'ALL' : 'PAID')"
       >
-        <div class="metricTop">
+        <div class="metricTop" [title]="'REQUESTS.STATUSES.PAID' | translate">
           <span class="metricLabel">{{ 'REQUESTS.STATUSES.PAID' | translate }}</span>
           <ion-icon name="cash-outline"></ion-icon>
         </div>
         <div class="metricValue">{{ paidCount }}</div>
       </div>
 
+      <div
+        class="metricCard metricRejected"
+        [class.active]="selectedStatus === 'REJECTED'"
+        (click)="setStatusFilter(selectedStatus === 'REJECTED' ? 'ALL' : 'REJECTED')"
+      >
+        <div class="metricTop" [title]="'REQUESTS.STATUSES.REJECTED' | translate">
+          <span class="metricLabel">{{ 'REQUESTS.STATUSES.REJECTED' | translate }}</span>
+          <ion-icon name="close-circle-outline"></ion-icon>
+        </div>
+        <div class="metricValue">{{ rejectedCount }}</div>
+      </div>
+
       <div class="metricCard metricFinancials">
-        <div class="metricTop">
-          <span class="metricLabel">{{ 'REQUESTS.MANAGE_PANEL.TOTAL_APPROVED_PAID' | translate }}</span>
+        <div class="metricTop" [title]="'REQUESTS.MANAGE_PANEL.TOTAL_PAID_OUT' | translate">
+          <span class="metricLabel">{{ 'REQUESTS.MANAGE_PANEL.TOTAL_PAID_OUT' | translate }}</span>
           <ion-icon name="wallet-outline"></ion-icon>
         </div>
-        <div class="metricValue">{{ totalApprovedAmountPLN | number:'1.2-2' }} <small>PLN</small></div>
+        <div class="financialAmounts">
+          <div class="amountItem">
+            <span class="amountNumber">{{ totalPaidAmountPLN | number:'1.2-2' }}</span>
+            <small class="currencyLabel">PLN</small>
+          </div>
+          <div class="amountItem">
+            <span class="amountNumber">{{ totalPaidAmountEUR | number:'1.2-2' }}</span>
+            <small class="currencyLabel">EUR</small>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -201,7 +221,7 @@
             <th>{{ 'COMMON.TYPE' | translate }}</th>
             <th>{{ 'REQUESTS.TOTAL_AMOUNT' | translate }}</th>
             <th>{{ 'COMMON.STATUS' | translate }}</th>
-            <th class="actionsCol">{{ 'COMMON.ACTIONS' | translate }}</th>
+            <th class="actionsCol">{{ 'REQUESTS.REVIEW_PANEL.REVIEW_REQUEST' | translate }}</th>
           </tr>
         </thead>
         <tbody>
@@ -243,8 +263,22 @@
 
             <!-- Amount -->
             <td class="amountCell">
-              <strong>{{ req.totalGrossAmount | number:'1.2-2' }}</strong>
-              <small>{{ req.currency }}</small>
+              <ng-container *ngIf="req.isMixedCurrency(); else singleAmount">
+                <div class="mixedAmountCol">
+                  <div class="currAmountLine">
+                    <strong>{{ req.getGrossAmountPLN() | number:'1.2-2' }}</strong>
+                    <small>PLN</small>
+                  </div>
+                  <div class="currAmountLine">
+                    <strong>{{ req.getGrossAmountEUR() | number:'1.2-2' }}</strong>
+                    <small>EUR</small>
+                  </div>
+                </div>
+              </ng-container>
+              <ng-template #singleAmount>
+                <strong>{{ req.totalGrossAmount | number:'1.2-2' }}</strong>
+                <small>{{ req.currency }}</small>
+              </ng-template>
             </td>
 
             <!-- Status -->
@@ -254,14 +288,11 @@
               </span>
             </td>
 
-            <!-- Actions -->
+            <!-- Review Action -->
             <td class="actionsCell" (click)="$event.stopPropagation()">
               <div class="rowActions">
-                <!-- Manager Actions -->
                 <ng-container *ngIf="canManage">
-                  <!-- Review Button -->
                   <ion-button
-                    *ngIf="req.status !== 'DRAFT'"
                     fill="outline"
                     size="small"
                     color="primary"
@@ -271,59 +302,6 @@
                   >
                     <ion-icon slot="start" name="shield-checkmark-outline"></ion-icon>
                     {{ 'REQUESTS.REVIEW_PANEL.REVIEW_REQUEST' | translate }}
-                  </ion-button>
-
-                  <!-- Approve -->
-                  <ion-button
-                    *ngIf="req.status === 'SUBMITTED' || req.status === 'IN_REVIEW'"
-                    fill="solid"
-                    size="small"
-                    color="success"
-                    class="actionBtn"
-                    (click)="promptApprove(req, $event)"
-                    [title]="'REQUESTS.STATUSES.APPROVED' | translate"
-                  >
-                    <ion-icon slot="icon-only" name="checkmark-outline"></ion-icon>
-                  </ion-button>
-
-                  <!-- Request Changes -->
-                  <ion-button
-                    *ngIf="req.status === 'SUBMITTED' || req.status === 'IN_REVIEW'"
-                    fill="outline"
-                    size="small"
-                    color="warning"
-                    class="actionBtn"
-                    (click)="promptRequestChanges(req, $event)"
-                    [title]="'REQUESTS.STATUSES.CHANGES_REQUESTED' | translate"
-                  >
-                    <ion-icon slot="icon-only" name="create-outline"></ion-icon>
-                  </ion-button>
-
-                  <!-- Mark Paid -->
-                  <ion-button
-                    *ngIf="req.status === 'APPROVED'"
-                    fill="solid"
-                    size="small"
-                    color="tertiary"
-                    class="actionBtn"
-                    (click)="promptMarkPaid(req, $event)"
-                    [title]="'REQUESTS.STATUSES.PAID' | translate"
-                  >
-                    <ion-icon slot="start" name="cash-outline"></ion-icon>
-                    {{ 'REQUESTS.STATUSES.PAID' | translate }}
-                  </ion-button>
-
-                  <!-- Reject -->
-                  <ion-button
-                    *ngIf="req.status !== 'PAID' && req.status !== 'REJECTED' && req.status !== 'DRAFT'"
-                    fill="clear"
-                    size="small"
-                    color="danger"
-                    class="actionBtn"
-                    (click)="promptReject(req, $event)"
-                    [title]="'REQUESTS.STATUSES.REJECTED' | translate"
-                  >
-                    <ion-icon slot="icon-only" name="close-circle-outline"></ion-icon>
                   </ion-button>
                 </ng-container>
               </div>
@@ -367,7 +345,12 @@
 
         <div class="cardAmountRow">
           <span class="amountLabel">{{ 'REQUESTS.TOTAL_AMOUNT' | translate }}:</span>
-          <span class="amountValue">{{ req.totalGrossAmount | number:'1.2-2' }} {{ req.currency }}</span>
+          <span class="amountValue" *ngIf="!req.isMixedCurrency()">{{ req.totalGrossAmount | number:'1.2-2' }} {{ req.currency }}</span>
+          <span class="amountValue mixedMobileAmount" *ngIf="req.isMixedCurrency()">
+            <span>{{ req.getGrossAmountPLN() | number:'1.2-2' }} PLN</span>
+            <span class="dividerDot">·</span>
+            <span>{{ req.getGrossAmountEUR() | number:'1.2-2' }} EUR</span>
+          </span>
         </div>
 
         <!-- Remarks banner if present -->
@@ -380,7 +363,6 @@
         <div class="cardActionsRow" (click)="$event.stopPropagation()">
           <ng-container *ngIf="canManage">
             <ion-button
-              *ngIf="req.status !== 'DRAFT'"
               fill="outline"
               size="small"
               color="primary"
@@ -388,36 +370,6 @@
             >
               <ion-icon slot="start" name="shield-checkmark-outline"></ion-icon>
               {{ 'REQUESTS.REVIEW_PANEL.REVIEW_REQUEST' | translate }}
-            </ion-button>
-
-            <ion-button
-              *ngIf="req.status === 'SUBMITTED' || req.status === 'IN_REVIEW'"
-              fill="solid"
-              size="small"
-              color="success"
-              (click)="promptApprove(req, $event)"
-            >
-              {{ 'REQUESTS.STATUSES.APPROVED' | translate }}
-            </ion-button>
-
-            <ion-button
-              *ngIf="req.status === 'SUBMITTED' || req.status === 'IN_REVIEW'"
-              fill="outline"
-              size="small"
-              color="warning"
-              (click)="promptRequestChanges(req, $event)"
-            >
-              {{ 'REQUESTS.STATUSES.CHANGES_REQUESTED' | translate }}
-            </ion-button>
-
-            <ion-button
-              *ngIf="req.status === 'APPROVED'"
-              fill="solid"
-              size="small"
-              color="tertiary"
-              (click)="promptMarkPaid(req, $event)"
-            >
-              {{ 'REQUESTS.STATUSES.PAID' | translate }}
             </ion-button>
           </ng-container>
         </div>
