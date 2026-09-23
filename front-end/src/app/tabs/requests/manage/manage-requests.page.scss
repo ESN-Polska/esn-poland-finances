@@ -42,15 +42,6 @@
         margin: 0;
         letter-spacing: -0.01em;
       }
-
-      .countBadge {
-        background: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.12);
-        color: var(--ion-color-primary, #00aeef);
-        font-size: 0.85rem;
-        font-weight: 700;
-        padding: 3px 10px;
-        border-radius: 12px;
-      }
     }
 
     .panelSubtitle {
@@ -122,18 +113,23 @@
 /* Metrics Grid */
 .metricsGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
   margin-bottom: 24px;
+
+  @media (min-width: 900px) {
+    grid-template-columns: repeat(7, 1fr);
+  }
 
   .metricCard {
     background: var(--bg-card, #ffffff);
     border: 1px solid var(--border-color, #e2e8f0);
-    border-radius: 12px;
-    padding: 14px 16px;
+    border-radius: 10px;
+    padding: 10px 12px;
     cursor: pointer;
     transition: all 0.2s ease;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+    min-width: 0;
 
     &:hover {
       transform: translateY(-2px);
@@ -145,34 +141,71 @@
       box-shadow: 0 0 0 2px rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.25);
     }
 
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+
     .metricTop {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
+      min-width: 0;
 
       .metricLabel {
-        font-size: 0.8rem;
-        font-weight: 600;
+        font-size: 0.72rem;
+        font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.03em;
+        letter-spacing: 0.02em;
         color: var(--text-medium);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
 
       ion-icon {
-        font-size: 1.15rem;
+        font-size: 1.05rem;
+        flex-shrink: 0;
+        margin-left: 4px;
       }
     }
 
     .metricValue {
-      font-size: 1.5rem;
+      font-size: 1.35rem;
       font-weight: 700;
       color: var(--text-dark);
+      line-height: 1.15;
 
       small {
-        font-size: 0.85rem;
+        font-size: 0.8rem;
         font-weight: 600;
         color: var(--text-medium);
+      }
+    }
+
+    .financialAmounts {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+
+      .amountItem {
+        display: flex;
+        align-items: baseline;
+        gap: 3px;
+        white-space: nowrap;
+
+        .amountNumber {
+          font-size: 0.92rem;
+          font-weight: 700;
+          color: var(--text-dark);
+          line-height: 1.15;
+        }
+
+        .currencyLabel {
+          font-size: 0.68rem;
+          font-weight: 700;
+          color: var(--text-medium);
+        }
       }
     }
 
@@ -180,7 +213,8 @@
     &.metricInReview ion-icon { color: var(--ion-color-primary, #00aeef); }
     &.metricChanges ion-icon { color: #ea580c; }
     &.metricApproved ion-icon { color: #10b981; }
-    &.metricPaid ion-icon { color: #059669; }
+    &.metricPaid ion-icon { color: #8b5cf6; }
+    &.metricRejected ion-icon { color: #ef4444; }
     &.metricFinancials {
       cursor: default;
       &:hover { transform: none; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03); }
@@ -513,6 +547,27 @@
           font-size: 0.82rem;
           color: var(--text-medium);
         }
+
+        .mixedAmountCol {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+
+          .currAmountLine {
+            display: flex;
+            align-items: baseline;
+            gap: 4px;
+            font-size: 0.92rem;
+            line-height: 1.25;
+
+            small {
+              margin-left: 0;
+              font-weight: 600;
+              font-size: 0.75rem;
+              color: var(--text-medium);
+            }
+          }
+        }
       }
 
       .actionsCell {
@@ -706,6 +761,18 @@
           font-size: 1.15rem;
           font-weight: 700;
           color: var(--text-dark);
+
+          &.mixedMobileAmount {
+            font-size: 1.02rem;
+            display: inline-flex;
+            align-items: baseline;
+            gap: 6px;
+
+            .dividerDot {
+              color: var(--text-medium);
+              font-weight: normal;
+            }
+          }
         }
       }
 
@@ -756,4 +823,5 @@ body.dark {
     background: rgba(255, 255, 255, 0.05);
     color: #cbd5e1;
   }
+
 }

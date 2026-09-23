@@ -113,14 +113,43 @@ export class ManageRequestsPage implements OnInit {
     return this.baseFilteredRequests.filter((r) => r.status === 'PAID').length;
   }
 
-  public get totalApprovedAmountPLN(): number {
-    const targetRequests =
-      this.selectedStatus === 'ALL'
-        ? this.baseFilteredRequests.filter((r) => r.status === 'APPROVED' || r.status === 'PAID')
-        : this.filteredRequests.filter((r) => r.status === 'APPROVED' || r.status === 'PAID');
+  public get rejectedCount(): number {
+    return this.baseFilteredRequests.filter((r) => r.status === 'REJECTED').length;
+  }
 
-    const sum = targetRequests.reduce((acc, r) => acc + (Number(r.totalGrossAmount) || 0), 0);
+  private calculatePaidSumByCurrency(currency: string): number {
+    const isPln = currency.toUpperCase() === 'PLN';
+    const targetRequests = this.allRequests.filter((req) => {
+      if (req.status !== 'PAID') {
+        return false;
+      }
+      if (this.selectedType !== 'ALL' && req.requestType !== this.selectedType) {
+        return false;
+      }
+      if (this.selectedYear !== 'ALL') {
+        const reqYear = req.year || (req.createdAt ? new Date(req.createdAt).getFullYear() : null);
+        if (reqYear !== Number(this.selectedYear)) {
+          return false;
+        }
+      }
+      return true;
+    });
+
+    const sum = targetRequests.reduce((acc, r) => {
+      const amount = isPln
+        ? (typeof r.getGrossAmountPLN === 'function' ? r.getGrossAmountPLN() : ((r.currency || 'PLN').toUpperCase() === 'PLN' ? r.totalGrossAmount : 0))
+        : (typeof r.getGrossAmountEUR === 'function' ? r.getGrossAmountEUR() : ((r.currency || '').toUpperCase() === 'EUR' ? r.totalGrossAmount : 0));
+      return acc + (Number(amount) || 0);
+    }, 0);
     return Math.round(sum * 100) / 100;
+  }
+
+  public get totalPaidAmountPLN(): number {
+    return this.calculatePaidSumByCurrency('PLN');
+  }
+
+  public get totalPaidAmountEUR(): number {
+    return this.calculatePaidSumByCurrency('EUR');
   }
 
   constructor(
@@ -253,7 +282,8 @@ export class ManageRequestsPage implements OnInit {
     );
   }
 
-  public viewRequest(requestId: string): void {
+  public viewRequest(requestId: string, event?: Event): void {
+    if (event) event.stopPropagation();
     const [seq, year] = requestId.split('/');
     if (year && seq) {
       this.router.navigate(['/t/requests/view', year, seq]);
@@ -277,7 +307,7 @@ export class ManageRequestsPage implements OnInit {
   }
 
   public openRequest(req: FinancialRequest): void {
-    if (this.canManage && req.status !== 'DRAFT') {
+    if (this.canManage) {
       this.reviewRequest(req.requestId);
     } else {
       this.viewRequest(req.requestId);
@@ -386,9 +416,13 @@ export class ManageRequestsPage implements OnInit {
     if (event) event.stopPropagation();
     if (!this.canManage) return;
 
+    const amountDisplay = req.isMixedCurrency?.()
+      ? `${req.getGrossAmountPLN()} PLN + ${req.getGrossAmountEUR()} EUR`
+      : `${req.totalGrossAmount} ${req.currency}`;
+
     const alert = await this.alertCtrl.create({
       header: this.translate.instant('REQUESTS.MANAGE_PANEL.MARK_PAID_HEADER') || 'Mark as Paid',
-      message: `${this.translate.instant('REQUESTS.MANAGE_PANEL.MARK_PAID_CONFIRM')} ${req.displayId} (${req.totalGrossAmount} ${req.currency})?`,
+      message: `${this.translate.instant('REQUESTS.MANAGE_PANEL.MARK_PAID_CONFIRM')} ${req.displayId} (${amountDisplay})?`,
       inputs: [
         {
           name: 'comment',

@@ -26,6 +26,14 @@ export class RequestFormPage implements OnInit {
   public readonly MAX_FILE_SIZE_MB = 20;
   private readonly MAX_FILE_SIZE = this.MAX_FILE_SIZE_MB * 1024 * 1024;
 
+  public isMixedCurrency = false;
+  public totalGrossPLN = 0;
+  public totalVatPLN = 0;
+  public totalNetPLN = 0;
+  public totalGrossEUR = 0;
+  public totalVatEUR = 0;
+  public totalNetEUR = 0;
+
   public request: Partial<FinancialRequest> = {
     position: '',
     sourceOfFunding: '',
@@ -136,6 +144,12 @@ export class RequestFormPage implements OnInit {
         ? 'INTERNATIONAL'
         : 'DOMESTIC';
 
+    if (this.request.requestType === 'ADVANCE_PAYMENT') {
+      if (this.request.requestedAmountPLN === undefined || this.request.requestedAmountPLN === null) {
+        this.request.requestedAmountPLN = this.request.totalGrossAmount;
+      }
+    }
+
     this.recalculateTotals();
   }
 
@@ -201,6 +215,9 @@ export class RequestFormPage implements OnInit {
   public addDocumentItem(): void {
     if (!this.request.documents) this.request.documents = [];
 
+    const lastDoc = this.request.documents[this.request.documents.length - 1];
+    const defaultCurrency = lastDoc?.currency || this.request.currency || 'PLN';
+
     const newItem: InvoiceDocumentItem = {
       id: 'doc_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
       invoiceNumber: '',
@@ -210,7 +227,7 @@ export class RequestFormPage implements OnInit {
       paymentDeadline: '',
       paidOn: '',
       bankAccountDetails: '',
-      currency: this.request.currency || 'PLN',
+      currency: defaultCurrency,
       grossAmount: 0,
       vatAmount: 0,
       explanation: ''
@@ -232,22 +249,64 @@ export class RequestFormPage implements OnInit {
       this.request.requestType === 'INVOICE_TO_PAY' ||
       this.request.requestType === 'INVOICE_REIMBURSEMENT'
     ) {
-      const curr = this.request.currency || 'PLN';
       if (this.request.documents && this.request.documents.length > 0) {
-        for (const doc of this.request.documents) {
-          doc.currency = curr;
+        const plnDocs = this.request.documents.filter((d) => (d.currency || 'PLN').toUpperCase() === 'PLN');
+        const eurDocs = this.request.documents.filter((d) => (d.currency || '').toUpperCase() === 'EUR');
+
+        const plnTotals = this.requestsService.calculateTotals(plnDocs);
+        const eurTotals = this.requestsService.calculateTotals(eurDocs);
+
+        this.totalGrossPLN = plnTotals.totalGrossAmount;
+        this.totalVatPLN = plnTotals.totalVatAmount;
+        this.totalNetPLN = Math.max(0, Math.round((this.totalGrossPLN - this.totalVatPLN) * 100) / 100);
+
+        this.totalGrossEUR = eurTotals.totalGrossAmount;
+        this.totalVatEUR = eurTotals.totalVatAmount;
+        this.totalNetEUR = Math.max(0, Math.round((this.totalGrossEUR - this.totalVatEUR) * 100) / 100);
+
+        if (plnDocs.length > 0 && eurDocs.length > 0) {
+          this.isMixedCurrency = true;
+          this.request.currency = 'PLN';
+          this.request.totalGrossAmount = Math.round((this.totalGrossPLN + this.totalGrossEUR) * 100) / 100;
+          this.request.totalVatAmount = Math.round((this.totalVatPLN + this.totalVatEUR) * 100) / 100;
+          this.totalNetAmount = Math.max(0, Math.round((this.request.totalGrossAmount - this.request.totalVatAmount) * 100) / 100);
+        } else if (eurDocs.length > 0) {
+          this.isMixedCurrency = false;
+          this.request.currency = 'EUR';
+          this.request.totalGrossAmount = this.totalGrossEUR;
+          this.request.totalVatAmount = this.totalVatEUR;
+          this.totalNetAmount = this.totalNetEUR;
+        } else {
+          this.isMixedCurrency = false;
+          this.request.currency = 'PLN';
+          this.request.totalGrossAmount = this.totalGrossPLN;
+          this.request.totalVatAmount = this.totalVatPLN;
+          this.totalNetAmount = this.totalNetPLN;
         }
-        const totals = this.requestsService.calculateTotals(this.request.documents);
-        this.request.totalGrossAmount = totals.totalGrossAmount;
-        this.request.totalVatAmount = totals.totalVatAmount;
       } else {
+        this.isMixedCurrency = false;
+        this.totalGrossPLN = 0;
+        this.totalVatPLN = 0;
+        this.totalNetPLN = 0;
+        this.totalGrossEUR = 0;
+        this.totalVatEUR = 0;
+        this.totalNetEUR = 0;
         this.request.totalGrossAmount = 0;
         this.request.totalVatAmount = 0;
+        this.totalNetAmount = 0;
       }
+    } else if (this.request.requestType === 'ADVANCE_PAYMENT') {
+      this.isMixedCurrency = false;
+      this.request.totalGrossAmount = Number(this.request.requestedAmountPLN) || 0;
+      this.request.totalVatAmount = 0;
+      this.request.currency = 'PLN';
+      this.totalNetAmount = this.request.totalGrossAmount;
+    } else {
+      this.isMixedCurrency = false;
+      const gross = Number(this.request.totalGrossAmount) || 0;
+      const vat = Number(this.request.totalVatAmount) || 0;
+      this.totalNetAmount = Math.max(0, Math.round((gross - vat) * 100) / 100);
     }
-    const gross = Number(this.request.totalGrossAmount) || 0;
-    const vat = Number(this.request.totalVatAmount) || 0;
-    this.totalNetAmount = Math.max(0, Math.round((gross - vat) * 100) / 100);
   }
 
   public getDocNet(doc: InvoiceDocumentItem): number {
@@ -256,8 +315,7 @@ export class RequestFormPage implements OnInit {
     return Math.max(0, Math.round((gross - vat) * 100) / 100);
   }
 
-  public onCurrencyChange(newCurr: any): void {
-    this.request.currency = newCurr;
+  public onCurrencyChange(newCurr?: any): void {
     this.recalculateTotals();
   }
 

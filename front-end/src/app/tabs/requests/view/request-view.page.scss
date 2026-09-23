@@ -310,6 +310,23 @@
       font-size: 0.8rem;
       color: var(--text-medium);
     }
+
+    .mixed-hero-block {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 3px;
+
+      .mixed-amount-row {
+        display: flex;
+        align-items: baseline;
+        gap: 6px;
+
+        .amount-value {
+          font-size: 1.35rem;
+        }
+      }
+    }
   }
 
   .request-type-heading {

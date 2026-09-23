@@ -306,7 +306,7 @@
                   class="formInput"
                   [(ngModel)]="doc.currency"
                   [name]="'currency_' + i"
-                  (change)="onCurrencyChange(doc.currency)"
+                  (change)="onCurrencyChange()"
                 >
                   <option value="PLN">PLN</option>
                   <option value="EUR">EUR</option>
@@ -439,8 +439,8 @@
           </div>
         </div>
 
-        <!-- Totals Summary Bar -->
-        <div class="totalsSummaryBar">
+        <!-- Totals Summary Bar (Single Currency) -->
+        <div class="totalsSummaryBar" *ngIf="!isMixedCurrency">
           <div class="totalItem">
             <span class="totalLabel">{{ 'REQUESTS.TOTAL_NET_AMOUNT' | translate }}:</span>
             <span class="totalValue">{{ totalNetAmount | number:'1.2-2' }} {{ request.currency }}</span>
@@ -452,6 +452,49 @@
           <div class="totalItem highlight">
             <span class="totalLabel">{{ 'REQUESTS.TOTAL_GROSS_AMOUNT' | translate }}:</span>
             <span class="totalValue font-bold">{{ request.totalGrossAmount | number:'1.2-2' }} {{ request.currency }}</span>
+          </div>
+        </div>
+
+        <!-- Mixed Currency Summaries (Separate PLN and EUR) -->
+        <div class="mixedTotalsContainer" *ngIf="isMixedCurrency">
+          <div class="mixedTotalsHeader">
+            <ion-icon name="swap-horizontal-outline"></ion-icon>
+            <span>{{ 'REQUESTS.MIXED_CURRENCY_SUMMARY' | translate }}</span>
+          </div>
+          <div class="mixedTotalsGrid">
+            <!-- PLN Summary Card -->
+            <div class="currencySummaryCard plnSummaryCard">
+              <div class="cardCurrencyPill plnPill">PLN</div>
+              <div class="currencyMetricRow">
+                <span class="mLabel">{{ 'REQUESTS.TOTAL_NET_AMOUNT' | translate }}:</span>
+                <span class="mVal">{{ totalNetPLN | number:'1.2-2' }} PLN</span>
+              </div>
+              <div class="currencyMetricRow">
+                <span class="mLabel">{{ 'REQUESTS.TOTAL_VAT_AMOUNT' | translate }}:</span>
+                <span class="mVal">{{ totalVatPLN | number:'1.2-2' }} PLN</span>
+              </div>
+              <div class="currencyMetricRow highlight">
+                <span class="mLabel">{{ 'REQUESTS.TOTAL_GROSS_AMOUNT' | translate }}:</span>
+                <span class="mVal font-bold">{{ totalGrossPLN | number:'1.2-2' }} PLN</span>
+              </div>
+            </div>
+
+            <!-- EUR Summary Card -->
+            <div class="currencySummaryCard eurSummaryCard">
+              <div class="cardCurrencyPill eurPill">EUR</div>
+              <div class="currencyMetricRow">
+                <span class="mLabel">{{ 'REQUESTS.TOTAL_NET_AMOUNT' | translate }}:</span>
+                <span class="mVal">{{ totalNetEUR | number:'1.2-2' }} EUR</span>
+              </div>
+              <div class="currencyMetricRow">
+                <span class="mLabel">{{ 'REQUESTS.TOTAL_VAT_AMOUNT' | translate }}:</span>
+                <span class="mVal">{{ totalVatEUR | number:'1.2-2' }} EUR</span>
+              </div>
+              <div class="currencyMetricRow highlight">
+                <span class="mLabel">{{ 'REQUESTS.TOTAL_GROSS_AMOUNT' | translate }}:</span>
+                <span class="mVal font-bold">{{ totalGrossEUR | number:'1.2-2' }} EUR</span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -477,6 +520,7 @@
             [(ngModel)]="request.requestedAmountPLN"
             name="requestedAmountPLN"
             (input)="onAdvanceAmountChange()"
+            (change)="onAdvanceAmountChange()"
             required
             placeholder="0.00"
           />

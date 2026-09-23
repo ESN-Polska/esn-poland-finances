@@ -148,6 +148,16 @@ export class FinancialRequest extends Resource {
     this.requestedAmountPLN = this.clean(x.requestedAmountPLN, Number);
     this.explanationAndBudget = this.clean(x.explanationAndBudget, String);
 
+    if (this.requestType === 'ADVANCE_PAYMENT') {
+      if (this.requestedAmountPLN !== undefined && this.requestedAmountPLN !== null) {
+        this.totalGrossAmount = Number(this.requestedAmountPLN) || 0;
+      } else if (this.totalGrossAmount) {
+        this.requestedAmountPLN = this.totalGrossAmount;
+      }
+      this.totalVatAmount = 0;
+      this.currency = 'PLN';
+    }
+
     this.delegationFormAttachment = x.delegationFormAttachment || undefined;
     this.ticketAttachments = Array.isArray(x.ticketAttachments) ? x.ticketAttachments : [];
     this.otherReceipts = Array.isArray(x.otherReceipts) ? x.otherReceipts : [];
@@ -202,5 +212,73 @@ export class FinancialRequest extends Resource {
       return `ESN ${country}`;
     }
     return '';
+  }
+
+  isMixedCurrency(): boolean {
+    if (this.requestType === 'ADVANCE_PAYMENT' || this.requestType === 'DELEGATION_SETTLEMENT') {
+      return false;
+    }
+    if (!this.documents || this.documents.length <= 1) {
+      return false;
+    }
+    const hasPLN = this.documents.some((d) => (d.currency || 'PLN').toUpperCase() === 'PLN');
+    const hasEUR = this.documents.some((d) => (d.currency || '').toUpperCase() === 'EUR');
+    return hasPLN && hasEUR;
+  }
+
+  getGrossAmountPLN(): number {
+    if (this.requestType === 'ADVANCE_PAYMENT') {
+      return Number(this.requestedAmountPLN ?? this.totalGrossAmount) || 0;
+    }
+    if (this.requestType === 'DELEGATION_SETTLEMENT') {
+      return (this.currency || 'PLN').toUpperCase() === 'PLN' ? Number(this.totalGrossAmount) || 0 : 0;
+    }
+    if (this.documents && this.documents.length > 0) {
+      const sum = this.documents
+        .filter((d) => (d.currency || 'PLN').toUpperCase() === 'PLN')
+        .reduce((acc, d) => acc + (Number(d.grossAmount) || 0), 0);
+      return Math.round(sum * 100) / 100;
+    }
+    return (this.currency || 'PLN').toUpperCase() === 'PLN' ? Number(this.totalGrossAmount) || 0 : 0;
+  }
+
+  getGrossAmountEUR(): number {
+    if (this.requestType === 'ADVANCE_PAYMENT') {
+      return 0;
+    }
+    if (this.requestType === 'DELEGATION_SETTLEMENT') {
+      return (this.currency || '').toUpperCase() === 'EUR' ? Number(this.totalGrossAmount) || 0 : 0;
+    }
+    if (this.documents && this.documents.length > 0) {
+      const sum = this.documents
+        .filter((d) => (d.currency || '').toUpperCase() === 'EUR')
+        .reduce((acc, d) => acc + (Number(d.grossAmount) || 0), 0);
+      return Math.round(sum * 100) / 100;
+    }
+    return (this.currency || '').toUpperCase() === 'EUR' ? Number(this.totalGrossAmount) || 0 : 0;
+  }
+
+  getVatAmountPLN(): number {
+    if (!this.documents || this.documents.length === 0) return 0;
+    const sum = this.documents
+      .filter((d) => (d.currency || 'PLN').toUpperCase() === 'PLN')
+      .reduce((acc, d) => acc + (Number(d.vatAmount) || 0), 0);
+    return Math.round(sum * 100) / 100;
+  }
+
+  getVatAmountEUR(): number {
+    if (!this.documents || this.documents.length === 0) return 0;
+    const sum = this.documents
+      .filter((d) => (d.currency || '').toUpperCase() === 'EUR')
+      .reduce((acc, d) => acc + (Number(d.vatAmount) || 0), 0);
+    return Math.round(sum * 100) / 100;
+  }
+
+  getNetAmountPLN(): number {
+    return Math.max(0, Math.round((this.getGrossAmountPLN() - this.getVatAmountPLN()) * 100) / 100);
+  }
+
+  getNetAmountEUR(): number {
+    return Math.max(0, Math.round((this.getGrossAmountEUR() - this.getVatAmountEUR()) * 100) / 100);
   }
 }
