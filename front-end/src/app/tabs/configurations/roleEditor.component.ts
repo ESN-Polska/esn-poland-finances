@@ -55,7 +55,7 @@ import {
               <p>{{ 'CONFIGURATIONS.CAS_PERMISSIONS_I' | translate }}</p>
             </ion-label>
           </ion-list-header>
-          <ion-item *ngFor="let permission of casPermissionOptions">
+          <ion-item *ngFor="let permission of availableRoleOptions">
             <ion-checkbox slot="start" [disabled]="readOnly" [(ngModel)]="selectedCASPermissions[permission]"></ion-checkbox>
             <ion-label class="ion-text-wrap">{{ permission }}</ion-label>
           </ion-item>
@@ -112,8 +112,14 @@ export class RoleEditorComponent implements OnInit {
   @Input() requirePatterns = false;
   @Input() readOnly = false;
 
+  @Input() casPermissionOptions?: string[];
+
   readonly permissionTree = APP_PERMISSION_TREE;
-  readonly casPermissionOptions = CAS_PERMISSION_OPTIONS;
+  get availableRoleOptions(): string[] {
+    return this.casPermissionOptions && this.casPermissionOptions.length > 0
+      ? this.casPermissionOptions
+      : CAS_PERMISSION_OPTIONS;
+  }
   selectedCASPermissions: Record<string, boolean> = {};
   selectedAppPermissions: Record<string, boolean> = {};
   name = '';
@@ -142,7 +148,7 @@ export class RoleEditorComponent implements OnInit {
     (this.role?.permissions || []).forEach(permission => (this.selectedAppPermissions[permission] = true));
     this.normalizePermissionTree();
     this.customExtendedRolePatterns = selectedCAS
-      .filter(permission => !this.casPermissionOptions.includes(permission))
+      .filter(permission => !this.availableRoleOptions.includes(permission))
       .join('\n');
   }
 
@@ -188,7 +194,7 @@ export class RoleEditorComponent implements OnInit {
   save(): void {
     if (this.readOnly) return;
     const extendedRolePatterns = [
-      ...this.casPermissionOptions.filter(permission => this.selectedCASPermissions[permission]),
+      ...this.availableRoleOptions.filter(permission => this.selectedCASPermissions[permission]),
       ...this.customExtendedRolePatterns
         .split(/[\n,]/)
         .map(permission => permission.trim())

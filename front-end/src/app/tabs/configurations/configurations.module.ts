@@ -12,6 +12,7 @@ import { GuestInviteModalComponent } from './guestInviteModal.component';
 import { GuestInstructionsModalComponent } from './guestInstructionsModal.component';
 import { AppLockMessageModalComponent } from './appLockMessageModal.component';
 import { EmailTemplateComponent } from './emailTemplate/emailTemplate.component';
+import { OAuthRolesModalComponent } from './oauthRolesModal.component';
 
 @NgModule({
   imports: [
@@ -28,7 +29,8 @@ import { EmailTemplateComponent } from './emailTemplate/emailTemplate.component'
     GuestInviteModalComponent,
     GuestInstructionsModalComponent,
     AppLockMessageModalComponent,
-    EmailTemplateComponent
+    EmailTemplateComponent,
+    OAuthRolesModalComponent
   ]
 })
 export class ConfigurationsModule {}

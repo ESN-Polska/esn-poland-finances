@@ -682,6 +682,61 @@
       </ion-item>
     </ion-list>
 
+    <!-- SUBTAB: OPTIONS - OAUTH ROLE OPTIONS -->
+    <ion-list class="aList" *ngIf="pageSection === 'OPTIONS'">
+      <ion-list-header>
+        <ion-label>
+          <h2>{{ 'CONFIGURATIONS.OAUTH_ROLES_SECTION' | translate }}</h2>
+          <p>{{ 'CONFIGURATIONS.OAUTH_ROLES_SECTION_I' | translate }}</p>
+        </ion-label>
+        <ion-button
+          fill="clear"
+          color="primary"
+          *ngIf="canModifyOptions()"
+          (click)="addOAuthRoleOption()"
+        >
+          <ion-icon name="add" slot="start"></ion-icon>
+          {{ 'COMMON.ADD' | translate }}
+        </ion-button>
+        <ion-button
+          fill="clear"
+          color="primary"
+          *ngIf="canModifyOptions()"
+          (click)="editOAuthRoleOptions()"
+        >
+          <ion-icon name="create-outline" slot="start"></ion-icon>
+          {{ 'CONFIGURATIONS.EDIT_LIST' | translate }}
+        </ion-button>
+        <ion-button
+          fill="clear"
+          color="medium"
+          *ngIf="canModifyOptions()"
+          (click)="resetOAuthRoleOptionsToDefault()"
+        >
+          <ion-icon name="refresh-outline" slot="start"></ion-icon>
+          {{ 'CONFIGURATIONS.RESET_TO_DEFAULTS' | translate }}
+        </ion-button>
+      </ion-list-header>
+
+      <ion-reorder-group [disabled]="!canModifyOptions()" (ionItemReorder)="reorderOAuthRoleOptions($event)">
+        <ion-item *ngFor="let role of oauthRoleOptions; let i = index; trackBy: trackByRole">
+          <ion-label class="ion-text-wrap">
+            {{ role }}
+          </ion-label>
+          <ion-button
+            slot="end"
+            fill="clear"
+            color="danger"
+            *ngIf="canModifyOptions()"
+            (click)="removeOAuthRoleOption(i)"
+          >
+            <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
+          </ion-button>
+          <ion-reorder slot="end" *ngIf="canModifyOptions()"></ion-reorder>
+        </ion-item>
+      </ion-reorder-group>
+    </ion-list>
+
     <!-- SUBTAB: OPTIONS - PAGE SECTIONS ORDER (Users with full configurations rights) -->
     <ion-list class="aList" *ngIf="pageSection === 'OPTIONS' && canReorderPageSections()">
       <ion-list-header>
@@ -691,7 +746,7 @@
         </ion-label>
       </ion-list-header>
       <ion-reorder-group [disabled]="false" (ionItemReorder)="reorderPageSections($event)">
-        <ion-item *ngFor="let section of pageSections">
+        <ion-item *ngFor="let section of pageSections; trackBy: trackBySection">
           <ion-label>{{ 'CONFIGURATIONS.PAGE_SECTIONS.' + section | translate }}</ion-label>
           <ion-reorder slot="end"></ion-reorder>
         </ion-item>
