@@ -10,6 +10,7 @@ import { RequestFormPage } from './submit/request-form.page';
 import { RequestViewPage } from './view/request-view.page';
 import { RequestReviewPage } from './review/request-review.page';
 import { ManageRequestsPage } from './manage/manage-requests.page';
+import { StatusCommentPipe } from './pipes/status-comment.pipe';
 
 @NgModule({
   declarations: [
@@ -17,7 +18,11 @@ import { ManageRequestsPage } from './manage/manage-requests.page';
     RequestFormPage,
     RequestViewPage,
     RequestReviewPage,
-    ManageRequestsPage
+    ManageRequestsPage,
+    StatusCommentPipe
+  ],
+  exports: [
+    StatusCommentPipe
   ],
   imports: [
     CommonModule,

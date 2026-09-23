@@ -6,6 +6,7 @@ import { FinancialRequest, FinancialRequestStatus, RequestStatus } from '@models
 import { AppPermission } from '@models/configurations.model';
 import { RequestsService } from '../../../services/requests.service';
 import { AppService } from '../../../app.service';
+import { NavigationHistoryService } from '../../../services/navigation-history.service';
 
 @Component({
   selector: 'app-request-review',
@@ -56,6 +57,7 @@ export class RequestReviewPage implements OnInit {
     private toastCtrl: ToastController,
     private translate: TranslateService,
     private requestsService: RequestsService,
+    private navHistory: NavigationHistoryService,
     public appService: AppService
   ) {}
 
@@ -119,7 +121,7 @@ export class RequestReviewPage implements OnInit {
     if (!this.request || this.request.status !== 'SUBMITTED' || !this.canManage) return;
 
     try {
-      const comment = this.translate.instant('REQUESTS.MANAGE_PANEL.IN_REVIEW_COMMENT') || 'Review started by manager';
+      const comment = 'REQUESTS.HISTORY_COMMENTS.IN_REVIEW';
       const updated = await this.requestsService.updateRequestStatus(
         this.request.requestId,
         'IN_REVIEW',
@@ -147,7 +149,7 @@ export class RequestReviewPage implements OnInit {
   }
 
   public goBack(): void {
-    this.router.navigate(['/t/requests/manage']);
+    this.navHistory.goBack('/t/requests/manage');
   }
 
   public openAccountsProfile(userId?: string): void {
@@ -235,7 +237,8 @@ export class RequestReviewPage implements OnInit {
         {
           text: this.translate.instant('REQUESTS.STATUSES.APPROVED') || 'Approve',
           handler: async (data) => {
-            await this.executeStatusChange('APPROVED', data.comment || 'Request approved');
+            const comment = (data.comment || '').trim();
+            await this.executeStatusChange('APPROVED', comment || 'REQUESTS.HISTORY_COMMENTS.REQUEST_APPROVED');
           }
         }
       ]
@@ -303,7 +306,8 @@ export class RequestReviewPage implements OnInit {
         {
           text: this.translate.instant('REQUESTS.STATUSES.PAID') || 'Mark Paid',
           handler: async (data) => {
-            await this.executeStatusChange('PAID', data.comment || 'Payout completed');
+            const comment = (data.comment || '').trim();
+            await this.executeStatusChange('PAID', comment || 'REQUESTS.HISTORY_COMMENTS.PAYOUT_COMPLETED');
           }
         }
       ]

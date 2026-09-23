@@ -14,6 +14,33 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 12px;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: stretch;
+
+    .back-link-btn {
+      align-self: flex-start;
+    }
+
+    .top-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      width: 100%;
+
+      button {
+        flex: 1 1 calc(50% - 4px);
+        justify-content: center;
+        text-align: center;
+        padding: 0.55rem 0.6rem;
+        font-size: 0.82rem;
+        min-width: 0;
+      }
+    }
+  }
 }
 
 .back-link-btn {
@@ -239,6 +266,12 @@
   margin-bottom: 1.5rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 
+  @media (max-width: 600px) {
+    padding: 1.1rem 1rem;
+    margin-bottom: 1.2rem;
+    border-radius: 10px;
+  }
+
   .header-top {
     display: flex;
     justify-content: space-between;
@@ -246,6 +279,12 @@
     flex-wrap: wrap;
     gap: 1rem;
     margin-bottom: 0.75rem;
+
+    @media (max-width: 600px) {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 12px;
+    }
   }
 
   .title-group {
@@ -293,6 +332,13 @@
     flex-direction: column;
     align-items: flex-end;
 
+    @media (max-width: 600px) {
+      align-items: flex-start;
+      border-top: 1px solid var(--border-color);
+      padding-top: 10px;
+      width: 100%;
+    }
+
     .amount-label {
       font-size: 0.75rem;
       text-transform: uppercase;
@@ -304,6 +350,10 @@
       font-size: 1.6rem;
       font-weight: 800;
       color: var(--text-dark);
+
+      @media (max-width: 600px) {
+        font-size: 1.35rem;
+      }
     }
 
     .vat-sub {
@@ -317,6 +367,10 @@
       align-items: flex-end;
       gap: 3px;
 
+      @media (max-width: 600px) {
+        align-items: flex-start;
+      }
+
       .mixed-amount-row {
         display: flex;
         align-items: baseline;
@@ -324,6 +378,10 @@
 
         .amount-value {
           font-size: 1.35rem;
+
+          @media (max-width: 600px) {
+            font-size: 1.15rem;
+          }
         }
       }
     }
@@ -337,6 +395,10 @@
       font-weight: 700;
       margin: 0;
       color: var(--text-dark);
+
+      @media (max-width: 600px) {
+        font-size: 1.15rem;
+      }
     }
   }
 
@@ -348,6 +410,13 @@
     border-bottom: 1px solid var(--border-color);
     padding-bottom: 1.25rem;
     margin-bottom: 1.25rem;
+
+    @media (max-width: 600px) {
+      flex-direction: column;
+      gap: 6px;
+      padding-bottom: 0.85rem;
+      margin-bottom: 0.85rem;
+    }
 
     .meta-val {
       font-weight: 600;
@@ -376,6 +445,11 @@
     height: 2px;
     background: var(--border-color);
     z-index: 0;
+
+    @media (max-width: 600px) {
+      left: 18px;
+      right: 18px;
+    }
   }
 
   .step-item {
@@ -384,6 +458,8 @@
     align-items: center;
     position: relative;
     z-index: 1;
+    min-width: 0;
+    flex: 1;
 
     .step-circle {
       width: 30px;
@@ -399,6 +475,12 @@
       border: 2px solid var(--bg-card);
       box-shadow: 0 0 0 2px var(--border-color);
       transition: all 0.2s ease;
+
+      @media (max-width: 600px) {
+        width: 26px;
+        height: 26px;
+        font-size: 0.72rem;
+      }
     }
 
     .step-label {
@@ -407,6 +489,19 @@
       color: var(--text-medium);
       margin-top: 0.5rem;
       text-align: center;
+
+      @media (max-width: 600px) {
+        font-size: 0.65rem;
+        margin-top: 0.3rem;
+        line-height: 1.2;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        word-break: break-word;
+        max-width: 100%;
+      }
     }
 
     &.active {
@@ -526,6 +621,8 @@
   .cell-val {
     font-size: 0.95rem;
     color: var(--text-dark);
+    overflow-wrap: anywhere;
+    word-break: break-word;
 
     &.preserve-text {
       white-space: pre-line;
@@ -624,11 +721,18 @@
   .att-meta {
     display: flex;
     flex-direction: column;
+    min-width: 0;
+    overflow: hidden;
 
     .att-name {
       font-size: 0.85rem;
       font-weight: 600;
       color: var(--text-dark);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: block;
+      max-width: 100%;
     }
 
     .att-sub {

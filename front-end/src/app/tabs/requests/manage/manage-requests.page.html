@@ -15,12 +15,12 @@
       </div>
 
       <div class="headerRight">
-        <ion-button *ngIf="canExport" class="exportBtn" fill="outline" (click)="exportData()">
+        <ion-button *ngIf="canExport" class="exportBtn" fill="outline" (click)="exportData()" [title]="'REQUESTS.MANAGE_PANEL.EXPORT_CSV' | translate">
           <ion-icon slot="start" name="download-outline"></ion-icon>
           {{ 'REQUESTS.MANAGE_PANEL.EXPORT_CSV' | translate }}
         </ion-button>
 
-        <ion-button class="refreshBtn" fill="clear" (click)="loadRequests()">
+        <ion-button class="refreshBtn" fill="clear" (click)="loadRequests()" [title]="'COMMON.REFRESH' | translate">
           <ion-icon slot="icon-only" name="refresh-outline" [class.spinning]="isLoading"></ion-icon>
         </ion-button>
       </div>
@@ -30,7 +30,7 @@
     <div class="auditorNotice" *ngIf="isAuditorOnly">
       <ion-icon name="information-circle-outline"></ion-icon>
       <div class="noticeText">
-        <strong>{{ 'REQUESTS.MANAGE_PANEL.AUDITOR_BADGE' | translate }}:</strong>
+        <strong>{{ 'REQUESTS.MANAGE_PANEL.AUDITOR_BADGE' | translate }}: </strong>
         <span>{{ 'REQUESTS.MANAGE_PANEL.AUDITOR_NOTICE' | translate }}</span>
       </div>
     </div>
@@ -217,11 +217,11 @@
           <tr>
             <th>{{ 'REQUESTS.FIELDS.ID' | translate }}</th>
             <th>{{ 'REQUESTS.CREATED_AT' | translate }}</th>
+            <th>{{ 'REQUESTS.LAST_UPDATED' | translate }}</th>
             <th>{{ 'REQUESTS.MANAGE_PANEL.APPLICANT' | translate }}</th>
             <th>{{ 'COMMON.TYPE' | translate }}</th>
             <th>{{ 'REQUESTS.TOTAL_AMOUNT' | translate }}</th>
             <th>{{ 'COMMON.STATUS' | translate }}</th>
-            <th class="actionsCol">{{ 'REQUESTS.REVIEW_PANEL.REVIEW_REQUEST' | translate }}</th>
           </tr>
         </thead>
         <tbody>
@@ -239,9 +239,14 @@
               </span>
             </td>
 
-            <!-- Date -->
+            <!-- Created On -->
             <td class="dateCell">
               {{ (req.submittedAt || req.createdAt) | date:'dd.MM.yyyy' }}
+            </td>
+
+            <!-- Last Updated -->
+            <td class="dateCell">
+              {{ (req.updatedAt || req.submittedAt || req.createdAt) | date:'dd.MM.yyyy' }}
             </td>
 
             <!-- Applicant -->
@@ -287,25 +292,6 @@
                 {{ ('REQUESTS.STATUSES.' + req.status) | translate }}
               </span>
             </td>
-
-            <!-- Review Action -->
-            <td class="actionsCell" (click)="$event.stopPropagation()">
-              <div class="rowActions">
-                <ng-container *ngIf="canManage">
-                  <ion-button
-                    fill="outline"
-                    size="small"
-                    color="primary"
-                    class="actionBtn"
-                    (click)="reviewRequest(req.requestId, $event)"
-                    [title]="'REQUESTS.REVIEW_PANEL.REVIEW_REQUEST' | translate"
-                  >
-                    <ion-icon slot="start" name="shield-checkmark-outline"></ion-icon>
-                    {{ 'REQUESTS.REVIEW_PANEL.REVIEW_REQUEST' | translate }}
-                  </ion-button>
-                </ng-container>
-              </div>
-            </td>
           </tr>
         </tbody>
       </table>
@@ -343,35 +329,16 @@
           <span class="datePill">{{ (req.submittedAt || req.createdAt) | date:'dd.MM.yyyy' }}</span>
         </div>
 
-        <div class="cardAmountRow">
-          <span class="amountLabel">{{ 'REQUESTS.TOTAL_AMOUNT' | translate }}:</span>
-          <span class="amountValue" *ngIf="!req.isMixedCurrency()">{{ req.totalGrossAmount | number:'1.2-2' }} {{ req.currency }}</span>
-          <span class="amountValue mixedMobileAmount" *ngIf="req.isMixedCurrency()">
-            <span>{{ req.getGrossAmountPLN() | number:'1.2-2' }} PLN</span>
-            <span class="dividerDot">·</span>
-            <span>{{ req.getGrossAmountEUR() | number:'1.2-2' }} EUR</span>
-          </span>
-        </div>
-
-        <!-- Remarks banner if present -->
-        <div class="remarksBox" *ngIf="req.adminRemarks">
-          <ion-icon name="chatbox-outline"></ion-icon>
-          <span>{{ req.adminRemarks }}</span>
-        </div>
-
-        <!-- Card Actions -->
-        <div class="cardActionsRow" (click)="$event.stopPropagation()">
-          <ng-container *ngIf="canManage">
-            <ion-button
-              fill="outline"
-              size="small"
-              color="primary"
-              (click)="reviewRequest(req.requestId, $event)"
-            >
-              <ion-icon slot="start" name="shield-checkmark-outline"></ion-icon>
-              {{ 'REQUESTS.REVIEW_PANEL.REVIEW_REQUEST' | translate }}
-            </ion-button>
-          </ng-container>
+        <div class="cardBottom">
+          <div class="amountContainer">
+            <span class="amountLabel">{{ 'REQUESTS.TOTAL_AMOUNT' | translate }}:</span>
+            <span class="amountNumber" *ngIf="!req.isMixedCurrency()">{{ req.totalGrossAmount | number:'1.2-2' }} {{ req.currency }}</span>
+            <span class="amountNumber mixedAmountTag" *ngIf="req.isMixedCurrency()">
+              <span>{{ req.getGrossAmountPLN() | number:'1.2-2' }} PLN</span>
+              <span class="dividerDot">·</span>
+              <span>{{ req.getGrossAmountEUR() | number:'1.2-2' }} EUR</span>
+            </span>
+          </div>
         </div>
       </div>
     </div>

@@ -6,6 +6,7 @@ import { FinancialRequest, FinancialRequestStatus, RequestStatus } from '@models
 import { AppPermission } from '@models/configurations.model';
 import { RequestsService } from '../../../services/requests.service';
 import { AppService } from '../../../app.service';
+import { NavigationHistoryService } from '../../../services/navigation-history.service';
 
 @Component({
   selector: 'app-request-view',
@@ -73,6 +74,7 @@ export class RequestViewPage implements OnInit {
     private toastCtrl: ToastController,
     private translate: TranslateService,
     private requestsService: RequestsService,
+    private navHistory: NavigationHistoryService,
     public appService: AppService
   ) {}
 
@@ -206,7 +208,8 @@ export class RequestViewPage implements OnInit {
   }
 
   public goBack(): void {
-    this.router.navigate(['/t/requests']);
+    const fallback = this.canManage ? '/t/requests/manage' : '/t/requests';
+    this.navHistory.goBack(fallback);
   }
 
   public exportCurrentRequest(): void {

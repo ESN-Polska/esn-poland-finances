@@ -519,8 +519,12 @@ class RequestsHandler extends ResourceController {
         return;
       }
 
+      const configurations = await this.getConfigurations();
       const userLang = ((request as any).language || (request as any).preferredLanguage || '').toLowerCase();
-      const lang: 'pl' | 'en' = userLang === 'en' || (request.country && request.country.toLowerCase() !== 'poland') ? 'en' : 'pl';
+      let lang: 'pl' | 'en' = userLang === 'en' || (request.country && request.country.toLowerCase() !== 'poland') ? 'en' : 'pl';
+      if (configurations?.forcedLanguage && configurations.forcedLanguage !== 'ALL') {
+        lang = configurations.forcedLanguage === 'pl' ? 'pl' : 'en';
+      }
       const templateEnum = this.getTemplateForStatus(targetStatus, lang);
       if (!templateEnum) return;
 
@@ -534,16 +538,17 @@ class RequestsHandler extends ResourceController {
         title: request.requestType || 'Financial Request',
         detail: totalAmount,
         url: requestUrl,
-        message: comment || '',
+        message: this.resolveCommentForEmail(comment, lang),
         status: targetStatus
       };
 
-      const configurations = await this.getConfigurations();
       const senderName = formatSenderName(configurations.getAppTitle(lang) || 'ESN Poland');
+      const replyTo = configurations.supportEmail?.trim() ? [configurations.supportEmail.trim()] : undefined;
 
       try {
         await ses.sendTemplatedEmail({
           toAddresses: [request.userEmail],
+          replyToAddresses: replyTo,
           template: `${templateName}-${STAGE}`,
           templateData
         }, {
@@ -575,6 +580,7 @@ class RequestsHandler extends ResourceController {
           await ses.setTemplate(`${templateName}-${STAGE}`, subject, content, true);
           await ses.sendTemplatedEmail({
             toAddresses: [request.userEmail],
+            replyToAddresses: replyTo,
             template: `${templateName}-${STAGE}`,
             templateData
           }, {
@@ -594,5 +600,35 @@ class RequestsHandler extends ResourceController {
         email: request.userEmail
       });
     }
+  }
+
+  private resolveCommentForEmail(comment?: string, lang: 'pl' | 'en' = 'pl'): string {
+    if (!comment) return '';
+    const keyMap: { [key: string]: { pl: string; en: string } } = {
+      'REQUESTS.HISTORY_COMMENTS.IN_REVIEW': {
+        pl: 'Weryfikacja rozpoczęta',
+        en: 'Review started'
+      },
+      'REQUESTS.HISTORY_COMMENTS.REQUEST_APPROVED': {
+        pl: 'Wniosek został zatwierdzony',
+        en: 'Financial request approved'
+      },
+      'REQUESTS.HISTORY_COMMENTS.PAYOUT_COMPLETED': {
+        pl: 'Wypłata została zrealizowana',
+        en: 'Payment has been processed'
+      },
+      'REQUESTS.HISTORY_COMMENTS.INITIAL_SUBMISSION': {
+        pl: 'Wniosek został złożony',
+        en: 'Request submitted'
+      },
+      'REQUESTS.HISTORY_COMMENTS.SUBMITTED_BY_APPLICANT': {
+        pl: 'Wniosek złożony przez wnioskodawcę',
+        en: 'Submitted by applicant'
+      }
+    };
+    if (keyMap[comment]) {
+      return keyMap[comment][lang];
+    }
+    return comment;
   }
 }

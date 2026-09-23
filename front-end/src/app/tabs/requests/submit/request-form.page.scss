@@ -843,9 +843,38 @@
     }
   }
 
+  .bankTypeToggleRow {
+    .bankTypeSegment {
+      width: 100%;
+      display: flex;
+
+      .segmentBtn {
+        flex: 1;
+        justify-content: center;
+        padding: 7px 8px;
+        font-size: 0.8rem;
+        text-align: center;
+      }
+    }
+  }
+
+  .uploadPlaceholder {
+    padding: 16px 12px;
+    min-height: 96px;
+
+    .uploadText {
+      font-size: 0.82rem;
+    }
+  }
+
   .documentsList {
     .documentItemCard {
       padding: 14px 12px;
+
+      .docCardHeader {
+        flex-wrap: wrap;
+        gap: 8px;
+      }
 
       .docGrid {
         grid-template-columns: 1fr;
@@ -871,13 +900,15 @@
     gap: 10px;
 
     .draftBtn,
-    .submitBtn {
+    .submitBtn,
+    .cancelBtn {
       width: 100%;
     }
 
     .actionGroup {
-      flex-direction: column;
+      flex-direction: column-reverse;
       width: 100%;
+      gap: 10px;
     }
   }
 }

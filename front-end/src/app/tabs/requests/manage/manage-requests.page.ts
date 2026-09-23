@@ -337,7 +337,7 @@ export class ManageRequestsPage implements OnInit {
       await this.requestsService.updateRequestStatus(
         req.requestId,
         'IN_REVIEW',
-        this.translate.instant('REQUESTS.MANAGE_PANEL.IN_REVIEW_COMMENT') || 'Review started by manager'
+        'REQUESTS.HISTORY_COMMENTS.IN_REVIEW'
       );
       await this.loadRequests();
       await this.showToast('REQUESTS.MANAGE_PANEL.STATUS_UPDATED', 'success');
@@ -368,7 +368,8 @@ export class ManageRequestsPage implements OnInit {
         {
           text: this.translate.instant('REQUESTS.STATUSES.APPROVED') || 'Approve',
           handler: async (data) => {
-            await this.executeStatusChange(req.requestId, 'APPROVED', data.comment || 'Request approved');
+            const comment = (data.comment || '').trim();
+            await this.executeStatusChange(req.requestId, 'APPROVED', comment || 'REQUESTS.HISTORY_COMMENTS.REQUEST_APPROVED');
           }
         }
       ]
@@ -438,7 +439,8 @@ export class ManageRequestsPage implements OnInit {
         {
           text: this.translate.instant('REQUESTS.STATUSES.PAID') || 'Mark Paid',
           handler: async (data) => {
-            await this.executeStatusChange(req.requestId, 'PAID', data.comment || 'Payout completed');
+            const comment = (data.comment || '').trim();
+            await this.executeStatusChange(req.requestId, 'PAID', comment || 'REQUESTS.HISTORY_COMMENTS.PAYOUT_COMPLETED');
           }
         }
       ]
