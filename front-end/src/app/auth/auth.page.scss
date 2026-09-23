@@ -221,6 +221,68 @@ p.version {
     margin: 0;
     line-height: 1.5;
   }
+
+  .auth-support-container {
+    margin-top: 16px;
+    display: flex;
+    justify-content: center;
+  }
+}
+
+.auth-support-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 10px;
+  padding: 10px 14px;
+  width: 100%;
+  max-width: 320px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+
+  &:hover {
+    border-color: var(--ion-color-primary, #00aeef);
+    background: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.04);
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+  }
+
+  .support-btn-icon {
+    font-size: 1.4rem;
+    color: var(--ion-color-primary, #00aeef);
+    flex-shrink: 0;
+  }
+
+  .support-btn-text {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+
+    .support-btn-title {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text-dark, #222428);
+    }
+
+    .support-btn-email {
+      font-size: 0.8rem;
+      color: var(--ion-color-medium, #64748b);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  .support-btn-arrow {
+    font-size: 1rem;
+    color: var(--ion-color-medium, #94a3b8);
+    flex-shrink: 0;
+  }
 }
 
 .appLockedCard {
@@ -257,6 +319,12 @@ p.version {
     word-break: break-word;
   }
 
+  .auth-support-container {
+    margin-top: 16px;
+    display: flex;
+    justify-content: center;
+  }
+
   .admin-bypass-container {
     margin-top: 18px;
     padding-top: 14px;
@@ -276,6 +344,27 @@ p.version {
 
       &:hover {
         --color: var(--text-dark);
+      }
+    }
+  }
+}
+
+body.dark {
+  .auth-support-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.12);
+
+    &:hover {
+      background: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.12);
+      border-color: var(--ion-color-primary, #00aeef);
+    }
+
+    .support-btn-text {
+      .support-btn-title {
+        color: var(--text-light, #f8fafc);
+      }
+      .support-btn-email {
+        color: var(--text-medium, #94a3b8);
       }
     }
   }

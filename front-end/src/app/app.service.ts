@@ -123,6 +123,9 @@ export class AppService {
         User.applyConfigurationPermissions(this.currentUser, this.configurations);
       }
       await this.checkAppLockForCurrentUser();
+      if (this.isLanguageForced() && this.translate.currentLang !== this.getForcedLanguage()) {
+        await this.setLanguage(this.getForcedLanguage()!);
+      }
     } catch {
       // Keep existing/default configurations if backend is unreachable
     }
@@ -455,15 +458,30 @@ export class AppService {
     this.userSubject.next(null);
   }
 
+  public isLanguageForced(): boolean {
+    return !!this.configurations?.forcedLanguage && this.configurations.forcedLanguage !== 'ALL';
+  }
+
+  public getForcedLanguage(): string | null {
+    return this.isLanguageForced() ? this.configurations.forcedLanguage : null;
+  }
+
+  public isLanguageAvailable(lang: string): boolean {
+    if (!this.isLanguageForced()) return true;
+    return this.getForcedLanguage() === lang;
+  }
+
   public async setLanguage(lang: string): Promise<void> {
-    await this.translate.use(lang).toPromise();
+    const targetLang = this.isLanguageForced() ? this.getForcedLanguage()! : lang;
+    await this.translate.use(targetLang).toPromise();
     this.updateTitle();
     if (this._storage) {
-      await this._storage.set(LANG_KEY, lang);
+      await this._storage.set(LANG_KEY, targetLang);
     }
   }
 
   public async toggleLanguage(): Promise<void> {
+    if (this.isLanguageForced()) return;
     const nextLang = this.currentLanguage === 'pl' ? 'en' : 'pl';
     await this.setLanguage(nextLang);
   }
@@ -484,6 +502,9 @@ export class AppService {
   }
 
   public get currentLanguage(): string {
+    if (this.isLanguageForced()) {
+      return this.getForcedLanguage()!;
+    }
     return this.translate.currentLang || this.translate.defaultLang || 'en';
   }
 
@@ -603,6 +624,36 @@ export class AppService {
     }
   }
 
+
+  public isLocalHost(hostname: string = typeof window !== 'undefined' ? window.location.hostname : ''): boolean {
+    if (!hostname) return false;
+    return (
+      hostname === 'localhost' ||
+      hostname === '127.0.0.1' ||
+      hostname.startsWith('192.168.') ||
+      /^192\.168\.\d{1,3}\.\d{1,3}$/.test(hostname) ||
+      hostname.startsWith('10.') ||
+      /^172\.(1[6-9]|2\d|3[0-1])\./.test(hostname)
+    );
+  }
+
+  public isLocalUrl(url?: string | null): boolean {
+    if (!url) return false;
+    return (
+      url.includes('localhost') ||
+      url.includes('127.0.0.1') ||
+      /192\.168\.\d{1,3}\.\d{1,3}/.test(url) ||
+      /10\.\d{1,3}\.\d{1,3}\.\d{1,3}/.test(url) ||
+      /172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}/.test(url)
+    );
+  }
+
+  public getPublicRedirectUri(): string {
+    const stage = env.stage || env.idea?.api?.stage || 'dev';
+    const domain = stage === 'prod' ? 'finances.esn-poland.link' : 'dev.finances.esn-poland.link';
+    return `https://${domain}/auth`;
+  }
+
   public async startLoginFlow(): Promise<void> {
     // Dynamically retrieve OAuth config from backend (which securely loads clientId from SSM)
     let oauthConfig: any;
@@ -619,15 +670,21 @@ export class AppService {
     }
 
     const hostname = window.location.hostname;
-    const isLocal =
-      hostname === 'localhost' ||
-      hostname === '127.0.0.1' ||
-      hostname.startsWith('192.168.') ||
-      /^192\.168\.\d{1,3}\.\d{1,3}$/.test(hostname) ||
-      hostname.startsWith('10.') ||
-      /^172\.(1[6-9]|2\d|3[0-1])\./.test(hostname);
+    const isLocal = this.isLocalHost(hostname);
 
-    const redirectUri = oauthConfig?.redirectUri || `${window.location.origin}/auth`;
+    // If local, the redirect_uri sent to accounts.esn.org MUST be the deployed dev callback URL,
+    // NEVER a local IP or localhost, because accounts.esn.org only allows registered public domains.
+    let redirectUri: string;
+    if (isLocal) {
+      if (oauthConfig?.redirectUri && !this.isLocalUrl(oauthConfig.redirectUri)) {
+        redirectUri = oauthConfig.redirectUri;
+      } else {
+        redirectUri = this.getPublicRedirectUri();
+      }
+    } else {
+      redirectUri = oauthConfig?.redirectUri || `${window.location.origin}/auth`;
+    }
+
     const authorizeUrl = oauthConfig?.authorizeUrl || 'https://accounts.esn.org/oauth/authorize';
     const scope = oauthConfig?.scope || 'oauth2_access_to_profile_information';
 
@@ -659,11 +716,16 @@ export class AppService {
   }
 
   public async loginWithOAuthCode(code: string, codeVerifier?: string, redirectUri?: string): Promise<User | null> {
+    const effectiveRedirectUri =
+      redirectUri && !this.isLocalUrl(redirectUri)
+        ? redirectUri
+        : (this.isLocalHost() ? this.getPublicRedirectUri() : redirectUri);
+
     const res: any = await this.api.postResource('login', {
       body: {
         code,
         codeVerifier,
-        redirectUri
+        redirectUri: effectiveRedirectUri
       }
     });
     if (res?.token) {
@@ -675,10 +737,16 @@ export class AppService {
   private generateRandomString(length = 64): string {
     const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
     let result = '';
-    const randomValues = new Uint8Array(length);
-    window.crypto.getRandomValues(randomValues);
-    for (let i = 0; i < length; i++) {
-      result += charset[randomValues[i] % charset.length];
+    if (typeof window !== 'undefined' && window.crypto && typeof window.crypto.getRandomValues === 'function') {
+      const randomValues = new Uint8Array(length);
+      window.crypto.getRandomValues(randomValues);
+      for (let i = 0; i < length; i++) {
+        result += charset[randomValues[i] % charset.length];
+      }
+    } else {
+      for (let i = 0; i < length; i++) {
+        result += charset[Math.floor(Math.random() * charset.length)];
+      }
     }
     return result;
   }
@@ -688,14 +756,93 @@ export class AppService {
   }
 
   private async generateCodeChallenge(verifier: string): Promise<string> {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(verifier);
-    const digest = await window.crypto.subtle.digest('SHA-256', data);
+    if (typeof window !== 'undefined' && window.crypto?.subtle?.digest) {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(verifier);
+      const digest = await window.crypto.subtle.digest('SHA-256', data);
+      return this.base64UrlEncode(digest);
+    }
+    // Fallback for non-secure contexts (e.g. HTTP over LAN IP like 192.168.*.* where window.crypto.subtle is undefined)
+    const digest = this.fallbackSha256(verifier);
     return this.base64UrlEncode(digest);
   }
 
-  private base64UrlEncode(buffer: ArrayBuffer): string {
-    const bytes = new Uint8Array(buffer);
+  private fallbackSha256(ascii: string): Uint8Array {
+    function rightRotate(value: number, amount: number): number {
+      return (value >>> amount) | (value << (32 - amount));
+    }
+    const mathPow = Math.pow;
+    const maxWord = mathPow(2, 32);
+    let i: number;
+    let j: number;
+    const words: number[] = [];
+    const asciiBitLength = ascii.length * 8;
+    let hash: number[] = [];
+    const k: number[] = [];
+    let primeCounter = 0;
+    const isComposite: { [key: number]: number } = {};
+    for (let candidate = 2; primeCounter < 64; candidate++) {
+      if (!isComposite[candidate]) {
+        for (i = 0; i < 313; i += candidate) {
+          isComposite[i] = candidate;
+        }
+        hash[primeCounter] = (mathPow(candidate, 0.5) * maxWord) | 0;
+        k[primeCounter++] = (mathPow(candidate, 1 / 3) * maxWord) | 0;
+      }
+    }
+    hash = hash.slice(0, 8);
+    ascii += '\x80';
+    while ((ascii.length % 64) - 56) ascii += '\x00';
+    for (i = 0; i < ascii.length; i++) {
+      j = ascii.charCodeAt(i);
+      if (j >> 8) return new Uint8Array(32);
+      words[i >> 2] |= j << ((3 - (i % 4)) * 8);
+    }
+    words[words.length] = (asciiBitLength / maxWord) | 0;
+    words[words.length] = asciiBitLength | 0;
+    for (j = 0; j < words.length; ) {
+      const w = words.slice(j, (j += 16));
+      const oldHash = hash;
+      hash = hash.slice(0, 8);
+      for (i = 0; i < 64; i++) {
+        const w15 = w[i - 15];
+        const w2 = w[i - 2];
+        const a = hash[0];
+        const e = hash[4];
+        const temp1 =
+          hash[7] +
+          (rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25)) +
+          ((e & hash[5]) ^ (~e & hash[6])) +
+          k[i] +
+          (w[i] =
+            i < 16
+              ? w[i]
+              : (w[i - 16] +
+                  (rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3)) +
+                  w[i - 7] +
+                  (rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10))) |
+                0);
+        const temp2 =
+          (rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22)) +
+          ((a & hash[1]) ^ (a & hash[2]) ^ (hash[1] & hash[2]));
+        hash = [(temp1 + temp2) | 0].concat(hash);
+        hash[4] = (hash[4] + temp1) | 0;
+      }
+      for (i = 0; i < 8; i++) {
+        hash[i] = (hash[i] + oldHash[i]) | 0;
+      }
+    }
+    const buffer = new Uint8Array(32);
+    for (i = 0; i < 8; i++) {
+      for (j = 3; j >= 0; j--) {
+        buffer[i * 4 + (3 - j)] = (hash[i] >> (j * 8)) & 255;
+      }
+    }
+    return buffer;
+  }
+
+  private base64UrlEncode(buffer: ArrayBuffer | Uint8Array): string {
+    const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
     let binary = '';
     for (let i = 0; i < bytes.byteLength; i++) {
       binary += String.fromCharCode(bytes[i]);

@@ -24,6 +24,17 @@ const systemsManager = new SystemsManager();
 
 let JWT_SECRET: string;
 
+function isLocalHost(hostOrUrl?: string | null): boolean {
+  if (!hostOrUrl) return false;
+  return (
+    hostOrUrl.includes('localhost') ||
+    hostOrUrl.includes('127.0.0.1') ||
+    /192\.168\.\d{1,3}\.\d{1,3}/.test(hostOrUrl) ||
+    /10\.\d{1,3}\.\d{1,3}\.\d{1,3}/.test(hostOrUrl) ||
+    /172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}/.test(hostOrUrl)
+  );
+}
+
 export const handler = (ev: any, _: any, cb: any): Promise<void> => new Login(ev, cb).handleRequest();
 
 class Login extends ResourceController {
@@ -62,7 +73,7 @@ class Login extends ResourceController {
     }
 
     const origin = (this.event.headers?.origin || this.event.headers?.Origin || '') as string;
-    const isLocalOrigin = origin.includes('localhost') || origin.includes('127.0.0.1');
+    const isLocalOrigin = isLocalHost(origin);
     const defaultRedirectUri = (!isLocalOrigin && origin) ? `${origin.replace(/\/+$/, '')}/auth` : `${APP_URL}/auth`;
 
     return {
@@ -109,9 +120,9 @@ class Login extends ResourceController {
     }
 
     const origin = (this.event.headers?.origin || this.event.headers?.Origin || '') as string;
-    const isLocalOrigin = origin.includes('localhost') || origin.includes('127.0.0.1');
+    const isLocalOrigin = isLocalHost(origin);
     const defaultRedirectUri = (!isLocalOrigin && origin) ? `${origin.replace(/\/+$/, '')}/auth` : `${APP_URL}/auth`;
-    const effectiveRedirectUri = redirectUri || defaultRedirectUri;
+    const effectiveRedirectUri = (redirectUri && !isLocalHost(redirectUri)) ? redirectUri : defaultRedirectUri;
 
     let accessToken: string;
     try {
@@ -401,14 +412,11 @@ class Login extends ResourceController {
     let appURL = APP_URL;
     if (this.queryParams.localhost) {
       const local = String(this.queryParams.localhost);
-      const isLocalHost =
+      const isLocal =
         /^\d+$/.test(local) ||
-        /^(localhost|127\.0\.0\.1)(:\d+)?$/.test(local) ||
-        /^192\.168\.\d{1,3}\.\d{1,3}(:\d+)?$/.test(local) ||
-        /^10\.\d{1,3}\.\d{1,3}(:\d+)?$/.test(local) ||
-        /^172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}(:\d+)?$/.test(local);
+        isLocalHost(local);
 
-      if (isLocalHost) {
+      if (isLocal) {
         appURL = local.includes(':') || local.includes('.') ? `http://${local}` : `http://localhost:${local}`;
       }
     }

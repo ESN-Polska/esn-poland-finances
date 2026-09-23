@@ -87,7 +87,7 @@
           </ion-select>
         </ion-item>
 
-        <ion-item lines="none" class="themeProfileItem">
+        <ion-item lines="none" class="themeProfileItem" *ngIf="!app.isLanguageForced()">
           <ion-icon name="globe-outline" slot="start"></ion-icon>
           <ion-select
             [label]="'COMMON.LANGUAGE' | translate"
@@ -269,6 +269,21 @@
       </div>
 
       <ion-list lines="none" class="aboutList">
+        <ion-item
+          button
+          detail
+          lines="none"
+          class="aboutItem"
+          *ngIf="app.configurations?.supportEmail"
+          (click)="openSupportContact()"
+        >
+          <ion-icon name="help-buoy-outline" slot="start"></ion-icon>
+          <ion-label>
+            <h3>{{ 'SUPPORT.TITLE' | translate }}</h3>
+            <p>{{ app.configurations.supportEmail }}</p>
+          </ion-label>
+        </ion-item>
+
         <ion-item button detail lines="none" class="aboutItem" (click)="openCredits()">
           <ion-icon name="document-text-outline" slot="start"></ion-icon>
           <ion-label>{{ 'PROFILE.CREDITS_AND_LICENSE' | translate }}</ion-label>

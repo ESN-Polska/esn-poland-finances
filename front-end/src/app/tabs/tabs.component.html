@@ -1,5 +1,5 @@
-<!-- Preview Mode Impersonation Banner -->
-<div class="impersonationBanner" *ngIf="app.isImpersonating">
+<!-- Desktop Preview Mode Impersonation Banner -->
+<div class="impersonationBanner" *ngIf="app.isImpersonating && !app.isInMobileMode()">
   <div class="impersonationInfo">
     <ion-icon name="eye-outline"></ion-icon>
     <span>{{ 'CONFIGURATIONS.VIEWING_AS' | translate }}:</span>
@@ -135,7 +135,7 @@
       </div>
 
       <!-- Language Selector: Click row to toggle language -->
-      <div class="menuSettingRow clickableRow" (click)="toggleLanguage()">
+      <div class="menuSettingRow clickableRow" (click)="toggleLanguage()" *ngIf="!app.isLanguageForced()">
         <div class="settingLeft">
           <ion-icon name="globe-outline"></ion-icon>
           <span>{{ 'COMMON.LANGUAGE' | translate }}</span>
@@ -173,7 +173,32 @@
 </ion-menu>
 
 <!-- Stationary Mobile Header (Outside of main-tabs-content so pointer events are never blocked when menu is open) -->
-<div class="mobileTopHeader" *ngIf="app.isInMobileMode()">
+<div class="mobileTopHeader" *ngIf="app.isInMobileMode()" [class.hasImpersonation]="app.isImpersonating">
+  <!-- Mobile Preview Mode Impersonation Banner -->
+  <div class="impersonationBanner mobileImpersonationBanner" *ngIf="app.isImpersonating">
+    <div class="impersonationInfo">
+      <ion-icon name="eye-outline"></ion-icon>
+      <span>{{ 'CONFIGURATIONS.VIEWING_AS' | translate }}:</span>
+      <ion-select
+        class="personaSelect"
+        interface="popover"
+        [value]="app.impersonatedRole"
+        (ionChange)="app.changeImpersonatedRole($event.detail.value)"
+      >
+        <ion-select-option value="STANDARD_USER">{{ 'CONFIGURATIONS.STANDARD_USER' | translate }}</ion-select-option>
+        <ion-select-option value="MANAGER">{{ 'CONFIGURATIONS.MANAGER' | translate }}</ion-select-option>
+        <ion-select-option value="AUDITOR">{{ 'CONFIGURATIONS.AUDITOR' | translate }}</ion-select-option>
+        <ion-select-option *ngFor="let role of app.configurations?.customRoles" [value]="'CUSTOM_ROLE:' + role.id">
+          {{ role.name }}
+        </ion-select-option>
+      </ion-select>
+    </div>
+    <ion-button size="small" fill="solid" color="light" class="exitPreviewBtn" (click)="app.exitPreview()">
+      <ion-icon slot="start" name="arrow-undo-outline"></ion-icon>
+      {{ 'CONFIGURATIONS.EXIT_PREVIEW' | translate }}
+    </ion-button>
+  </div>
+
   <ion-toolbar color="ideaToolbar">
     <!-- Brand on the left: Logo + Title + Subtitle -->
     <ion-buttons slot="start">
@@ -243,7 +268,7 @@
         </ion-button>
 
         <!-- Language Selector -->
-        <div class="langSelector">
+        <div class="langSelector" *ngIf="!app.isLanguageForced()">
           <button
             type="button"
             class="langBtn"

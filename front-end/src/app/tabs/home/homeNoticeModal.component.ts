@@ -1,6 +1,7 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { ModalController } from '@ionic/angular';
 import { HomeNotice } from '@models/configurations.model';
+import { AppService } from '@app/app.service';
 
 @Component({
   selector: 'app-home-notice-modal',
@@ -45,7 +46,7 @@ import { HomeNotice } from '@models/configurations.model';
             </ion-select>
           </ion-item>
 
-          <ion-item>
+          <ion-item *ngIf="app.isLanguageAvailable('en')">
             <ion-label position="stacked">{{ 'HOME.NOTICE_TEXT_EN' | translate }}</ion-label>
             <ion-textarea
               [(ngModel)]="textEn"
@@ -55,7 +56,7 @@ import { HomeNotice } from '@models/configurations.model';
             ></ion-textarea>
           </ion-item>
 
-          <ion-item>
+          <ion-item *ngIf="app.isLanguageAvailable('pl')">
             <ion-label position="stacked">{{ 'HOME.NOTICE_TEXT_PL' | translate }}</ion-label>
             <ion-textarea
               [(ngModel)]="textPl"
@@ -90,7 +91,7 @@ export class HomeNoticeModalComponent implements OnInit {
   textEn = '';
   textPl = '';
 
-  constructor(private modalCtrl: ModalController) {}
+  constructor(private modalCtrl: ModalController, public app: AppService) {}
 
   ngOnInit(): void {
     if (this.currentNotice) {

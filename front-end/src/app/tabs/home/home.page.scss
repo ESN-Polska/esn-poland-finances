@@ -543,9 +543,9 @@
 
     .heroHeaderActions {
       justify-content: flex-end;
-      margin-top: -8px;
-      margin-bottom: 8px;
-      gap: 4px;
+      margin-top: -4px;
+      margin-bottom: 12px;
+      gap: 6px;
       flex-wrap: wrap;
 
       .heroActionBtn {
@@ -569,6 +569,12 @@
     }
 
     .primaryActionWrapper {
+      display: flex;
+      flex-direction: column-reverse;
+      gap: 10px;
+      width: 100%;
+
+      .readRulesBtn,
       .submitRequestBtn {
         min-width: 100%;
         width: 100%;

@@ -1,6 +1,7 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { ModalController } from '@ionic/angular';
 import { DEFAULT_CONFIGURATIONS, LocalizedText } from '@models/configurations.model';
+import { AppService } from '@app/app.service';
 
 @Component({
   selector: 'app-rules-warning-modal',
@@ -31,7 +32,7 @@ import { DEFAULT_CONFIGURATIONS, LocalizedText } from '@models/configurations.mo
             </ion-label>
           </ion-list-header>
 
-          <ion-item>
+          <ion-item *ngIf="app.isLanguageAvailable('en')">
             <ion-label position="stacked">{{ 'RULES.WARNING_TEXT_EN' | translate }}</ion-label>
             <ion-textarea
               [(ngModel)]="warningEn"
@@ -41,7 +42,7 @@ import { DEFAULT_CONFIGURATIONS, LocalizedText } from '@models/configurations.mo
             ></ion-textarea>
           </ion-item>
 
-          <ion-item>
+          <ion-item *ngIf="app.isLanguageAvailable('pl')">
             <ion-label position="stacked">{{ 'RULES.WARNING_TEXT_PL' | translate }}</ion-label>
             <ion-textarea
               [(ngModel)]="warningPl"
@@ -74,7 +75,7 @@ export class RulesWarningModalComponent implements OnInit {
   warningEn = '';
   warningPl = '';
 
-  constructor(private modalCtrl: ModalController) {}
+  constructor(private modalCtrl: ModalController, public app: AppService) {}
 
   ngOnInit(): void {
     this.warningEn = this.currentWarningText?.en || DEFAULT_CONFIGURATIONS.rulesWarningText.en;

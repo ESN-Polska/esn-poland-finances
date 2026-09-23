@@ -1,6 +1,6 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { ToastController } from '@ionic/angular';
+import { ActionSheetController, ToastController } from '@ionic/angular';
 import { TranslateService } from '@ngx-translate/core';
 import { environment as env } from '@env';
 import { AppService } from '../app.service';
@@ -23,7 +23,7 @@ export class AuthPage implements OnInit {
 
   public get appLockMessage(): string {
     return (
-      this.appService.configurations?.getAppLockMessage(this.currentLang) ||
+      this.appService.configurations?.getAppLockMessage(this.appService.currentLanguage) ||
       this.translate.instant('AUTH.APP_LOCKED_TITLE')
     );
   }
@@ -31,15 +31,64 @@ export class AuthPage implements OnInit {
   public get guestErrorNotice(): string | null {
     return this.guestErrorKey ? this.translate.instant(this.guestErrorKey) : null;
   }
+  public get supportEmail(): string {
+    return this.appService.configurations?.supportEmail?.trim() || '';
+  }
   public version = env.idea?.app?.version || '1.0.0';
 
   constructor(
     public appService: AppService,
+    private actionSheetCtrl: ActionSheetController,
     private route: ActivatedRoute,
     private router: Router,
     private toastCtrl: ToastController,
     private translate: TranslateService
   ) {}
+
+  public async openSupportContact(): Promise<void> {
+    const email = this.supportEmail;
+    if (!email) return;
+
+    const actionSheet = await this.actionSheetCtrl.create({
+      header: this.translate.instant('SUPPORT.TITLE'),
+      subHeader: email,
+      buttons: [
+        {
+          text: this.translate.instant('SUPPORT.ACTION_SEND'),
+          icon: 'mail-outline',
+          handler: () => {
+            const appTitle = this.appService.configurations?.getAppTitle(this.appService.currentLanguage) || 'ESN Finances';
+            const context = this.guestErrorKey
+              ? 'Guest Invitation Issue'
+              : (this.isAppLocked ? 'Application Locked Inquiry' : 'Support Request');
+            const subject = encodeURIComponent(`[${appTitle}] ${context}`);
+            window.location.href = `mailto:${email}?subject=${subject}`;
+          }
+        },
+        {
+          text: this.translate.instant('SUPPORT.ACTION_COPY'),
+          icon: 'copy-outline',
+          handler: () => {
+            if (navigator?.clipboard?.writeText) {
+              navigator.clipboard.writeText(email).then(() => {
+                this.showToast('SUPPORT.EMAIL_COPIED', 'success');
+              }).catch(() => {
+                this.showToast('SUPPORT.EMAIL_COPIED', 'success');
+              });
+            } else {
+              this.showToast('SUPPORT.EMAIL_COPIED', 'success');
+            }
+          }
+        },
+        {
+          text: this.translate.instant('COMMON.CANCEL'),
+          icon: 'close-outline',
+          role: 'cancel'
+        }
+      ]
+    });
+    await actionSheet.present();
+  }
 
   public async ngOnInit(): Promise<void> {
     await this.appService.init();
@@ -80,8 +129,7 @@ export class AuthPage implements OnInit {
         state &&
         state.startsWith('local:') &&
         typeof window !== 'undefined' &&
-        window.location.hostname !== 'localhost' &&
-        window.location.hostname !== '127.0.0.1'
+        !this.appService.isLocalHost(window.location.hostname)
       ) {
         const raw = state.replace('local:', '');
         const lastColon = raw.lastIndexOf(':');
@@ -105,7 +153,10 @@ export class AuthPage implements OnInit {
           this.route.snapshot.queryParamMap.get('v') ||
           sessionStorage.getItem('oauth_verifier') ||
           undefined;
-        const redirectUri = sessionStorage.getItem('oauth_redirect_uri') || undefined;
+        let redirectUri = sessionStorage.getItem('oauth_redirect_uri') || undefined;
+        if (!redirectUri || (this.appService.isLocalHost() && this.appService.isLocalUrl(redirectUri))) {
+          redirectUri = this.appService.getPublicRedirectUri();
+        }
 
         await this.appService.loginWithOAuthCode(code, codeVerifier, redirectUri);
         sessionStorage.removeItem('oauth_verifier');
@@ -205,5 +256,16 @@ export class AuthPage implements OnInit {
   public login(): void {
     this.isProcessing = true;
     this.appService.startLoginFlow();
+  }
+
+  private async showToast(messageKey: string, color: string): Promise<void> {
+    const msg = this.translate.instant(messageKey);
+    const toast = await this.toastCtrl.create({
+      message: msg && msg !== messageKey ? msg : messageKey,
+      duration: 3000,
+      position: 'bottom',
+      color
+    });
+    await toast.present();
   }
 }

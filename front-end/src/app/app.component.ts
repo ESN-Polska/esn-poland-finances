@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { AppService } from './app.service';
+import { NavigationHistoryService } from './services/navigation-history.service';
 
 @Component({
   selector: 'app-root',
@@ -7,7 +8,10 @@ import { AppService } from './app.service';
   styleUrls: ['./app.component.scss']
 })
 export class AppComponent implements OnInit {
-  constructor(private appService: AppService) {}
+  constructor(
+    private appService: AppService,
+    private navHistory: NavigationHistoryService
+  ) {}
 
   public async ngOnInit(): Promise<void> {
     await this.appService.init();
