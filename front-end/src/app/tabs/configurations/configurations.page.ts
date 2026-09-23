@@ -11,6 +11,7 @@ import { GuestInviteModalComponent } from './guestInviteModal.component';
 import { GuestInstructionsModalComponent } from './guestInstructionsModal.component';
 import { AppLockMessageModalComponent } from './appLockMessageModal.component';
 import { EmailTemplateComponent } from './emailTemplate/emailTemplate.component';
+import { OAuthRolesModalComponent } from './oauthRolesModal.component';
 
 import {
   AppPermission,
@@ -22,7 +23,8 @@ import {
   GuestInvitation,
   FinancialRequestType,
   EmailTemplates,
-  EmailTemplateTypes
+  EmailTemplateTypes,
+  OAUTH_ROLE_OPTIONS
 } from '@models/configurations.model';
 import { User } from '@models/user.model';
 
@@ -53,6 +55,7 @@ export class ConfigurationsPage implements OnInit {
 
   guestFilterStatus: 'ALL' | 'ACTIVE' | 'USED' | 'EXPIRED' | 'REVOKED' = 'ALL';
   guestSearchQuery: string = '';
+  oauthRoleOptions: string[] = [];
 
   constructor(
     private modalCtrl: ModalController,
@@ -71,6 +74,7 @@ export class ConfigurationsPage implements OnInit {
       if (this.configurations.configurationPageSectionsOrder?.length) {
         this.pageSections = this.configurations.configurationPageSectionsOrder;
       }
+      this.oauthRoleOptions = this.getActiveOAuthRoleOptions();
     }
 
     const firstAccessible = this.pageSections.find(s => this.canAccessPageSection(s));
@@ -88,6 +92,7 @@ export class ConfigurationsPage implements OnInit {
     try {
       this.configurations = await this.configurationsService.get();
       this.app.configurations = this.configurations;
+      this.oauthRoleOptions = this.getActiveOAuthRoleOptions();
       if (this.app.currentUser && !this.app.isImpersonating) {
         User.applyConfigurationPermissions(this.app.currentUser, this.configurations);
       }
@@ -107,6 +112,14 @@ export class ConfigurationsPage implements OnInit {
     } catch (e) {
       console.error('Failed to load configurations', e);
     }
+  }
+
+  trackByRole(_index: number, role: string): string {
+    return role;
+  }
+
+  trackBySection(_index: number, section: ConfigurationPageSection): string {
+    return section;
   }
 
   canAccessPageSection(section: ConfigurationPageSection): boolean {
@@ -181,17 +194,37 @@ export class ConfigurationsPage implements OnInit {
     );
   }
 
-  async updateConfigurations(newConfigurations: Configurations = this.configurations): Promise<void> {
-    const loading = await this.loadingCtrl.create({ message: this.translate.instant('COMMON.SAVING') });
-    await loading.present();
+  async updateConfigurations(
+    newConfigurations: Configurations = this.configurations,
+    options: { silent?: boolean; noLoading?: boolean } | boolean = false
+  ): Promise<boolean> {
+    const silent = typeof options === 'boolean' ? options : !!options?.silent;
+    const noLoading = typeof options === 'object' ? !!options?.noLoading : false;
+
+    let loading: HTMLIonLoadingElement | null = null;
+    if (!noLoading) {
+      loading = await this.loadingCtrl.create({ message: this.translate.instant('COMMON.SAVING') });
+      await loading.present();
+    }
     try {
       this.configurations = await this.configurationsService.update(newConfigurations);
+      this.oauthRoleOptions = this.getActiveOAuthRoleOptions();
       this.app.configurations = this.configurations;
       if (this.app.currentUser && !this.app.isImpersonating) {
         User.applyConfigurationPermissions(this.app.currentUser, this.configurations);
       }
       this.app.updateTitle();
+      if (!silent) {
+        const toast = await this.toastCtrl.create({
+          message: this.translate.instant('COMMON.OPERATION_COMPLETED'),
+          duration: 3000,
+          color: 'success'
+        });
+        await toast.present();
+      }
+      return true;
     } catch (err: any) {
+      await this.loadData();
       const isConflict =
         err?.status === 409 ||
         err?.statusCode === 409 ||
@@ -200,7 +233,6 @@ export class ConfigurationsPage implements OnInit {
         String(err).includes('CONFIGURATIONS_CONFLICT');
 
       if (isConflict) {
-        await this.loadData();
         const alert = await this.alertCtrl.create({
           header: this.translate.instant('COMMON.OPERATION_FAILED'),
           message: this.translate.instant('CONFIGURATIONS.CONFLICT_ALERT'),
@@ -208,10 +240,29 @@ export class ConfigurationsPage implements OnInit {
         });
         await alert.present();
       } else {
-        throw err;
+        const rawMessage =
+          err?.error?.message ||
+          (typeof err?.error === 'string' ? err.error : null) ||
+          err?.message ||
+          '';
+
+        let displayMessage = rawMessage || this.translate.instant('COMMON.OPERATION_FAILED');
+        if (displayMessage.includes('oauthRoleOptions') || displayMessage.includes('Invalid fields')) {
+          displayMessage = `${this.translate.instant('CONFIGURATIONS.INVALID_ROLE_PATTERN')}\n\n(${displayMessage})`;
+        }
+
+        const alert = await this.alertCtrl.create({
+          header: this.translate.instant('COMMON.OPERATION_FAILED'),
+          message: displayMessage,
+          buttons: [{ text: this.translate.instant('COMMON.CONFIRM'), role: 'cancel' }]
+        });
+        await alert.present();
       }
+      return false;
     } finally {
-      await loading.dismiss();
+      if (loading) {
+        await loading.dismiss();
+      }
     }
   }
 
@@ -454,7 +505,7 @@ export class ConfigurationsPage implements OnInit {
     const updated = new Configurations(this.configurations);
     updated.configurationPageSectionsOrder = reordered;
     this.pageSections = reordered;
-    await this.updateConfigurations(updated);
+    await this.updateConfigurations(updated, { silent: true, noLoading: true });
   }
 
   //
@@ -641,7 +692,8 @@ export class ConfigurationsPage implements OnInit {
         roleId,
         assignment: existing || { roleId, extendedRolePatterns: [] },
         requirePatterns,
-        readOnly
+        readOnly,
+        casPermissionOptions: this.configurations?.getOAuthRoleOptions()
       }
     });
     await modal.present();
@@ -674,7 +726,10 @@ export class ConfigurationsPage implements OnInit {
   async addCustomRole(): Promise<void> {
     const modal = await this.modalCtrl.create({
       component: RoleEditorComponent,
-      componentProps: { mode: 'custom' }
+      componentProps: {
+        mode: 'custom',
+        casPermissionOptions: this.configurations?.getOAuthRoleOptions()
+      }
     });
     await modal.present();
     const { data } = await modal.onDidDismiss();
@@ -689,7 +744,12 @@ export class ConfigurationsPage implements OnInit {
     const readOnly = !this.canModifyUsers();
     const modal = await this.modalCtrl.create({
       component: RoleEditorComponent,
-      componentProps: { mode: 'custom', role, readOnly }
+      componentProps: {
+        mode: 'custom',
+        role,
+        readOnly,
+        casPermissionOptions: this.configurations?.getOAuthRoleOptions()
+      }
     });
     await modal.present();
     const { data } = await modal.onDidDismiss();
@@ -1006,5 +1066,98 @@ export class ConfigurationsPage implements OnInit {
       updated.guestAccessInstructions = data.instructions;
       await this.updateConfigurations(updated);
     }
+  }
+
+  getActiveOAuthRoleOptions(): string[] {
+    return this.configurations?.getOAuthRoleOptions() || OAUTH_ROLE_OPTIONS;
+  }
+
+  async addOAuthRoleOption(): Promise<void> {
+    const alert = await this.alertCtrl.create({
+      header: this.translate.instant('CONFIGURATIONS.ADD_OAUTH_ROLE'),
+      inputs: [
+        {
+          name: 'rolePattern',
+          type: 'text',
+          placeholder: this.translate.instant('CONFIGURATIONS.ROLE_OPTION_PLACEHOLDER')
+        }
+      ],
+      buttons: [
+        { text: this.translate.instant('COMMON.CANCEL'), role: 'cancel' },
+        {
+          text: this.translate.instant('COMMON.ADD'),
+          handler: async data => {
+            const role = data.rolePattern?.trim();
+            if (!role) return;
+            const current = [...this.getActiveOAuthRoleOptions()];
+            if (!current.includes(role)) {
+              current.push(role);
+              const updated = new Configurations(this.configurations);
+              updated.oauthRoleOptions = current;
+              await this.updateConfigurations(updated);
+            }
+            return true;
+          }
+        }
+      ]
+    });
+    await alert.present();
+  }
+
+  async editOAuthRoleOptions(rolesToEdit?: string[]): Promise<void> {
+    const modal = await this.modalCtrl.create({
+      component: OAuthRolesModalComponent,
+      componentProps: {
+        roles: rolesToEdit || this.getActiveOAuthRoleOptions()
+      }
+    });
+    await modal.present();
+    const { data } = await modal.onDidDismiss();
+    if (data?.roles) {
+      const updated = new Configurations(this.configurations);
+      updated.oauthRoleOptions = data.roles;
+      const success = await this.updateConfigurations(updated);
+      if (!success) {
+        await this.editOAuthRoleOptions(data.roles);
+      }
+    }
+  }
+
+  async removeOAuthRoleOption(index: number): Promise<void> {
+    const current = [...this.getActiveOAuthRoleOptions()];
+    if (index >= 0 && index < current.length) {
+      current.splice(index, 1);
+      const updated = new Configurations(this.configurations);
+      updated.oauthRoleOptions = current;
+      await this.updateConfigurations(updated);
+    }
+  }
+
+  async resetOAuthRoleOptionsToDefault(): Promise<void> {
+    const alert = await this.alertCtrl.create({
+      header: this.translate.instant('COMMON.CONFIRM'),
+      message: this.translate.instant('CONFIGURATIONS.RESET_OAUTH_ROLES_CONFIRM'),
+      buttons: [
+        { text: this.translate.instant('COMMON.CANCEL'), role: 'cancel' },
+        {
+          text: this.translate.instant('CONFIGURATIONS.RESET_TO_DEFAULTS'),
+          role: 'destructive',
+          handler: async () => {
+            const updated = new Configurations(this.configurations);
+            updated.oauthRoleOptions = [...OAUTH_ROLE_OPTIONS];
+            await this.updateConfigurations(updated);
+          }
+        }
+      ]
+    });
+    await alert.present();
+  }
+
+  async reorderOAuthRoleOptions(event: any): Promise<void> {
+    const reordered = event.detail.complete(this.oauthRoleOptions);
+    this.oauthRoleOptions = reordered;
+    const updated = new Configurations(this.configurations);
+    updated.oauthRoleOptions = reordered;
+    await this.updateConfigurations(updated, { silent: true, noLoading: true });
   }
 }

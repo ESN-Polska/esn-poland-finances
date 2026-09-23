@@ -111,25 +111,28 @@ export const ALL_APP_PERMISSIONS: AppPermission[] = APP_PERMISSION_TREE.reduce(
   [] as AppPermission[]
 );
 
-/** Country and local scoped CAS permissions published by ESN Accounts. */
-export const CAS_PERMISSION_OPTIONS = [
-  'National.president:PL',
-  'National.vicePresident:PL',
-  'National.treasurer:PL',
-  'National.pr:PL',
-  'National.regularBoardMember:PL',
-  'National.secretary:PL',
-  'National.staff:PL',
-  'National.boardSupport:PL',
-  'National.webmaster:PL',
-  'National.projectCoordinator:PL',
-  'National.Auditor:PL',
-  'National.EducationOfficer:PL',
-  'National.activity:PL',
-  'National.eventCoordinator:PL',
-  'National.cardManager:PL',
-  'National.alumnus:PL'
+/** Country and local scoped OAuth roles published by ESN Accounts. */
+export const OAUTH_ROLE_OPTIONS = [
+  'PL:country-president',
+  'PL:country-vice_president',
+  'PL:country-treasurer',
+  'PL:country-communication',
+  'PL:country-regular_board_member',
+  'PL:country-secretary',
+  'PL:country-staff',
+  'PL:country-board_support',
+  'PL:country-webmaster',
+  'PL:country-project_coordinator',
+  'PL:country-auditor',
+  'PL:country-education',
+  'PL:country-activity_coordinator',
+  'PL:country-event_coordinator',
+  'PL:country-esncard',
+  'PL:country-alumnus'
 ];
+
+/** Alias for existing front-end configuration components */
+export const CAS_PERMISSION_OPTIONS = OAUTH_ROLE_OPTIONS;
 
 export interface CustomRole {
   id: string;
@@ -244,7 +247,8 @@ export const DEFAULT_CONFIGURATIONS = {
   appLockMessage: {
     en: 'The application is temporarily locked for maintenance. Please check back later.',
     pl: 'Aplikacja jest tymczasowo zablokowana z powodu prac konserwacyjnych. Prosimy spróbować później.'
-  }
+  },
+  oauthRoleOptions: [...OAUTH_ROLE_OPTIONS] as string[]
 };
 
 /**
@@ -317,6 +321,8 @@ export class Configurations extends Resource {
   appLocked: boolean;
   /** Message displayed on the sign-in page when the application is locked. */
   appLockMessage: LocalizedText;
+  /** Configured ESN Accounts OAuth role options offered as checkboxes in modals. */
+  oauthRoleOptions: string[];
 
   constructor(data?: any) {
     super();
@@ -497,6 +503,11 @@ export class Configurations extends Resource {
         pl: this.clean(x.appLockMessage?.pl, String, defaultLockMessage.pl)
       };
     }
+    this.oauthRoleOptions = this.cleanArray(
+      x.oauthRoleOptions,
+      String,
+      DEFAULT_CONFIGURATIONS.oauthRoleOptions
+    );
   }
 
   getAppTitle(lang: string = 'en'): string {
@@ -543,6 +554,12 @@ export class Configurations extends Resource {
     return (this.appLockMessage as any)?.[lang] || this.appLockMessage?.en || this.appLockMessage?.pl || '';
   }
 
+  getOAuthRoleOptions(): string[] {
+    return (this.oauthRoleOptions && this.oauthRoleOptions.length > 0)
+      ? this.oauthRoleOptions
+      : OAUTH_ROLE_OPTIONS;
+  }
+
   safeLoad(newData: any, safeData: any): void {
     super.safeLoad(newData, safeData);
     this.PK = Configurations.PK;
@@ -562,6 +579,7 @@ export class Configurations extends Resource {
     this.guestInvitations = safeData.guestInvitations;
     this.appLocked = safeData.appLocked !== undefined ? Boolean(safeData.appLocked) : DEFAULT_CONFIGURATIONS.appLocked;
     this.appLockMessage = safeData.appLockMessage || DEFAULT_CONFIGURATIONS.appLockMessage;
+    this.oauthRoleOptions = safeData.oauthRoleOptions !== undefined ? safeData.oauthRoleOptions : DEFAULT_CONFIGURATIONS.oauthRoleOptions;
   }
 
   hasAdminGroup(): boolean {
@@ -588,7 +606,7 @@ export class Configurations extends Resource {
     }
 
     const knownPermissions = new Set(ALL_APP_PERMISSIONS);
-    const validExtendedRolePattern = /^[A-Za-z][A-Za-z0-9]*(?:\.[A-Za-z][A-Za-z0-9]*)*:[A-Za-z0-9*]+(?:-[A-Za-z0-9*]+)*$/;
+    const validExtendedRolePattern = /^[A-Za-z0-9*_-]+(?:\.[A-Za-z0-9*_-]+)*:[A-Za-z0-9*_-]+$/;
     for (const role of this.customRoles || []) {
       if (!role.name || !role.name.trim()) {
         errors.push('customRoles.name');
@@ -603,6 +621,11 @@ export class Configurations extends Resource {
     for (const assignment of this.automaticRoleAssignments || []) {
       if ((assignment.extendedRolePatterns || []).some(pattern => !validExtendedRolePattern.test(pattern))) {
         errors.push('automaticRoleAssignments.extendedRolePatterns');
+      }
+    }
+    for (const option of this.oauthRoleOptions || []) {
+      if (!validExtendedRolePattern.test(option)) {
+        errors.push('oauthRoleOptions');
       }
     }
     for (const inv of this.guestInvitations || []) {
