@@ -146,6 +146,12 @@
     "ABOUT": "About",
     "CREDITS_AND_LICENSE": "Credits & Licence"
   },
+  "SUPPORT": {
+    "TITLE": "Support",
+    "ACTION_SEND": "Send Email",
+    "ACTION_COPY": "Copy Email Address",
+    "EMAIL_COPIED": "Email address copied to clipboard!"
+  },
   "CREDITS": {
     "APP_NAME": "ESN Poland Finances app",
     "DEVELOPMENT": "Development",
@@ -177,7 +183,6 @@
   "REQUESTS": {
     "MY_REQUESTS_TITLE": "My Requests",
     "MY_REQUESTS_SUBTITLE": "Track and manage your submitted financial requests and drafts.",
-    "MANAGE_REQUESTS_BTN": "Manage",
     "MANAGE_PANEL": {
       "TITLE": "Manage Financial Requests",
       "SUBTITLE": "Review, process, and audit all federation financial requests",
@@ -193,7 +198,6 @@
       "EXPORT_SUCCESS": "Requests export downloaded successfully.",
       "STATUS_UPDATED": "Request status updated successfully.",
       "START_REVIEW": "Start Review",
-      "IN_REVIEW_COMMENT": "Review started by manager",
       "APPROVE_HEADER": "Approve Financial Request",
       "APPROVE_CONFIRM": "Are you sure you want to approve request",
       "OPTIONAL_COMMENT": "Optional approval comment",
@@ -212,21 +216,15 @@
       "MANAGER_REVIEW_TITLE": "Manager Actions"
     },
     "REVIEW_PANEL": {
-      "TITLE": "Request Review Mode",
-      "SUBTITLE": "Formal & accounting verification, document inspection and decision",
       "BADGE": "Review Mode",
       "AUTO_IN_REVIEW_SUCCESS": "Request marked as In Review.",
       "SWITCH_TO_VIEW": "General View",
       "SWITCH_TO_REVIEW": "Open in Review Mode",
-      "REVIEW_REQUEST": "Review",
-      "REVIEW_ACTIONS": "Review Decision & Actions",
       "PAYOUT_VERIFICATION": "Payout Details",
-      "ATTACHMENTS_INSPECTOR": "Documents & Attachments Inspection",
       "COPY_SUCCESS": "Copied to clipboard",
       "COPY_IBAN": "Copy IBAN",
       "COPY_AMOUNT": "Copy Amount",
       "COPY_INVOICE_NUM": "Copy No.",
-      "BACK_TO_MANAGE": "Back to List",
       "UNAUTHORIZED_REDIRECT": "Unauthorized to access review mode. Redirected to request view."
     },
     "SEARCH_PLACEHOLDER": "Search by ID, issuer, position or funding source...",
@@ -272,8 +270,6 @@
     "DOC_BANK_ACCOUNT": "Seller Bank Account",
     "DOC_EXPLANATION": "Explanation",
     "PROOF_OF_PAYMENT": "Proof of Payment",
-    "DELETE_CONFIRM_TITLE": "Delete Draft",
-    "DELETED_SUCCESS": "Draft request deleted.",
     "DOCUMENTS_LIST": "Documents Breakdown",
     "DOCUMENT": "Document",
     "DOCUMENT_ITEM": "Document Item",
@@ -307,6 +303,17 @@
     "ADDITIONAL_REMARKS": "Additional Remarks",
     "STATUS_PROGRESS": "Status Progress",
     "STATUS_HISTORY": "Status History",
+    "HISTORY_COMMENTS": {
+      "IN_REVIEW": "Review started",
+      "INITIAL_SUBMISSION": "Initial submission",
+      "SUBMITTED_BY_APPLICANT": "Submitted by applicant",
+      "DRAFT_CREATED": "Draft created",
+      "DRAFT_SAVED": "Draft saved",
+      "REQUEST_APPROVED": "Request approved",
+      "PAYOUT_COMPLETED": "Payout completed",
+      "STATUS_CHANGED_TO": "Status changed to {{status}}",
+      "UPDATED": "Updated"
+    },
     "DELETE_CONFIRM_HEADER": "Delete Draft",
     "DELETE_CONFIRM_MSG": "Are you sure you want to permanently delete this draft request? This action cannot be undone.",
     "DELETE_SUCCESS": "Draft request deleted.",
@@ -429,6 +436,13 @@
   "CONFIGURATIONS": {
     "DISPLAY_OPTIONS": "Display options",
     "DISPLAY_OPTIONS_I": "Personalise the interface with the following options.",
+    "LANGUAGE_MODE": "Language mode",
+    "LANGUAGE_MODE_I": "Allow all supported languages or force a specific language across the entire application and emails.",
+    "LANGUAGES": {
+      "ALL": "All supported languages (English & Polish)",
+      "EN_ONLY": "English only",
+      "PL_ONLY": "Polish only"
+    },
     "APP_TITLE": "App title",
     "APP_TITLE_I": "This name will be used in the login page and everywhere in the app.",
     "APP_TITLE_EN": "App title (EN)",

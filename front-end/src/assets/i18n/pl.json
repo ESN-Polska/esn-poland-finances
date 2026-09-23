@@ -146,6 +146,12 @@
     "ABOUT": "O aplikacji",
     "CREDITS_AND_LICENSE": "Zasługi i licencja"
   },
+  "SUPPORT": {
+    "TITLE": "Pomoc",
+    "ACTION_SEND": "Napisz wiadomość",
+    "ACTION_COPY": "Kopiuj adres e-mail",
+    "EMAIL_COPIED": "Skopiowano adres e-mail do schowka!"
+  },
   "CREDITS": {
     "APP_NAME": "ESN Poland Finances app",
     "DEVELOPMENT": "Twórcy i rozwój",
@@ -157,9 +163,8 @@
     "LICENSE_TEXT": "Ten utwór jest objęty licencją CC BY-NC-SA 4.0. Licencja zawiera stosowne wyłączenie odpowiedzialności gwarancyjnej.",
     "CONTRIBUTORS": "Współtwórcy repozytorium",
     "CONTRIBUTORS_TEXT": "Lista współtwórców pobrana z serwisu GitHub na podstawie historii repozytorium.",
-    "CONTRIBUTION_ONE": "wkład",
-    "CONTRIBUTION_FEW": "wkłady",
-    "CONTRIBUTION_MANY": "wkładów",
+    "CONTRIBUTION_ONE": "contribution",
+    "CONTRIBUTION_MANY": "contributions",
     "NO_CONTRIBUTORS": "Lista współtwórców jest obecnie niedostępna."
   },
   "USER": {
@@ -178,7 +183,6 @@
   "REQUESTS": {
     "MY_REQUESTS_TITLE": "Moje wnioski",
     "MY_REQUESTS_SUBTITLE": "Śledź i zarządzaj swoimi wnioskami finansowymi oraz wersjami roboczymi.",
-    "MANAGE_REQUESTS_BTN": "Zarządzaj",
     "MANAGE_PANEL": {
       "TITLE": "Zarządzanie wnioskami finansowymi",
       "SUBTITLE": "Weryfikuj, przetwarzaj i audytuj wszystkie wnioski finansowe stowarzyszenia",
@@ -194,7 +198,6 @@
       "EXPORT_SUCCESS": "Plik CSV z wnioskami został pomyślnie pobrany.",
       "STATUS_UPDATED": "Status wniosku został zaktualizowany.",
       "START_REVIEW": "Rozpocznij weryfikację",
-      "IN_REVIEW_COMMENT": "Weryfikacja rozpoczęta przez managera",
       "APPROVE_HEADER": "Zatwierdź wniosek finansowy",
       "APPROVE_CONFIRM": "Czy na pewno chcesz zatwierdzić wniosek",
       "OPTIONAL_COMMENT": "Opcjonalna uwaga do zatwierdzenia",
@@ -213,21 +216,15 @@
       "MANAGER_REVIEW_TITLE": "Działania managera"
     },
     "REVIEW_PANEL": {
-      "TITLE": "Weryfikacja wniosku",
-      "SUBTITLE": "Weryfikacja formalno-rachunkowa, kontrola dokumentów i zatwierdzenie",
       "BADGE": "Tryb Weryfikacji",
       "AUTO_IN_REVIEW_SUCCESS": "Wniosek został oznaczony jako w trakcie weryfikacji.",
       "SWITCH_TO_VIEW": "Widok ogólny",
       "SWITCH_TO_REVIEW": "Przejdź do weryfikacji",
-      "REVIEW_REQUEST": "Weryfikuj",
-      "REVIEW_ACTIONS": "Decyzja i akcje weryfikacji",
       "PAYOUT_VERIFICATION": "Dane do przelewu",
-      "ATTACHMENTS_INSPECTOR": "Weryfikacja dokumentów i załączników",
       "COPY_SUCCESS": "Skopiowano do schowka",
       "COPY_IBAN": "Kopiuj IBAN",
       "COPY_AMOUNT": "Kopiuj kwotę",
       "COPY_INVOICE_NUM": "Kopiuj nr",
-      "BACK_TO_MANAGE": "Wróć do listy",
       "UNAUTHORIZED_REDIRECT": "Brak uprawnień do trybu weryfikacji. Przekierowano do podglądu wniosku."
     },
     "SEARCH_PLACEHOLDER": "Szukaj po numerze, wystawcy, stanowisku lub źródle...",
@@ -273,8 +270,6 @@
     "DOC_BANK_ACCOUNT": "Konto bankowe sprzedawcy",
     "DOC_EXPLANATION": "Uzasadnienie / uwagi",
     "PROOF_OF_PAYMENT": "Potwierdzenie płatności",
-    "DELETE_CONFIRM_TITLE": "Usuń wersję roboczą",
-    "DELETED_SUCCESS": "Wersja robocza została usunięta.",
     "DOCUMENTS_LIST": "Zestawienie dokumentów",
     "DOCUMENT": "Dokument",
     "DOCUMENT_ITEM": "Pozycja dokumentu",
@@ -308,6 +303,17 @@
     "ADDITIONAL_REMARKS": "Dodatkowe uwagi",
     "STATUS_PROGRESS": "Postęp statusu",
     "STATUS_HISTORY": "Historia statusu",
+    "HISTORY_COMMENTS": {
+      "IN_REVIEW": "Weryfikacja rozpoczęta",
+      "INITIAL_SUBMISSION": "Złożenie wniosku",
+      "SUBMITTED_BY_APPLICANT": "Złożono przez wnioskodawcę",
+      "DRAFT_CREATED": "Utworzono wersję roboczą",
+      "DRAFT_SAVED": "Zapisano wersję roboczą",
+      "REQUEST_APPROVED": "Wniosek zatwierdzony",
+      "PAYOUT_COMPLETED": "Wypłata zrealizowana",
+      "STATUS_CHANGED_TO": "Status zmieniony na {{status}}",
+      "UPDATED": "Zaktualizowano"
+    },
     "DELETE_CONFIRM_HEADER": "Usuń wersję roboczą",
     "DELETE_CONFIRM_MSG": "Czy na pewno chcesz bezpowrotnie usunąć tę wersję roboczą wniosku?",
     "DELETE_SUCCESS": "Wersja robocza została usunięta.",
@@ -430,6 +436,13 @@
   "CONFIGURATIONS": {
     "DISPLAY_OPTIONS": "Opcje wyświetlania",
     "DISPLAY_OPTIONS_I": "Dostosuj interfejs za pomocą poniższych opcji.",
+    "LANGUAGE_MODE": "Tryb językowy",
+    "LANGUAGE_MODE_I": "Zezwól na wszystkie obsługiwane języki lub wymuś określony język w całej aplikacji i powiadomieniach e-mail.",
+    "LANGUAGES": {
+      "ALL": "Wszystkie obsługiwane języki (angielski i polski)",
+      "EN_ONLY": "Tylko angielski",
+      "PL_ONLY": "Tylko polski"
+    },
     "APP_TITLE": "Tytuł aplikacji",
     "APP_TITLE_I": "Nazwa używana na stronie logowania oraz w całym systemie.",
     "APP_TITLE_EN": "Tytuł aplikacji (EN)",

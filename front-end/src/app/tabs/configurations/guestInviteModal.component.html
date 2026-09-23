@@ -140,7 +140,7 @@
       </ion-item>
 
       <ng-container *ngIf="customizeInstructions">
-        <ion-item class="ion-margin-top">
+        <ion-item class="ion-margin-top" *ngIf="app.isLanguageAvailable('en')">
           <ion-label position="stacked">{{ 'CONFIGURATIONS.GUEST_INSTRUCTIONS_EN' | translate }}</ion-label>
           <ion-textarea
             [(ngModel)]="customInstructionsEn"
@@ -149,7 +149,7 @@
             [placeholder]="'CONFIGURATIONS.GUEST_INSTRUCTIONS_PLACEHOLDER' | translate"
           ></ion-textarea>
         </ion-item>
-        <ion-item class="ion-margin-top">
+        <ion-item class="ion-margin-top" *ngIf="app.isLanguageAvailable('pl')">
           <ion-label position="stacked">{{ 'CONFIGURATIONS.GUEST_INSTRUCTIONS_PL' | translate }}</ion-label>
           <ion-textarea
             [(ngModel)]="customInstructionsPl"
@@ -247,7 +247,7 @@
 
             <div *ngIf="emailGuestOnDone" class="emailOptionsWrapper">
               <!-- Language Selection -->
-              <div class="langSelectRow">
+              <div class="langSelectRow" *ngIf="!app.isLanguageForced()">
                 <span class="langSelectLabel">{{ 'CONFIGURATIONS.GUEST_EMAIL_LANG' | translate }}:</span>
                 <ion-segment [(ngModel)]="guestEmailLang" (ionChange)="onGuestLangChange()" class="guestLangSegment">
                   <ion-segment-button value="pl">

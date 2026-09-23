@@ -4,6 +4,9 @@ export { FinancialRequestType };
 
 export const DEFAULT_TIMEZONE = 'Europe/Warsaw';
 
+export const SUPPORTED_LANGUAGES = ['en', 'pl'] as const;
+export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
+
 export const DEFAULT_CONFIGURATION_PAGE_SECTIONS_ORDER = [
   'GUESTS',
   'USERS',
@@ -249,7 +252,8 @@ export const DEFAULT_CONFIGURATIONS = {
     en: 'The application is temporarily locked for maintenance. Please check back later.',
     pl: 'Aplikacja jest tymczasowo zablokowana z powodu prac konserwacyjnych. Prosimy spróbować później.'
   },
-  oauthRoleOptions: [...OAUTH_ROLE_OPTIONS] as string[]
+  oauthRoleOptions: [...OAUTH_ROLE_OPTIONS] as string[],
+  forcedLanguage: 'ALL'
 };
 
 /**
@@ -326,6 +330,8 @@ export class Configurations extends Resource {
   appLockMessage: LocalizedText;
   /** Configured ESN Accounts OAuth role options offered as checkboxes in modals. */
   oauthRoleOptions: string[];
+  /** When set to a specific language code ('en', 'pl', etc.), forces that language everywhere and disables multi-language switches. 'ALL' enables all supported languages. */
+  forcedLanguage: string;
 
   constructor(data?: any) {
     super();
@@ -512,16 +518,19 @@ export class Configurations extends Resource {
       String,
       DEFAULT_CONFIGURATIONS.oauthRoleOptions
     );
+    this.forcedLanguage = this.clean(x.forcedLanguage, String, DEFAULT_CONFIGURATIONS.forcedLanguage);
   }
 
   getAppTitle(lang: string = 'en'): string {
+    const effectiveLang = (this.forcedLanguage && this.forcedLanguage !== 'ALL') ? this.forcedLanguage : lang;
     if (typeof this.appTitle === 'string') return this.appTitle;
-    return (this.appTitle as any)?.[lang] || this.appTitle?.en || this.appTitle?.pl || '';
+    return (this.appTitle as any)?.[effectiveLang] || this.appTitle?.en || this.appTitle?.pl || '';
   }
 
   getAppOrganisation(lang: string = 'en'): string {
+    const effectiveLang = (this.forcedLanguage && this.forcedLanguage !== 'ALL') ? this.forcedLanguage : lang;
     if (typeof this.appOrganisation === 'string') return this.appOrganisation;
-    return (this.appOrganisation as any)?.[lang] || this.appOrganisation?.en || this.appOrganisation?.pl || '';
+    return (this.appOrganisation as any)?.[effectiveLang] || this.appOrganisation?.en || this.appOrganisation?.pl || '';
   }
 
   getOrganisationLogo(): string {
@@ -529,24 +538,28 @@ export class Configurations extends Resource {
   }
 
   getRulesWarningText(lang: string = 'en'): string {
+    const effectiveLang = (this.forcedLanguage && this.forcedLanguage !== 'ALL') ? this.forcedLanguage : lang;
     if (typeof this.rulesWarningText === 'string') return this.rulesWarningText;
-    return (this.rulesWarningText as any)?.[lang] || this.rulesWarningText?.en || this.rulesWarningText?.pl || '';
+    return (this.rulesWarningText as any)?.[effectiveLang] || this.rulesWarningText?.en || this.rulesWarningText?.pl || '';
   }
 
   getHomeWelcomeTitle(lang: string = 'en'): string {
+    const effectiveLang = (this.forcedLanguage && this.forcedLanguage !== 'ALL') ? this.forcedLanguage : lang;
     if (typeof this.homeWelcomeTitle === 'string') return this.homeWelcomeTitle;
-    return (this.homeWelcomeTitle as any)?.[lang] || this.homeWelcomeTitle?.en || this.homeWelcomeTitle?.pl || '';
+    return (this.homeWelcomeTitle as any)?.[effectiveLang] || this.homeWelcomeTitle?.en || this.homeWelcomeTitle?.pl || '';
   }
 
   getHomeWelcomeSubtitle(lang: string = 'en'): string {
+    const effectiveLang = (this.forcedLanguage && this.forcedLanguage !== 'ALL') ? this.forcedLanguage : lang;
     if (typeof this.homeWelcomeSubtitle === 'string') return this.homeWelcomeSubtitle;
-    return (this.homeWelcomeSubtitle as any)?.[lang] || this.homeWelcomeSubtitle?.en || this.homeWelcomeSubtitle?.pl || '';
+    return (this.homeWelcomeSubtitle as any)?.[effectiveLang] || this.homeWelcomeSubtitle?.en || this.homeWelcomeSubtitle?.pl || '';
   }
 
   getHomeNoticeText(lang: string = 'en'): string {
+    const effectiveLang = (this.forcedLanguage && this.forcedLanguage !== 'ALL') ? this.forcedLanguage : lang;
     if (!this.homeNotice?.text) return '';
     if (typeof this.homeNotice.text === 'string') return this.homeNotice.text;
-    return (this.homeNotice.text as any)?.[lang] || this.homeNotice.text?.en || this.homeNotice.text?.pl || '';
+    return (this.homeNotice.text as any)?.[effectiveLang] || this.homeNotice.text?.en || this.homeNotice.text?.pl || '';
   }
 
   isHomeNoticeActive(): boolean {
@@ -554,8 +567,9 @@ export class Configurations extends Resource {
   }
 
   getAppLockMessage(lang: string = 'en'): string {
+    const effectiveLang = (this.forcedLanguage && this.forcedLanguage !== 'ALL') ? this.forcedLanguage : lang;
     if (typeof this.appLockMessage === 'string') return this.appLockMessage;
-    return (this.appLockMessage as any)?.[lang] || this.appLockMessage?.en || this.appLockMessage?.pl || '';
+    return (this.appLockMessage as any)?.[effectiveLang] || this.appLockMessage?.en || this.appLockMessage?.pl || '';
   }
 
   getOAuthRoleOptions(): string[] {
@@ -585,6 +599,7 @@ export class Configurations extends Resource {
     this.appLockedAt = safeData.appLockedAt ? String(safeData.appLockedAt) : undefined;
     this.appLockMessage = safeData.appLockMessage || DEFAULT_CONFIGURATIONS.appLockMessage;
     this.oauthRoleOptions = safeData.oauthRoleOptions !== undefined ? safeData.oauthRoleOptions : DEFAULT_CONFIGURATIONS.oauthRoleOptions;
+    this.forcedLanguage = safeData.forcedLanguage !== undefined ? this.clean(safeData.forcedLanguage, String, DEFAULT_CONFIGURATIONS.forcedLanguage) : DEFAULT_CONFIGURATIONS.forcedLanguage;
   }
 
   hasAdminGroup(): boolean {

@@ -348,9 +348,14 @@ class ConfigurationsRC extends ResourceController {
       throw new HandledError('Recipient email is blocked due to previous bounces');
     }
 
+    let effectiveLang: 'pl' | 'en' = lang;
+    if (this.configurations?.forcedLanguage && this.configurations.forcedLanguage !== 'ALL') {
+      effectiveLang = this.configurations.forcedLanguage === 'pl' ? 'pl' : 'en';
+    }
+
     const guestLink = `${BASE_URL}/auth?guestToken=${encodeURIComponent(invite.id)}`;
-    const expiryDate = invite.expiresAt ? new Date(invite.expiresAt).toLocaleDateString('pl-PL') : '';
-    const senderName = formatSenderName(this.configurations?.getAppTitle(lang) || 'ESN Poland');
+    const expiryDate = invite.expiresAt ? new Date(invite.expiresAt).toLocaleDateString(effectiveLang === 'pl' ? 'pl-PL' : 'en-US') : '';
+    const senderName = formatSenderName(this.configurations?.getAppTitle(effectiveLang) || 'ESN Poland');
     const sesParams = {
       ...SES_CONFIG,
       sourceName: senderName
@@ -365,14 +370,14 @@ class ConfigurationsRC extends ResourceController {
       }, sesParams);
     } else {
       // Send templated email
-      const templateEnum = lang === 'en' ? EmailTemplates.GUEST_INVITATION_EN : EmailTemplates.GUEST_INVITATION_PL;
+      const templateEnum = effectiveLang === 'en' ? EmailTemplates.GUEST_INVITATION_EN : EmailTemplates.GUEST_INVITATION_PL;
       const templateName = this.getSESTemplateName(templateEnum);
       const templateData = {
         user: invite.guestName,
         title: invite.purpose || 'ESN Polska',
         detail: expiryDate,
         url: guestLink,
-        message: invite.instructions?.[lang] || ''
+        message: invite.instructions?.[effectiveLang] || ''
       };
 
       try {

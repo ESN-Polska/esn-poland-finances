@@ -1,5 +1,9 @@
 .templateModalContent {
   --background: var(--ion-background-color, #f8fafc);
+
+  .maxWidthContainer {
+    padding-bottom: calc(36px + env(safe-area-inset-bottom, 0px));
+  }
 }
 
 .optionsToolbar {
@@ -14,6 +18,15 @@
     gap: 10px;
     max-width: 700px;
     margin: 0 auto;
+
+    @media (max-width: 480px) {
+      justify-content: center;
+
+      .modeSegment {
+        max-width: 100%;
+        flex: 1 1 100%;
+      }
+    }
 
     .langSegment {
       width: 110px;

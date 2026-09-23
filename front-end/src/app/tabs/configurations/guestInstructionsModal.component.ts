@@ -1,6 +1,7 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { ModalController } from '@ionic/angular';
 import { LocalizedText } from '@models/configurations.model';
+import { AppService } from '@app/app.service';
 
 @Component({
   selector: 'app-guest-instructions-modal',
@@ -32,7 +33,7 @@ import { LocalizedText } from '@models/configurations.model';
           </ion-list-header>
 
           <!-- English Instructions -->
-          <ion-item class="instructionItem">
+          <ion-item class="instructionItem" *ngIf="app.isLanguageAvailable('en')">
             <ion-label position="stacked">{{ 'CONFIGURATIONS.GUEST_INSTRUCTIONS_EN' | translate }}</ion-label>
             <ion-textarea
               [(ngModel)]="instructionsEn"
@@ -44,7 +45,7 @@ import { LocalizedText } from '@models/configurations.model';
           </ion-item>
 
           <!-- Polish Instructions -->
-          <ion-item class="instructionItem ion-margin-top">
+          <ion-item class="instructionItem ion-margin-top" *ngIf="app.isLanguageAvailable('pl')">
             <ion-label position="stacked">{{ 'CONFIGURATIONS.GUEST_INSTRUCTIONS_PL' | translate }}</ion-label>
             <ion-textarea
               [(ngModel)]="instructionsPl"
@@ -89,7 +90,7 @@ export class GuestInstructionsModalComponent implements OnInit {
   public instructionsEn = '';
   public instructionsPl = '';
 
-  constructor(private modalCtrl: ModalController) {}
+  constructor(private modalCtrl: ModalController, public app: AppService) {}
 
   ngOnInit(): void {
     this.instructionsEn = this.instructions?.en || '';
