@@ -17,8 +17,9 @@ export class RequestsPage implements OnInit {
   public filteredRequests: FinancialRequest[] = [];
   public selectedStatus: string = 'ALL';
   public searchQuery: string = '';
-  public isLoading: boolean = false;
+  public isLoading: boolean = true;
   public pendingReviewCount = 0;
+  private loadPromise: Promise<void> | null = null;
 
   public readonly allStatuses: RequestStatus[] = [
     'DRAFT',
@@ -43,6 +44,23 @@ export class RequestsPage implements OnInit {
     );
   }
 
+  public get isFiltered(): boolean {
+    return !!this.searchQuery.trim() || this.selectedStatus !== 'ALL';
+  }
+
+  public get statusFilterText(): string {
+    if (this.isLoading) {
+      const allLabel = this.translate.instant('COMMON.ALL') || 'All';
+      return `${allLabel} (…)`;
+    }
+    if (this.selectedStatus === 'ALL') {
+      const allLabel = this.translate.instant('COMMON.ALL') || 'All';
+      return `${allLabel} (${this.allRequests.length})`;
+    }
+    const statusLabel = this.translate.instant('REQUESTS.STATUSES.' + this.selectedStatus) || this.selectedStatus;
+    return `${statusLabel} (${this.countByStatus(this.selectedStatus)})`;
+  }
+
   constructor(
     private router: Router,
     private alertCtrl: AlertController,
@@ -61,17 +79,42 @@ export class RequestsPage implements OnInit {
   }
 
   public async loadRequests(): Promise<void> {
+    if (this.loadPromise) {
+      return this.loadPromise;
+    }
+
     this.isLoading = true;
+    this.loadPromise = (async () => {
+      try {
+        this.allRequests = await this.requestsService.loadMyRequests();
+        this.applyFilters();
+        if (this.canAccessManage) {
+          await this.loadPendingCount();
+        }
+      } catch (err) {
+        console.error('Failed to load requests', err);
+      } finally {
+        this.isLoading = false;
+        this.loadPromise = null;
+      }
+    })();
+
+    return this.loadPromise;
+  }
+
+  public async doRefresh(event: any): Promise<void> {
     try {
       this.allRequests = await this.requestsService.loadMyRequests();
       this.applyFilters();
       if (this.canAccessManage) {
-        this.loadPendingCount();
+        await this.loadPendingCount();
       }
     } catch (err) {
-      console.error('Failed to load requests', err);
+      console.error('Failed to refresh requests', err);
     } finally {
-      this.isLoading = false;
+      if (event?.target?.complete) {
+        event.target.complete();
+      }
     }
   }
 
@@ -97,6 +140,12 @@ export class RequestsPage implements OnInit {
 
   public clearSearch(): void {
     this.searchQuery = '';
+    this.applyFilters();
+  }
+
+  public resetFilters(): void {
+    this.searchQuery = '';
+    this.selectedStatus = 'ALL';
     this.applyFilters();
   }
 

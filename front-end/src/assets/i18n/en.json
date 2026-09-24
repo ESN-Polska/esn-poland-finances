@@ -334,21 +334,23 @@
     "LOAD_ERROR": "Error loading request details.",
     "NO_REQUESTS_FOUND": "No financial requests found",
     "NO_REQUESTS_DESC": "You haven't submitted any financial requests yet.",
+    "NO_MATCHING_REQUESTS": "No matching requests found",
+    "NO_MATCHING_DESC": "No financial requests match your search and filter criteria.",
     "TYPES": {
-      "INVOICE_TO_PAY": "Payment request",
       "INVOICE_REIMBURSEMENT": "Reimbursement request",
+      "INVOICE_TO_PAY": "Payment request",
       "ADVANCE_PAYMENT": "Advance request",
       "DELEGATION_SETTLEMENT": "Delegation settlement"
     },
     "TYPES_SHORT": {
-      "INVOICE_TO_PAY": "Pay",
       "INVOICE_REIMBURSEMENT": "Reimburse",
+      "INVOICE_TO_PAY": "Pay",
       "ADVANCE_PAYMENT": "Advance",
       "DELEGATION_SETTLEMENT": "Delegation"
     },
     "TYPES_DESC": {
-      "INVOICE_TO_PAY": "For invoices that should be transferred directly to the vendor's bank account.",
       "INVOICE_REIMBURSEMENT": "For expenses paid with personal funds that require reimbursement to your account.",
+      "INVOICE_TO_PAY": "For invoices that should be transferred directly to the vendor's bank account.",
       "ADVANCE_PAYMENT": "Request advance funds for planned expenditures.",
       "DELEGATION_SETTLEMENT": "Settle travel expenses, mileage and per diems."
     },
@@ -423,6 +425,7 @@
       "DOC_NUMBER_REQUIRED": "Document number is required.",
       "ISSUER_REQUIRED": "Issuer name is required.",
       "ISSUE_DATE_REQUIRED": "Issue date is required.",
+      "SALE_DATE_REQUIRED": "Sale date is required.",
       "AMOUNT_GREATER_ZERO": "Amount must be greater than 0.",
       "SELLER_BANK_REQUIRED": "Seller's bank account details are required.",
       "ADVANCE_AMOUNT_REQUIRED": "Requested advance amount must be greater than 0.",

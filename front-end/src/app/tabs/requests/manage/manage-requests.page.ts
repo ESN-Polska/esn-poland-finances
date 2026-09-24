@@ -19,7 +19,8 @@ import { AppService } from '../../../app.service';
 export class ManageRequestsPage implements OnInit {
   public allRequests: FinancialRequest[] = [];
   public filteredRequests: FinancialRequest[] = [];
-  public isLoading = false;
+  public isLoading = true;
+  private loadPromise: Promise<void> | null = null;
 
   public currentYear = new Date().getFullYear();
 
@@ -40,8 +41,8 @@ export class ManageRequestsPage implements OnInit {
   ];
 
   public readonly allTypes: FinancialRequestType[] = [
-    'INVOICE_TO_PAY',
     'INVOICE_REIMBURSEMENT',
+    'INVOICE_TO_PAY',
     'ADVANCE_PAYMENT',
     'DELEGATION_SETTLEMENT'
   ];
@@ -179,17 +180,42 @@ export class ManageRequestsPage implements OnInit {
   }
 
   public async loadRequests(): Promise<void> {
+    if (this.loadPromise) {
+      return this.loadPromise;
+    }
+
     this.isLoading = true;
+    this.loadPromise = (async () => {
+      try {
+        const loaded = await this.requestsService.loadAllRequests();
+        this.allRequests = (loaded || []).filter((r) => r.status !== 'DRAFT');
+        this.extractAvailableYears();
+        this.applyFilters();
+      } catch (err) {
+        console.error('Failed to load requests for management', err);
+        this.showToast('REQUESTS.LOAD_ERROR', 'danger');
+      } finally {
+        this.isLoading = false;
+        this.loadPromise = null;
+      }
+    })();
+
+    return this.loadPromise;
+  }
+
+  public async doRefresh(event: any): Promise<void> {
     try {
       const loaded = await this.requestsService.loadAllRequests();
       this.allRequests = (loaded || []).filter((r) => r.status !== 'DRAFT');
       this.extractAvailableYears();
       this.applyFilters();
     } catch (err) {
-      console.error('Failed to load requests for management', err);
+      console.error('Failed to refresh requests for management', err);
       this.showToast('REQUESTS.LOAD_ERROR', 'danger');
     } finally {
-      this.isLoading = false;
+      if (event?.target?.complete) {
+        event.target.complete();
+      }
     }
   }
 

@@ -1,4 +1,8 @@
 <ion-content class="manageRequestsContent ion-padding">
+  <ion-refresher slot="fixed" (ionRefresh)="doRefresh($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+
   <div class="manageContainer">
     <!-- Top Header -->
     <div class="panelHeader">
@@ -15,7 +19,7 @@
       </div>
 
       <div class="headerRight">
-        <ion-button *ngIf="canExport" class="exportBtn" fill="outline" (click)="exportData()" [title]="'REQUESTS.MANAGE_PANEL.EXPORT_CSV' | translate">
+        <ion-button *ngIf="canExport" class="exportBtn" fill="outline" (click)="exportData()" [disabled]="isLoading" [title]="'REQUESTS.MANAGE_PANEL.EXPORT_CSV' | translate">
           <ion-icon slot="start" name="download-outline"></ion-icon>
           {{ 'REQUESTS.MANAGE_PANEL.EXPORT_CSV' | translate }}
         </ion-button>
@@ -40,73 +44,97 @@
       <div
         class="metricCard metricSubmitted"
         [class.active]="selectedStatus === 'SUBMITTED'"
-        (click)="setStatusFilter(selectedStatus === 'SUBMITTED' ? 'ALL' : 'SUBMITTED')"
+        [class.disabledCard]="isLoading"
+        (click)="!isLoading && setStatusFilter(selectedStatus === 'SUBMITTED' ? 'ALL' : 'SUBMITTED')"
       >
         <div class="metricTop" [title]="'REQUESTS.STATUSES.SUBMITTED' | translate">
           <span class="metricLabel">{{ 'REQUESTS.STATUSES.SUBMITTED' | translate }}</span>
           <ion-icon name="hourglass-outline"></ion-icon>
         </div>
-        <div class="metricValue">{{ pendingCount }}</div>
+        <div class="metricValue">
+          <span *ngIf="!isLoading">{{ pendingCount }}</span>
+          <ion-skeleton-text *ngIf="isLoading" [animated]="true" class="skeletonMetric"></ion-skeleton-text>
+        </div>
       </div>
 
       <div
         class="metricCard metricInReview"
         [class.active]="selectedStatus === 'IN_REVIEW'"
-        (click)="setStatusFilter(selectedStatus === 'IN_REVIEW' ? 'ALL' : 'IN_REVIEW')"
+        [class.disabledCard]="isLoading"
+        (click)="!isLoading && setStatusFilter(selectedStatus === 'IN_REVIEW' ? 'ALL' : 'IN_REVIEW')"
       >
         <div class="metricTop" [title]="'REQUESTS.STATUSES.IN_REVIEW' | translate">
           <span class="metricLabel">{{ 'REQUESTS.STATUSES.IN_REVIEW' | translate }}</span>
           <ion-icon name="search-outline"></ion-icon>
         </div>
-        <div class="metricValue">{{ inReviewCount }}</div>
+        <div class="metricValue">
+          <span *ngIf="!isLoading">{{ inReviewCount }}</span>
+          <ion-skeleton-text *ngIf="isLoading" [animated]="true" class="skeletonMetric"></ion-skeleton-text>
+        </div>
       </div>
 
       <div
         class="metricCard metricChanges"
         [class.active]="selectedStatus === 'CHANGES_REQUESTED'"
-        (click)="setStatusFilter(selectedStatus === 'CHANGES_REQUESTED' ? 'ALL' : 'CHANGES_REQUESTED')"
+        [class.disabledCard]="isLoading"
+        (click)="!isLoading && setStatusFilter(selectedStatus === 'CHANGES_REQUESTED' ? 'ALL' : 'CHANGES_REQUESTED')"
       >
         <div class="metricTop" [title]="'REQUESTS.STATUSES.CHANGES_REQUESTED' | translate">
           <span class="metricLabel">{{ 'REQUESTS.STATUSES.CHANGES_REQUESTED' | translate }}</span>
           <ion-icon name="alert-circle-outline"></ion-icon>
         </div>
-        <div class="metricValue">{{ changesRequestedCount }}</div>
+        <div class="metricValue">
+          <span *ngIf="!isLoading">{{ changesRequestedCount }}</span>
+          <ion-skeleton-text *ngIf="isLoading" [animated]="true" class="skeletonMetric"></ion-skeleton-text>
+        </div>
       </div>
 
       <div
         class="metricCard metricApproved"
         [class.active]="selectedStatus === 'APPROVED'"
-        (click)="setStatusFilter(selectedStatus === 'APPROVED' ? 'ALL' : 'APPROVED')"
+        [class.disabledCard]="isLoading"
+        (click)="!isLoading && setStatusFilter(selectedStatus === 'APPROVED' ? 'ALL' : 'APPROVED')"
       >
         <div class="metricTop" [title]="'REQUESTS.STATUSES.APPROVED' | translate">
           <span class="metricLabel">{{ 'REQUESTS.STATUSES.APPROVED' | translate }}</span>
           <ion-icon name="checkmark-circle-outline"></ion-icon>
         </div>
-        <div class="metricValue">{{ approvedCount }}</div>
+        <div class="metricValue">
+          <span *ngIf="!isLoading">{{ approvedCount }}</span>
+          <ion-skeleton-text *ngIf="isLoading" [animated]="true" class="skeletonMetric"></ion-skeleton-text>
+        </div>
       </div>
 
       <div
         class="metricCard metricPaid"
         [class.active]="selectedStatus === 'PAID'"
-        (click)="setStatusFilter(selectedStatus === 'PAID' ? 'ALL' : 'PAID')"
+        [class.disabledCard]="isLoading"
+        (click)="!isLoading && setStatusFilter(selectedStatus === 'PAID' ? 'ALL' : 'PAID')"
       >
         <div class="metricTop" [title]="'REQUESTS.STATUSES.PAID' | translate">
           <span class="metricLabel">{{ 'REQUESTS.STATUSES.PAID' | translate }}</span>
           <ion-icon name="cash-outline"></ion-icon>
         </div>
-        <div class="metricValue">{{ paidCount }}</div>
+        <div class="metricValue">
+          <span *ngIf="!isLoading">{{ paidCount }}</span>
+          <ion-skeleton-text *ngIf="isLoading" [animated]="true" class="skeletonMetric"></ion-skeleton-text>
+        </div>
       </div>
 
       <div
         class="metricCard metricRejected"
         [class.active]="selectedStatus === 'REJECTED'"
-        (click)="setStatusFilter(selectedStatus === 'REJECTED' ? 'ALL' : 'REJECTED')"
+        [class.disabledCard]="isLoading"
+        (click)="!isLoading && setStatusFilter(selectedStatus === 'REJECTED' ? 'ALL' : 'REJECTED')"
       >
         <div class="metricTop" [title]="'REQUESTS.STATUSES.REJECTED' | translate">
           <span class="metricLabel">{{ 'REQUESTS.STATUSES.REJECTED' | translate }}</span>
           <ion-icon name="close-circle-outline"></ion-icon>
         </div>
-        <div class="metricValue">{{ rejectedCount }}</div>
+        <div class="metricValue">
+          <span *ngIf="!isLoading">{{ rejectedCount }}</span>
+          <ion-skeleton-text *ngIf="isLoading" [animated]="true" class="skeletonMetric"></ion-skeleton-text>
+        </div>
       </div>
 
       <div class="metricCard metricFinancials">
@@ -114,13 +142,23 @@
           <span class="metricLabel">{{ 'REQUESTS.MANAGE_PANEL.TOTAL_PAID_OUT' | translate }}</span>
           <ion-icon name="wallet-outline"></ion-icon>
         </div>
-        <div class="financialAmounts">
+        <div class="financialAmounts" *ngIf="!isLoading">
           <div class="amountItem">
             <span class="amountNumber">{{ totalPaidAmountPLN | number:'1.2-2' }}</span>
             <small class="currencyLabel">PLN</small>
           </div>
           <div class="amountItem">
             <span class="amountNumber">{{ totalPaidAmountEUR | number:'1.2-2' }}</span>
+            <small class="currencyLabel">EUR</small>
+          </div>
+        </div>
+        <div class="financialAmounts skeletonFinancialAmounts" *ngIf="isLoading">
+          <div class="amountItem">
+            <ion-skeleton-text [animated]="true" class="skeletonFinancialAmount"></ion-skeleton-text>
+            <small class="currencyLabel">PLN</small>
+          </div>
+          <div class="amountItem">
+            <ion-skeleton-text [animated]="true" class="skeletonFinancialAmount"></ion-skeleton-text>
             <small class="currencyLabel">EUR</small>
           </div>
         </div>
@@ -136,9 +174,10 @@
           class="searchInput"
           [(ngModel)]="searchQuery"
           (input)="applyFilters()"
+          [disabled]="isLoading"
           [placeholder]="'REQUESTS.MANAGE_PANEL.SEARCH_PLACEHOLDER' | translate"
         />
-        <button *ngIf="searchQuery" class="clearBtn" (click)="clearSearch()">
+        <button *ngIf="searchQuery && !isLoading" class="clearBtn" (click)="clearSearch()">
           <ion-icon name="close-circle"></ion-icon>
         </button>
       </div>
@@ -152,6 +191,7 @@
             class="filterSelect statusSelect"
             [(ngModel)]="selectedStatus"
             (ionChange)="applyFilters()"
+            [disabled]="isLoading"
           >
             <ion-select-option value="ALL">{{ 'COMMON.ALL' | translate }}</ion-select-option>
             <ion-select-option *ngFor="let s of allStatuses" [value]="s">
@@ -168,6 +208,7 @@
             class="filterSelect typeSelect"
             [(ngModel)]="selectedType"
             (ionChange)="applyFilters()"
+            [disabled]="isLoading"
           >
             <ion-select-option value="ALL">{{ 'COMMON.ALL' | translate }}</ion-select-option>
             <ion-select-option *ngFor="let t of allTypes" [value]="t">
@@ -184,6 +225,7 @@
             class="filterSelect yearSelect"
             [(ngModel)]="selectedYear"
             (ionChange)="applyFilters()"
+            [disabled]="isLoading"
           >
             <ion-select-option value="ALL">{{ 'COMMON.ALL' | translate }}</ion-select-option>
             <ion-select-option *ngFor="let y of availableYears" [value]="y.toString()">
@@ -196,11 +238,13 @@
 
     <!-- Active Filters Feedback bar -->
     <div class="resultsCountBar">
-      <span>
+      <span *ngIf="!isLoading">
         {{ 'REQUESTS.MANAGE_PANEL.SHOWING_RESULTS' | translate:{ current: filteredRequests.length, total: allRequests.length } }}
       </span>
+      <ion-skeleton-text *ngIf="isLoading" [animated]="true" class="skeletonResultsCount"></ion-skeleton-text>
+
       <ion-button
-        *ngIf="isFiltered"
+        *ngIf="!isLoading && isFiltered"
         fill="clear"
         size="small"
         class="resetFiltersBtn"
@@ -211,7 +255,7 @@
     </div>
 
     <!-- Requests Table (Desktop) -->
-    <div class="desktopTableWrapper" *ngIf="filteredRequests.length > 0; else noResults">
+    <div class="desktopTableWrapper" *ngIf="isLoading || filteredRequests.length > 0">
       <table class="requestsTable">
         <thead>
           <tr>
@@ -224,7 +268,38 @@
             <th>{{ 'COMMON.STATUS' | translate }}</th>
           </tr>
         </thead>
-        <tbody>
+        <!-- Table Skeletons -->
+        <tbody *ngIf="isLoading">
+          <tr *ngFor="let s of [1, 2, 3, 4, 5]" class="tableRow skeletonTableRow">
+            <td class="idCell">
+              <ion-skeleton-text [animated]="true" class="skeletonIdCell"></ion-skeleton-text>
+            </td>
+            <td class="dateCell">
+              <ion-skeleton-text [animated]="true" class="skeletonDateCell"></ion-skeleton-text>
+            </td>
+            <td class="dateCell">
+              <ion-skeleton-text [animated]="true" class="skeletonDateCell"></ion-skeleton-text>
+            </td>
+            <td class="applicantCell">
+              <div class="applicantInfo">
+                <ion-skeleton-text [animated]="true" class="skeletonApplicantName"></ion-skeleton-text>
+                <ion-skeleton-text [animated]="true" class="skeletonApplicantEmail"></ion-skeleton-text>
+              </div>
+            </td>
+            <td class="typeCell">
+              <ion-skeleton-text [animated]="true" class="skeletonTypePill"></ion-skeleton-text>
+            </td>
+            <td class="amountCell">
+              <ion-skeleton-text [animated]="true" class="skeletonAmountCell"></ion-skeleton-text>
+            </td>
+            <td class="statusCell">
+              <ion-skeleton-text [animated]="true" class="skeletonStatusPill"></ion-skeleton-text>
+            </td>
+          </tr>
+        </tbody>
+
+        <!-- Loaded Table Rows -->
+        <tbody *ngIf="!isLoading">
           <tr
             *ngFor="let req of filteredRequests"
             (click)="openRequest(req)"
@@ -298,58 +373,97 @@
     </div>
 
     <!-- Mobile Cards View -->
-    <div class="mobileCardsWrapper" *ngIf="filteredRequests.length > 0">
-      <div
-        class="manageCard"
-        *ngFor="let req of filteredRequests"
-        (click)="openRequest(req)"
-      >
-        <div class="cardHeaderRow">
-          <div class="idSection">
-            <span class="cardId" [class.isDraftPlaceholder]="req.isDraft">{{ req.displayId }}</span>
-            <span class="guestBadge" *ngIf="req.isGuest">
-              <ion-icon name="person-outline"></ion-icon>
-              {{ 'CONFIGURATIONS.GUEST_BADGE' | translate }}
+    <div class="mobileCardsWrapper" *ngIf="isLoading || filteredRequests.length > 0">
+      <!-- Mobile Skeletons -->
+      <ng-container *ngIf="isLoading">
+        <div class="manageCard skeletonManageCard" *ngFor="let s of [1, 2, 3]">
+          <div class="cardHeaderRow">
+            <div class="idSection">
+              <ion-skeleton-text [animated]="true" class="skeletonCardId"></ion-skeleton-text>
+            </div>
+            <ion-skeleton-text [animated]="true" class="skeletonStatusBadge"></ion-skeleton-text>
+          </div>
+
+          <div class="cardApplicantRow">
+            <div class="applicantDetails">
+              <ion-skeleton-text [animated]="true" class="skeletonApplicantName"></ion-skeleton-text>
+              <ion-skeleton-text [animated]="true" class="skeletonApplicantEmail"></ion-skeleton-text>
+            </div>
+          </div>
+
+          <div class="cardMetaRow">
+            <ion-skeleton-text [animated]="true" class="skeletonTypePill"></ion-skeleton-text>
+            <ion-skeleton-text [animated]="true" class="skeletonDatePill"></ion-skeleton-text>
+          </div>
+
+          <div class="cardBottom">
+            <div class="amountContainer">
+              <ion-skeleton-text [animated]="true" class="skeletonAmountLabel"></ion-skeleton-text>
+              <ion-skeleton-text [animated]="true" class="skeletonAmountValue"></ion-skeleton-text>
+            </div>
+          </div>
+        </div>
+      </ng-container>
+
+      <!-- Loaded Mobile Cards -->
+      <ng-container *ngIf="!isLoading">
+        <div
+          class="manageCard"
+          *ngFor="let req of filteredRequests"
+          (click)="openRequest(req)"
+        >
+          <div class="cardHeaderRow">
+            <div class="idSection">
+              <span class="cardId" [class.isDraftPlaceholder]="req.isDraft">{{ req.displayId }}</span>
+              <span class="guestBadge" *ngIf="req.isGuest">
+                <ion-icon name="person-outline"></ion-icon>
+                {{ 'CONFIGURATIONS.GUEST_BADGE' | translate }}
+              </span>
+            </div>
+            <span class="statusBadge" [ngClass]="'status-' + req.status.toLowerCase()">
+              {{ ('REQUESTS.STATUSES.' + req.status) | translate }}
             </span>
           </div>
-          <span class="statusBadge" [ngClass]="'status-' + req.status.toLowerCase()">
-            {{ ('REQUESTS.STATUSES.' + req.status) | translate }}
-          </span>
-        </div>
 
-        <div class="cardApplicantRow">
-          <div class="applicantDetails">
-            <span class="name">{{ req.userDisplayName || req.userId }}</span>
-            <span class="email">{{ req.userEmail }}</span>
+          <div class="cardApplicantRow">
+            <div class="applicantDetails">
+              <span class="name">{{ req.userDisplayName || req.userId }}</span>
+              <span class="email">{{ req.userEmail }}</span>
+            </div>
+          </div>
+
+          <div class="cardMetaRow">
+            <span class="typePill">{{ ('REQUESTS.TYPES_SHORT.' + req.requestType) | translate }}</span>
+            <span class="datePill">{{ (req.submittedAt || req.createdAt) | date:'dd.MM.yyyy' }}</span>
+          </div>
+
+          <div class="cardBottom">
+            <div class="amountContainer">
+              <span class="amountLabel">{{ 'REQUESTS.TOTAL_AMOUNT' | translate }}:</span>
+              <span class="amountNumber" *ngIf="!req.isMixedCurrency()">{{ req.totalGrossAmount | number:'1.2-2' }} {{ req.currency }}</span>
+              <span class="amountNumber mixedAmountTag" *ngIf="req.isMixedCurrency()">
+                <span>{{ req.getGrossAmountPLN() | number:'1.2-2' }} PLN</span>
+                <span class="dividerDot">·</span>
+                <span>{{ req.getGrossAmountEUR() | number:'1.2-2' }} EUR</span>
+              </span>
+            </div>
           </div>
         </div>
-
-        <div class="cardMetaRow">
-          <span class="typePill">{{ ('REQUESTS.TYPES_SHORT.' + req.requestType) | translate }}</span>
-          <span class="datePill">{{ (req.submittedAt || req.createdAt) | date:'dd.MM.yyyy' }}</span>
-        </div>
-
-        <div class="cardBottom">
-          <div class="amountContainer">
-            <span class="amountLabel">{{ 'REQUESTS.TOTAL_AMOUNT' | translate }}:</span>
-            <span class="amountNumber" *ngIf="!req.isMixedCurrency()">{{ req.totalGrossAmount | number:'1.2-2' }} {{ req.currency }}</span>
-            <span class="amountNumber mixedAmountTag" *ngIf="req.isMixedCurrency()">
-              <span>{{ req.getGrossAmountPLN() | number:'1.2-2' }} PLN</span>
-              <span class="dividerDot">·</span>
-              <span>{{ req.getGrossAmountEUR() | number:'1.2-2' }} EUR</span>
-            </span>
-          </div>
-        </div>
-      </div>
+      </ng-container>
     </div>
 
-    <!-- Empty Results Template -->
-    <ng-template #noResults>
-      <div class="emptyCard">
-        <ion-icon name="file-tray-outline" class="emptyIcon"></ion-icon>
-        <h3>{{ 'REQUESTS.NO_REQUESTS_FOUND' | translate }}</h3>
-        <p>{{ 'REQUESTS.MANAGE_PANEL.NO_MATCHING_REQUESTS' | translate }}</p>
+    <!-- Empty Results Card (shown on both desktop and mobile when not loading and empty) -->
+    <div class="emptyCard" *ngIf="!isLoading && filteredRequests.length === 0">
+      <ion-icon [name]="isFiltered ? 'search-outline' : 'file-tray-outline'" class="emptyIcon"></ion-icon>
+      <h3>{{ (isFiltered ? 'REQUESTS.NO_MATCHING_REQUESTS' : 'REQUESTS.NO_REQUESTS_FOUND') | translate }}</h3>
+      <p>{{ 'REQUESTS.MANAGE_PANEL.NO_MATCHING_REQUESTS' | translate }}</p>
+
+      <div class="emptyActions" *ngIf="isFiltered">
+        <ion-button fill="outline" class="resetFiltersBtn" (click)="resetFilters()">
+          <ion-icon slot="start" name="refresh-outline"></ion-icon>
+          {{ 'REQUESTS.MANAGE_PANEL.RESET_FILTERS' | translate }}
+        </ion-button>
       </div>
-    </ng-template>
+    </div>
   </div>
 </ion-content>
