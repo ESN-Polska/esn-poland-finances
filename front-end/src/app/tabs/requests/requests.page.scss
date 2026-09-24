@@ -133,6 +133,11 @@
         border-color: var(--ion-color-primary, #00aeef);
         box-shadow: 0 0 0 3px rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.15);
       }
+
+      &:disabled {
+        opacity: 0.65;
+        cursor: not-allowed;
+      }
     }
 
     .clearSearchBtn {
@@ -175,7 +180,7 @@
       display: flex;
       align-items: center;
       outline: none !important;
-      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
       --border-color: transparent !important;
       --border-width: 0px !important;
       --highlight-color: transparent !important;
@@ -198,6 +203,13 @@
         outline: none !important;
         border-color: var(--ion-color-primary, #00aeef) !important;
         box-shadow: 0 0 0 3px rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.15) !important;
+      }
+
+      &.select-disabled,
+      &[disabled] {
+        opacity: 0.65;
+        cursor: not-allowed;
+        pointer-events: none;
       }
     }
   }
@@ -410,6 +422,79 @@
       }
     }
   }
+
+  &.skeletonCard {
+    cursor: default !important;
+    pointer-events: none;
+
+    &:hover {
+      transform: none !important;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05) !important;
+      border-color: var(--border-color) !important;
+    }
+
+    ion-skeleton-text {
+      --border-radius: 6px;
+      margin: 0;
+    }
+
+    .skeletonBadge {
+      height: 24px;
+      display: inline-block;
+    }
+
+    .skeletonId {
+      width: 90px;
+      --border-radius: 6px;
+    }
+
+    .skeletonType {
+      width: 120px;
+      --border-radius: 6px;
+    }
+
+    .skeletonStatus {
+      width: 96px;
+      --border-radius: 12px;
+    }
+
+    .skeletonMetaLabel {
+      width: 60px;
+      height: 12px;
+      margin-bottom: 4px;
+      --border-radius: 4px;
+    }
+
+    .skeletonMetaValue {
+      width: 100px;
+      height: 16px;
+      --border-radius: 4px;
+    }
+
+    .amountContainer {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+
+      .skeletonAmountLabel {
+        width: 70px;
+        height: 12px;
+        --border-radius: 4px;
+      }
+
+      .skeletonAmountValue {
+        width: 120px;
+        height: 20px;
+        --border-radius: 4px;
+      }
+    }
+
+    .skeletonBtn {
+      width: 68px;
+      height: 32px;
+      --border-radius: 8px;
+    }
+  }
 }
 
 /* Empty State */
@@ -438,6 +523,33 @@
     font-size: 0.95rem;
     color: var(--text-medium);
     margin: 0 0 20px 0;
+  }
+
+  .emptyStateActions {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 8px;
+
+    .resetFiltersBtn {
+      --border-color: var(--ion-color-primary, #00aeef);
+      --color: var(--ion-color-primary, #00aeef);
+      --border-radius: 8px;
+      height: 42px;
+      font-weight: 600;
+      text-transform: none;
+      margin: 0;
+      transition: all 0.15s ease;
+
+      &:hover {
+        --background: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.08);
+      }
+
+      ion-icon {
+        font-size: 1.1rem;
+        margin-right: 6px;
+      }
+    }
   }
 
   .submitBtn {

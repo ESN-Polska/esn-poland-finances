@@ -334,21 +334,23 @@
     "LOAD_ERROR": "Błąd podczas wczytywania danych wniosku.",
     "NO_REQUESTS_FOUND": "Nie znaleziono wniosków finansowych",
     "NO_REQUESTS_DESC": "Nie złożyłeś(-aś) jeszcze żadnego wniosku finansowego.",
+    "NO_MATCHING_REQUESTS": "Brak pasujących wniosków",
+    "NO_MATCHING_DESC": "Żadne wnioski nie spełniają aktualnych kryteriów wyszukiwania i filtrów.",
     "TYPES": {
-      "INVOICE_TO_PAY": "Wniosek o płatność",
       "INVOICE_REIMBURSEMENT": "Wniosek o zwrot",
+      "INVOICE_TO_PAY": "Wniosek o płatność",
       "ADVANCE_PAYMENT": "Wniosek o zaliczkę",
       "DELEGATION_SETTLEMENT": "Rozliczenie delegacji"
     },
     "TYPES_SHORT": {
-      "INVOICE_TO_PAY": "Płatność",
       "INVOICE_REIMBURSEMENT": "Zwrot",
+      "INVOICE_TO_PAY": "Płatność",
       "ADVANCE_PAYMENT": "Zaliczka",
       "DELEGATION_SETTLEMENT": "Delegacja"
     },
     "TYPES_DESC": {
-      "INVOICE_TO_PAY": "Dla faktur, które mają zostać opłacone bezpośrednio na rachunek wystawcy.",
       "INVOICE_REIMBURSEMENT": "Dla wydatków opłaconych z prywatnych środków, wymagających zwrotu na Twoje konto.",
+      "INVOICE_TO_PAY": "Dla faktur, które mają zostać opłacone bezpośrednio na rachunek wystawcy.",
       "ADVANCE_PAYMENT": "Wniosek o zaliczkę finansową na pokrycie planowanych wydatków.",
       "DELEGATION_SETTLEMENT": "Rozliczenie kosztów podróży służbowych, diet i przejazdów."
     },
@@ -423,6 +425,7 @@
       "DOC_NUMBER_REQUIRED": "Numer dokumentu jest wymagany.",
       "ISSUER_REQUIRED": "Wystawca jest wymagany.",
       "ISSUE_DATE_REQUIRED": "Data wystawienia jest wymagana.",
+      "SALE_DATE_REQUIRED": "Data sprzedaży jest wymagana.",
       "AMOUNT_GREATER_ZERO": "Kwota musi być większa niż 0.",
       "SELLER_BANK_REQUIRED": "Numer konta sprzedawcy jest wymagany.",
       "ADVANCE_AMOUNT_REQUIRED": "Wnioskowana kwota zaliczki musi być większa od 0.",

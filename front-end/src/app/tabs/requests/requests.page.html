@@ -1,4 +1,8 @@
 <ion-content class="requestsContent ion-padding">
+  <ion-refresher slot="fixed" (ionRefresh)="doRefresh($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+
   <div class="requestsContainer">
     <!-- Header with Title and Submit Action -->
     <div class="pageHeader">
@@ -37,9 +41,10 @@
           class="searchInput"
           [(ngModel)]="searchQuery"
           (input)="applyFilters()"
+          [disabled]="isLoading"
           [placeholder]="'REQUESTS.SEARCH_PLACEHOLDER' | translate"
         />
-        <button *ngIf="searchQuery" class="clearSearchBtn" (click)="clearSearch()">
+        <button *ngIf="searchQuery && !isLoading" class="clearSearchBtn" (click)="clearSearch()">
           <ion-icon name="close-circle"></ion-icon>
         </button>
       </div>
@@ -51,20 +56,60 @@
           class="statusFilterSelect"
           [(ngModel)]="selectedStatus"
           (ionChange)="applyFilters()"
-          [selectedText]="selectedStatus === 'ALL' ? ('COMMON.ALL' | translate) + ' (' + allRequests.length + ')' : ('REQUESTS.STATUSES.' + selectedStatus | translate) + ' (' + countByStatus(selectedStatus) + ')'"
+          [disabled]="isLoading"
+          [selectedText]="statusFilterText"
         >
           <ion-select-option value="ALL">
-            {{ 'COMMON.ALL' | translate }} ({{ allRequests.length }})
+            {{ 'COMMON.ALL' | translate }} {{ isLoading ? '(…)' : '(' + allRequests.length + ')' }}
           </ion-select-option>
           <ion-select-option *ngFor="let s of allStatuses" [value]="s">
-            {{ ('REQUESTS.STATUSES.' + s) | translate }} ({{ countByStatus(s) }})
+            {{ ('REQUESTS.STATUSES.' + s) | translate }} {{ isLoading ? '(…)' : '(' + countByStatus(s) + ')' }}
           </ion-select-option>
         </ion-select>
       </div>
     </div>
 
-    <!-- Requests List -->
-    <div class="requestsList" *ngIf="filteredRequests.length > 0; else noRequests">
+    <!-- Skeleton Loading Cards -->
+    <div class="requestsList skeletonList" *ngIf="isLoading">
+      <div class="requestCard skeletonCard" *ngFor="let s of [1, 2, 3]">
+        <div class="cardTop">
+          <div class="idGroup">
+            <ion-skeleton-text [animated]="true" class="skeletonBadge skeletonId"></ion-skeleton-text>
+            <ion-skeleton-text [animated]="true" class="skeletonBadge skeletonType"></ion-skeleton-text>
+          </div>
+          <ion-skeleton-text [animated]="true" class="skeletonBadge skeletonStatus"></ion-skeleton-text>
+        </div>
+
+        <div class="cardMiddle">
+          <div class="metaItem">
+            <ion-skeleton-text [animated]="true" class="skeletonMetaLabel"></ion-skeleton-text>
+            <ion-skeleton-text [animated]="true" class="skeletonMetaValue"></ion-skeleton-text>
+          </div>
+          <div class="metaItem">
+            <ion-skeleton-text [animated]="true" class="skeletonMetaLabel"></ion-skeleton-text>
+            <ion-skeleton-text [animated]="true" class="skeletonMetaValue"></ion-skeleton-text>
+          </div>
+          <div class="metaItem">
+            <ion-skeleton-text [animated]="true" class="skeletonMetaLabel"></ion-skeleton-text>
+            <ion-skeleton-text [animated]="true" class="skeletonMetaValue"></ion-skeleton-text>
+          </div>
+        </div>
+
+        <div class="cardBottom">
+          <div class="amountContainer">
+            <ion-skeleton-text [animated]="true" class="skeletonAmountLabel"></ion-skeleton-text>
+            <ion-skeleton-text [animated]="true" class="skeletonAmountValue"></ion-skeleton-text>
+          </div>
+
+          <div class="cardActions">
+            <ion-skeleton-text [animated]="true" class="skeletonBtn"></ion-skeleton-text>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Requests List (Loaded) -->
+    <div class="requestsList" *ngIf="!isLoading && filteredRequests.length > 0">
       <div
         class="requestCard"
         *ngFor="let req of filteredRequests"
@@ -167,12 +212,31 @@
     </div>
 
     <!-- Empty State -->
-    <ng-template #noRequests>
-      <div class="emptyStateCard">
-        <ion-icon name="file-tray-outline" class="emptyIcon"></ion-icon>
-        <h3 class="emptyTitle">{{ 'REQUESTS.NO_REQUESTS_FOUND' | translate }}</h3>
-        <p class="emptyDesc">{{ 'REQUESTS.NO_REQUESTS_DESC' | translate }}</p>
+    <div class="emptyStateCard" *ngIf="!isLoading && filteredRequests.length === 0">
+      <ion-icon
+        [name]="isFiltered ? 'search-outline' : 'file-tray-outline'"
+        class="emptyIcon"
+      ></ion-icon>
+      <h3 class="emptyTitle">
+        {{ (isFiltered ? 'REQUESTS.NO_MATCHING_REQUESTS' : 'REQUESTS.NO_REQUESTS_FOUND') | translate }}
+      </h3>
+      <p class="emptyDesc">
+        {{ (isFiltered ? 'REQUESTS.NO_MATCHING_DESC' : 'REQUESTS.NO_REQUESTS_DESC') | translate }}
+      </p>
+
+      <div class="emptyStateActions" *ngIf="isFiltered">
+        <ion-button fill="outline" class="resetFiltersBtn" (click)="resetFilters()">
+          <ion-icon slot="start" name="refresh-outline"></ion-icon>
+          {{ 'REQUESTS.MANAGE_PANEL.RESET_FILTERS' | translate }}
+        </ion-button>
       </div>
-    </ng-template>
+
+      <div class="emptyStateActions" *ngIf="!isFiltered">
+        <ion-button class="submitBtn" (click)="goToSubmit()">
+          <ion-icon slot="start" name="add-circle-outline"></ion-icon>
+          {{ 'COMMON.SUBMIT' | translate }}
+        </ion-button>
+      </div>
+    </div>
   </div>
 </ion-content>
