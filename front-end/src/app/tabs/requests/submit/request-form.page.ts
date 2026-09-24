@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, AfterViewInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, ViewChild, AfterViewInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { NgForm } from '@angular/forms';
 import { Subscription } from 'rxjs';
@@ -25,6 +25,7 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy {
   private formSub?: Subscription;
   private readonly DRAFT_KEY = 'esn_finances_request_draft';
 
+  public editId: string | null = null;
   public isEditMode = false;
   public isChangesRequested = false;
   public isSubmitting = false;
@@ -73,7 +74,8 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy {
     private translate: TranslateService,
     public appService: AppService,
     private requestsService: RequestsService,
-    private mediaService: MediaService
+    private mediaService: MediaService,
+    private cdr: ChangeDetectorRef
   ) {}
 
   public get allowedRequestTypes(): FinancialRequestType[] {
@@ -114,6 +116,7 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy {
     }
 
     if (editId) {
+      this.editId = editId;
       this.isEditMode = true;
       await this.loadExistingRequest(editId);
     } else {
@@ -157,6 +160,7 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private async loadExistingRequest(requestId: string): Promise<void> {
+    this.editId = requestId;
     const existing = await this.requestsService.getRequestById(requestId);
     if (!existing) {
       await this.showToast('REQUESTS.NOT_FOUND', 'danger');
@@ -207,6 +211,10 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy {
     if (this.request.requestType === 'ADVANCE_PAYMENT') {
       if (this.request.requestedAmountPLN === undefined || this.request.requestedAmountPLN === null) {
         this.request.requestedAmountPLN = this.request.totalGrossAmount;
+      }
+    } else if (this.request.requestType === 'DELEGATION_SETTLEMENT') {
+      if (this.request.delegationTotalAmount === undefined || this.request.delegationTotalAmount === null) {
+        this.request.delegationTotalAmount = this.request.totalGrossAmount;
       }
     }
 
@@ -421,8 +429,9 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy {
     } else if (this.request.requestType === 'DELEGATION_SETTLEMENT') {
       this.isMixedCurrency = false;
       this.request.currency = 'PLN';
+      this.request.totalGrossAmount = Number(this.request.delegationTotalAmount) || 0;
       this.request.totalVatAmount = 0;
-      this.totalNetAmount = Number(this.request.totalGrossAmount) || 0;
+      this.totalNetAmount = this.request.totalGrossAmount;
     } else {
       this.isMixedCurrency = false;
       const gross = Number(this.request.totalGrossAmount) || 0;
@@ -719,7 +728,7 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy {
           (!this.request.ticketAttachments || this.request.ticketAttachments.length === 0);
       case 'delegationTotalAmount':
         return this.request.requestType === 'DELEGATION_SETTLEMENT' &&
-          (!this.request.totalGrossAmount || Number(this.request.totalGrossAmount) <= 0);
+          (!this.request.delegationTotalAmount || Number(this.request.delegationTotalAmount) <= 0);
       default:
         return false;
     }
@@ -764,6 +773,13 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy {
     this.totalNetAmount = this.request.totalGrossAmount;
   }
 
+  public onDelegationAmountChange(): void {
+    this.request.totalGrossAmount = Number(this.request.delegationTotalAmount) || 0;
+    this.request.totalVatAmount = 0;
+    this.request.currency = 'PLN';
+    this.totalNetAmount = this.request.totalGrossAmount;
+  }
+
   /* File upload handling */
   public async onFileSelected(
     event: any,
@@ -792,9 +808,10 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy {
         s3Key: res.s3Key,
         uploadedAt: new Date().toISOString()
       };
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      this.showToast('REQUESTS.VALIDATION.UPLOAD_FAILED', 'danger');
+      const msg = e?.error?.message || e?.message;
+      this.showToast(msg || 'REQUESTS.VALIDATION.UPLOAD_FAILED', 'danger');
     } finally {
       loading.dismiss();
     }
@@ -830,9 +847,10 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy {
         s3Key: res.s3Key,
         uploadedAt: new Date().toISOString()
       };
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      this.showToast('REQUESTS.VALIDATION.UPLOAD_FAILED', 'danger');
+      const msg = e?.error?.message || e?.message;
+      this.showToast(msg || 'REQUESTS.VALIDATION.UPLOAD_FAILED', 'danger');
     } finally {
       loading.dismiss();
     }
@@ -865,9 +883,10 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy {
           uploadedAt: new Date().toISOString()
         });
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      this.showToast('REQUESTS.VALIDATION.UPLOAD_FAILED', 'danger');
+      const msg = e?.error?.message || e?.message;
+      this.showToast(msg || 'REQUESTS.VALIDATION.UPLOAD_FAILED', 'danger');
     } finally {
       loading.dismiss();
     }
@@ -1027,7 +1046,8 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy {
         return false;
       }
     } else if (this.request.requestType === 'DELEGATION_SETTLEMENT') {
-      if (!this.request.totalGrossAmount || Number(this.request.totalGrossAmount) <= 0) {
+      const amt = this.request.delegationTotalAmount ?? this.request.totalGrossAmount;
+      if (!amt || Number(amt) <= 0) {
         return false;
       }
       if (!this.request.delegationFormAttachment) {
@@ -1059,10 +1079,33 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy {
         { text: this.translate.instant('COMMON.CANCEL'), role: 'cancel' },
         { 
           text: this.translate.instant('COMMON.CONFIRM'), 
-          handler: () => {
-            localStorage.removeItem(this.DRAFT_KEY);
-            if (!this.isEditMode) {
-              this.initNewRequest();
+          handler: async () => {
+            this.hasAttemptedSubmit = false;
+            const requestIdToReload = this.editId || this.request.requestId;
+            if (this.isEditMode && requestIdToReload) {
+              const loading = await this.loadingCtrl.create({
+                message: this.translate.instant('COMMON.LOADING') || 'Loading...'
+              });
+              await loading.present();
+              try {
+                await this.loadExistingRequest(requestIdToReload);
+                this.requestForm?.form.markAsPristine();
+                this.requestForm?.form.markAsUntouched();
+                this.requestForm?.form.updateValueAndValidity();
+                this.cdr.markForCheck();
+              } catch (err: any) {
+                console.error('Failed to reset draft form', err);
+                await this.showToast(err.message || 'Error reloading request', 'danger');
+              } finally {
+                await loading.dismiss();
+              }
+            } else if (!this.isEditMode) {
+              localStorage.removeItem(this.DRAFT_KEY);
+              await this.initNewRequest();
+              this.requestForm?.form.markAsPristine();
+              this.requestForm?.form.markAsUntouched();
+              this.requestForm?.form.updateValueAndValidity();
+              this.cdr.markForCheck();
             }
           } 
         }

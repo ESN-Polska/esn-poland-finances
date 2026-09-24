@@ -98,6 +98,7 @@ export class FinancialRequest extends Resource {
   explanationAndBudget?: string;
 
   // Type D: Delegation
+  delegationTotalAmount?: number;
   delegationFormAttachment?: AttachmentFile;
   ticketAttachments?: AttachmentFile[];
   otherReceipts?: AttachmentFile[];
@@ -160,6 +161,7 @@ export class FinancialRequest extends Resource {
 
     this.documents = Array.isArray(x.documents) ? x.documents : [];
     this.requestedAmountPLN = this.clean(x.requestedAmountPLN, Number);
+    this.delegationTotalAmount = this.clean(x.delegationTotalAmount, Number);
     this.explanationAndBudget = this.clean(x.explanationAndBudget, String);
 
     if (this.requestType === 'ADVANCE_PAYMENT') {
@@ -171,6 +173,11 @@ export class FinancialRequest extends Resource {
       this.totalVatAmount = 0;
       this.currency = (this.clean(x.currency, String) as Currency) || 'PLN';
     } else if (this.requestType === 'DELEGATION_SETTLEMENT') {
+      if (this.delegationTotalAmount !== undefined && this.delegationTotalAmount !== null) {
+        this.totalGrossAmount = Number(this.delegationTotalAmount) || 0;
+      } else if (this.totalGrossAmount) {
+        this.delegationTotalAmount = this.totalGrossAmount;
+      }
       this.totalVatAmount = 0;
       this.currency = 'PLN';
     }
@@ -253,7 +260,7 @@ export class FinancialRequest extends Resource {
       return (this.currency || 'PLN').toUpperCase() === 'PLN' ? (Number(this.requestedAmountPLN ?? this.totalGrossAmount) || 0) : 0;
     }
     if (this.requestType === 'DELEGATION_SETTLEMENT') {
-      return Number(this.totalGrossAmount) || 0;
+      return Number(this.delegationTotalAmount ?? this.totalGrossAmount) || 0;
     }
     if (this.documents && this.documents.length > 0) {
       const sum = this.documents

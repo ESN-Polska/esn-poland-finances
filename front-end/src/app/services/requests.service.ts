@@ -483,7 +483,7 @@ export class RequestsService {
       const advGross = Number(payload.requestedAmountPLN ?? payload.totalGrossAmount) || 0;
       totals = { totalGrossAmount: advGross, totalVatAmount: 0, currency: payload.currency || 'PLN' };
     } else if (payload.requestType === 'DELEGATION_SETTLEMENT') {
-      const delGross = Number(payload.totalGrossAmount) || 0;
+      const delGross = Number(payload.delegationTotalAmount ?? payload.totalGrossAmount) || 0;
       totals = { totalGrossAmount: delGross, totalVatAmount: 0, currency: 'PLN' };
     } else if (
       (payload.requestType === 'INVOICE_TO_PAY' || payload.requestType === 'INVOICE_REIMBURSEMENT') &&
@@ -531,6 +531,7 @@ export class RequestsService {
       ...payload,
       ...totals,
       requestedAmountPLN: payload.requestType === 'ADVANCE_PAYMENT' ? totals.totalGrossAmount : payload.requestedAmountPLN,
+      delegationTotalAmount: payload.requestType === 'DELEGATION_SETTLEMENT' ? totals.totalGrossAmount : payload.delegationTotalAmount,
       status: targetStatus,
       currency: totals.currency || payload.currency || 'PLN'
     };
