@@ -97,19 +97,6 @@
 
         <div class="typeSelectionGrid">
           <div
-            *ngIf="isTypeAllowed('INVOICE_TO_PAY')"
-            class="typeCard"
-            [class.active]="request.requestType === 'INVOICE_TO_PAY'"
-            (click)="selectType('INVOICE_TO_PAY')"
-          >
-            <div class="radioCircle"><div class="innerDot"></div></div>
-            <div class="typeInfo">
-              <span class="typeName">{{ 'REQUESTS.TYPES.INVOICE_TO_PAY' | translate }}</span>
-              <span class="typeDesc">{{ 'REQUESTS.TYPES_DESC.INVOICE_TO_PAY' | translate }}</span>
-            </div>
-          </div>
-
-          <div
             *ngIf="isTypeAllowed('INVOICE_REIMBURSEMENT')"
             class="typeCard"
             [class.active]="request.requestType === 'INVOICE_REIMBURSEMENT'"
@@ -119,6 +106,19 @@
             <div class="typeInfo">
               <span class="typeName">{{ 'REQUESTS.TYPES.INVOICE_REIMBURSEMENT' | translate }}</span>
               <span class="typeDesc">{{ 'REQUESTS.TYPES_DESC.INVOICE_REIMBURSEMENT' | translate }}</span>
+            </div>
+          </div>
+
+          <div
+            *ngIf="isTypeAllowed('INVOICE_TO_PAY')"
+            class="typeCard"
+            [class.active]="request.requestType === 'INVOICE_TO_PAY'"
+            (click)="selectType('INVOICE_TO_PAY')"
+          >
+            <div class="radioCircle"><div class="innerDot"></div></div>
+            <div class="typeInfo">
+              <span class="typeName">{{ 'REQUESTS.TYPES.INVOICE_TO_PAY' | translate }}</span>
+              <span class="typeDesc">{{ 'REQUESTS.TYPES_DESC.INVOICE_TO_PAY' | translate }}</span>
             </div>
           </div>
 
@@ -268,11 +268,15 @@
                     <input
                       type="date"
                       class="formInput"
+                      [class.is-invalid]="isDocFieldInvalid(doc, 'saleDate')"
                       [(ngModel)]="doc.saleDate"
                       [name]="'saleDate_' + i"
                       (change)="onForeignDateChange(doc)"
                       required
                     />
+                    <span class="errorText" *ngIf="isDocFieldInvalid(doc, 'saleDate')">
+                      {{ 'REQUESTS.VALIDATION.SALE_DATE_REQUIRED' | translate }}
+                    </span>
                   </div>
 
                   <!-- Type A: Payment Deadline -->
@@ -1035,7 +1039,7 @@
         </ion-button>
 
         <div class="actionGroup">
-          <ion-button fill="clear" color="danger" class="resetBtn" (click)="resetForm()" [disabled]="isSubmitting" style="margin-right: auto; text-transform: none; font-weight: 600;">
+          <ion-button fill="clear" color="danger" class="resetBtn" (click)="resetForm()" [disabled]="isSubmitting">
             <ion-icon slot="start" name="refresh-outline"></ion-icon>
             {{ 'COMMON.RESET' | translate }}
           </ion-button>

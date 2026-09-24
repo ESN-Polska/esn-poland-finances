@@ -52,7 +52,7 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy {
   public request: Partial<FinancialRequest> = {
     position: '',
     sourceOfFunding: '',
-    requestType: 'INVOICE_TO_PAY',
+    requestType: 'INVOICE_REIMBURSEMENT',
     currency: 'PLN',
     totalGrossAmount: undefined,
     totalVatAmount: undefined,
@@ -86,7 +86,7 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy {
       }
       return ['INVOICE_REIMBURSEMENT', 'DELEGATION_SETTLEMENT'];
     }
-    return ['INVOICE_TO_PAY', 'INVOICE_REIMBURSEMENT', 'ADVANCE_PAYMENT', 'DELEGATION_SETTLEMENT'];
+    return ['INVOICE_REIMBURSEMENT', 'INVOICE_TO_PAY', 'ADVANCE_PAYMENT', 'DELEGATION_SETTLEMENT'];
   }
 
   public isTypeAllowed(type: FinancialRequestType): boolean {
@@ -263,7 +263,7 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy {
     this.request = {
       position: user?.isGuest ? (user.guestPosition || '') : '',
       sourceOfFunding: user?.isGuest ? (user.guestDefaultSourceOfFunding || '') : '',
-      requestType: user?.isGuest ? defaultType : 'INVOICE_TO_PAY',
+      requestType: defaultType,
       currency: 'PLN',
       totalGrossAmount: undefined,
       totalVatAmount: undefined,
@@ -743,6 +743,8 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy {
         return !doc.issuedBy?.trim();
       case 'issuedOn':
         return !doc.issuedOn;
+      case 'saleDate':
+        return this.request.requestType === 'INVOICE_REIMBURSEMENT' && !!doc.hasDifferentSaleDate && !doc.saleDate;
       case 'paymentDeadline':
         return this.request.requestType === 'INVOICE_TO_PAY' && !doc.paymentDeadline;
       case 'paidOn':
@@ -1019,6 +1021,7 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy {
 
         if (this.request.requestType === 'INVOICE_REIMBURSEMENT') {
           if (!doc.paidOn) return false;
+          if (doc.hasDifferentSaleDate && !doc.saleDate) return false;
         }
 
         if (doc.originalCurrency) {

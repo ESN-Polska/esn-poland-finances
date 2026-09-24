@@ -92,6 +92,32 @@
   margin: 0;
 }
 
+.resetBtn {
+  --color: #ef4444;
+  --border-color: rgba(239, 68, 68, 0.3);
+  --border-radius: 8px;
+  font-weight: 600;
+  text-transform: none;
+  height: 40px;
+  margin: 0;
+
+  &:hover {
+    --background: rgba(239, 68, 68, 0.06);
+  }
+}
+
+.cancelBtn {
+  --color: var(--text-medium);
+  font-weight: 500;
+  text-transform: none;
+  height: 40px;
+  margin: 0;
+
+  &:hover {
+    --color: var(--text-dark);
+  }
+}
+
 /* Changes Requested Alert */
 .changesAlert {
   display: flex;
@@ -1027,18 +1053,55 @@
   .bottomActions {
     flex-direction: column-reverse;
     align-items: stretch;
-    gap: 10px;
+    gap: 12px;
+    margin-top: 20px;
 
-    .draftBtn,
-    .submitBtn,
     .cancelBtn {
       width: 100%;
+      height: 40px;
+      margin: 0;
+      font-size: 0.9rem;
     }
 
     .actionGroup {
-      flex-direction: column-reverse;
+      display: flex;
+      flex-direction: column;
       width: 100%;
       gap: 10px;
+
+      .submitBtn {
+        width: 100%;
+        height: 44px;
+        font-size: 0.95rem;
+        order: 1;
+      }
+
+      .draftBtn {
+        width: 100%;
+        height: 44px;
+        font-size: 0.95rem;
+        order: 2;
+      }
+
+      .resetBtn {
+        width: 100%;
+        height: 42px;
+        font-size: 0.9rem;
+        order: 3;
+        margin: 0 !important;
+        --border-width: 1px;
+        --border-style: solid;
+        --border-color: rgba(239, 68, 68, 0.28);
+        --background: rgba(239, 68, 68, 0.04);
+        --color: #ef4444;
+        --border-radius: 8px;
+        font-weight: 600;
+
+        &:hover,
+        &:active {
+          --background: rgba(239, 68, 68, 0.1);
+        }
+      }
     }
   }
 }
@@ -1116,6 +1179,17 @@ body.dark {
     border: none !important;
     outline: none !important;
     --color: var(--text-dark);
+  }
+
+  .resetBtn {
+    --border-color: rgba(239, 68, 68, 0.35) !important;
+    --color: #f87171 !important;
+    --background: rgba(239, 68, 68, 0.08) !important;
+
+    &:hover,
+    &:active {
+      --background: rgba(239, 68, 68, 0.16) !important;
+    }
   }
 
   .addDocBtn {
