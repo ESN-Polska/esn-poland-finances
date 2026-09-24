@@ -10,6 +10,7 @@ export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
 export const DEFAULT_CONFIGURATION_PAGE_SECTIONS_ORDER = [
   'GUESTS',
   'USERS',
+  'RESOURCES',
   'TEMPLATES',
   'OPTIONS'
 ] as const;
@@ -82,6 +83,7 @@ export const AppPermission = {
     PARENT: 'configurations',
     GUESTS: 'configurations.guests',
     USERS: 'configurations.users',
+    RESOURCES: 'configurations.resources',
     TEMPLATES: 'configurations.templates',
     OPTIONS: 'configurations.options'
   }
@@ -237,6 +239,8 @@ export const DEFAULT_CONFIGURATIONS = {
   rulesFileURL: 'https://media.finances.esn-poland.link/rules/finances-rules.pdf',
   rulesResolutionNumber: 'XX/XX',
   rulesRevisionDate: '',
+  delegationSettlementSheetURL: '',
+  delegationInstructionsURL: '',
   guestAccessEnabled: true,
   guestAccessAllowedRequestTypes: ['INVOICE_REIMBURSEMENT', 'DELEGATION_SETTLEMENT'] as FinancialRequestType[],
   guestAccessDefaultExpirationDays: 14,
@@ -303,6 +307,10 @@ export class Configurations extends Resource {
   rulesWarningText: LocalizedText;
   /** Rules document URL to download. */
   rulesFileURL: string;
+  /** Delegation settlement blank template sheet URL to download (XLSX). */
+  delegationSettlementSheetURL: string;
+  /** Delegation instructions guide URL to download or view (e.g. PDF or wiki). */
+  delegationInstructionsURL: string;
   /** Resolution number governing this rules revision (e.g. "XX/XX" or "04/2026"). */
   /** Rules resolution number. */
   rulesResolutionNumber: string;
@@ -419,12 +427,25 @@ export class Configurations extends Resource {
     this.timezone = this.clean(x.timezone, String, DEFAULT_TIMEZONE);
 
     const configuredSections = this.cleanArray(x.configurationPageSectionsOrder, String) as ConfigurationPageSection[];
-    this.configurationPageSectionsOrder = [
+    let resolvedSections = [
       ...configuredSections.filter((section, index) =>
         DEFAULT_CONFIGURATION_PAGE_SECTIONS_ORDER.includes(section) && configuredSections.indexOf(section) === index
-      ),
-      ...DEFAULT_CONFIGURATION_PAGE_SECTIONS_ORDER.filter(section => !configuredSections.includes(section))
+      )
     ];
+    if (resolvedSections.length > 0 && !resolvedSections.includes('RESOURCES')) {
+      const usersIdx = resolvedSections.indexOf('USERS');
+      if (usersIdx !== -1) {
+        resolvedSections.splice(usersIdx + 1, 0, 'RESOURCES');
+      } else {
+        resolvedSections.push('RESOURCES');
+      }
+    }
+    for (const section of DEFAULT_CONFIGURATION_PAGE_SECTIONS_ORDER) {
+      if (!resolvedSections.includes(section)) {
+        resolvedSections.push(section);
+      }
+    }
+    this.configurationPageSectionsOrder = resolvedSections.length ? resolvedSections : [...DEFAULT_CONFIGURATION_PAGE_SECTIONS_ORDER];
 
     const defaultWarning = DEFAULT_CONFIGURATIONS.rulesWarningText;
     if (typeof x.rulesWarningText === 'string') {
@@ -437,6 +458,16 @@ export class Configurations extends Resource {
     }
 
     this.rulesFileURL = this.clean(x.rulesFileURL, String, DEFAULT_CONFIGURATIONS.rulesFileURL);
+    this.delegationSettlementSheetURL = this.clean(
+      x.delegationSettlementSheetURL,
+      String,
+      DEFAULT_CONFIGURATIONS.delegationSettlementSheetURL
+    );
+    this.delegationInstructionsURL = this.clean(
+      x.delegationInstructionsURL,
+      String,
+      DEFAULT_CONFIGURATIONS.delegationInstructionsURL
+    );
     this.rulesResolutionNumber = this.clean(
       x.rulesResolutionNumber || (typeof x.rulesRevisionNotice === 'object' ? x.rulesRevisionNotice?.pl || x.rulesRevisionNotice?.en : x.rulesRevisionNotice),
       String,
@@ -587,6 +618,16 @@ export class Configurations extends Resource {
     this.homeNotice = safeData.homeNotice;
     this.rulesWarningText = safeData.rulesWarningText;
     this.rulesFileURL = safeData.rulesFileURL;
+    this.delegationSettlementSheetURL = this.clean(
+      safeData.delegationSettlementSheetURL,
+      String,
+      DEFAULT_CONFIGURATIONS.delegationSettlementSheetURL
+    );
+    this.delegationInstructionsURL = this.clean(
+      safeData.delegationInstructionsURL,
+      String,
+      DEFAULT_CONFIGURATIONS.delegationInstructionsURL
+    );
     this.rulesResolutionNumber = safeData.rulesResolutionNumber;
     this.rulesRevisionDate = safeData.rulesRevisionDate;
     this.guestAccessEnabled = safeData.guestAccessEnabled;

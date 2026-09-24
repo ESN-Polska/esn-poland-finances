@@ -139,7 +139,24 @@ export class ConfigurationsPage implements OnInit {
     if (section === 'TEMPLATES') {
       return user.hasPermission(AppPermission.CONFIGURATIONS.TEMPLATES);
     }
+    if (section === 'RESOURCES') {
+      return (
+        user.hasPermission(AppPermission.CONFIGURATIONS.RESOURCES) ||
+        user.hasPermission(AppPermission.CONFIGURATIONS.OPTIONS)
+      );
+    }
     return false;
+  }
+
+  canModifyResources(): boolean {
+    const user = this.app.currentUser;
+    if (!user) return false;
+    if (user.isAdministrator) return true;
+    if (user.isAuditor) return false;
+    return (
+      user.hasPermission(AppPermission.CONFIGURATIONS.RESOURCES) ||
+      user.hasPermission(AppPermission.CONFIGURATIONS.OPTIONS)
+    );
   }
 
   canModifyOptions(): boolean {
@@ -299,6 +316,188 @@ export class ConfigurationsPage implements OnInit {
     if (success && newLang !== 'ALL') {
       await this.app.setLanguage(newLang);
     }
+  }
+
+  testDelegationSheetURL(): void {
+    if (this.configurations?.delegationSettlementSheetURL) {
+      window.open(this.configurations.delegationSettlementSheetURL, '_blank');
+    }
+  }
+
+  async changeDelegationSheetURL(): Promise<void> {
+    const alert = await this.alertCtrl.create({
+      header: this.translate.instant('CONFIGURATIONS.EDIT_DELEGATION_SHEET_URL'),
+      inputs: [
+        {
+          name: 'url',
+          type: 'url',
+          placeholder: this.translate.instant('CONFIGURATIONS.DELEGATION_SHEET_URL_PLACEHOLDER'),
+          value: this.configurations.delegationSettlementSheetURL || ''
+        }
+      ],
+      buttons: [
+        { text: this.translate.instant('COMMON.CANCEL'), role: 'cancel' },
+        {
+          text: this.translate.instant('COMMON.SAVE'),
+          handler: async (data: { url?: string }) => {
+            const trimmed = (data?.url || '').trim();
+            if (trimmed && !/^https?:\/\//i.test(trimmed)) {
+              const toast = await this.toastCtrl.create({
+                message: this.translate.instant('CONFIGURATIONS.ENTER_VALID_URL'),
+                duration: 3000,
+                color: 'warning'
+              });
+              await toast.present();
+              return false;
+            }
+            const updated = new Configurations(this.configurations);
+            updated.delegationSettlementSheetURL = trimmed;
+            await this.updateConfigurations(updated);
+            return true;
+          }
+        }
+      ]
+    });
+    await alert.present();
+  }
+
+  async uploadDelegationSheetFile(event: any): Promise<void> {
+    const file = event?.target?.files?.[0];
+    if (!file) return;
+
+    const loading = await this.loadingCtrl.create({
+      message: this.translate.instant('COMMON.UPLOADING')
+    });
+    await loading.present();
+
+    try {
+      const { url } = await this.mediaService.uploadDocument(file);
+      const updated = new Configurations(this.configurations);
+      updated.delegationSettlementSheetURL = url;
+      await this.updateConfigurations(updated);
+    } catch (err: any) {
+      console.error(err);
+      const toast = await this.toastCtrl.create({
+        message: err?.error?.message || err?.message || this.translate.instant('COMMON.OPERATION_FAILED'),
+        duration: 3500,
+        color: 'danger'
+      });
+      await toast.present();
+    } finally {
+      await loading.dismiss();
+      if (event?.target) event.target.value = '';
+    }
+  }
+
+  async clearDelegationSheetURL(): Promise<void> {
+    const alert = await this.alertCtrl.create({
+      header: this.translate.instant('COMMON.CONFIRM'),
+      message: this.translate.instant('CONFIGURATIONS.CLEAR_DELEGATION_SHEET_URL_CONFIRM'),
+      buttons: [
+        { text: this.translate.instant('COMMON.CANCEL'), role: 'cancel' },
+        {
+          text: this.translate.instant('COMMON.CONFIRM'),
+          role: 'destructive',
+          handler: async () => {
+            const updated = new Configurations(this.configurations);
+            updated.delegationSettlementSheetURL = '';
+            await this.updateConfigurations(updated);
+          }
+        }
+      ]
+    });
+    await alert.present();
+  }
+
+  testDelegationInstructionsURL(): void {
+    if (this.configurations?.delegationInstructionsURL) {
+      window.open(this.configurations.delegationInstructionsURL, '_blank');
+    }
+  }
+
+  async changeDelegationInstructionsURL(): Promise<void> {
+    const alert = await this.alertCtrl.create({
+      header: this.translate.instant('CONFIGURATIONS.EDIT_DELEGATION_INSTRUCTIONS_URL'),
+      inputs: [
+        {
+          name: 'url',
+          type: 'url',
+          placeholder: this.translate.instant('CONFIGURATIONS.DELEGATION_INSTRUCTIONS_URL_PLACEHOLDER'),
+          value: this.configurations.delegationInstructionsURL || ''
+        }
+      ],
+      buttons: [
+        { text: this.translate.instant('COMMON.CANCEL'), role: 'cancel' },
+        {
+          text: this.translate.instant('COMMON.SAVE'),
+          handler: async (data: { url?: string }) => {
+            const trimmed = (data?.url || '').trim();
+            if (trimmed && !/^https?:\/\//i.test(trimmed)) {
+              const toast = await this.toastCtrl.create({
+                message: this.translate.instant('CONFIGURATIONS.ENTER_VALID_URL'),
+                duration: 3000,
+                color: 'warning'
+              });
+              await toast.present();
+              return false;
+            }
+            const updated = new Configurations(this.configurations);
+            updated.delegationInstructionsURL = trimmed;
+            await this.updateConfigurations(updated);
+            return true;
+          }
+        }
+      ]
+    });
+    await alert.present();
+  }
+
+  async uploadDelegationInstructionsFile(event: any): Promise<void> {
+    const file = event?.target?.files?.[0];
+    if (!file) return;
+
+    const loading = await this.loadingCtrl.create({
+      message: this.translate.instant('COMMON.UPLOADING')
+    });
+    await loading.present();
+
+    try {
+      const { url } = await this.mediaService.uploadDocument(file);
+      const updated = new Configurations(this.configurations);
+      updated.delegationInstructionsURL = url;
+      await this.updateConfigurations(updated);
+    } catch (err: any) {
+      console.error(err);
+      const toast = await this.toastCtrl.create({
+        message: err?.error?.message || err?.message || this.translate.instant('COMMON.OPERATION_FAILED'),
+        duration: 3500,
+        color: 'danger'
+      });
+      await toast.present();
+    } finally {
+      await loading.dismiss();
+      if (event?.target) event.target.value = '';
+    }
+  }
+
+  async clearDelegationInstructionsURL(): Promise<void> {
+    const alert = await this.alertCtrl.create({
+      header: this.translate.instant('COMMON.CONFIRM'),
+      message: this.translate.instant('CONFIGURATIONS.CLEAR_DELEGATION_INSTRUCTIONS_URL_CONFIRM'),
+      buttons: [
+        { text: this.translate.instant('COMMON.CANCEL'), role: 'cancel' },
+        {
+          text: this.translate.instant('COMMON.CONFIRM'),
+          role: 'destructive',
+          handler: async () => {
+            const updated = new Configurations(this.configurations);
+            updated.delegationInstructionsURL = '';
+            await this.updateConfigurations(updated);
+          }
+        }
+      ]
+    });
+    await alert.present();
   }
 
   async changeAppTitle(lang: 'en' | 'pl' = 'en'): Promise<void> {
