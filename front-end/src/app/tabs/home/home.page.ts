@@ -71,7 +71,7 @@ export class HomePage implements OnInit {
     const user = this.app.currentUser;
     if (!user) return false;
     if (user.isAdministrator) return true;
-    if (user.isAuditor) return false;
+    if (user.isAuditorOnly) return false;
     return user.hasPermission(AppPermission.HOME.TEXT);
   }
 
@@ -79,7 +79,7 @@ export class HomePage implements OnInit {
     const user = this.app.currentUser;
     if (!user) return false;
     if (user.isAdministrator) return true;
-    if (user.isAuditor) return false;
+    if (user.isAuditorOnly) return false;
     return user.hasPermission(AppPermission.HOME.NOTICE);
   }
 

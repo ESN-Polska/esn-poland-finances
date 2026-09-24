@@ -233,7 +233,7 @@ export class RequestsService {
       'EUR IBAN',
       'EUR SWIFT/BIC',
       'EUR Account Holder',
-      'Admin Remarks'
+      'Reviewer Remarks'
     ];
 
     const rows = requests.map((req) => {

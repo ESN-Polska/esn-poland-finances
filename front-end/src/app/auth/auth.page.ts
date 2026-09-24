@@ -235,7 +235,7 @@ export class AuthPage implements OnInit {
         this.isProcessing = false;
       }
     } else if (this.appService.isAuthenticated) {
-      if (!this.appService.currentUser?.isAdministrator) {
+      if (!this.appService.realUser?.isAdministrator) {
         const isLocked = await this.appService.checkAppLockForCurrentUser();
         if (isLocked) {
           return;

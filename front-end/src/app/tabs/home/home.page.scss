@@ -20,32 +20,32 @@
   transition: all 0.2s ease;
 
   &.notice-info {
-    background: rgba(0, 174, 239, 0.08);
-    border: 1px solid rgba(0, 174, 239, 0.25);
-    color: #0077a8;
+    background: var(--notice-info-bg);
+    border: 1px solid var(--notice-info-border);
+    color: var(--notice-info-text);
 
     .noticeIcon ion-icon {
-      color: #00aeef;
+      color: var(--notice-info-icon);
     }
   }
 
   &.notice-warning {
-    background: rgba(247, 148, 29, 0.1);
-    border: 1px solid rgba(247, 148, 29, 0.3);
-    color: #a35500;
+    background: var(--notice-warning-bg);
+    border: 1px solid var(--notice-warning-border);
+    color: var(--notice-warning-text);
 
     .noticeIcon ion-icon {
-      color: #f7941d;
+      color: var(--notice-warning-icon);
     }
   }
 
   &.notice-success {
-    background: rgba(122, 193, 67, 0.1);
-    border: 1px solid rgba(122, 193, 67, 0.3);
-    color: #3b7516;
+    background: var(--notice-success-bg);
+    border: 1px solid var(--notice-success-border);
+    color: var(--notice-success-text);
 
     .noticeIcon ion-icon {
-      color: #7ac143;
+      color: var(--notice-success-icon);
     }
   }
 
@@ -783,21 +783,43 @@
 body.dark {
   .homeNoticeBanner {
     &.notice-info {
-      background: rgba(0, 174, 239, 0.15);
-      border-color: rgba(0, 174, 239, 0.35);
-      color: #38bdf8;
+      background: var(--notice-info-bg);
+      border-color: var(--notice-info-border);
+      color: var(--notice-info-text);
+
+      .noticeIcon ion-icon {
+        color: var(--notice-info-icon);
+      }
     }
 
     &.notice-warning {
-      background: rgba(247, 148, 29, 0.18);
-      border-color: rgba(247, 148, 29, 0.4);
-      color: #fbbf24;
+      background: var(--notice-warning-bg);
+      border-color: var(--notice-warning-border);
+      color: var(--notice-warning-text);
+
+      .noticeIcon ion-icon {
+        color: var(--notice-warning-icon);
+      }
     }
 
     &.notice-success {
-      background: rgba(122, 193, 67, 0.18);
-      border-color: rgba(122, 193, 67, 0.4);
-      color: #86efac;
+      background: var(--notice-success-bg);
+      border-color: var(--notice-success-border);
+      color: var(--notice-success-text);
+
+      .noticeIcon ion-icon {
+        color: var(--notice-success-icon);
+      }
+    }
+
+    &.notice-danger {
+      background: var(--notice-danger-bg);
+      border-color: var(--notice-danger-border);
+      color: var(--notice-danger-text);
+
+      .noticeIcon ion-icon {
+        color: var(--notice-danger-icon);
+      }
     }
   }
 

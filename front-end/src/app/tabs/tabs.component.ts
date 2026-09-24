@@ -76,7 +76,10 @@ export class TabsComponent {
       user.isAuditor ||
       user.hasPermission(AppPermission.CONFIGURATIONS.PARENT) ||
       user.hasPermission(AppPermission.CONFIGURATIONS.OPTIONS) ||
-      user.hasPermission(AppPermission.CONFIGURATIONS.USERS)
+      user.hasPermission(AppPermission.CONFIGURATIONS.USERS) ||
+      user.hasPermission(AppPermission.CONFIGURATIONS.GUESTS) ||
+      user.hasPermission(AppPermission.CONFIGURATIONS.RESOURCES) ||
+      user.hasPermission(AppPermission.CONFIGURATIONS.TEMPLATES)
     );
   }
 
