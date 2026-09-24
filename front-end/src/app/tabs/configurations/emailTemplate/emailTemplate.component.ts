@@ -23,7 +23,7 @@ export class EmailTemplateComponent implements OnInit {
     const user = this.app.currentUser;
     if (!user) return true;
     if (user.isAdministrator) return false;
-    if (user.isAuditor) return true;
+    if (user.isAuditorOnly) return true;
     return !user.hasPermission(AppPermission.CONFIGURATIONS.TEMPLATES);
   }
 

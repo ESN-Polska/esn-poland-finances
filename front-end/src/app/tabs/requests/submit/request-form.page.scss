@@ -123,16 +123,16 @@
   display: flex;
   align-items: flex-start;
   gap: 14px;
-  background: #fff7ed;
-  border: 1px solid #fed7aa;
-  border-left: 4px solid #ea580c;
+  background: var(--notice-warning-bg);
+  border: 1px solid var(--notice-warning-border);
+  border-left: 4px solid var(--notice-warning-accent);
   border-radius: 8px;
   padding: 16px 20px;
   margin-bottom: 24px;
 
   .alertIcon {
     font-size: 1.6rem;
-    color: #ea580c;
+    color: var(--notice-warning-icon);
     flex-shrink: 0;
     margin-top: 2px;
   }
@@ -141,13 +141,13 @@
     .alertTitle {
       font-size: 1rem;
       font-weight: 700;
-      color: #9a3412;
+      color: var(--notice-warning-text);
       margin: 0 0 4px 0;
     }
 
     .alertText {
       font-size: 0.95rem;
-      color: #7c2d12;
+      color: var(--notice-warning-text);
       margin: 0;
       line-height: 1.45;
     }
@@ -732,8 +732,8 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  background: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.08);
-  border: 1px solid rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.2);
+  background: var(--notice-info-bg);
+  border: 1px solid var(--notice-info-border);
   border-radius: 8px;
   padding: 10px 14px;
   margin-top: 12px;
@@ -742,7 +742,7 @@
 
   ion-icon {
     font-size: 1.25rem;
-    color: var(--ion-color-primary, var(--esn-cyan));
+    color: var(--notice-info-icon);
     flex-shrink: 0;
   }
 }
@@ -1143,9 +1143,13 @@ body.dark {
   }
 
   .sellerPaymentNotice {
-    background: rgba(0, 174, 239, 0.12);
-    border-color: rgba(0, 174, 239, 0.25);
+    background: var(--notice-info-bg);
+    border-color: var(--notice-info-border);
     color: var(--text-dark);
+
+    ion-icon {
+      color: var(--notice-info-icon);
+    }
   }
 
   .uploadPlaceholder {
@@ -1200,21 +1204,39 @@ body.dark {
   }
 
   .changesAlert {
-    background: rgba(234, 88, 12, 0.15);
-    border: none !important;
-    border-left: 4px solid #ea580c !important;
+    background: var(--notice-warning-bg);
+    border: 1px solid var(--notice-warning-border) !important;
+    border-left: 4px solid var(--notice-warning-accent) !important;
 
     .alertIcon {
-      color: #fb923c;
+      color: var(--notice-warning-icon);
     }
 
     .alertContent {
       .alertTitle {
-        color: #fed7aa;
+        color: var(--notice-warning-text);
       }
 
       .alertText {
-        color: #ffedd5;
+        color: var(--notice-warning-text);
+      }
+    }
+  }
+
+  .idBadge.isDraftPlaceholder {
+    background: rgba(255, 255, 255, 0.06) !important;
+  }
+
+  .guestNoticeBanner {
+    background: var(--notice-info-bg);
+    border-color: var(--notice-info-border);
+
+    .guestInstructionsBox {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+
+      p {
+        color: var(--text-dark);
       }
     }
   }

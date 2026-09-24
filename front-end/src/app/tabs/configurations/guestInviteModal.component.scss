@@ -239,3 +239,41 @@
 .doneWrapper {
   margin-top: 16px;
 }
+
+body.dark {
+  .successCard {
+    border: none !important;
+    outline: none !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+  }
+
+  .linkBox {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+
+  .summaryCard,
+  .emailGuestCard {
+    border: none !important;
+    outline: none !important;
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  .summaryCard .summaryRow {
+    border-bottom-color: rgba(255, 255, 255, 0.06);
+  }
+
+  .emailGuestCard .emailOptionsWrapper {
+    border-top-color: rgba(255, 255, 255, 0.06);
+
+    .guestLangSegment {
+      --background: rgba(255, 255, 255, 0.06);
+    }
+
+    .customEmailEditor {
+      background: rgba(255, 255, 255, 0.04);
+      border-color: rgba(255, 255, 255, 0.08);
+    }
+  }
+}
+

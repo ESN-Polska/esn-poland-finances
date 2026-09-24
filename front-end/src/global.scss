@@ -169,6 +169,72 @@ ion-toolbar {
   }
 }
 
+/* Global Guest Badges & Pills */
+.guestBadge,
+.guest-badge,
+.guest-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: #fdf2f8;
+  color: #be185d;
+  border: 1px solid #fbcfe8;
+  line-height: 1.25;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+
+  ion-icon {
+    font-size: 0.85rem;
+  }
+}
+
+/* Centralized Auditor Notice Banner */
+.auditorNotice,
+.auditor-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--notice-success-bg, #f0fdf4);
+  border-left: 4px solid var(--notice-success-accent, #16a34a);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  color: var(--notice-success-text, #166534);
+  font-size: 0.92rem;
+
+  ion-icon {
+    font-size: 1.3rem;
+    color: var(--notice-success-icon, #16a34a);
+    flex-shrink: 0;
+  }
+}
+
+/* Centralized Remarks Quote (inside alerts / change requests) */
+.remarks-quote {
+  background: var(--notice-quote-bg, #ffffff);
+  border-radius: 6px;
+  color: var(--notice-quote-text, inherit);
+
+  strong {
+    display: block;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    margin-bottom: 0.25rem;
+  }
+
+  p {
+    margin: 0;
+    color: var(--notice-quote-text, inherit);
+    white-space: pre-wrap;
+  }
+}
+
 /* Dark Mode Status Badges & Surfaces (eliminates light backgrounds and border outlines in dark mode) */
 body.dark {
   .statusBadge,
@@ -245,6 +311,59 @@ body.dark {
       background: rgba(236, 72, 153, 0.22) !important;
       color: #f472b6 !important;
       border: 1px solid rgba(244, 114, 182, 0.4) !important;
+    }
+  }
+
+  .guestBadge,
+  .guest-badge,
+  .guest-pill {
+    background: rgba(236, 72, 153, 0.22) !important;
+    color: #f472b6 !important;
+    border: 1px solid rgba(244, 114, 182, 0.4) !important;
+  }
+
+  .auditorNotice,
+  .auditor-banner {
+    background: var(--notice-success-bg, rgba(22, 163, 74, 0.15)) !important;
+    border-left-color: var(--notice-success-accent, #22c55e) !important;
+    color: var(--notice-success-text, #86efac) !important;
+
+    ion-icon {
+      color: var(--notice-success-icon, #4ade80) !important;
+    }
+  }
+
+  .isDraftPlaceholder {
+    background: rgba(255, 255, 255, 0.06) !important;
+    color: var(--text-medium) !important;
+  }
+
+  .remarks-quote {
+    background: var(--notice-quote-bg, rgba(0, 0, 0, 0.35)) !important;
+    color: var(--notice-quote-text, #f8fafc) !important;
+
+    p {
+      color: var(--notice-quote-text, #f8fafc) !important;
+    }
+  }
+
+  .alert-changes-requested {
+    background: var(--notice-warning-bg) !important;
+    border-color: var(--notice-warning-border) !important;
+    color: var(--notice-warning-text) !important;
+
+    .alert-icon {
+      color: var(--notice-warning-icon) !important;
+    }
+  }
+
+  .alert-rejected {
+    background: var(--notice-danger-bg) !important;
+    border-color: var(--notice-danger-border) !important;
+    color: var(--notice-danger-text) !important;
+
+    .alert-icon {
+      color: var(--notice-danger-icon) !important;
     }
   }
 

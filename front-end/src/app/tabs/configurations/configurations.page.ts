@@ -152,7 +152,7 @@ export class ConfigurationsPage implements OnInit {
     const user = this.app.currentUser;
     if (!user) return false;
     if (user.isAdministrator) return true;
-    if (user.isAuditor) return false;
+    if (user.isAuditorOnly) return false;
     return (
       user.hasPermission(AppPermission.CONFIGURATIONS.RESOURCES) ||
       user.hasPermission(AppPermission.CONFIGURATIONS.OPTIONS)
@@ -163,7 +163,7 @@ export class ConfigurationsPage implements OnInit {
     const user = this.app.currentUser;
     if (!user) return false;
     if (user.isAdministrator) return true;
-    if (user.isAuditor) return false;
+    if (user.isAuditorOnly) return false;
     return user.hasPermission(AppPermission.CONFIGURATIONS.OPTIONS);
   }
 
@@ -171,7 +171,7 @@ export class ConfigurationsPage implements OnInit {
     const user = this.app.currentUser;
     if (!user) return false;
     if (user.isAdministrator) return true;
-    if (user.isAuditor) return false;
+    if (user.isAuditorOnly) return false;
     return user.hasPermission(AppPermission.CONFIGURATIONS.USERS);
   }
 
@@ -179,7 +179,7 @@ export class ConfigurationsPage implements OnInit {
     const user = this.app.currentUser;
     if (!user) return false;
     if (user.isAdministrator) return true;
-    if (user.isAuditor) return false;
+    if (user.isAuditorOnly) return false;
     return user.hasPermission(AppPermission.CONFIGURATIONS.GUESTS);
   }
 
@@ -187,7 +187,7 @@ export class ConfigurationsPage implements OnInit {
     const user = this.app.currentUser;
     if (!user) return false;
     if (user.isAdministrator) return true;
-    if (user.isAuditor) return false;
+    if (user.isAuditorOnly) return false;
     return user.hasPermission(AppPermission.CONFIGURATIONS.TEMPLATES);
   }
 
@@ -195,7 +195,7 @@ export class ConfigurationsPage implements OnInit {
     const user = this.app.currentUser;
     if (!user) return false;
     if (user.isAdministrator) return true;
-    if (user.isAuditor) return false;
+    if (user.isAuditorOnly) return false;
     return user.hasPermission(AppPermission.CONFIGURATIONS.USERS);
   }
 
@@ -203,7 +203,7 @@ export class ConfigurationsPage implements OnInit {
     const user = this.app.currentUser;
     if (!user) return false;
     if (user.isAdministrator) return true;
-    if (user.isAuditor) return false;
+    if (user.isAuditorOnly) return false;
 
     return (
       DEFAULT_CONFIGURATION_PAGE_SECTIONS_ORDER.every(section => this.canAccessPageSection(section)) &&
