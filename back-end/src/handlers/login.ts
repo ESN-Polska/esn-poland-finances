@@ -223,6 +223,13 @@ class Login extends ResourceController {
     extractedRoles = extractedRoles.map(r => (typeof r === 'string' ? r.trim() : '')).filter(Boolean);
     extractedRoles = extractedRoles.filter((item, idx) => extractedRoles.indexOf(item) === idx);
 
+    let existingUserRecord: any = null;
+    if (DDB_TABLES.users) {
+      try {
+        existingUserRecord = await ddb.get({ TableName: DDB_TABLES.users, Key: { userId } });
+      } catch {}
+    }
+
     const user = new User({
       userId,
       email,
@@ -235,7 +242,8 @@ class Login extends ResourceController {
       country,
       avatarURL,
       lastLoginAt: new Date().toISOString(),
-      isAdministrator: false
+      isAdministrator: false,
+      disabledEmailNotifications: existingUserRecord?.disabledEmailNotifications || []
     });
     User.applyConfigurationPermissions(user, configurations);
     this.logger.info('ESN Accounts OAuth login successful', { userId: user.userId, section: user.sectionCode });
@@ -274,7 +282,8 @@ class Login extends ResourceController {
             extendedRoles: user.extendedRoles,
             isAdministrator: user.isAdministrator,
             canManageFinances: user.canManageFinances,
-            lastLoginAt: user.lastLoginAt
+            lastLoginAt: user.lastLoginAt,
+            disabledEmailNotifications: user.disabledEmailNotifications || []
           }
         });
       } catch (dbErr) {
@@ -327,8 +336,16 @@ class Login extends ResourceController {
     }
 
     const shortId = invitation.id.replace(/-/g, '').slice(0, 10);
+    const guestUserId = `guest_${shortId}`;
+    let existingGuestRecord: any = null;
+    if (DDB_TABLES.users) {
+      try {
+        existingGuestRecord = await ddb.get({ TableName: DDB_TABLES.users, Key: { userId: guestUserId } });
+      } catch {}
+    }
+
     const guestUser = new User({
-      userId: `guest_${shortId}`,
+      userId: guestUserId,
       email: invitation.guestEmail,
       firstName: invitation.guestName,
       lastName: '',
@@ -349,7 +366,8 @@ class Login extends ResourceController {
       guestAllowedRequestTypes: invitation.allowedRequestTypes || configurations.guestAccessAllowedRequestTypes,
       guestMaxAmount: invitation.maxAmount,
       guestInstructions: invitation.instructions,
-      lastLoginAt: now
+      lastLoginAt: now,
+      disabledEmailNotifications: existingGuestRecord?.disabledEmailNotifications || []
     });
 
     // Persist guest user to DynamoDB users table
@@ -376,7 +394,8 @@ class Login extends ResourceController {
             guestPurpose: guestUser.guestPurpose,
             guestPosition: guestUser.guestPosition,
             guestDefaultSourceOfFunding: guestUser.guestDefaultSourceOfFunding,
-            lastLoginAt: guestUser.lastLoginAt
+            lastLoginAt: guestUser.lastLoginAt,
+            disabledEmailNotifications: guestUser.disabledEmailNotifications || []
           }
         });
       } catch (dbErr) {

@@ -33,4 +33,19 @@ export class UsersService {
       return null;
     }
   }
+
+  /**
+   * Update disabled automatic email notifications preferences for user.
+   */
+  async updateNotificationPreferences(userId: string, disabledEmailNotifications: string[]): Promise<User | null> {
+    try {
+      const raw = await this.api.patchResource(['users', encodeURIComponent(userId.toLowerCase())], {
+        body: { disabledEmailNotifications }
+      });
+      return raw ? new User(raw) : null;
+    } catch (err) {
+      console.error('Failed to update user notification preferences', err);
+      throw err;
+    }
+  }
 }

@@ -1,5 +1,5 @@
 import { DynamoDB, HandledError, ResourceController } from 'idea-aws';
-import { Configurations } from '../models/configurations.model';
+import { AppPermission, Configurations } from '../models/configurations.model';
 import { User } from '../models/user.model';
 
 const DDB_TABLES = {
@@ -27,18 +27,80 @@ class UsersRC extends ResourceController {
     if (!this.resourceId) return;
 
     const userId = this.resourceId.toLowerCase();
+    const isSelf = this.callerUser?.userId?.toLowerCase() === userId;
     try {
       if (DDB_TABLES.users) {
         this.targetUser = await ddb.get({ TableName: DDB_TABLES.users, Key: { userId } });
       }
-      if (!this.targetUser) throw new HandledError('User not found');
+      if (!this.targetUser) {
+        if (isSelf) {
+          this.targetUser = JSON.parse(JSON.stringify(this.callerUser));
+          this.targetUser.userId = userId;
+        } else {
+          throw new HandledError('User not found');
+        }
+      }
     } catch {
-      throw new HandledError('User not found');
+      if (isSelf) {
+        this.targetUser = JSON.parse(JSON.stringify(this.callerUser));
+        this.targetUser.userId = userId;
+      } else {
+        throw new HandledError('User not found');
+      }
     }
   }
 
   protected async getResource(): Promise<any> {
     return this.targetUser;
+  }
+
+  protected async patchResource(): Promise<any> {
+    const userId = this.resourceId?.toLowerCase();
+    if (!userId) throw new HandledError('Missing userId parameter');
+
+    const isSelf = this.callerUser.userId?.toLowerCase() === userId;
+    const isAdmin = this.callerUser.isAdministrator;
+
+    if (!isSelf && !isAdmin) {
+      this.returnStatusCode = 403;
+      throw new HandledError('Forbidden: you can only update your own profile');
+    }
+
+    if (!DDB_TABLES.users) {
+      throw new HandledError('Users database table is not configured');
+    }
+
+    let userRecord = this.targetUser;
+    if (!userRecord) {
+      userRecord = await ddb.get({ TableName: DDB_TABLES.users, Key: { userId } });
+    }
+    if (!userRecord) {
+      userRecord = JSON.parse(JSON.stringify(this.callerUser));
+      userRecord.userId = userId;
+    }
+
+    if (this.body?.disabledEmailNotifications !== undefined) {
+      if (!Array.isArray(this.body.disabledEmailNotifications)) {
+        throw new HandledError('disabledEmailNotifications must be an array of strings');
+      }
+      const rawList = this.body.disabledEmailNotifications;
+      const sanitized = Array.from(
+        new Set(
+          rawList
+            .filter((item: any) => typeof item === 'string' && item.trim().length > 0)
+            .map((item: string) => item.trim())
+        )
+      );
+      userRecord.disabledEmailNotifications = sanitized;
+    }
+
+    await ddb.put({
+      TableName: DDB_TABLES.users,
+      Item: userRecord
+    });
+
+    this.targetUser = userRecord;
+    return userRecord;
   }
 
   protected async getResources(): Promise<any[]> {
@@ -47,7 +109,7 @@ class UsersRC extends ResourceController {
     const search = this.queryParams?.search ? String(this.queryParams.search).toLowerCase() : '';
     const includeRoleAssignments = this.queryParams?.roleAssignments === 'true';
     const canViewRoleAssignments =
-      this.callerUser?.isAdministrator || this.callerUser?.hasPermission('configurations.users');
+      this.callerUser?.isAdministrator || this.callerUser?.hasPermission(AppPermission.CONFIGURATIONS.USERS);
 
     let rawUsers: any[] = (await ddb.scan({ TableName: DDB_TABLES.users })) || [];
     if (search) {

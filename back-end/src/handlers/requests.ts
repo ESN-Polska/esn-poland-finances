@@ -1,7 +1,7 @@
 import { DynamoDB, HandledError, ResourceController, S3, SES } from 'idea-aws';
 import { randomUUID } from 'crypto';
 import { FinancialRequest } from '../models/financial-request.model';
-import { AppPermission, Configurations, EmailTemplates, formatSenderName } from '../models/configurations.model';
+import { AppPermission, Configurations, EmailTemplates, EmailTemplateTypes, formatSenderName } from '../models/configurations.model';
 import { User } from '../models/user.model';
 import { isEmailInBlockList } from './sesNotifications';
 
@@ -15,7 +15,8 @@ const SES_CONFIG = {
 };
 const DDB_TABLES = {
   requests: process.env.DDB_TABLE_financial_requests || 'esn-poland-finances-dev-financial_requests',
-  configurations: process.env.DDB_TABLE_configurations
+  configurations: process.env.DDB_TABLE_configurations,
+  users: process.env.DDB_TABLE_users
 };
 const S3_BUCKET_MEDIA = process.env.S3_BUCKET_MEDIA || 'esn-poland-finances-media';
 const S3_ASSETS_FOLDER = process.env.S3_ASSETS_FOLDER || `assets/${STAGE}`;
@@ -145,7 +146,8 @@ class RequestsHandler extends ResourceController {
   protected async postResource(): Promise<any> {
     const user = this.getAuthenticatedUser();
     const body = this.body || {};
-    const status = body.status || 'DRAFT';
+    const status = body.status === 'SUBMITTED' ? 'SUBMITTED' : 'DRAFT';
+    delete body.adminRemarks;
     const year = new Date().getFullYear();
 
     if (user.isGuest) {
@@ -250,6 +252,14 @@ class RequestsHandler extends ResourceController {
 
     const updates = this.body || {};
     const updatedStatus = updates.status || existing.status;
+
+    // Security check: non-managers cannot mutate administrative fields or perform manager status transitions
+    if (!canManage) {
+      if (updatedStatus !== 'DRAFT' && updatedStatus !== 'SUBMITTED') {
+        throw new HandledError('Requesters can only transition requests to DRAFT or SUBMITTED');
+      }
+      delete updates.adminRemarks;
+    }
 
     if (user.isGuest) {
       if (user.guestAllowedRequestTypes?.length && updates.requestType && !user.guestAllowedRequestTypes.includes(updates.requestType)) {
@@ -460,6 +470,23 @@ class RequestsHandler extends ResourceController {
     }
   }
 
+  private getTemplateTypeForStatus(status: string): EmailTemplateTypes | null {
+    switch (status) {
+      case 'SUBMITTED':
+        return EmailTemplateTypes.REQUEST_SUBMITTED;
+      case 'CHANGES_REQUESTED':
+        return EmailTemplateTypes.REQUEST_CHANGES_REQUESTED;
+      case 'APPROVED':
+        return EmailTemplateTypes.REQUEST_APPROVED;
+      case 'PAID':
+        return EmailTemplateTypes.REQUEST_PAID;
+      case 'REJECTED':
+        return EmailTemplateTypes.REQUEST_REJECTED;
+      default:
+        return null;
+    }
+  }
+
   private async signRequestAttachments(request: FinancialRequest): Promise<void> {
     if (request.documents) {
       for (const doc of request.documents) {
@@ -541,6 +568,30 @@ class RequestsHandler extends ResourceController {
       if (await isEmailInBlockList(request.userEmail)) {
         this.logger.warn('Skipping email notification, recipient is in blocklist', { email: request.userEmail });
         return;
+      }
+
+      const templateType = this.getTemplateTypeForStatus(targetStatus);
+      if (!templateType) return;
+
+      if (request.userId && DDB_TABLES.users) {
+        try {
+          const userRecord = await ddb.get({
+            TableName: DDB_TABLES.users,
+            Key: { userId: request.userId.toLowerCase() }
+          });
+          if (userRecord && Array.isArray(userRecord.disabledEmailNotifications)) {
+            if (userRecord.disabledEmailNotifications.includes(templateType)) {
+              this.logger.info(`Skipping email notification (${templateType}), disabled by user preferences`, {
+                userId: request.userId,
+                email: request.userEmail,
+                templateType
+              });
+              return;
+            }
+          }
+        } catch (dbErr) {
+          this.logger.warn('Failed to check user email notification preferences, proceeding with email', { err: dbErr });
+        }
       }
 
       const configurations = await this.getConfigurations();

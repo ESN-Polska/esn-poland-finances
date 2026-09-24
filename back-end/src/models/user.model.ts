@@ -66,6 +66,8 @@ export class User extends Resource {
   guestMaxAmount?: number;
   /** Optional custom localized instructions for this guest */
   guestInstructions?: LocalizedText;
+  /** Types of automatic email notifications disabled by user */
+  disabledEmailNotifications?: string[];
 
   constructor(data?: any) {
     super();
@@ -137,45 +139,64 @@ export class User extends Resource {
 
     // 3. Evaluate Auditor status
     user.isAuditor =
-      !user.isAdministrator &&
-      ((configurations.auditorsIds || []).includes(user.userId) ||
-        automaticRoleIds.includes('AUDITOR'));
+      (configurations.auditorsIds || []).includes(user.userId) ||
+      automaticRoleIds.includes('AUDITOR');
 
     // 4. Evaluate Custom Roles
     user.customRoleIds = (configurations.customRoles || [])
       .filter(role => role.userIds.includes(user.userId) || User.hasAnyRole(user, role.extendedRolePatterns))
       .map(role => role.id);
 
+    const assignedCustomRoles = (configurations.customRoles || []).filter(r => user.customRoleIds.includes(r.id));
+    const customPerms = assignedCustomRoles.reduce(
+      (acc, role) => [...acc, ...(role.permissions || [])],
+      [] as AppPermission[]
+    );
+
     // 5. Calculate effective permissions
     if (user.isAdministrator) {
       user.permissions = [...ALL_APP_PERMISSIONS];
     } else if (user.isManager) {
-      // Manager has all permissions except configurations
+      // Manager has all permissions except configurations, plus any explicitly granted custom permissions
       const configurationsPrefix = AppPermission.CONFIGURATIONS.PARENT;
-      user.permissions = ALL_APP_PERMISSIONS.filter(
+      const baseManagerPerms = ALL_APP_PERMISSIONS.filter(
         perm => perm !== configurationsPrefix && !perm.startsWith(`${configurationsPrefix}.`)
       );
+      user.permissions = Array.from(new Set([...baseManagerPerms, ...customPerms]));
     } else if (user.isAuditor) {
-      // Auditor has read-only access across requests (view all, export) and home statistics
-      user.permissions = [
+      // Auditor has read-only access across requests and home statistics, plus any custom permissions
+      const baseAuditorPerms = [
         AppPermission.REQUESTS.VIEW_ALL,
         AppPermission.REQUESTS.EXPORT,
         AppPermission.HOME.STATISTICS
       ];
+      user.permissions = Array.from(new Set([...baseAuditorPerms, ...customPerms]));
     } else {
-      const assignedCustomRoles = (configurations.customRoles || []).filter(r => user.customRoleIds.includes(r.id));
-      const customPerms = assignedCustomRoles.reduce(
-        (acc, role) => [...acc, ...(role.permissions || [])],
-        [] as AppPermission[]
-      );
       user.permissions = Array.from(new Set(customPerms));
     }
+  }
+
+  get isAuditorOnly(): boolean {
+    if (!this.isAuditor) return false;
+    if (this.isAdministrator || this.isManager || this.canManageFinances) return false;
+    if (this.hasPermission(AppPermission.REQUESTS.MANAGE)) return false;
+    if (this.customRoleIds && this.customRoleIds.length > 0) return false;
+    return true;
   }
 
   hasPermission(permission: AppPermission | string): boolean {
     if (this.isAdministrator) return true;
 
-    // Manager has all current and future permissions except configurations
+    // Check explicitly granted permissions first (including custom roles)
+    if (
+      (this.permissions || []).some(
+        granted => permission === granted || permission.startsWith(`${granted}.`)
+      )
+    ) {
+      return true;
+    }
+
+    // Manager default fallback: has all current and future permissions except configurations
     if (this.isManager) {
       const configurationsPrefix = AppPermission.CONFIGURATIONS.PARENT;
       if (permission === configurationsPrefix || permission.startsWith(`${configurationsPrefix}.`)) {
@@ -184,9 +205,7 @@ export class User extends Resource {
       return true;
     }
 
-    return (this.permissions || []).some(
-      granted => permission === granted || permission.startsWith(`${granted}.`)
-    );
+    return false;
   }
 
   load(x: any): void {
@@ -225,6 +244,11 @@ export class User extends Resource {
         pl: this.clean(x.guestInstructions.pl, String)
       };
     }
+    this.disabledEmailNotifications = this.cleanArray(x.disabledEmailNotifications, String);
+  }
+
+  isEmailNotificationEnabled(templateType: string): boolean {
+    return !(this.disabledEmailNotifications || []).includes(templateType);
   }
 
   getDisplayName(): string {

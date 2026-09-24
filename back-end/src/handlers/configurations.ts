@@ -186,7 +186,7 @@ class ConfigurationsRC extends ResourceController {
 
     // All template modifications and tests require TEMPLATES permission and cannot be performed by auditors
     if (
-      this.user.isAuditor ||
+      this.user.isAuditorOnly ||
       (!this.user.isAdministrator && !this.user.hasPermission(AppPermission.CONFIGURATIONS.TEMPLATES))
     ) {
       throw new HandledError('Unauthorized');
@@ -440,7 +440,8 @@ class ConfigurationsRC extends ResourceController {
       'appLogoURLDarkMode',
       'organisationLogoURL',
       'timezone',
-      'usersOriginDisplay',
+      'forcedLanguage',
+      'oauthRoleOptions',
       'configurationPageSectionsOrder',
       'administratorsIds',
       'managersIds',
@@ -466,7 +467,7 @@ class ConfigurationsRC extends ResourceController {
 
     if (!changedFields.length) return;
 
-    if (this.user.isAuditor) {
+    if (this.user.isAuditorOnly) {
       throw new HandledError('Unauthorized');
     }
 
@@ -497,7 +498,8 @@ class ConfigurationsRC extends ResourceController {
       'appLogoURLDarkMode',
       'organisationLogoURL',
       'timezone',
-      'usersOriginDisplay',
+      'forcedLanguage',
+      'oauthRoleOptions',
       'appLocked',
       'appLockedAt',
       'appLockMessage'

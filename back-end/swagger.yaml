@@ -375,6 +375,35 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         404:
           $ref: '#/components/responses/NotFound'
+    patch:
+      summary: Update user profile preferences
+      description: Update user profile preferences such as disabled automatic email notification types. User can update their own profile; Administrator can update any profile.
+      tags: [Users]
+      security:
+        - AuthFunction: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                disabledEmailNotifications:
+                  type: array
+                  items:
+                    type: string
+                  example: ["REQUEST_SUBMITTED", "REQUEST_APPROVED"]
+      responses:
+        200:
+          $ref: '#/components/responses/User'
+        400:
+          $ref: '#/components/responses/BadParameters'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        403:
+          $ref: '#/components/responses/Forbidden'
+        404:
+          $ref: '#/components/responses/NotFound'
 
   /media:
     post:
@@ -682,6 +711,11 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/RoleAssignmentSource'
+        disabledEmailNotifications:
+          type: array
+          items:
+            type: string
+          example: ["REQUEST_SUBMITTED"]
 
     AttachmentFile:
       type: object
