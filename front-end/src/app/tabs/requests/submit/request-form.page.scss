@@ -229,6 +229,37 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 16px;
+
+  &.grid-3 {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    @media (min-width: 768px) {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+
+  &.grid-4 {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    @media (min-width: 768px) {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+
+  .formGroup {
+    margin-top: 0 !important;
+  }
+}
+
+.bankSubSection {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.formGroup + .formGroup,
+.bankTypeToggleRow + .formGroup,
+.formGroup + .formGrid,
+.bankTypeToggleRow + .formGrid {
+  margin-top: 16px;
 }
 
 .formGroup {
@@ -300,6 +331,33 @@
 
   .formInput {
     height: 42px;
+  }
+
+  .currencyInputWrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+
+    .formInput {
+      text-align: right;
+      padding-right: 48px;
+      
+      &::-webkit-inner-spin-button,
+      &::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+      }
+      -moz-appearance: textfield;
+    }
+
+    .currencySuffix {
+      position: absolute;
+      right: 14px;
+      color: var(--text-medium);
+      font-weight: 600;
+      pointer-events: none;
+      font-size: 0.95rem;
+    }
   }
 
   .formTextarea {

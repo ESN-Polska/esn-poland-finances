@@ -228,6 +228,18 @@ export class RequestViewPage implements OnInit {
     }
   }
 
+  public openAttachment(attachment: any): void {
+    if (!attachment) return;
+    if (attachment.url) {
+      window.open(attachment.url, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    if (attachment.s3Key) {
+      const url = `https://media.finances.esn-poland.link/${attachment.s3Key.replace(/^\/+/, '')}`;
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
+  }
+
   private async showToast(messageKey: string, color: string): Promise<void> {
     const msg = this.translate.instant(messageKey);
     const toast = await this.toastCtrl.create({

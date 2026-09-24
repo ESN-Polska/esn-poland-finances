@@ -470,38 +470,54 @@
   &.single-col {
     grid-template-columns: 1fr;
   }
+}
 
-  .info-cell {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
+.info-cell-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
 
-    &.full-width {
-      grid-column: 1 / -1;
-    }
+  &.full-width {
+    grid-column: 1 / -1;
+  }
 
-    .cell-lbl {
-      font-size: 0.78rem;
-      text-transform: uppercase;
+  > .info-cell {
+    flex: 1;
+    min-width: 100px;
+  }
+}
+
+/* Info Cell (used in grids) */
+.info-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+
+  &.full-width {
+    grid-column: 1 / -1;
+  }
+
+  .cell-lbl {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+  }
+
+  .cell-val {
+    font-size: 0.95rem;
+    color: var(--text-dark);
+    word-break: break-word;
+
+    &.font-semibold {
       font-weight: 600;
-      letter-spacing: 0.04em;
-      color: var(--text-muted);
     }
-
-    .cell-val {
-      font-size: 0.95rem;
-      color: var(--text-dark);
-      word-break: break-word;
-
-      &.font-semibold {
-        font-weight: 600;
-      }
-      &.font-mono {
-        font-family: monospace;
-      }
-      &.preserve-text {
-        white-space: pre-wrap;
-      }
+    &.font-mono {
+      font-family: monospace;
+    }
+    &.preserve-text {
+      white-space: pre-wrap;
     }
   }
 }

@@ -601,6 +601,21 @@
   }
 }
 
+.info-cell-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+
+  &.full-width {
+    grid-column: 1 / -1;
+  }
+
+  > .info-cell {
+    flex: 1;
+    min-width: 100px;
+  }
+}
+
 .info-cell {
   display: flex;
   flex-direction: column;

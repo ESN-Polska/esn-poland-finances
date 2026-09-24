@@ -66,6 +66,16 @@
           <span class="divider-dot">•</span>
           <span class="request-type-tag">{{ ('REQUESTS.TYPES_SHORT.' + request.requestType) | translate }}</span>
         </div>
+        
+        <div class="decision-dates-meta" style="font-size: 0.8rem; color: var(--text-medium); margin-top: 6px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center;">
+          <span *ngIf="request.submittedAt">
+            {{ 'REQUESTS.SUBMITTED_ON' | translate }}: <strong style="color: var(--text-dark); font-weight: 600;">{{ request.submittedAt | date:'dd.MM.yyyy' }}</strong>
+          </span>
+          <span class="divider-dot" *ngIf="request.submittedAt && request.updatedAt">•</span>
+          <span *ngIf="request.updatedAt">
+            {{ 'REQUESTS.LAST_UPDATED' | translate }}: <strong style="color: var(--text-dark); font-weight: 600;">{{ request.updatedAt | date:'dd.MM.yyyy' }}</strong>
+          </span>
+        </div>
       </div>
 
       <div class="decision-amount-box">
@@ -74,41 +84,29 @@
           <div class="amount-val-group">
             <span class="amount-val">{{ request.totalGrossAmount | number:'1.2-2' }}</span>
             <span class="amount-curr">{{ request.currency }}</span>
-            <button
-              class="copy-mini-btn"
-              (click)="copyToClipboard(request.totalGrossAmount.toFixed(2), 'amount')"
-              [title]="'REQUESTS.REVIEW_PANEL.COPY_AMOUNT' | translate"
-            >
-              <ion-icon [name]="copiedField === 'amount' ? 'checkmark-outline' : 'copy-outline'"></ion-icon>
-            </button>
           </div>
-          <span class="vat-sub" *ngIf="request.totalVatAmount > 0">
-            VAT: {{ request.totalVatAmount | number:'1.2-2' }} {{ request.currency }}
+          <span class="vat-sub">
+            VAT: {{ request.totalVatAmount | number:'1.2-2' }} {{ request.currency }}<br>
+            Net: {{ (request.totalGrossAmount - request.totalVatAmount) | number:'1.2-2' }} {{ request.currency }}
           </span>
         </ng-container>
         <ng-container *ngIf="request.isMixedCurrency()">
           <div class="amount-val-group">
             <span class="amount-val">{{ request.getGrossAmountPLN() | number:'1.2-2' }}</span>
             <span class="amount-curr">PLN</span>
-            <button
-              class="copy-mini-btn"
-              (click)="copyToClipboard(request.getGrossAmountPLN().toFixed(2), 'amount_pln')"
-              [title]="'REQUESTS.REVIEW_PANEL.COPY_AMOUNT' | translate"
-            >
-              <ion-icon [name]="copiedField === 'amount_pln' ? 'checkmark-outline' : 'copy-outline'"></ion-icon>
-            </button>
           </div>
+          <span class="vat-sub">
+            VAT: {{ request.getVatAmountPLN() | number:'1.2-2' }} PLN<br>
+            Net: {{ (request.getGrossAmountPLN() - request.getVatAmountPLN()) | number:'1.2-2' }} PLN
+          </span>
           <div class="amount-val-group" style="margin-top: 4px;">
             <span class="amount-val">{{ request.getGrossAmountEUR() | number:'1.2-2' }}</span>
             <span class="amount-curr">EUR</span>
-            <button
-              class="copy-mini-btn"
-              (click)="copyToClipboard(request.getGrossAmountEUR().toFixed(2), 'amount_eur')"
-              [title]="'REQUESTS.REVIEW_PANEL.COPY_AMOUNT' | translate"
-            >
-              <ion-icon [name]="copiedField === 'amount_eur' ? 'checkmark-outline' : 'copy-outline'"></ion-icon>
-            </button>
           </div>
+          <span class="vat-sub">
+            VAT: {{ request.getVatAmountEUR() | number:'1.2-2' }} EUR<br>
+            Net: {{ (request.getGrossAmountEUR() - request.getVatAmountEUR()) | number:'1.2-2' }} EUR
+          </span>
         </ng-container>
       </div>
 
@@ -225,10 +223,6 @@
               <span class="cell-lbl">{{ 'REQUESTS.SOURCE_OF_FUNDING' | translate }}</span>
               <span class="cell-val">{{ request.sourceOfFunding }}</span>
             </div>
-            <div class="info-cell" *ngIf="request.submittedAt">
-              <span class="cell-lbl">{{ 'REQUESTS.SUBMITTED_ON' | translate }}</span>
-              <span class="cell-val">{{ request.submittedAt | date:'dd.MM.yyyy, HH:mm' }}</span>
-            </div>
             <div class="info-cell full-width" *ngIf="request.additionalRemarks">
               <span class="cell-lbl">{{ 'REQUESTS.ADDITIONAL_REMARKS' | translate }}</span>
               <span class="cell-val preserve-text">{{ request.additionalRemarks }}</span>
@@ -253,11 +247,12 @@
               <div class="doc-card-header">
                 <div class="doc-title-row">
                   <span class="doc-idx">{{ 'REQUESTS.DOCUMENT_ITEM' | translate }} #{{ idx + 1 }}</span>
-                  <span class="doc-seller" *ngIf="doc.issuedBy">{{ doc.issuedBy }}</span>
                 </div>
-                <div class="doc-amount-badge">
-                  <span>{{ doc.grossAmount | number:'1.2-2' }} {{ doc.currency }}</span>
-                  <small *ngIf="doc.vatAmount > 0">(VAT: {{ doc.vatAmount | number:'1.2-2' }})</small>
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                  <span class="doc-gross-badge" *ngIf="doc.originalCurrency && doc.exchangeRate" style="background-color: transparent; color: var(--text-medium); border: 1px solid var(--border-color); font-size: 0.8rem; padding: 2px 8px; box-shadow: none;">
+                    1 {{ doc.originalCurrency }} = <a [href]="'https://api.nbp.pl/api/exchangerates/rates/A/' + doc.originalCurrency + '/' + doc.exchangeDate + '/'" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: none;">{{ doc.exchangeRate }}</a> PLN
+                  </span>
+                  <span class="doc-gross-badge">{{ doc.grossAmount | number:'1.2-2' }} {{ doc.currency }}</span>
                 </div>
               </div>
 
@@ -269,41 +264,95 @@
                     <button
                       class="copy-mini-btn"
                       (click)="copyToClipboard(doc.invoiceNumber, 'inv_' + idx)"
-                      [title]="'REQUESTS.REVIEW_PANEL.COPY_INVOICE_NUM' | translate"
+                      [title]="'COMMON.COPY' | translate"
                     >
                       <ion-icon [name]="copiedField === 'inv_' + idx ? 'checkmark-outline' : 'copy-outline'"></ion-icon>
                     </button>
                   </div>
                 </div>
 
-                <div class="info-cell" *ngIf="doc.ksefNumber">
+                <div class="info-cell">
+                  <span class="cell-lbl">{{ 'REQUESTS.DOC_ISSUED_BY' | translate }}</span>
+                  <span class="cell-val">{{ doc.issuedBy }}</span>
+                </div>
+
+                <div class="info-cell full-width" *ngIf="doc.ksefNumber">
                   <span class="cell-lbl">{{ 'REQUESTS.DOC_KSEF_NUMBER' | translate }}</span>
                   <div class="copy-field-row">
                     <span class="cell-val font-mono">{{ doc.ksefNumber }}</span>
                     <button
                       class="copy-mini-btn"
                       (click)="copyToClipboard(doc.ksefNumber, 'ksef_' + idx)"
-                      [title]="'REQUESTS.REVIEW_PANEL.COPY_SUCCESS' | translate"
+                      [title]="'COMMON.COPY' | translate"
                     >
                       <ion-icon [name]="copiedField === 'ksef_' + idx ? 'checkmark-outline' : 'copy-outline'"></ion-icon>
                     </button>
                   </div>
                 </div>
 
-                <div class="info-cell">
-                  <span class="cell-lbl">{{ 'REQUESTS.DOC_ISSUED_ON' | translate }}</span>
-                  <span class="cell-val">{{ doc.issuedOn | date:'dd.MM.yyyy' }}</span>
+                <div class="info-cell-row full-width">
+                  <div class="info-cell">
+                    <span class="cell-lbl">{{ 'REQUESTS.DOC_ISSUED_ON' | translate }}</span>
+                    <span class="cell-val">{{ doc.issuedOn | date:'dd.MM.yyyy' }}</span>
+                  </div>
+                  <div class="info-cell" *ngIf="request.requestType === 'INVOICE_REIMBURSEMENT' && doc.hasDifferentSaleDate && doc.saleDate">
+                    <span class="cell-lbl">{{ 'REQUESTS.FIELDS.SALE_DATE' | translate }}</span>
+                    <span class="cell-val">{{ doc.saleDate | date:'dd.MM.yyyy' }}</span>
+                  </div>
+                  <div class="info-cell" *ngIf="doc.paymentDeadline">
+                    <span class="cell-lbl">{{ 'REQUESTS.DOC_PAYMENT_DEADLINE' | translate }}</span>
+                    <span class="cell-val font-semibold">{{ doc.paymentDeadline | date:'dd.MM.yyyy' }}</span>
+                  </div>
+                  <div class="info-cell" *ngIf="doc.paidOn">
+                    <span class="cell-lbl">{{ 'REQUESTS.DOC_PAID_ON' | translate }}</span>
+                    <span class="cell-val">{{ doc.paidOn | date:'dd.MM.yyyy' }}</span>
+                  </div>
                 </div>
 
-                <div class="info-cell" *ngIf="doc.paymentDeadline">
-                  <span class="cell-lbl">{{ 'REQUESTS.DOC_PAYMENT_DEADLINE' | translate }}</span>
-                  <span class="cell-val font-semibold">{{ doc.paymentDeadline | date:'dd.MM.yyyy' }}</span>
+                <!-- Amounts Row -->
+                <div class="info-cell-row full-width" style="margin-top: 0.5rem;">
+                  <!-- GROSS -->
+                  <div class="info-cell">
+                    <span class="cell-lbl">
+                      {{ 'REQUESTS.FIELDS.GROSS_AMOUNT' | translate }}
+                    </span>
+                    <div class="copy-field-row">
+                      <span class="cell-val">
+                        {{ (doc.originalCurrency ? doc.originalAmount : doc.grossAmount) | number:'1.2-2' }} {{ doc.originalCurrency || doc.currency }}
+                      </span>
+                      <button class="copy-mini-btn" (click)="copyToClipboard((doc.originalCurrency ? doc.originalAmount : doc.grossAmount) + '', 'gross_' + idx)" [title]="'COMMON.COPY' | translate">
+                        <ion-icon [name]="copiedField === 'gross_' + idx ? 'checkmark-outline' : 'copy-outline'"></ion-icon>
+                      </button>
+                    </div>
+                    <div *ngIf="doc.originalCurrency && doc.exchangeRate" style="font-size: 0.85rem; color: var(--text-medium); margin-top: 4px;">
+                      {{ 'REQUESTS.FIELDS.CALCULATED_AS' | translate }} {{ doc.grossAmount | number:'1.2-2' }} PLN
+                    </div>
+                  </div>
+                  
+                  <!-- VAT -->
+                  <div class="info-cell">
+                    <span class="cell-lbl">{{ 'REQUESTS.FIELDS.VAT_AMOUNT' | translate }}</span>
+                    <span class="cell-val">
+                      {{ (doc.originalCurrency ? doc.originalVatAmount : doc.vatAmount) | number:'1.2-2' }} {{ doc.originalCurrency || doc.currency }}
+                    </span>
+                    <div *ngIf="doc.originalCurrency && doc.exchangeRate" style="font-size: 0.85rem; color: var(--text-medium); margin-top: 4px;">
+                      {{ 'REQUESTS.FIELDS.CALCULATED_AS' | translate }} {{ doc.vatAmount | number:'1.2-2' }} PLN
+                    </div>
+                  </div>
+                  
+                  <!-- NET -->
+                  <div class="info-cell">
+                    <span class="cell-lbl">{{ 'REQUESTS.FIELDS.NET_AMOUNT' | translate }}</span>
+                    <span class="cell-val">
+                      {{ ((doc.originalCurrency ? doc.originalAmount : doc.grossAmount) - (doc.originalCurrency ? doc.originalVatAmount : doc.vatAmount)) | number:'1.2-2' }} {{ doc.originalCurrency || doc.currency }}
+                    </span>
+                    <div *ngIf="doc.originalCurrency && doc.exchangeRate" style="font-size: 0.85rem; color: var(--text-medium); margin-top: 4px;">
+                      {{ 'REQUESTS.FIELDS.CALCULATED_AS' | translate }} {{ (doc.grossAmount - doc.vatAmount) | number:'1.2-2' }} PLN
+                    </div>
+                  </div>
                 </div>
-
-                <div class="info-cell" *ngIf="doc.paidOn">
-                  <span class="cell-lbl">{{ 'REQUESTS.DOC_PAID_ON' | translate }}</span>
-                  <span class="cell-val">{{ doc.paidOn | date:'dd.MM.yyyy' }}</span>
-                </div>
+                
+                <!-- Removed bulky Exchange Rate cell -->
 
                 <div class="info-cell full-width" *ngIf="doc.bankAccountDetails">
                   <span class="cell-lbl">{{ 'REQUESTS.DOC_BANK_ACCOUNT' | translate }}</span>
@@ -312,7 +361,7 @@
                     <button
                       class="copy-mini-btn"
                       (click)="copyToClipboard(doc.bankAccountDetails, 'bank_' + idx)"
-                      [title]="'REQUESTS.REVIEW_PANEL.COPY_IBAN' | translate"
+                      [title]="'COMMON.COPY' | translate"
                     >
                       <ion-icon [name]="copiedField === 'bank_' + idx ? 'checkmark-outline' : 'copy-outline'"></ion-icon>
                     </button>
@@ -327,21 +376,21 @@
 
               <!-- Attachments for this invoice -->
               <div class="attachments-list" *ngIf="doc.attachment || doc.proofOfPaymentAttachment">
-                <div class="attachment-item" *ngIf="doc.attachment">
+                <a class="attachment-item" *ngIf="doc.attachment" (click)="openAttachment(doc.attachment)" style="text-decoration: none; color: inherit; cursor: pointer;">
                   <ion-icon name="document-attach-outline"></ion-icon>
                   <div class="att-meta">
                     <span class="att-name">{{ doc.attachment.fileName }}</span>
                     <span class="att-sub">{{ (doc.attachment.fileSize / 1024) | number:'1.0-1' }} KB</span>
                   </div>
-                </div>
+                </a>
 
-                <div class="attachment-item" *ngIf="doc.proofOfPaymentAttachment">
+                <a class="attachment-item" *ngIf="doc.proofOfPaymentAttachment" (click)="openAttachment(doc.proofOfPaymentAttachment)" style="text-decoration: none; color: inherit; cursor: pointer;">
                   <ion-icon name="checkmark-done-circle-outline"></ion-icon>
                   <div class="att-meta">
-                    <span class="att-name">{{ 'REQUESTS.PROOF_OF_PAYMENT' | translate }}: {{ doc.proofOfPaymentAttachment.fileName }}</span>
+                    <span class="att-name">{{ doc.proofOfPaymentAttachment.fileName }}</span>
                     <span class="att-sub">{{ (doc.proofOfPaymentAttachment.fileSize / 1024) | number:'1.0-1' }} KB</span>
                   </div>
-                </div>
+                </a>
               </div>
             </div>
           </div>
@@ -358,7 +407,7 @@
           <div class="info-grid">
             <div class="info-cell">
               <span class="cell-lbl">{{ 'REQUESTS.REQUESTED_AMOUNT' | translate }}</span>
-              <span class="cell-val font-semibold">{{ request.requestedAmountPLN | number:'1.2-2' }} PLN</span>
+              <span class="cell-val font-semibold">{{ (request.requestedAmountPLN ?? request.totalGrossAmount) | number:'1.2-2' }} {{ request.currency || 'PLN' }}</span>
             </div>
             <div class="info-cell full-width" *ngIf="request.explanationAndBudget">
               <span class="cell-lbl">{{ 'REQUESTS.EXPLANATION_BUDGET' | translate }}</span>
@@ -382,24 +431,24 @@
             </div>
             <div class="info-cell full-width" *ngIf="request.delegationFormAttachment">
               <span class="cell-lbl">{{ 'REQUESTS.DELEGATION_SIGNED_FORM' | translate }}</span>
-              <div class="attachment-item mt-1">
+              <a class="attachment-item mt-1" (click)="openAttachment(request.delegationFormAttachment)" style="text-decoration: none; color: inherit; cursor: pointer;">
                 <ion-icon name="document-text-outline"></ion-icon>
                 <div class="att-meta">
                   <span class="att-name">{{ request.delegationFormAttachment.fileName }}</span>
                   <span class="att-sub">{{ (request.delegationFormAttachment.fileSize / 1024) | number:'1.0-1' }} KB</span>
                 </div>
-              </div>
+              </a>
             </div>
             <div class="info-cell full-width" *ngIf="request.ticketAttachments && request.ticketAttachments.length > 0">
               <span class="cell-lbl">{{ 'REQUESTS.TICKETS_ATTACHMENTS' | translate }} ({{ request.ticketAttachments.length }})</span>
               <div class="attachments-list mt-1">
-                <div class="attachment-item" *ngFor="let t of request.ticketAttachments">
+                <a class="attachment-item" *ngFor="let t of request.ticketAttachments" (click)="openAttachment(t)" style="text-decoration: none; color: inherit; cursor: pointer;">
                   <ion-icon name="ticket-outline"></ion-icon>
                   <div class="att-meta">
                     <span class="att-name">{{ t.fileName }}</span>
                     <span class="att-sub">{{ (t.fileSize / 1024) | number:'1.0-1' }} KB</span>
                   </div>
-                </div>
+                </a>
               </div>
             </div>
           </div>
@@ -414,7 +463,7 @@
           <div class="section-header">
             <div class="header-icon-title">
               <ion-icon name="card-outline"></ion-icon>
-              <h3>{{ 'REQUESTS.REVIEW_PANEL.PAYOUT_VERIFICATION' | translate }}</h3>
+              <h3>{{ (request.isMixedCurrency?.() ? 'REQUESTS.PLN_PAYOUT_ACCOUNT' : 'REQUESTS.REVIEW_PANEL.PAYOUT_VERIFICATION') | translate }}</h3>
             </div>
           </div>
           <div class="info-grid single-col">
@@ -425,7 +474,7 @@
                 <button
                   class="copy-mini-btn"
                   (click)="copyToClipboard(request.accountHolderName, 'holder')"
-                  [title]="'REQUESTS.REVIEW_PANEL.COPY_SUCCESS' | translate"
+                  [title]="'COMMON.COPY' | translate"
                 >
                   <ion-icon [name]="copiedField === 'holder' ? 'checkmark-outline' : 'copy-outline'"></ion-icon>
                 </button>
@@ -434,7 +483,16 @@
 
             <div class="info-cell">
               <span class="cell-lbl">{{ 'REQUESTS.ACCOUNT_HOLDER_ADDRESS' | translate }}</span>
-              <span class="cell-val">{{ request.accountHolderAddress }}</span>
+              <div class="copy-field-row">
+                <span class="cell-val">{{ request.accountHolderAddress }}</span>
+                <button
+                  class="copy-mini-btn"
+                  (click)="copyToClipboard(request.accountHolderAddress, 'address')"
+                  [title]="'COMMON.COPY' | translate"
+                >
+                  <ion-icon [name]="copiedField === 'address' ? 'checkmark-outline' : 'copy-outline'"></ion-icon>
+                </button>
+              </div>
             </div>
 
             <div class="info-cell">
@@ -444,10 +502,10 @@
                 <button
                   class="btn-copy-iban"
                   (click)="copyToClipboard(request.iban, 'iban')"
-                  [title]="'REQUESTS.REVIEW_PANEL.COPY_IBAN' | translate"
+                  [title]="'COMMON.COPY' | translate"
                 >
                   <ion-icon [name]="copiedField === 'iban' ? 'checkmark-outline' : 'copy-outline'"></ion-icon>
-                  <span>{{ (copiedField === 'iban' ? 'REQUESTS.REVIEW_PANEL.COPY_SUCCESS' : 'REQUESTS.REVIEW_PANEL.COPY_IBAN') | translate }}</span>
+                  <span>{{ (copiedField === 'iban' ? 'COMMON.COPY_SUCCESS' : 'COMMON.COPY') | translate }}</span>
                 </button>
               </div>
             </div>
@@ -459,9 +517,77 @@
                 <button
                   class="copy-mini-btn"
                   (click)="copyToClipboard(request.swiftBic, 'bic')"
-                  [title]="'REQUESTS.REVIEW_PANEL.COPY_SUCCESS' | translate"
+                  [title]="'COMMON.COPY' | translate"
                 >
                   <ion-icon [name]="copiedField === 'bic' ? 'checkmark-outline' : 'copy-outline'"></ion-icon>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- EUR Payout Bank Account Details Card -->
+        <div class="section-card payout-card" *ngIf="request.requestType !== 'INVOICE_TO_PAY' && (request.isMixedCurrency?.() || request.ibanEUR)" style="margin-top: 1rem;">
+          <div class="section-header">
+            <div class="header-icon-title">
+              <ion-icon name="card-outline"></ion-icon>
+              <h3>{{ 'REQUESTS.EUR_PAYOUT_ACCOUNT' | translate }}</h3>
+            </div>
+          </div>
+          <div class="info-grid single-col">
+            <div class="info-cell" *ngIf="request.accountHolderNameEUR">
+              <span class="cell-lbl">{{ 'REQUESTS.ACCOUNT_HOLDER_NAME' | translate }}</span>
+              <div class="copy-field-row">
+                <span class="cell-val font-semibold">{{ request.accountHolderNameEUR }}</span>
+                <button
+                  class="copy-mini-btn"
+                  (click)="copyToClipboard(request.accountHolderNameEUR, 'holderEUR')"
+                  [title]="'COMMON.COPY' | translate"
+                >
+                  <ion-icon [name]="copiedField === 'holderEUR' ? 'checkmark-outline' : 'copy-outline'"></ion-icon>
+                </button>
+              </div>
+            </div>
+
+            <div class="info-cell" *ngIf="request.accountHolderAddressEUR">
+              <span class="cell-lbl">{{ 'REQUESTS.ACCOUNT_HOLDER_ADDRESS' | translate }}</span>
+              <div class="copy-field-row">
+                <span class="cell-val">{{ request.accountHolderAddressEUR }}</span>
+                <button
+                  class="copy-mini-btn"
+                  (click)="copyToClipboard(request.accountHolderAddressEUR, 'addressEUR')"
+                  [title]="'COMMON.COPY' | translate"
+                >
+                  <ion-icon [name]="copiedField === 'addressEUR' ? 'checkmark-outline' : 'copy-outline'"></ion-icon>
+                </button>
+              </div>
+            </div>
+
+            <div class="info-cell" *ngIf="request.ibanEUR">
+              <span class="cell-lbl">{{ 'REQUESTS.IBAN' | translate }}</span>
+              <div class="copy-field-row iban-highlight-row">
+                <span class="cell-val font-mono iban-text">{{ request.ibanEUR }}</span>
+                <button
+                  class="btn-copy-iban"
+                  (click)="copyToClipboard(request.ibanEUR, 'ibanEUR')"
+                  [title]="'COMMON.COPY' | translate"
+                >
+                  <ion-icon [name]="copiedField === 'ibanEUR' ? 'checkmark-outline' : 'copy-outline'"></ion-icon>
+                  <span>{{ (copiedField === 'ibanEUR' ? 'COMMON.COPY_SUCCESS' : 'COMMON.COPY') | translate }}</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="info-cell" *ngIf="request.swiftBicEUR">
+              <span class="cell-lbl">{{ 'REQUESTS.SWIFT_BIC' | translate }}</span>
+              <div class="copy-field-row">
+                <span class="cell-val font-mono">{{ request.swiftBicEUR }}</span>
+                <button
+                  class="copy-mini-btn"
+                  (click)="copyToClipboard(request.swiftBicEUR, 'bicEUR')"
+                  [title]="'COMMON.COPY' | translate"
+                >
+                  <ion-icon [name]="copiedField === 'bicEUR' ? 'checkmark-outline' : 'copy-outline'"></ion-icon>
                 </button>
               </div>
             </div>

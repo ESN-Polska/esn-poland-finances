@@ -223,12 +223,16 @@ export class RequestsService {
       'Guest',
       'Position',
       'Funding Source',
-      'Gross Amount',
-      'VAT Amount',
-      'Currency',
-      'IBAN',
-      'SWIFT/BIC',
-      'Account Holder',
+      'PLN Gross Amount',
+      'PLN VAT Amount',
+      'PLN IBAN',
+      'PLN SWIFT/BIC',
+      'PLN Account Holder',
+      'EUR Gross Amount',
+      'EUR VAT Amount',
+      'EUR IBAN',
+      'EUR SWIFT/BIC',
+      'EUR Account Holder',
       'Admin Remarks'
     ];
 
@@ -238,6 +242,32 @@ export class RequestsService {
         const str = String(val).replace(/"/g, '""');
         return `"${str}"`;
       };
+
+      const grossPLN = typeof req.getGrossAmountPLN === 'function'
+        ? req.getGrossAmountPLN()
+        : ((req.currency || 'PLN').toUpperCase() === 'PLN' ? (req.totalGrossAmount || 0) : 0);
+
+      const vatPLN = typeof req.getVatAmountPLN === 'function'
+        ? req.getVatAmountPLN()
+        : ((req.currency || 'PLN').toUpperCase() === 'PLN' ? (req.totalVatAmount || 0) : 0);
+
+      const grossEUR = typeof req.getGrossAmountEUR === 'function'
+        ? req.getGrossAmountEUR()
+        : ((req.currency || '').toUpperCase() === 'EUR' ? (req.totalGrossAmount || 0) : 0);
+
+      const vatEUR = typeof req.getVatAmountEUR === 'function'
+        ? req.getVatAmountEUR()
+        : ((req.currency || '').toUpperCase() === 'EUR' ? (req.totalVatAmount || 0) : 0);
+
+      const isSingleEur = (req.currency || '').toUpperCase() === 'EUR' && !req.isMixedCurrency?.();
+
+      const plnIban = isSingleEur ? '' : (req.iban || '');
+      const plnSwift = isSingleEur ? '' : (req.swiftBic || '');
+      const plnHolder = isSingleEur ? '' : (req.accountHolderName || '');
+
+      const eurIban = req.ibanEUR || (isSingleEur ? req.iban : '');
+      const eurSwift = req.swiftBicEUR || (isSingleEur ? req.swiftBic : '');
+      const eurHolder = req.accountHolderNameEUR || (isSingleEur ? req.accountHolderName : '');
 
       return [
         escape(req.displayId),
@@ -251,12 +281,16 @@ export class RequestsService {
         escape(req.isGuest ? 'Yes' : 'No'),
         escape(req.position || ''),
         escape(req.sourceOfFunding || ''),
-        escape(req.isMixedCurrency?.() ? `${req.getGrossAmountPLN()} PLN / ${req.getGrossAmountEUR()} EUR` : (req.totalGrossAmount || 0)),
-        escape(req.isMixedCurrency?.() ? `${req.getVatAmountPLN()} PLN / ${req.getVatAmountEUR()} EUR` : (req.totalVatAmount || 0)),
-        escape(req.isMixedCurrency?.() ? 'PLN / EUR' : (req.currency || 'PLN')),
-        escape(req.iban || ''),
-        escape(req.swiftBic || ''),
-        escape(req.accountHolderName || ''),
+        escape(grossPLN),
+        escape(vatPLN),
+        escape(plnIban),
+        escape(plnSwift),
+        escape(plnHolder),
+        escape(grossEUR),
+        escape(vatEUR),
+        escape(eurIban),
+        escape(eurSwift),
+        escape(eurHolder),
         escape(req.adminRemarks || '')
       ].join(';');
     });
@@ -447,7 +481,10 @@ export class RequestsService {
     let totals: { totalGrossAmount: number; totalVatAmount: number; currency?: string };
     if (payload.requestType === 'ADVANCE_PAYMENT') {
       const advGross = Number(payload.requestedAmountPLN ?? payload.totalGrossAmount) || 0;
-      totals = { totalGrossAmount: advGross, totalVatAmount: 0, currency: 'PLN' };
+      totals = { totalGrossAmount: advGross, totalVatAmount: 0, currency: payload.currency || 'PLN' };
+    } else if (payload.requestType === 'DELEGATION_SETTLEMENT') {
+      const delGross = Number(payload.totalGrossAmount) || 0;
+      totals = { totalGrossAmount: delGross, totalVatAmount: 0, currency: 'PLN' };
     } else if (
       (payload.requestType === 'INVOICE_TO_PAY' || payload.requestType === 'INVOICE_REIMBURSEMENT') &&
       payload.documents &&
