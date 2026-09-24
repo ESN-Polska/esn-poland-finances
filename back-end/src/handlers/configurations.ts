@@ -132,6 +132,12 @@ class ConfigurationsRC extends ResourceController {
       if (this.configurations?.rulesFileURL && newConfigurations.rulesFileURL !== this.configurations.rulesFileURL) {
         await this.deleteOldS3File(this.configurations.rulesFileURL);
       }
+      if (this.configurations?.delegationSettlementSheetURL && newConfigurations.delegationSettlementSheetURL !== this.configurations.delegationSettlementSheetURL) {
+        await this.deleteOldS3File(this.configurations.delegationSettlementSheetURL);
+      }
+      if (this.configurations?.delegationInstructionsURL && newConfigurations.delegationInstructionsURL !== this.configurations.delegationInstructionsURL) {
+        await this.deleteOldS3File(this.configurations.delegationInstructionsURL);
+      }
       if (this.configurations?.appLogoURL && newConfigurations.appLogoURL !== this.configurations.appLogoURL) {
         await this.deleteOldS3File(this.configurations.appLogoURL);
       }
@@ -445,6 +451,8 @@ class ConfigurationsRC extends ResourceController {
       'rulesFileURL',
       'rulesResolutionNumber',
       'rulesRevisionDate',
+      'delegationSettlementSheetURL',
+      'delegationInstructionsURL',
       'guestAccessEnabled',
       'guestAccessAllowedRequestTypes',
       'guestAccessDefaultExpirationDays',
@@ -467,6 +475,7 @@ class ConfigurationsRC extends ResourceController {
       DEFAULT_CONFIGURATION_PAGE_SECTIONS_ORDER.every(section => {
         if (section === 'OPTIONS') return this.user!.hasPermission(AppPermission.CONFIGURATIONS.OPTIONS);
         if (section === 'USERS') return this.user!.hasPermission(AppPermission.CONFIGURATIONS.USERS);
+        if (section === 'RESOURCES') return this.user!.hasPermission(AppPermission.CONFIGURATIONS.RESOURCES);
         if (section === 'GUESTS') return this.user!.hasPermission(AppPermission.CONFIGURATIONS.GUESTS);
         if (section === 'TEMPLATES') return this.user!.hasPermission(AppPermission.CONFIGURATIONS.TEMPLATES);
         return false;
@@ -494,6 +503,11 @@ class ConfigurationsRC extends ResourceController {
       'appLockMessage'
     ];
 
+    const resourceFields = [
+      'delegationSettlementSheetURL',
+      'delegationInstructionsURL'
+    ];
+
     const userFields = [
       'administratorsIds',
       'managersIds',
@@ -518,6 +532,7 @@ class ConfigurationsRC extends ResourceController {
 
     const allowedFields = [
       ...(this.user.hasPermission(AppPermission.CONFIGURATIONS.OPTIONS) ? optionFields : []),
+      ...(this.user.hasPermission(AppPermission.CONFIGURATIONS.RESOURCES) || this.user.hasPermission(AppPermission.CONFIGURATIONS.OPTIONS) ? resourceFields : []),
       ...(this.user.hasPermission(AppPermission.CONFIGURATIONS.USERS) ? userFields : []),
       ...(this.user.hasPermission(AppPermission.CONFIGURATIONS.GUESTS) ? guestFields : []),
       ...(hasFullConfigurationsRights ? ['configurationPageSectionsOrder'] : []),

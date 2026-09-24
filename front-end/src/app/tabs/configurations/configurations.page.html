@@ -464,6 +464,136 @@
       </ion-list-header>
     </ion-list>
 
+    <!-- SUBTAB: RESOURCES -->
+    <ion-list class="aList" *ngIf="pageSection === 'RESOURCES'">
+      <ion-list-header>
+        <ion-label>
+          <h2>{{ 'CONFIGURATIONS.RESOURCES_TITLE' | translate }}</h2>
+          <p>{{ 'CONFIGURATIONS.RESOURCES_I' | translate }}</p>
+        </ion-label>
+      </ion-list-header>
+
+      <!-- Delegation Settlement Sheet URL -->
+      <ion-item>
+        <ion-label position="stacked">
+          {{ 'CONFIGURATIONS.DELEGATION_SHEET_URL' | translate }}
+        </ion-label>
+        <ion-input
+          readonly
+          [placeholder]="'CONFIGURATIONS.DELEGATION_SHEET_URL_PLACEHOLDER' | translate"
+          [value]="configurations.delegationSettlementSheetURL || ''"
+        ></ion-input>
+        <ion-note slot="helper">{{ 'CONFIGURATIONS.DELEGATION_SHEET_URL_I' | translate }}</ion-note>
+
+        <ion-buttons slot="end" class="ion-margin-top">
+          <ion-button
+            fill="clear"
+            color="primary"
+            *ngIf="configurations.delegationSettlementSheetURL"
+            (click)="testDelegationSheetURL()"
+            [title]="'COMMON.OPEN' | translate"
+          >
+            <ion-icon name="open-outline" slot="icon-only"></ion-icon>
+          </ion-button>
+          <ion-button
+            fill="clear"
+            color="medium"
+            *ngIf="canModifyResources()"
+            (click)="changeDelegationSheetURL()"
+            [title]="'COMMON.EDIT' | translate"
+          >
+            <ion-icon name="pencil" slot="icon-only"></ion-icon>
+          </ion-button>
+          <ion-button
+            fill="clear"
+            color="primary"
+            *ngIf="canModifyResources()"
+            (click)="delegationFileInput.click()"
+            [title]="'COMMON.UPLOAD' | translate"
+          >
+            <ion-icon name="cloud-upload-outline" slot="icon-only"></ion-icon>
+          </ion-button>
+          <ion-button
+            fill="clear"
+            color="danger"
+            *ngIf="canModifyResources() && configurations.delegationSettlementSheetURL"
+            (click)="clearDelegationSheetURL()"
+            [title]="'COMMON.DELETE' | translate"
+          >
+            <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
+          </ion-button>
+        </ion-buttons>
+
+        <input
+          type="file"
+          #delegationFileInput
+          hidden
+          accept=".xlsx,.xls"
+          (change)="uploadDelegationSheetFile($event)"
+        />
+      </ion-item>
+
+      <!-- Delegation Instructions Guide URL -->
+      <ion-item>
+        <ion-label position="stacked">
+          {{ 'CONFIGURATIONS.DELEGATION_INSTRUCTIONS_URL' | translate }}
+        </ion-label>
+        <ion-input
+          readonly
+          [placeholder]="'CONFIGURATIONS.DELEGATION_INSTRUCTIONS_URL_PLACEHOLDER' | translate"
+          [value]="configurations.delegationInstructionsURL || ''"
+        ></ion-input>
+        <ion-note slot="helper">{{ 'CONFIGURATIONS.DELEGATION_INSTRUCTIONS_URL_I' | translate }}</ion-note>
+
+        <ion-buttons slot="end" class="ion-margin-top">
+          <ion-button
+            fill="clear"
+            color="primary"
+            *ngIf="configurations.delegationInstructionsURL"
+            (click)="testDelegationInstructionsURL()"
+            [title]="'COMMON.OPEN' | translate"
+          >
+            <ion-icon name="open-outline" slot="icon-only"></ion-icon>
+          </ion-button>
+          <ion-button
+            fill="clear"
+            color="medium"
+            *ngIf="canModifyResources()"
+            (click)="changeDelegationInstructionsURL()"
+            [title]="'COMMON.EDIT' | translate"
+          >
+            <ion-icon name="pencil" slot="icon-only"></ion-icon>
+          </ion-button>
+          <ion-button
+            fill="clear"
+            color="primary"
+            *ngIf="canModifyResources()"
+            (click)="instructionsFileInput.click()"
+            [title]="'COMMON.UPLOAD' | translate"
+          >
+            <ion-icon name="cloud-upload-outline" slot="icon-only"></ion-icon>
+          </ion-button>
+          <ion-button
+            fill="clear"
+            color="danger"
+            *ngIf="canModifyResources() && configurations.delegationInstructionsURL"
+            (click)="clearDelegationInstructionsURL()"
+            [title]="'COMMON.DELETE' | translate"
+          >
+            <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
+          </ion-button>
+        </ion-buttons>
+
+        <input
+          type="file"
+          #instructionsFileInput
+          hidden
+          accept=".pdf,.docx,.doc"
+          (change)="uploadDelegationInstructionsFile($event)"
+        />
+      </ion-item>
+    </ion-list>
+
     <!-- SUBTAB: SES TEMPLATES -->
     <ion-list class="aList" *ngIf="pageSection === 'TEMPLATES'">
       <ion-list-header>

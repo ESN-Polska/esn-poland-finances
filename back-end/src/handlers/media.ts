@@ -22,11 +22,15 @@ class MediaRC extends ResourceController {
   }
 
   protected async checkAuthBeforeRequest(): Promise<void> {
+    if (!this.user) {
+      throw new HandledError('Unauthorized');
+    }
+    const isDocument = this.body?.type === 'document';
     if (
-      !this.user ||
-      (!this.user.isAdministrator &&
-        !this.user.hasPermission('configurations.options') &&
-        !this.user.hasPermission('rules.update'))
+      !isDocument &&
+      !this.user.isAdministrator &&
+      !this.user.hasPermission('configurations.options') &&
+      !this.user.hasPermission('rules.update')
     ) {
       throw new HandledError('Unauthorized');
     }
@@ -35,8 +39,9 @@ class MediaRC extends ResourceController {
   protected async postResources(): Promise<SignedURL> {
     const isDocument = this.body?.type === 'document';
     const ext = this.body?.extension?.replace(/[^a-zA-Z0-9]/g, '').toLowerCase() || (isDocument ? 'pdf' : 'png');
-    if (isDocument && ext !== 'pdf') {
-      throw new HandledError('Only PDF files are allowed for documents');
+    const ALLOWED_DOCUMENT_EXTENSIONS = ['pdf', 'xlsx', 'xls', 'docx', 'doc', 'png', 'jpg', 'jpeg', 'csv'];
+    if (isDocument && !ALLOWED_DOCUMENT_EXTENSIONS.includes(ext)) {
+      throw new HandledError(`File type .${ext} is not allowed for documents. Allowed types: ${ALLOWED_DOCUMENT_EXTENSIONS.join(', ')}`);
     }
     const folder = isDocument ? `documents/${process.env.STAGE || 'dev'}` : S3_IMAGES_FOLDER;
     const sanitizedName = this.sanitizeFilename(this.body?.filename);

@@ -28,11 +28,14 @@ export class MediaService {
     const res = await this.api.postResource('media', {
       body: { type: 'document', extension, filename: file.name }
     });
-    await fetch(res.url, {
+    const putRes = await fetch(res.url, {
       method: 'PUT',
       body: file,
-      headers: { 'Content-Type': file.type || 'application/pdf' }
+      headers: { 'Content-Type': file.type || 'application/octet-stream' }
     });
+    if (!putRes.ok) {
+      throw new Error(`Upload to storage failed (${putRes.status} ${putRes.statusText})`);
+    }
     // Brief pause to allow S3 object visibility
     await new Promise(resolve => setTimeout(resolve, 1500));
     return { id: res.id, url: res.cdnUrl || res.url, s3Key: res.key };
