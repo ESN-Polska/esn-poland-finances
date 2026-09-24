@@ -361,11 +361,25 @@ body.dark {
 
     .support-btn-text {
       .support-btn-title {
-        color: var(--text-light, #f8fafc);
+        color: var(--text-dark, #f8fafc);
       }
       .support-btn-email {
         color: var(--text-medium, #94a3b8);
       }
+    }
+  }
+
+  .guestErrorCard {
+    background: rgba(var(--ion-color-danger-rgb, 235, 68, 90), 0.12);
+    border-color: rgba(var(--ion-color-danger-rgb, 235, 68, 90), 0.3);
+  }
+
+  .appLockedCard {
+    background: rgba(var(--ion-color-warning-rgb, 244, 123, 32), 0.12);
+    border-color: rgba(var(--ion-color-warning-rgb, 244, 123, 32), 0.3);
+
+    .admin-bypass-container {
+      border-top-color: rgba(var(--ion-color-warning-rgb, 244, 123, 32), 0.3);
     }
   }
 }

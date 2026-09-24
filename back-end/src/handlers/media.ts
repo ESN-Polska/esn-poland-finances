@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import { HandledError, ResourceController, S3 } from 'idea-aws';
 import { SignedURL } from 'idea-toolbox';
+import { AppPermission } from '../models/configurations.model';
 import { User } from '../models/user.model';
 
 const PROJECT = process.env.PROJECT || 'esn-poland-finances';
@@ -29,8 +30,8 @@ class MediaRC extends ResourceController {
     if (
       !isDocument &&
       !this.user.isAdministrator &&
-      !this.user.hasPermission('configurations.options') &&
-      !this.user.hasPermission('rules.update')
+      !this.user.hasPermission(AppPermission.CONFIGURATIONS.OPTIONS) &&
+      !this.user.hasPermission(AppPermission.RULES.UPDATE)
     ) {
       throw new HandledError('Unauthorized');
     }

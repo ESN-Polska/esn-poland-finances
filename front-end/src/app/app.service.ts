@@ -17,6 +17,7 @@ const USER_KEY = 'auth_user';
 const LANG_KEY = 'app_lang';
 const THEME_PREFERENCE_STORAGE_KEY = 'themePreference';
 const DEFAULT_BANK_KEY = 'user_default_bank';
+const IMPERSONATION_ROLE_STORAGE_KEY = 'app_impersonation_role';
 
 const APP_ICON_DEFAULT = 'assets/icons/icon.svg';
 const ORGANISATION_LOGO_DEFAULT = 'assets/images/esn-poland-logo.png';
@@ -96,20 +97,29 @@ export class AppService {
       this.tokenSubject.next(savedToken);
       this.api.authToken = savedToken;
 
+      let u: User | null = null;
       if (savedUser) {
-        const u = new User(savedUser);
+        u = new User(savedUser);
         User.applyConfigurationPermissions(u, this.configurations);
         this.userSubject.next(u);
       } else {
         const parsed = this.parseTokenPayload(savedToken);
         if (parsed) {
-          const u = new User(parsed);
+          u = new User(parsed);
           User.applyConfigurationPermissions(u, this.configurations);
           this.userSubject.next(u);
           await this._storage.set(USER_KEY, parsed);
         }
       }
+
+      if (u?.isAdministrator && typeof window !== 'undefined' && window.sessionStorage) {
+        const savedImpersonationRole = window.sessionStorage.getItem(IMPERSONATION_ROLE_STORAGE_KEY);
+        if (savedImpersonationRole) {
+          this.changeImpersonatedRole(savedImpersonationRole);
+        }
+      }
     } else {
+      this.clearPersistedImpersonationRole();
       await this.clearAuth();
     }
 
@@ -120,7 +130,14 @@ export class AppService {
     try {
       this.configurations = await this.configurationsService.get();
       if (this.currentUser) {
-        User.applyConfigurationPermissions(this.currentUser, this.configurations);
+        if (this.isImpersonating) {
+          if (this.originalUser) {
+            User.applyConfigurationPermissions(this.originalUser, this.configurations);
+          }
+          this.changeImpersonatedRole(this.impersonatedRole);
+        } else {
+          User.applyConfigurationPermissions(this.currentUser, this.configurations);
+        }
       }
       await this.checkAppLockForCurrentUser();
       if (this.isLanguageForced() && this.translate.currentLang !== this.getForcedLanguage()) {
@@ -135,6 +152,10 @@ export class AppService {
 
   public get currentUser(): User | null {
     return this.userSubject.value;
+  }
+
+  public get realUser(): User | null {
+    return this.originalUser || this.currentUser;
   }
 
   public get currentToken(): string | null {
@@ -170,6 +191,7 @@ export class AppService {
     if (this.isImpersonating) {
       this.exitPreview(false);
     }
+    this.clearPersistedImpersonationRole();
     await this.clearAuth();
     await this.router.navigate(['/auth'], { replaceUrl: true });
     if (dueToLock) {
@@ -184,7 +206,7 @@ export class AppService {
   }
 
   public async checkAppLockForCurrentUser(): Promise<boolean> {
-    if (!this.isAuthenticated || !this.currentUser || this.currentUser.isAdministrator) {
+    if (!this.isAuthenticated || !this.realUser || this.realUser.isAdministrator) {
       return false;
     }
 
@@ -213,19 +235,19 @@ export class AppService {
     if (typeof window === 'undefined') return;
 
     window.addEventListener('focus', () => {
-      if (this.isAuthenticated && !this.currentUser?.isAdministrator) {
+      if (this.isAuthenticated && !this.realUser?.isAdministrator) {
         this.loadConfigurations();
       }
     });
 
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible' && this.isAuthenticated && !this.currentUser?.isAdministrator) {
+      if (document.visibilityState === 'visible' && this.isAuthenticated && !this.realUser?.isAdministrator) {
         this.loadConfigurations();
       }
     });
 
     setInterval(() => {
-      if (this.isAuthenticated && !this.currentUser?.isAdministrator) {
+      if (this.isAuthenticated && !this.realUser?.isAdministrator) {
         this.loadConfigurations();
       }
     }, 15000);
@@ -281,8 +303,20 @@ export class AppService {
   // PREVIEW / IMPERSONATION SYSTEM
   //
 
+  private persistImpersonationRole(role: string): void {
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      window.sessionStorage.setItem(IMPERSONATION_ROLE_STORAGE_KEY, role);
+    }
+  }
+
+  private clearPersistedImpersonationRole(): void {
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      window.sessionStorage.removeItem(IMPERSONATION_ROLE_STORAGE_KEY);
+    }
+  }
+
   public seeAsStandardUser(navigate = true): void {
-    const current = this.currentUser;
+    const current = this.realUser;
     if (!current) return;
 
     if (!this.isImpersonating) {
@@ -291,8 +325,9 @@ export class AppService {
     this.isImpersonating = true;
     this.impersonatedRole = 'STANDARD_USER';
     this.impersonatedPersonaTitle = this.translate.instant('CONFIGURATIONS.STANDARD_USER');
+    this.persistImpersonationRole(this.impersonatedRole);
 
-    const impersonated = new User(this.originalUser);
+    const impersonated = new User(this.originalUser!);
     impersonated.isAdministrator = false;
     impersonated.isManager = false;
     impersonated.isAuditor = false;
@@ -307,7 +342,7 @@ export class AppService {
   }
 
   public seeAsManager(navigate = true): void {
-    const current = this.currentUser;
+    const current = this.realUser;
     if (!current) return;
 
     if (!this.isImpersonating) {
@@ -316,8 +351,9 @@ export class AppService {
     this.isImpersonating = true;
     this.impersonatedRole = 'MANAGER';
     this.impersonatedPersonaTitle = this.translate.instant('CONFIGURATIONS.MANAGER');
+    this.persistImpersonationRole(this.impersonatedRole);
 
-    const impersonated = new User(this.originalUser);
+    const impersonated = new User(this.originalUser!);
     impersonated.isAdministrator = false;
     impersonated.isManager = true;
     impersonated.isAuditor = false;
@@ -335,7 +371,7 @@ export class AppService {
   }
 
   public seeAsAuditor(navigate = true): void {
-    const current = this.currentUser;
+    const current = this.realUser;
     if (!current) return;
 
     if (!this.isImpersonating) {
@@ -344,8 +380,9 @@ export class AppService {
     this.isImpersonating = true;
     this.impersonatedRole = 'AUDITOR';
     this.impersonatedPersonaTitle = this.translate.instant('CONFIGURATIONS.AUDITOR');
+    this.persistImpersonationRole(this.impersonatedRole);
 
-    const impersonated = new User(this.originalUser);
+    const impersonated = new User(this.originalUser!);
     impersonated.isAdministrator = false;
     impersonated.isManager = false;
     impersonated.isAuditor = true;
@@ -364,7 +401,7 @@ export class AppService {
   }
 
   public seeAsCustomRole(customRole: CustomRole, navigate = true): void {
-    const current = this.currentUser;
+    const current = this.realUser;
     if (!current || !customRole) return;
 
     if (!this.isImpersonating) {
@@ -373,8 +410,9 @@ export class AppService {
     this.isImpersonating = true;
     this.impersonatedRole = `CUSTOM_ROLE:${customRole.id}`;
     this.impersonatedPersonaTitle = customRole.name;
+    this.persistImpersonationRole(this.impersonatedRole);
 
-    const impersonated = new User(this.originalUser);
+    const impersonated = new User(this.originalUser!);
     impersonated.isAdministrator = false;
     impersonated.isManager = false;
     impersonated.isAuditor = false;
@@ -409,6 +447,7 @@ export class AppService {
   }
 
   public exitPreview(navigate = true): void {
+    this.clearPersistedImpersonationRole();
     if (this.originalUser) {
       const restoredUser = new User(this.originalUser);
       User.applyConfigurationPermissions(restoredUser, this.configurations);
