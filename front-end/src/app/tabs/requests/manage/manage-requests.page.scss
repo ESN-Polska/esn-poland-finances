@@ -24,10 +24,21 @@
 
     .backBtn {
       --color: var(--text-dark);
+      --padding-start: 0;
+      --padding-end: 0;
+      --padding-top: 0;
+      --padding-bottom: 0;
+      color: var(--text-dark);
       margin: 2px 0 0 0;
-      font-size: 1.3rem;
       width: 40px;
       height: 40px;
+      min-width: 40px;
+
+      ion-icon {
+        font-size: 1.45rem;
+        color: var(--text-dark);
+        display: block;
+      }
     }
 
     .headerTitleRow {
@@ -74,10 +85,32 @@
 
     .refreshBtn {
       --color: var(--text-medium);
+      --color-hover: var(--ion-color-primary, #00aeef);
+      --background-hover: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.08);
+      --border-radius: 8px;
+      --padding-start: 0;
+      --padding-end: 0;
+      --padding-top: 0;
+      --padding-bottom: 0;
+      color: var(--text-medium);
       margin: 0;
       width: 40px;
       height: 40px;
-      font-size: 1.3rem;
+      min-width: 40px;
+      transition: all 0.15s ease-in-out;
+
+      ion-icon {
+        font-size: 1.35rem;
+        color: var(--text-medium);
+        display: block;
+      }
+
+      &:hover {
+        --color: var(--ion-color-primary, #00aeef);
+        ion-icon {
+          color: var(--ion-color-primary, #00aeef);
+        }
+      }
 
       .spinning {
         animation: spin 1s linear infinite;
@@ -782,10 +815,18 @@
       align-items: flex-start;
 
       .backBtn {
-        width: 34px;
-        height: 34px;
-        font-size: 1.2rem;
+        --padding-start: 0;
+        --padding-end: 0;
+        --padding-top: 0;
+        --padding-bottom: 0;
+        width: 36px;
+        height: 36px;
+        min-width: 36px;
         margin: 0;
+
+        ion-icon {
+          font-size: 1.35rem;
+        }
       }
 
       .panelTitle {
@@ -807,12 +848,20 @@
     .refreshBtn {
       grid-column: 2;
       grid-row: 1;
+      --padding-start: 0;
+      --padding-end: 0;
+      --padding-top: 0;
+      --padding-bottom: 0;
       width: 36px;
       height: 36px;
-      font-size: 1.2rem;
+      min-width: 36px;
       justify-self: end;
       align-self: start;
       margin: 0;
+
+      ion-icon {
+        font-size: 1.25rem;
+      }
     }
 
     .exportBtn {
@@ -843,6 +892,25 @@
 
     .metricFinancials {
       grid-column: 1 / -1;
+
+      .financialAmounts {
+        flex-direction: row;
+        align-items: baseline;
+        gap: 16px;
+        flex-wrap: wrap;
+
+        .amountItem {
+          gap: 4px;
+
+          .amountNumber {
+            font-size: 1.15rem;
+          }
+
+          .currencyLabel {
+            font-size: 0.72rem;
+          }
+        }
+      }
     }
 
     .metricCard {

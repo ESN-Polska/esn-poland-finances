@@ -51,6 +51,7 @@
           class="statusFilterSelect"
           [(ngModel)]="selectedStatus"
           (ionChange)="applyFilters()"
+          [selectedText]="selectedStatus === 'ALL' ? ('COMMON.ALL' | translate) + ' (' + allRequests.length + ')' : ('REQUESTS.STATUSES.' + selectedStatus | translate) + ' (' + countByStatus(selectedStatus) + ')'"
         >
           <ion-select-option value="ALL">
             {{ 'COMMON.ALL' | translate }} ({{ allRequests.length }})

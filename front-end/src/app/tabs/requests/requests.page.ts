@@ -125,7 +125,7 @@ export class RequestsPage implements OnInit {
     });
   }
 
-  public countByStatus(status: RequestStatus): number {
+  public countByStatus(status: RequestStatus | string): number {
     return this.allRequests.filter((r) => r.status === status).length;
   }
 

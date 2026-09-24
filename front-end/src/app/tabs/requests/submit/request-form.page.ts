@@ -1,6 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild, AfterViewInit, OnDestroy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { ToastController } from '@ionic/angular';
+import { NgForm } from '@angular/forms';
+import { Subscription } from 'rxjs';
+import { debounceTime } from 'rxjs/operators';
+import { ToastController, LoadingController, AlertController } from '@ionic/angular';
 import { TranslateService } from '@ngx-translate/core';
 import {
   AttachmentFile,
@@ -10,18 +13,24 @@ import {
 } from '@models/financial-request.model';
 import { AppService } from '../../../app.service';
 import { RequestsService } from '../../../services/requests.service';
+import { MediaService } from '../../../common/media.service';
 
 @Component({
   selector: 'app-request-form',
   templateUrl: './request-form.page.html',
   styleUrls: ['./request-form.page.scss']
 })
-export class RequestFormPage implements OnInit {
+export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy {
+  @ViewChild('requestForm') requestForm?: NgForm;
+  private formSub?: Subscription;
+  private readonly DRAFT_KEY = 'esn_finances_request_draft';
+
   public isEditMode = false;
   public isChangesRequested = false;
   public isSubmitting = false;
   public totalNetAmount = 0;
   public bankAccountType: 'DOMESTIC' | 'INTERNATIONAL' = 'DOMESTIC';
+  public eurBankAccountType: 'DOMESTIC' | 'INTERNATIONAL' = 'DOMESTIC';
   public hasAttemptedSubmit: boolean = false;
   public readonly MAX_FILE_SIZE_MB = 20;
   private readonly MAX_FILE_SIZE = this.MAX_FILE_SIZE_MB * 1024 * 1024;
@@ -33,14 +42,19 @@ export class RequestFormPage implements OnInit {
   public totalGrossEUR = 0;
   public totalVatEUR = 0;
   public totalNetEUR = 0;
+  public availableCurrencies = [
+    'AUD', 'BRL', 'CAD', 'CHF', 'CLP', 'CNY', 'CZK', 'DKK', 'GBP', 'HKD',
+    'HUF', 'IDR', 'ILS', 'INR', 'ISK', 'JPY', 'KRW', 'MXN', 'MYR', 'NOK',
+    'NZD', 'PHP', 'RON', 'SEK', 'SGD', 'THB', 'TRY', 'UAH', 'USD', 'XDR', 'ZAR'
+  ];
 
   public request: Partial<FinancialRequest> = {
     position: '',
     sourceOfFunding: '',
     requestType: 'INVOICE_TO_PAY',
     currency: 'PLN',
-    totalGrossAmount: 0,
-    totalVatAmount: 0,
+    totalGrossAmount: undefined,
+    totalVatAmount: undefined,
     documents: [],
     accountHolderName: '',
     accountHolderAddress: '',
@@ -54,9 +68,12 @@ export class RequestFormPage implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private toastCtrl: ToastController,
+    private loadingCtrl: LoadingController,
+    private alertCtrl: AlertController,
     private translate: TranslateService,
     public appService: AppService,
-    private requestsService: RequestsService
+    private requestsService: RequestsService,
+    private mediaService: MediaService
   ) {}
 
   public get allowedRequestTypes(): FinancialRequestType[] {
@@ -85,6 +102,7 @@ export class RequestFormPage implements OnInit {
   }
 
   public async ngOnInit(): Promise<void> {
+    this.loadCurrencies();
     const year = this.route.snapshot.paramMap.get('year');
     const id = this.route.snapshot.paramMap.get('id');
     let editId: string | null = null;
@@ -102,6 +120,40 @@ export class RequestFormPage implements OnInit {
       this.isEditMode = false;
       await this.initNewRequest();
     }
+  }
+
+  public ngAfterViewInit(): void {
+    setTimeout(() => {
+      if (this.requestForm) {
+        this.formSub = this.requestForm.valueChanges?.pipe(debounceTime(1000)).subscribe(() => {
+          this.saveDraftLocally();
+        });
+      }
+    }, 0);
+  }
+
+  public ngOnDestroy(): void {
+    if (this.formSub) {
+      this.formSub.unsubscribe();
+    }
+  }
+
+  public saveDraftLocally(): void {
+    if (this.isEditMode || this.hasAttemptedSubmit) return;
+    
+    const draft = {
+      ...this.request,
+      ticketAttachments: [] // Do not serialize files
+    };
+    
+    if (draft.documents) {
+      draft.documents = draft.documents.map(doc => {
+        const { attachment, ...rest } = doc;
+        return rest as any; // Do not serialize files
+      });
+    }
+
+    localStorage.setItem(this.DRAFT_KEY, JSON.stringify(draft));
   }
 
   private async loadExistingRequest(requestId: string): Promise<void> {
@@ -127,7 +179,10 @@ export class RequestFormPage implements OnInit {
     this.isChangesRequested = existing.status === 'CHANGES_REQUESTED';
     this.request = {
       ...existing,
-      documents: existing.documents ? [...existing.documents] : [],
+      documents: existing.documents ? existing.documents.map(doc => ({
+        ...doc,
+        currency: (doc.originalCurrency ? doc.originalCurrency : doc.currency) as any
+      })) : [],
       ticketAttachments: existing.ticketAttachments ? [...existing.ticketAttachments] : []
     };
 
@@ -141,6 +196,11 @@ export class RequestFormPage implements OnInit {
 
     this.bankAccountType =
       existing.swiftBic || (existing.iban && /^[A-Za-z]{2}/.test(existing.iban.trim()) && !existing.iban.trim().toUpperCase().startsWith('PL'))
+        ? 'INTERNATIONAL'
+        : 'DOMESTIC';
+
+    this.eurBankAccountType =
+      existing.swiftBicEUR || (existing.ibanEUR && /^[A-Za-z]{2}/.test(existing.ibanEUR.trim()) && !existing.ibanEUR.trim().toUpperCase().startsWith('PL'))
         ? 'INTERNATIONAL'
         : 'DOMESTIC';
 
@@ -162,26 +222,67 @@ export class RequestFormPage implements OnInit {
       ? 'INVOICE_REIMBURSEMENT'
       : (allowed[0] || 'INVOICE_REIMBURSEMENT');
 
+    const plnBank = defaultBank?.pln;
+    const eurBank = defaultBank?.eur;
+
+    const savedDraft = localStorage.getItem(this.DRAFT_KEY);
+    if (savedDraft) {
+      try {
+        const parsed = JSON.parse(savedDraft);
+        if (parsed && Object.keys(parsed).length > 0) {
+          this.request = parsed;
+          this.request.ticketAttachments = [];
+          if (this.request.documents) {
+             this.request.documents.forEach(d => delete d.attachment);
+          }
+          this.recalculateTotals();
+          
+          this.bankAccountType =
+            this.request.swiftBic || (this.request.iban && /^[A-Za-z]{2}/.test(this.request.iban.trim()) && !this.request.iban.trim().toUpperCase().startsWith('PL'))
+              ? 'INTERNATIONAL'
+              : 'DOMESTIC';
+          this.eurBankAccountType =
+            this.request.swiftBicEUR || (this.request.ibanEUR && /^[A-Za-z]{2}/.test(this.request.ibanEUR.trim()) && !this.request.ibanEUR.trim().toUpperCase().startsWith('PL'))
+              ? 'INTERNATIONAL'
+              : 'DOMESTIC';
+          return;
+        }
+      } catch (e) {
+        console.error('Failed to parse draft', e);
+      }
+    }
+
     this.request = {
       position: user?.isGuest ? (user.guestPosition || '') : '',
       sourceOfFunding: user?.isGuest ? (user.guestDefaultSourceOfFunding || '') : '',
       requestType: user?.isGuest ? defaultType : 'INVOICE_TO_PAY',
       currency: 'PLN',
-      totalGrossAmount: 0,
-      totalVatAmount: 0,
+      totalGrossAmount: undefined,
+      totalVatAmount: undefined,
       documents: [],
-      accountHolderName: defaultBank?.accountHolderName || user?.getDisplayName() || '',
-      accountHolderAddress: defaultBank?.accountHolderAddress || '',
-      iban: defaultBank?.iban || '',
-      swiftBic: defaultBank?.swiftBic || '',
+      accountHolderName: plnBank?.accountHolderName || user?.getDisplayName() || '',
+      accountHolderAddress: plnBank?.accountHolderAddress || '',
+      iban: plnBank?.iban || '',
+      swiftBic: plnBank?.swiftBic || '',
+      accountHolderNameEUR: eurBank?.accountHolderName || plnBank?.accountHolderName || user?.getDisplayName() || '',
+      accountHolderAddressEUR: eurBank?.accountHolderAddress || plnBank?.accountHolderAddress || '',
+      ibanEUR: eurBank?.iban || '',
+      swiftBicEUR: eurBank?.swiftBic || '',
       additionalRemarks: '',
       ticketAttachments: []
     };
 
     this.bankAccountType =
-      defaultBank?.swiftBic || (defaultBank?.iban && /^[A-Za-z]{2}/.test(defaultBank.iban.trim()) && !defaultBank.iban.trim().toUpperCase().startsWith('PL'))
+      plnBank?.accountType ||
+      (plnBank?.swiftBic || (plnBank?.iban && /^[A-Za-z]{2}/.test(plnBank.iban.trim()) && !plnBank.iban.trim().toUpperCase().startsWith('PL'))
         ? 'INTERNATIONAL'
-        : 'DOMESTIC';
+        : 'DOMESTIC');
+
+    this.eurBankAccountType =
+      eurBank?.accountType ||
+      (eurBank?.swiftBic || (eurBank?.iban && /^[A-Za-z]{2}/.test(eurBank.iban.trim()) && !eurBank.iban.trim().toUpperCase().startsWith('PL'))
+        ? 'INTERNATIONAL'
+        : 'DOMESTIC');
 
     if (this.request.requestType === 'INVOICE_TO_PAY' || this.request.requestType === 'INVOICE_REIMBURSEMENT') {
       this.addDocumentItem();
@@ -201,12 +302,28 @@ export class RequestFormPage implements OnInit {
   }
 
   public selectType(type: FinancialRequestType): void {
+    const previousType = this.request.requestType;
     this.request.requestType = type;
-    if (
-      (type === 'INVOICE_TO_PAY' || type === 'INVOICE_REIMBURSEMENT') &&
-      (!this.request.documents || this.request.documents.length === 0)
+
+    if (type === 'DELEGATION_SETTLEMENT') {
+      this.request.currency = 'PLN';
+    } else if (
+      (type === 'INVOICE_TO_PAY' || type === 'INVOICE_REIMBURSEMENT')
     ) {
-      this.addDocumentItem();
+      if (!this.request.documents || this.request.documents.length === 0) {
+        this.addDocumentItem();
+      } else if (previousType === 'ADVANCE_PAYMENT' && this.request.currency) {
+        this.request.documents.forEach(d => {
+          d.currency = this.request.currency;
+          if (this.request.currency === 'PLN' || this.request.currency === 'EUR') {
+            d.originalCurrency = undefined;
+            d.originalAmount = undefined;
+            d.originalVatAmount = undefined;
+            d.exchangeRate = undefined;
+            d.exchangeDate = undefined;
+          }
+        });
+      }
     }
     this.recalculateTotals();
   }
@@ -228,8 +345,8 @@ export class RequestFormPage implements OnInit {
       paidOn: '',
       bankAccountDetails: '',
       currency: defaultCurrency,
-      grossAmount: 0,
-      vatAmount: 0,
+      grossAmount: undefined as any,
+      vatAmount: undefined as any,
       explanation: ''
     };
 
@@ -250,7 +367,7 @@ export class RequestFormPage implements OnInit {
       this.request.requestType === 'INVOICE_REIMBURSEMENT'
     ) {
       if (this.request.documents && this.request.documents.length > 0) {
-        const plnDocs = this.request.documents.filter((d) => (d.currency || 'PLN').toUpperCase() === 'PLN');
+        const plnDocs = this.request.documents.filter((d) => (d.currency || 'PLN').toUpperCase() === 'PLN' || ((d.currency || 'PLN').toUpperCase() !== 'EUR' && d.exchangeRate));
         const eurDocs = this.request.documents.filter((d) => (d.currency || '').toUpperCase() === 'EUR');
 
         const plnTotals = this.requestsService.calculateTotals(plnDocs);
@@ -299,8 +416,13 @@ export class RequestFormPage implements OnInit {
       this.isMixedCurrency = false;
       this.request.totalGrossAmount = Number(this.request.requestedAmountPLN) || 0;
       this.request.totalVatAmount = 0;
-      this.request.currency = 'PLN';
+      this.request.currency = this.request.currency || 'PLN';
       this.totalNetAmount = this.request.totalGrossAmount;
+    } else if (this.request.requestType === 'DELEGATION_SETTLEMENT') {
+      this.isMixedCurrency = false;
+      this.request.currency = 'PLN';
+      this.request.totalVatAmount = 0;
+      this.totalNetAmount = Number(this.request.totalGrossAmount) || 0;
     } else {
       this.isMixedCurrency = false;
       const gross = Number(this.request.totalGrossAmount) || 0;
@@ -310,12 +432,137 @@ export class RequestFormPage implements OnInit {
   }
 
   public getDocNet(doc: InvoiceDocumentItem): number {
+    if (doc.originalCurrency) {
+      const gross = Number(doc.originalAmount) || 0;
+      const vat = Number(doc.originalVatAmount) || 0;
+      return Math.max(0, Math.round((gross - vat) * 100) / 100);
+    }
     const gross = Number(doc.grossAmount) || 0;
     const vat = Number(doc.vatAmount) || 0;
     return Math.max(0, Math.round((gross - vat) * 100) / 100);
   }
 
-  public onCurrencyChange(newCurr?: any): void {
+  public getDocNetPLN(doc: InvoiceDocumentItem): number {
+    const gross = Number(doc.grossAmount) || 0;
+    const vat = Number(doc.vatAmount) || 0;
+    return Math.max(0, Math.round((gross - vat) * 100) / 100);
+  }
+
+  public onCurrencyChange(doc?: InvoiceDocumentItem): void {
+    if (doc) {
+      if (doc.currency !== 'PLN' && doc.currency !== 'EUR' && (doc.currency as string) !== (doc.originalCurrency as string)) {
+        if (!doc.originalCurrency && doc.grossAmount !== undefined) {
+          // Switching from PLN/EUR to Foreign: transfer the typed amount
+          doc.originalAmount = doc.grossAmount;
+          doc.originalVatAmount = doc.vatAmount;
+        }
+        doc.originalCurrency = doc.currency;
+        this.onForeignCurrencyAmountOrDateChange(doc);
+      } else if (doc.currency === 'PLN' || doc.currency === 'EUR') {
+        if (doc.originalCurrency && doc.originalAmount !== undefined) {
+          // Switching from Foreign to PLN/EUR: transfer the typed amount
+          doc.grossAmount = doc.originalAmount;
+          doc.vatAmount = doc.originalVatAmount !== undefined ? doc.originalVatAmount : 0;
+        }
+        doc.originalCurrency = undefined;
+        doc.originalAmount = undefined;
+        doc.originalVatAmount = undefined;
+        doc.exchangeRate = undefined;
+        doc.exchangeDate = undefined;
+      }
+    } else {
+      // Global/Advance Payment currency changed: sync with existing document(s)
+      if (this.request.currency && this.request.documents && this.request.documents.length > 0) {
+        this.request.documents.forEach(d => {
+          d.currency = this.request.currency;
+          if (this.request.currency === 'PLN' || this.request.currency === 'EUR') {
+            d.originalCurrency = undefined;
+            d.originalAmount = undefined;
+            d.originalVatAmount = undefined;
+            d.exchangeRate = undefined;
+            d.exchangeDate = undefined;
+          }
+        });
+      }
+    }
+    this.recalculateTotals();
+  }
+
+  public onForeignAmountChange(doc: InvoiceDocumentItem): void {
+    if (doc.exchangeRate) {
+      if (doc.originalAmount !== undefined && doc.originalAmount !== null) {
+        doc.grossAmount = Math.round((Number(doc.originalAmount) * doc.exchangeRate) * 100) / 100;
+      } else {
+        doc.grossAmount = undefined as any;
+      }
+      
+      if (doc.originalVatAmount !== undefined && doc.originalVatAmount !== null) {
+        doc.vatAmount = Math.round((Number(doc.originalVatAmount) * doc.exchangeRate) * 100) / 100;
+      } else {
+        doc.vatAmount = 0;
+      }
+    }
+    this.recalculateTotals();
+  }
+
+  public onForeignDateChange(doc: InvoiceDocumentItem): void {
+    if (doc.originalCurrency && doc.originalCurrency !== 'PLN' && doc.originalCurrency !== 'EUR') {
+      this.onForeignCurrencyAmountOrDateChange(doc);
+    }
+  }
+
+  public async loadCurrencies(): Promise<void> {
+    // Currencies are hardcoded in availableCurrencies array for reliability
+    // They represent the standard NBP Table A currencies (excluding PLN and EUR which are handled separately)
+  }
+
+  public async onForeignCurrencyAmountOrDateChange(doc: InvoiceDocumentItem): Promise<void> {
+    if (this.request.requestType !== 'INVOICE_REIMBURSEMENT') return;
+    const currencyToUse = doc.originalCurrency || doc.currency;
+    if (!currencyToUse || currencyToUse === 'PLN' || currencyToUse === 'EUR') return;
+
+    doc.originalCurrency = currencyToUse;
+
+    const baseDate = doc.hasDifferentSaleDate ? doc.saleDate : doc.issuedOn;
+    if (!baseDate || doc.originalAmount === undefined || doc.originalAmount === null) return;
+
+    let dateObj = new Date(baseDate);
+    dateObj.setDate(dateObj.getDate() - 1);
+    while (dateObj.getDay() === 0 || dateObj.getDay() === 6) {
+      dateObj.setDate(dateObj.getDate() - 1);
+    }
+
+    let foundRate = false;
+    let attempts = 0;
+    while (!foundRate && attempts < 10) {
+      const dateStr = dateObj.toISOString().split('T')[0];
+      try {
+        const response = await fetch(`https://api.nbp.pl/api/exchangerates/rates/A/${doc.originalCurrency}/${dateStr}?format=JSON`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data && data.rates && data.rates[0]) {
+            doc.exchangeRate = data.rates[0].mid;
+            doc.exchangeDate = dateStr;
+            doc.grossAmount = Math.round((Number(doc.originalAmount) * doc.exchangeRate) * 100) / 100;
+            if (doc.originalVatAmount !== undefined && doc.originalVatAmount !== null) {
+              doc.vatAmount = Math.round((Number(doc.originalVatAmount) * doc.exchangeRate) * 100) / 100;
+            } else {
+              doc.vatAmount = 0; // Default VAT to 0 if not provided yet, recalculateTotals will use it
+            }
+            foundRate = true;
+          }
+        }
+      } catch (err) {
+        // ignore
+      }
+      if (!foundRate) {
+        dateObj.setDate(dateObj.getDate() - 1);
+        while (dateObj.getDay() === 0 || dateObj.getDay() === 6) {
+          dateObj.setDate(dateObj.getDate() - 1);
+        }
+        attempts++;
+      }
+    }
     this.recalculateTotals();
   }
 
@@ -341,24 +588,8 @@ export class RequestFormPage implements OnInit {
 
   public formatInternationalIban(value: string): string {
     if (!value) return '';
-    const cleaned = value.toUpperCase().replace(/[^A-Z0-9]/g, '');
-    let letters = '';
-    let digits = '';
-    for (let i = 0; i < cleaned.length; i++) {
-      const char = cleaned[i];
-      if (letters.length < 2) {
-        if (/[A-Z]/.test(char)) {
-          letters += char;
-        }
-      } else {
-        if (/[0-9]/.test(char)) {
-          digits += char;
-        }
-      }
-    }
-    digits = digits.slice(0, 32);
-    const combined = letters + digits;
-    return combined.match(/.{1,4}/g)?.join(' ') || combined;
+    const cleaned = value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 34);
+    return cleaned.match(/.{1,4}/g)?.join(' ') || cleaned;
   }
 
   public formatSwift(value: string): string {
@@ -374,6 +605,16 @@ export class RequestFormPage implements OnInit {
     return this.formatInternationalIban(value);
   }
 
+  public setEurBankAccountType(type: 'DOMESTIC' | 'INTERNATIONAL'): void {
+    this.eurBankAccountType = type;
+    if (type === 'DOMESTIC') {
+      this.request.swiftBicEUR = '';
+    }
+    if (this.request.ibanEUR) {
+      this.request.ibanEUR = this.formatIban(this.request.ibanEUR, type);
+    }
+  }
+
   public onPayoutIbanInput(event: any): void {
     const raw = event.target?.value || '';
     const formatted = this.bankAccountType === 'DOMESTIC'
@@ -385,6 +626,19 @@ export class RequestFormPage implements OnInit {
   public onPayoutSwiftInput(event: any): void {
     const raw = event.target?.value || '';
     this.request.swiftBic = this.formatSwift(raw);
+  }
+
+  public onEurPayoutIbanInput(event: any): void {
+    const raw = event.target?.value || '';
+    const formatted = this.eurBankAccountType === 'DOMESTIC'
+      ? this.formatDomesticAccount(raw)
+      : this.formatInternationalIban(raw);
+    this.request.ibanEUR = formatted;
+  }
+
+  public onEurPayoutSwiftInput(event: any): void {
+    const raw = event.target?.value || '';
+    this.request.swiftBicEUR = this.formatSwift(raw);
   }
 
   public onSellerIbanInput(event: any, doc: InvoiceDocumentItem): void {
@@ -403,7 +657,7 @@ export class RequestFormPage implements OnInit {
 
   public isValidInternationalIban(val: string | undefined): boolean {
     const clean = (val || '').replace(/\s+/g, '').toUpperCase();
-    return /^[A-Z]{2}[0-9]{13,32}$/.test(clean);
+    return /^[A-Z]{2}[A-Z0-9]{13,32}$/.test(clean);
   }
 
   public isValidSwift(val: string | undefined): boolean {
@@ -435,6 +689,24 @@ export class RequestFormPage implements OnInit {
         return this.request.requestType !== 'INVOICE_TO_PAY' &&
           this.bankAccountType === 'INTERNATIONAL' &&
           !this.isValidSwift(this.request.swiftBic);
+      case 'accountHolderNameEUR':
+        return this.request.requestType !== 'INVOICE_TO_PAY' &&
+          this.isMixedCurrency &&
+          !this.request.accountHolderNameEUR?.trim();
+      case 'accountHolderAddressEUR':
+        return this.request.requestType !== 'INVOICE_TO_PAY' &&
+          this.isMixedCurrency &&
+          !this.request.accountHolderAddressEUR?.trim();
+      case 'ibanEUR':
+        if (this.request.requestType === 'INVOICE_TO_PAY' || !this.isMixedCurrency) return false;
+        return this.eurBankAccountType === 'DOMESTIC'
+          ? !this.isValidDomesticAccount(this.request.ibanEUR)
+          : !this.isValidInternationalIban(this.request.ibanEUR);
+      case 'swiftBicEUR':
+        return this.request.requestType !== 'INVOICE_TO_PAY' &&
+          this.isMixedCurrency &&
+          this.eurBankAccountType === 'INTERNATIONAL' &&
+          !this.isValidSwift(this.request.swiftBicEUR);
       case 'requestedAmountPLN':
         return this.request.requestType === 'ADVANCE_PAYMENT' &&
           (!this.request.requestedAmountPLN || Number(this.request.requestedAmountPLN) <= 0);
@@ -469,8 +741,14 @@ export class RequestFormPage implements OnInit {
       case 'bankAccountDetails':
         return this.request.requestType === 'INVOICE_TO_PAY' && !this.isValidSellerBank(doc.bankAccountDetails);
       case 'grossAmount':
+        if (doc.originalCurrency) {
+          return doc.originalAmount === undefined || doc.originalAmount === null || Number(doc.originalAmount) <= 0;
+        }
         return doc.grossAmount === undefined || doc.grossAmount === null || Number(doc.grossAmount) <= 0;
       case 'vatAmount':
+        if (doc.originalCurrency) {
+          return doc.originalVatAmount === undefined || doc.originalVatAmount === null || Number(doc.originalVatAmount) < 0 || Number(doc.originalVatAmount) > Number(doc.originalAmount);
+        }
         return doc.vatAmount === undefined || doc.vatAmount === null || Number(doc.vatAmount) < 0 || Number(doc.vatAmount) > Number(doc.grossAmount);
       case 'attachment':
         return !doc.attachment;
@@ -482,16 +760,16 @@ export class RequestFormPage implements OnInit {
   public onAdvanceAmountChange(): void {
     this.request.totalGrossAmount = Number(this.request.requestedAmountPLN) || 0;
     this.request.totalVatAmount = 0;
-    this.request.currency = 'PLN';
+    this.request.currency = this.request.currency || 'PLN';
     this.totalNetAmount = this.request.totalGrossAmount;
   }
 
   /* File upload handling */
-  public onFileSelected(
+  public async onFileSelected(
     event: any,
     targetDoc: InvoiceDocumentItem,
     field: 'attachment' | 'proofOfPaymentAttachment'
-  ): void {
+  ): Promise<void> {
     const file = event.target?.files?.[0];
     if (!file) return;
 
@@ -501,14 +779,25 @@ export class RequestFormPage implements OnInit {
       return;
     }
 
-    targetDoc[field] = {
-      fileId: 'file_' + Date.now(),
-      fileName: file.name,
-      fileSize: file.size,
-      contentType: file.type,
-      s3Key: `requests/${Date.now()}_${file.name}`,
-      uploadedAt: new Date().toISOString()
-    };
+    const loading = await this.loadingCtrl.create({ message: this.translate.instant('COMMON.LOADING') || 'Uploading...' });
+    await loading.present();
+
+    try {
+      const res = await this.mediaService.uploadDocument(file);
+      targetDoc[field] = {
+        fileId: res.id,
+        fileName: file.name,
+        fileSize: file.size,
+        contentType: file.type,
+        s3Key: res.s3Key,
+        uploadedAt: new Date().toISOString()
+      };
+    } catch (e) {
+      console.error(e);
+      this.showToast('REQUESTS.VALIDATION.UPLOAD_FAILED', 'danger');
+    } finally {
+      loading.dismiss();
+    }
   }
 
   public removeAttachment(
@@ -518,7 +807,7 @@ export class RequestFormPage implements OnInit {
     targetDoc[field] = undefined;
   }
 
-  public onSingleFileSelected(event: any, field: 'delegationFormAttachment'): void {
+  public async onSingleFileSelected(event: any, field: 'delegationFormAttachment'): Promise<void> {
     const file = event.target?.files?.[0];
     if (!file) return;
 
@@ -528,36 +817,59 @@ export class RequestFormPage implements OnInit {
       return;
     }
 
-    this.request[field] = {
-      fileId: 'file_' + Date.now(),
-      fileName: file.name,
-      fileSize: file.size,
-      contentType: file.type,
-      s3Key: `requests/${Date.now()}_${file.name}`,
-      uploadedAt: new Date().toISOString()
-    };
+    const loading = await this.loadingCtrl.create({ message: this.translate.instant('COMMON.LOADING') || 'Uploading...' });
+    await loading.present();
+
+    try {
+      const res = await this.mediaService.uploadDocument(file);
+      this.request[field] = {
+        fileId: res.id,
+        fileName: file.name,
+        fileSize: file.size,
+        contentType: file.type,
+        s3Key: res.s3Key,
+        uploadedAt: new Date().toISOString()
+      };
+    } catch (e) {
+      console.error(e);
+      this.showToast('REQUESTS.VALIDATION.UPLOAD_FAILED', 'danger');
+    } finally {
+      loading.dismiss();
+    }
   }
 
-  public onMultipleFilesSelected(event: any, field: 'ticketAttachments'): void {
+  public async onMultipleFilesSelected(event: any, field: 'ticketAttachments'): Promise<void> {
     const files: FileList = event.target?.files;
     if (!files || files.length === 0) return;
 
     if (!this.request[field]) this.request[field] = [];
 
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      if (file.size > this.MAX_FILE_SIZE) {
-        this.showToast('REQUESTS.VALIDATION.FILE_TOO_LARGE', 'warning', { max: `${this.MAX_FILE_SIZE_MB}MB` });
-        continue;
+    const loading = await this.loadingCtrl.create({ message: this.translate.instant('COMMON.LOADING') || 'Uploading...' });
+    await loading.present();
+
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        if (file.size > this.MAX_FILE_SIZE) {
+          this.showToast('REQUESTS.VALIDATION.FILE_TOO_LARGE', 'warning', { max: `${this.MAX_FILE_SIZE_MB}MB` });
+          continue;
+        }
+        
+        const res = await this.mediaService.uploadDocument(file);
+        this.request[field]!.push({
+          fileId: res.id,
+          fileName: file.name,
+          fileSize: file.size,
+          contentType: file.type,
+          s3Key: res.s3Key,
+          uploadedAt: new Date().toISOString()
+        });
       }
-      this.request[field]!.push({
-        fileId: 'file_' + Date.now() + '_' + i,
-        fileName: file.name,
-        fileSize: file.size,
-        contentType: file.type,
-        s3Key: `requests/tickets/${Date.now()}_${file.name}`,
-        uploadedAt: new Date().toISOString()
-      });
+    } catch (e) {
+      console.error(e);
+      this.showToast('REQUESTS.VALIDATION.UPLOAD_FAILED', 'danger');
+    } finally {
+      loading.dismiss();
     }
   }
 
@@ -587,7 +899,25 @@ export class RequestFormPage implements OnInit {
     this.isSubmitting = true;
     try {
       this.recalculateTotals();
-      const saved = await this.requestsService.saveRequest(this.request, targetStatus);
+      
+      const requestToSave: Partial<FinancialRequest> = {
+        ...this.request,
+        documents: this.request.documents?.map(doc => {
+          if (doc.currency !== 'PLN' && doc.currency !== 'EUR' && doc.originalCurrency && doc.exchangeRate) {
+            return {
+              ...doc,
+              currency: 'PLN' as any
+            };
+          }
+          return doc;
+        })
+      };
+
+      const saved = await this.requestsService.saveRequest(requestToSave, targetStatus);
+
+      if (!this.isEditMode) {
+        localStorage.removeItem(this.DRAFT_KEY);
+      }
 
       const msgKey =
         targetStatus === 'DRAFT'
@@ -633,6 +963,18 @@ export class RequestFormPage implements OnInit {
         if (!this.isValidInternationalIban(this.request.iban)) return false;
         if (!this.isValidSwift(this.request.swiftBic)) return false;
       }
+
+      if (this.isMixedCurrency) {
+        if (!this.request.accountHolderNameEUR?.trim()) return false;
+        if (!this.request.accountHolderAddressEUR?.trim()) return false;
+        if (!this.request.ibanEUR?.trim()) return false;
+        if (this.eurBankAccountType === 'DOMESTIC') {
+          if (!this.isValidDomesticAccount(this.request.ibanEUR)) return false;
+        } else {
+          if (!this.isValidInternationalIban(this.request.ibanEUR)) return false;
+          if (!this.isValidSwift(this.request.swiftBicEUR)) return false;
+        }
+      }
     }
 
     if (
@@ -660,11 +1002,20 @@ export class RequestFormPage implements OnInit {
           if (!doc.paidOn) return false;
         }
 
-        if (doc.grossAmount === undefined || doc.grossAmount === null || Number(doc.grossAmount) <= 0) {
-          return false;
-        }
-        if (doc.vatAmount === undefined || doc.vatAmount === null || Number(doc.vatAmount) < 0 || Number(doc.vatAmount) > Number(doc.grossAmount)) {
-          return false;
+        if (doc.originalCurrency) {
+          if (doc.originalAmount === undefined || doc.originalAmount === null || Number(doc.originalAmount) <= 0) {
+            return false;
+          }
+          if (doc.originalVatAmount === undefined || doc.originalVatAmount === null || Number(doc.originalVatAmount) < 0 || Number(doc.originalVatAmount) > Number(doc.originalAmount)) {
+            return false;
+          }
+        } else {
+          if (doc.grossAmount === undefined || doc.grossAmount === null || Number(doc.grossAmount) <= 0) {
+            return false;
+          }
+          if (doc.vatAmount === undefined || doc.vatAmount === null || Number(doc.vatAmount) < 0 || Number(doc.vatAmount) > Number(doc.grossAmount)) {
+            return false;
+          }
         }
         if (!doc.attachment) return false;
       }
@@ -698,6 +1049,26 @@ export class RequestFormPage implements OnInit {
     return this.appService.currentLanguage === 'pl'
       ? (inst.pl || inst.en || '')
       : (inst.en || inst.pl || '');
+  }
+
+  public async resetForm(): Promise<void> {
+    const confirm = await this.alertCtrl.create({
+      header: this.translate.instant('COMMON.RESET'),
+      message: this.translate.instant('REQUESTS.CONFIRM_RESET'),
+      buttons: [
+        { text: this.translate.instant('COMMON.CANCEL'), role: 'cancel' },
+        { 
+          text: this.translate.instant('COMMON.CONFIRM'), 
+          handler: () => {
+            localStorage.removeItem(this.DRAFT_KEY);
+            if (!this.isEditMode) {
+              this.initNewRequest();
+            }
+          } 
+        }
+      ]
+    });
+    await confirm.present();
   }
 
   public goBack(): void {

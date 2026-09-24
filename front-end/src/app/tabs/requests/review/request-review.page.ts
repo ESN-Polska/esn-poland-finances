@@ -200,6 +200,18 @@ export class RequestReviewPage implements OnInit {
     this.showToast('REQUESTS.MANAGE_PANEL.EXPORT_SUCCESS', 'success');
   }
 
+  public openAttachment(attachment: any): void {
+    if (!attachment) return;
+    if (attachment.url) {
+      window.open(attachment.url, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    if (attachment.s3Key) {
+      const url = `https://media.finances.esn-poland.link/${attachment.s3Key.replace(/^\/+/, '')}`;
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
+  }
+
   public async copyToClipboard(text?: string, fieldName = ''): Promise<void> {
     if (!text) return;
     try {
@@ -208,7 +220,7 @@ export class RequestReviewPage implements OnInit {
       setTimeout(() => {
         if (this.copiedField === fieldName) this.copiedField = null;
       }, 2000);
-      this.showToast('REQUESTS.REVIEW_PANEL.COPY_SUCCESS', 'medium');
+      this.showToast('COMMON.COPY_SUCCESS', 'medium');
     } catch {
       // Fallback
     }
