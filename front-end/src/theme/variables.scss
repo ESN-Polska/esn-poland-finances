@@ -153,6 +153,33 @@ $text-white: #ffffff;
   --text-dark: #{$text-dark};
   --text-medium: #{$text-medium};
   --text-light: #{$text-light};
+
+  // Centralized Notice & Banner Tokens
+  --notice-info-bg: rgba(0, 174, 239, 0.08);
+  --notice-info-border: rgba(0, 174, 239, 0.25);
+  --notice-info-text: #0077a8;
+  --notice-info-icon: #00aeef;
+
+  --notice-warning-bg: #fff7ed;
+  --notice-warning-border: #fed7aa;
+  --notice-warning-accent: #ea580c;
+  --notice-warning-text: #9a3412;
+  --notice-warning-icon: #ea580c;
+
+  --notice-danger-bg: #fff5f5;
+  --notice-danger-border: #fed7d7;
+  --notice-danger-accent: #dc2626;
+  --notice-danger-text: #991b1b;
+  --notice-danger-icon: #dc2626;
+
+  --notice-success-bg: #f0fdf4;
+  --notice-success-border: #bbf7d0;
+  --notice-success-accent: #16a34a;
+  --notice-success-text: #166534;
+  --notice-success-icon: #16a34a;
+
+  --notice-quote-bg: #ffffff;
+  --notice-quote-text: #1e293b;
 }
 
 .ion-color-ideaToolbar {
@@ -264,6 +291,33 @@ body.dark {
   --ion-color-step-850: #dbdbdb;
   --ion-color-step-900: #e7e7e7;
   --ion-color-step-950: #f3f3f3;
+
+  // Dark Notice & Banner Tokens
+  --notice-info-bg: rgba(0, 174, 239, 0.15);
+  --notice-info-border: rgba(0, 174, 239, 0.35);
+  --notice-info-text: #38bdf8;
+  --notice-info-icon: #38bdf8;
+
+  --notice-warning-bg: rgba(234, 88, 12, 0.15);
+  --notice-warning-border: rgba(234, 88, 12, 0.35);
+  --notice-warning-accent: #ea580c;
+  --notice-warning-text: #fdba74;
+  --notice-warning-icon: #fb923c;
+
+  --notice-danger-bg: rgba(220, 38, 38, 0.15);
+  --notice-danger-border: rgba(220, 38, 38, 0.35);
+  --notice-danger-accent: #dc2626;
+  --notice-danger-text: #fca5a5;
+  --notice-danger-icon: #f87171;
+
+  --notice-success-bg: rgba(22, 163, 74, 0.15);
+  --notice-success-border: rgba(22, 163, 74, 0.35);
+  --notice-success-accent: #22c55e;
+  --notice-success-text: #86efac;
+  --notice-success-icon: #4ade80;
+
+  --notice-quote-bg: rgba(0, 0, 0, 0.35);
+  --notice-quote-text: #f8fafc;
 }
 
 /*

@@ -62,9 +62,12 @@ export class RequestViewPage implements OnInit {
   }
 
   public get isAuditorOnly(): boolean {
+    return !!this.appService.currentUser?.isAuditorOnly;
+  }
+
+  public get isOwner(): boolean {
     const user = this.appService.currentUser;
-    if (!user) return false;
-    return user.isAuditor && !user.isAdministrator && !user.isManager && !user.hasPermission(AppPermission.REQUESTS.MANAGE);
+    return !!user && !!this.request && (this.request.userId || '').toLowerCase() === (user.userId || '').toLowerCase();
   }
 
   constructor(
@@ -151,7 +154,15 @@ export class RequestViewPage implements OnInit {
   }
 
   public canEdit(): boolean {
-    return !!this.request && (this.request.status === 'DRAFT' || this.request.status === 'CHANGES_REQUESTED');
+    const user = this.appService.currentUser;
+    if (!user || !this.request) return false;
+    return this.request.isEditableBy(user);
+  }
+
+  public canDeleteDraft(): boolean {
+    const user = this.appService.currentUser;
+    if (!user || !this.request) return false;
+    return this.request.status === 'DRAFT' && (this.isOwner || !!user.isAdministrator);
   }
 
   public editRequest(): void {
@@ -165,7 +176,7 @@ export class RequestViewPage implements OnInit {
   }
 
   public async confirmDeleteDraft(): Promise<void> {
-    if (!this.request || this.request.status !== 'DRAFT') return;
+    if (!this.request || !this.canDeleteDraft()) return;
 
     const alert = await this.alertCtrl.create({
       header: this.translate.instant('REQUESTS.DELETE_CONFIRM_HEADER') || 'Delete Draft',

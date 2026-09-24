@@ -1,8 +1,10 @@
 import { Component, OnInit } from '@angular/core';
 import { ActionSheetController, ModalController, ToastController } from '@ionic/angular';
 import { TranslateService } from '@ngx-translate/core';
+import { EmailTemplateTypes } from '@models/configurations.model';
 import { User } from '@models/user.model';
 import { AppService } from '../../app.service';
+import { UsersService } from '../../common/users.service';
 
 @Component({
   selector: 'app-profile-tab',
@@ -36,8 +38,56 @@ export class ProfilePage implements OnInit {
   public isSaving = false;
   public hasAttemptedSubmit = false;
 
+  public disabledEmailNotifications: string[] = [];
+  public isSavingNotifications = false;
+
+  public readonly notificationTypes: Array<{
+    type: EmailTemplateTypes;
+    titleKey: string;
+    descKey: string;
+    icon: string;
+    colorClass: string;
+  }> = [
+    {
+      type: EmailTemplateTypes.REQUEST_SUBMITTED,
+      titleKey: 'CONFIGURATIONS.EMAIL_TEMPLATES_TYPES.REQUEST_SUBMITTED',
+      descKey: 'CONFIGURATIONS.EMAIL_TEMPLATES_TYPES.REQUEST_SUBMITTED_I',
+      icon: 'send-outline',
+      colorClass: 'icon-primary'
+    },
+    {
+      type: EmailTemplateTypes.REQUEST_CHANGES_REQUESTED,
+      titleKey: 'CONFIGURATIONS.EMAIL_TEMPLATES_TYPES.REQUEST_CHANGES_REQUESTED',
+      descKey: 'CONFIGURATIONS.EMAIL_TEMPLATES_TYPES.REQUEST_CHANGES_REQUESTED_I',
+      icon: 'alert-circle-outline',
+      colorClass: 'icon-warning'
+    },
+    {
+      type: EmailTemplateTypes.REQUEST_APPROVED,
+      titleKey: 'CONFIGURATIONS.EMAIL_TEMPLATES_TYPES.REQUEST_APPROVED',
+      descKey: 'CONFIGURATIONS.EMAIL_TEMPLATES_TYPES.REQUEST_APPROVED_I',
+      icon: 'checkmark-circle-outline',
+      colorClass: 'icon-success'
+    },
+    {
+      type: EmailTemplateTypes.REQUEST_PAID,
+      titleKey: 'CONFIGURATIONS.EMAIL_TEMPLATES_TYPES.REQUEST_PAID',
+      descKey: 'CONFIGURATIONS.EMAIL_TEMPLATES_TYPES.REQUEST_PAID_I',
+      icon: 'cash-outline',
+      colorClass: 'icon-purple'
+    },
+    {
+      type: EmailTemplateTypes.REQUEST_REJECTED,
+      titleKey: 'CONFIGURATIONS.EMAIL_TEMPLATES_TYPES.REQUEST_REJECTED',
+      descKey: 'CONFIGURATIONS.EMAIL_TEMPLATES_TYPES.REQUEST_REJECTED_I',
+      icon: 'close-circle-outline',
+      colorClass: 'icon-danger'
+    }
+  ];
+
   constructor(
     public app: AppService,
+    private usersService: UsersService,
     private actionSheetCtrl: ActionSheetController,
     private toastCtrl: ToastController,
     private modalCtrl: ModalController,
@@ -131,12 +181,85 @@ export class ProfilePage implements OnInit {
       }
     }
     if (this.user) {
+      if (this.user.disabledEmailNotifications) {
+        this.disabledEmailNotifications = [...this.user.disabledEmailNotifications];
+      }
+      if (this.user.userId) {
+        this.usersService.getById(this.user.userId).then(freshUser => {
+          if (freshUser && freshUser.disabledEmailNotifications) {
+            this.disabledEmailNotifications = [...freshUser.disabledEmailNotifications];
+            if (this.user) {
+              this.user.disabledEmailNotifications = this.disabledEmailNotifications;
+            }
+          }
+        }).catch(() => {});
+      }
+
       if (!saved?.pln && !this.plnBankDetails.accountHolderName) {
         this.plnBankDetails.accountHolderName = this.user.getDisplayName();
       }
       if (!saved?.eur && !this.eurBankDetails.accountHolderName) {
         this.eurBankDetails.accountHolderName = this.user.getDisplayName();
       }
+    }
+  }
+
+  public isNotificationEnabled(type: EmailTemplateTypes): boolean {
+    return !this.disabledEmailNotifications.includes(type);
+  }
+
+  public async onNotificationToggle(type: EmailTemplateTypes, enabled: boolean): Promise<void> {
+    const currentlyDisabled = [...this.disabledEmailNotifications];
+    let nextDisabled: string[];
+    if (enabled) {
+      nextDisabled = currentlyDisabled.filter(t => t !== type);
+    } else {
+      if (!currentlyDisabled.includes(type)) {
+        nextDisabled = [...currentlyDisabled, type];
+      } else {
+        nextDisabled = currentlyDisabled;
+      }
+    }
+
+    if (JSON.stringify(nextDisabled.slice().sort()) === JSON.stringify(currentlyDisabled.slice().sort())) {
+      return;
+    }
+
+    await this.persistNotificationPreferences(nextDisabled);
+  }
+
+  public async setAllNotifications(enabled: boolean): Promise<void> {
+    if (this.isSavingNotifications) return;
+    const allTypes = this.notificationTypes.map(n => n.type);
+    const nextDisabled = enabled ? [] : allTypes;
+
+    if (JSON.stringify(nextDisabled.slice().sort()) === JSON.stringify(this.disabledEmailNotifications.slice().sort())) {
+      return;
+    }
+
+    await this.persistNotificationPreferences(nextDisabled);
+  }
+
+  private async persistNotificationPreferences(nextDisabled: string[]): Promise<void> {
+    const userId = this.user?.userId;
+    if (!userId) return;
+
+    const previousDisabled = [...this.disabledEmailNotifications];
+    this.disabledEmailNotifications = nextDisabled;
+    this.isSavingNotifications = true;
+
+    try {
+      await this.usersService.updateNotificationPreferences(userId, nextDisabled);
+      if (this.user) {
+        this.user.disabledEmailNotifications = nextDisabled;
+      }
+      await this.showToast('PROFILE.NOTIFICATIONS_SAVED', 'success');
+    } catch (err) {
+      console.error('Failed to update email notification preferences', err);
+      this.disabledEmailNotifications = previousDisabled;
+      await this.showToast('PROFILE.NOTIFICATIONS_SAVE_FAILED', 'danger');
+    } finally {
+      this.isSavingNotifications = false;
     }
   }
 

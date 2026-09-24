@@ -135,11 +135,11 @@
           </span>
         </div>
 
-        <!-- Admin remarks banner if changes requested -->
+        <!-- Reviewer remarks banner if changes requested -->
         <div class="changesBanner" *ngIf="req.status === 'CHANGES_REQUESTED' && req.adminRemarks">
           <ion-icon name="alert-circle-outline"></ion-icon>
           <div class="bannerText">
-            <strong>{{ 'REQUESTS.CHANGES_REQUESTED_NOTE' | translate }}: </strong>
+            <strong>{{ 'REQUESTS.REVIEWER_REMARKS' | translate }}: </strong>
             <span>{{ req.adminRemarks }}</span>
           </div>
         </div>

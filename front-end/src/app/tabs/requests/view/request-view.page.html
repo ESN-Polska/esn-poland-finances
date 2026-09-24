@@ -29,7 +29,7 @@
         </button>
 
         <button
-          *ngIf="request.status === 'DRAFT'"
+          *ngIf="canDeleteDraft()"
           class="btn-danger-outline"
           (click)="confirmDeleteDraft()"
         >
@@ -52,7 +52,7 @@
     <div class="auditor-banner" *ngIf="isAuditorOnly">
       <ion-icon name="shield-outline"></ion-icon>
       <div class="auditor-text">
-        <strong>{{ 'REQUESTS.MANAGE_PANEL.AUDITOR_BADGE' | translate }}:</strong>
+        <strong>{{ 'REQUESTS.MANAGE_PANEL.AUDITOR_BADGE' | translate }}: </strong>
         <span>{{ 'REQUESTS.MANAGE_PANEL.AUDITOR_NOTICE' | translate }}</span>
       </div>
     </div>
@@ -69,7 +69,7 @@
           {{ 'REQUESTS.CHANGES_REQUESTED_DESC' | translate }}
         </p>
         <div class="remarks-quote" *ngIf="request.adminRemarks">
-          <strong>{{ 'REQUESTS.ADMIN_REMARKS' | translate }}:</strong>
+          <strong>{{ 'REQUESTS.REVIEWER_REMARKS' | translate }}:</strong>
           <p>{{ request.adminRemarks }}</p>
         </div>
         <button class="btn-warning mt-3" (click)="editRequest()">
@@ -268,7 +268,7 @@
                       {{ 'REQUESTS.FIELDS.CALCULATED_AS' | translate }} {{ doc.grossAmount | number:'1.2-2' }} PLN
                     </div>
                   </div>
-                  
+
                   <!-- VAT -->
                   <div class="info-cell">
                     <span class="cell-lbl">{{ 'REQUESTS.FIELDS.VAT_AMOUNT' | translate }}</span>
@@ -279,7 +279,7 @@
                       {{ 'REQUESTS.FIELDS.CALCULATED_AS' | translate }} {{ doc.vatAmount | number:'1.2-2' }} PLN
                     </div>
                   </div>
-                  
+
                   <!-- NET -->
                   <div class="info-cell">
                     <span class="cell-lbl">{{ 'REQUESTS.FIELDS.NET_AMOUNT' | translate }}</span>
@@ -291,7 +291,7 @@
                     </div>
                   </div>
                 </div>
-                
+
                 <!-- Removed bulky Exchange Rate cell -->
                 <div class="info-cell full-width" *ngIf="doc.bankAccountDetails">
                   <span class="cell-lbl">{{ 'REQUESTS.DOC_BANK_ACCOUNT' | translate }}</span>

@@ -84,9 +84,7 @@ export class ManageRequestsPage implements OnInit {
   }
 
   public get isAuditorOnly(): boolean {
-    const user = this.appService.currentUser;
-    if (!user) return false;
-    return user.isAuditor && !user.isAdministrator && !user.isManager && !user.hasPermission(AppPermission.REQUESTS.MANAGE);
+    return !!this.appService.currentUser?.isAuditorOnly;
   }
 
   // Summary Metrics scoped to active filter criteria

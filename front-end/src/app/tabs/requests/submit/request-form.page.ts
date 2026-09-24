@@ -168,8 +168,9 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy {
       return;
     }
 
-    // Strict Permission check: Only DRAFT and CHANGES_REQUESTED can be edited!
-    if (!existing.canEdit()) {
+    // Strict Permission check: Only DRAFT and CHANGES_REQUESTED can be edited by the owner!
+    const currentUser = this.appService.currentUser;
+    if (!currentUser || !existing.isEditableBy(currentUser)) {
       await this.showToast('REQUESTS.LOCKED_READONLY_NOTICE', 'warning');
       const [seq, year] = requestId.split('/');
       if (year && seq) {
