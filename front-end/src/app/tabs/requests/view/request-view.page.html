@@ -350,7 +350,7 @@
           <div class="info-grid">
             <div class="info-cell">
               <span class="cell-lbl">{{ 'REQUESTS.DELEGATION_TOTAL_SETTLEMENT' | translate }}</span>
-              <span class="cell-val font-semibold">{{ request.totalGrossAmount | number:'1.2-2' }} PLN</span>
+              <span class="cell-val font-semibold">{{ (request.delegationTotalAmount ?? request.totalGrossAmount) | number:'1.2-2' }} PLN</span>
             </div>
             <div class="info-cell full-width" *ngIf="request.delegationFormAttachment">
               <span class="cell-lbl">{{ 'REQUESTS.DELEGATION_SIGNED_FORM' | translate }}</span>

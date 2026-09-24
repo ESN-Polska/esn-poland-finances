@@ -676,14 +676,41 @@
 
         <!-- Filled Delegation Template -->
         <div class="formGroup">
-          <label class="inputLabel">{{ 'REQUESTS.FIELDS.DELEGATION_TEMPLATE_FILE' | translate }} *</label>
+          <div class="cardHeaderRow" *ngIf="appService.configurations?.delegationSettlementSheetURL || appService.configurations?.delegationInstructionsURL">
+            <label class="inputLabel">{{ 'REQUESTS.FIELDS.DELEGATION_TEMPLATE_FILE' | translate }} *</label>
+            <div class="headerActionsRow">
+              <a
+                *ngIf="appService.configurations?.delegationSettlementSheetURL"
+                [href]="appService.configurations?.delegationSettlementSheetURL"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="inlineAddBtn downloadTemplateLink"
+              >
+                <ion-icon name="cloud-download-outline"></ion-icon>
+                {{ 'REQUESTS.DOWNLOAD_DELEGATION_TEMPLATE' | translate }}
+              </a>
+              <a
+                *ngIf="appService.configurations?.delegationInstructionsURL"
+                [href]="appService.configurations?.delegationInstructionsURL"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="inlineAddBtn downloadTemplateLink instructionsLink"
+              >
+                <ion-icon name="help-circle-outline"></ion-icon>
+                {{ 'REQUESTS.DELEGATION_INSTRUCTIONS' | translate }}
+              </a>
+            </div>
+          </div>
+          <label class="inputLabel" *ngIf="!appService.configurations?.delegationSettlementSheetURL && !appService.configurations?.delegationInstructionsURL">
+            {{ 'REQUESTS.FIELDS.DELEGATION_TEMPLATE_FILE' | translate }} *
+          </label>
           <div class="fileUploadBox" [class.is-invalid]="isFieldInvalid('delegationFormAttachment')">
             <input
               type="file"
               class="hiddenFileInput"
               #delegationFileInput
               (change)="onSingleFileSelected($event, 'delegationFormAttachment')"
-              accept=".pdf,.doc,.docx"
+              accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
             />
             <div *ngIf="!request.delegationFormAttachment" class="uploadPlaceholder" (click)="delegationFileInput.click()">
               <ion-icon name="cloud-upload-outline"></ion-icon>
@@ -739,18 +766,23 @@
 
         <!-- Total Delegation Amount -->
         <div class="formGroup mt-4">
-          <label class="inputLabel">{{ 'REQUESTS.FIELDS.TOTAL_DELEGATION_AMOUNT' | translate }} (PLN) *</label>
-          <input
-            type="number"
-            step="0.01"
-            min="0"
-            class="formInput font-bold"
-            [class.is-invalid]="isFieldInvalid('delegationTotalAmount')"
-            [(ngModel)]="request.totalGrossAmount"
-            name="delegationTotalAmount"
-            required
-            placeholder="0.00"
-          />
+          <label class="inputLabel">{{ 'REQUESTS.FIELDS.TOTAL_DELEGATION_AMOUNT' | translate }} *</label>
+          <div class="currencyInputWrapper">
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              class="formInput font-bold"
+              [class.is-invalid]="isFieldInvalid('delegationTotalAmount')"
+              [(ngModel)]="request.delegationTotalAmount"
+              name="delegationTotalAmount"
+              (input)="onDelegationAmountChange()"
+              (change)="onDelegationAmountChange()"
+              required
+              placeholder="0.00"
+            />
+            <span class="currencySuffix">PLN</span>
+          </div>
           <span class="errorText" *ngIf="isFieldInvalid('delegationTotalAmount')">
             {{ 'REQUESTS.VALIDATION.DELEGATION_AMOUNT_REQUIRED' | translate }}
           </span>
