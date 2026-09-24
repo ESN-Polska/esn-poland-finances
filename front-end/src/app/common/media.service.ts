@@ -23,7 +23,7 @@ export class MediaService {
   /**
    * Upload a new document file and get its public CDN URL.
    */
-  async uploadDocument(file: File): Promise<{ id: string; url: string }> {
+  async uploadDocument(file: File): Promise<{ id: string; url: string; s3Key: string }> {
     const extension = file.name.split('.').pop()?.toLowerCase() || 'pdf';
     const res = await this.api.postResource('media', {
       body: { type: 'document', extension, filename: file.name }
@@ -35,6 +35,6 @@ export class MediaService {
     });
     // Brief pause to allow S3 object visibility
     await new Promise(resolve => setTimeout(resolve, 1500));
-    return { id: res.id, url: res.cdnUrl || res.url };
+    return { id: res.id, url: res.cdnUrl || res.url, s3Key: res.key };
   }
 }

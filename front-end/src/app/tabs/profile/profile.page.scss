@@ -239,6 +239,75 @@
     flex-direction: column;
     gap: 16px;
 
+    .currencySegmentContainer {
+      width: 100%;
+      margin-bottom: 4px;
+
+      .currencySegmentBar {
+        display: flex;
+        width: 100%;
+        background: var(--bg-body, rgba(0, 0, 0, 0.04));
+        border: 1px solid var(--border-color, rgba(0, 0, 0, 0.08));
+        border-radius: 12px;
+        padding: 4px;
+        gap: 6px;
+        box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.03);
+
+        .currencyTabBtn {
+          flex: 1;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          padding: 10px 16px;
+          border: none;
+          background: transparent;
+          border-radius: 8px;
+          font-size: 0.92rem;
+          font-weight: 600;
+          color: var(--text-medium);
+          cursor: pointer;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+          outline: none !important;
+
+          ion-icon {
+            font-size: 1.2rem;
+            transition: transform 0.2s ease, color 0.2s ease;
+          }
+
+          &:hover {
+            color: var(--text-dark);
+            background: rgba(0, 0, 0, 0.03);
+          }
+
+          &.active {
+            background: var(--bg-card, #ffffff);
+            color: var(--ion-color-primary, var(--esn-cyan));
+            font-weight: 700;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+
+            ion-icon {
+              transform: scale(1.1);
+              color: var(--ion-color-primary, var(--esn-cyan));
+            }
+          }
+        }
+      }
+    }
+
+    .currencyTabContent {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .formGroup + .formGroup,
+    .bankTypeToggleRow + .formGroup,
+    .formGroup + .formGrid,
+    .bankTypeToggleRow + .formGrid {
+      margin-top: 16px;
+    }
+
     .bankTypeToggleRow {
       display: flex;
       flex-direction: column;
@@ -301,6 +370,10 @@
       display: grid;
       grid-template-columns: 2fr 1fr;
       gap: 16px;
+
+      .formGroup {
+        margin-top: 0;
+      }
 
       @media (max-width: 600px) {
         grid-template-columns: 1fr;
@@ -446,6 +519,31 @@
       border: none !important;
       outline: none !important;
       box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+    }
+
+    .currencySegmentBar {
+      background: rgba(255, 255, 255, 0.05) !important;
+      border-color: rgba(255, 255, 255, 0.08) !important;
+
+      .currencyTabBtn {
+        color: rgba(255, 255, 255, 0.6);
+
+        &:hover {
+          background: rgba(255, 255, 255, 0.05);
+          color: #ffffff;
+        }
+
+        &.active {
+          background: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.18) !important;
+          color: var(--ion-color-primary, #38bdf8) !important;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+          border: 1px solid rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.3);
+
+          ion-icon {
+            color: var(--ion-color-primary, #38bdf8) !important;
+          }
+        }
+      }
     }
 
     .bankTypeToggleRow {
