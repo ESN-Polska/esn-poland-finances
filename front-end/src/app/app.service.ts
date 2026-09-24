@@ -429,20 +429,40 @@ export class AppService {
   }
 
   public async getDefaultBankDetails(): Promise<{
-    accountHolderName?: string;
-    accountHolderAddress?: string;
-    iban?: string;
-    swiftBic?: string;
+    pln?: {
+      accountHolderName?: string;
+      accountHolderAddress?: string;
+      iban?: string;
+      swiftBic?: string;
+      accountType?: 'DOMESTIC' | 'INTERNATIONAL';
+    };
+    eur?: {
+      accountHolderName?: string;
+      accountHolderAddress?: string;
+      iban?: string;
+      swiftBic?: string;
+      accountType?: 'DOMESTIC' | 'INTERNATIONAL';
+    };
   } | null> {
     if (!this._storage) await this.init();
     return (await this._storage?.get(DEFAULT_BANK_KEY)) || null;
   }
 
   public async saveDefaultBankDetails(details: {
-    accountHolderName?: string;
-    accountHolderAddress?: string;
-    iban?: string;
-    swiftBic?: string;
+    pln?: {
+      accountHolderName?: string;
+      accountHolderAddress?: string;
+      iban?: string;
+      swiftBic?: string;
+      accountType?: 'DOMESTIC' | 'INTERNATIONAL';
+    };
+    eur?: {
+      accountHolderName?: string;
+      accountHolderAddress?: string;
+      iban?: string;
+      swiftBic?: string;
+      accountType?: 'DOMESTIC' | 'INTERNATIONAL';
+    };
   }): Promise<void> {
     if (!this._storage) await this.init();
     await this._storage?.set(DEFAULT_BANK_KEY, details);

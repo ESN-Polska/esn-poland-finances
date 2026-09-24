@@ -90,6 +90,7 @@ class RequestsHandler extends ResourceController {
         throw new HandledError('Access denied');
       }
 
+      await this.signRequestAttachments(request);
       return request;
     }
 
@@ -455,6 +456,29 @@ class RequestsHandler extends ResourceController {
           return EmailTemplates.REQUEST_REJECTED_PL;
         default:
           return null;
+      }
+    }
+  }
+
+  private async signRequestAttachments(request: FinancialRequest): Promise<void> {
+    if (request.documents) {
+      for (const doc of request.documents) {
+        if (doc.attachment?.s3Key) {
+          doc.attachment.url = (await s3.signedURLGet(S3_BUCKET_MEDIA, doc.attachment.s3Key)).url;
+        }
+        if (doc.proofOfPaymentAttachment?.s3Key) {
+          doc.proofOfPaymentAttachment.url = (await s3.signedURLGet(S3_BUCKET_MEDIA, doc.proofOfPaymentAttachment.s3Key)).url;
+        }
+      }
+    }
+    if (request.delegationFormAttachment?.s3Key) {
+      request.delegationFormAttachment.url = (await s3.signedURLGet(S3_BUCKET_MEDIA, request.delegationFormAttachment.s3Key)).url;
+    }
+    if (request.ticketAttachments) {
+      for (const ticket of request.ticketAttachments) {
+        if (ticket.s3Key) {
+          ticket.url = (await s3.signedURLGet(S3_BUCKET_MEDIA, ticket.s3Key)).url;
+        }
       }
     }
   }

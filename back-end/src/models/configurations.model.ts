@@ -75,8 +75,8 @@ export const AppPermission = {
   REQUESTS: {
     PARENT: 'requests',
     VIEW_ALL: 'requests.view_all',
-    MANAGE: 'requests.manage',
-    EXPORT: 'requests.export'
+    EXPORT: 'requests.export',
+    MANAGE: 'requests.manage'
   },
   CONFIGURATIONS: {
     PARENT: 'configurations',

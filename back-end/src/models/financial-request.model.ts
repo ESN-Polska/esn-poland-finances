@@ -44,6 +44,14 @@ export interface InvoiceDocumentItem {
   explanation?: string;
   attachment?: AttachmentFile;
   proofOfPaymentAttachment?: AttachmentFile;
+  
+  hasDifferentSaleDate?: boolean;
+  saleDate?: string;
+  originalCurrency?: string;
+  originalAmount?: number;
+  originalVatAmount?: number;
+  exchangeRate?: number;
+  exchangeDate?: string;
 }
 
 export interface StatusHistoryEntry {
@@ -96,11 +104,17 @@ export class FinancialRequest extends Resource {
 
   generalExplanation?: string;
 
-  // Payout Bank Details
+  // Payout Bank Details (PLN / Primary)
   accountHolderName: string;
   accountHolderAddress: string;
   iban: string;
   swiftBic?: string;
+
+  // Payout Bank Details (EUR - used for mixed currency or EUR payout)
+  accountHolderNameEUR?: string;
+  accountHolderAddressEUR?: string;
+  ibanEUR?: string;
+  swiftBicEUR?: string;
 
   additionalRemarks?: string;
   adminRemarks?: string;
@@ -155,6 +169,9 @@ export class FinancialRequest extends Resource {
         this.requestedAmountPLN = this.totalGrossAmount;
       }
       this.totalVatAmount = 0;
+      this.currency = (this.clean(x.currency, String) as Currency) || 'PLN';
+    } else if (this.requestType === 'DELEGATION_SETTLEMENT') {
+      this.totalVatAmount = 0;
       this.currency = 'PLN';
     }
 
@@ -168,6 +185,11 @@ export class FinancialRequest extends Resource {
     this.accountHolderAddress = this.clean(x.accountHolderAddress, String);
     this.iban = this.clean(x.iban, String);
     this.swiftBic = this.clean(x.swiftBic, String);
+
+    this.accountHolderNameEUR = this.clean(x.accountHolderNameEUR, String);
+    this.accountHolderAddressEUR = this.clean(x.accountHolderAddressEUR, String);
+    this.ibanEUR = this.clean(x.ibanEUR, String);
+    this.swiftBicEUR = this.clean(x.swiftBicEUR, String);
 
     this.additionalRemarks = this.clean(x.additionalRemarks, String);
     this.adminRemarks = this.clean(x.adminRemarks, String);
@@ -228,10 +250,10 @@ export class FinancialRequest extends Resource {
 
   getGrossAmountPLN(): number {
     if (this.requestType === 'ADVANCE_PAYMENT') {
-      return Number(this.requestedAmountPLN ?? this.totalGrossAmount) || 0;
+      return (this.currency || 'PLN').toUpperCase() === 'PLN' ? (Number(this.requestedAmountPLN ?? this.totalGrossAmount) || 0) : 0;
     }
     if (this.requestType === 'DELEGATION_SETTLEMENT') {
-      return (this.currency || 'PLN').toUpperCase() === 'PLN' ? Number(this.totalGrossAmount) || 0 : 0;
+      return Number(this.totalGrossAmount) || 0;
     }
     if (this.documents && this.documents.length > 0) {
       const sum = this.documents
@@ -244,10 +266,10 @@ export class FinancialRequest extends Resource {
 
   getGrossAmountEUR(): number {
     if (this.requestType === 'ADVANCE_PAYMENT') {
-      return 0;
+      return (this.currency || '').toUpperCase() === 'EUR' ? (Number(this.requestedAmountPLN ?? this.totalGrossAmount) || 0) : 0;
     }
     if (this.requestType === 'DELEGATION_SETTLEMENT') {
-      return (this.currency || '').toUpperCase() === 'EUR' ? Number(this.totalGrossAmount) || 0 : 0;
+      return 0;
     }
     if (this.documents && this.documents.length > 0) {
       const sum = this.documents

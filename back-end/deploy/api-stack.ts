@@ -168,8 +168,8 @@ export class ApiStack extends cdk.Stack {
       // Grant permissions to S3 media bucket
       fn.addToRolePolicy(
         new IAM.PolicyStatement({
-          actions: ['s3:GetObject', 's3:PutObject', 's3:DeleteObject'],
-          resources: [`${props.mediaBucketArn}/*`]
+          actions: ['s3:GetObject', 's3:PutObject', 's3:DeleteObject', 's3:ListBucket'],
+          resources: [`${props.mediaBucketArn}/*`, props.mediaBucketArn]
         })
       );
 
