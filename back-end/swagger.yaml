@@ -393,6 +393,22 @@ paths:
                   items:
                     type: string
                   example: ["REQUEST_SUBMITTED", "REQUEST_APPROVED"]
+                sectionCode:
+                  type: string
+                  description: Chosen primary section code (must be from user's available sections)
+                  example: "PL-WAR-SGH"
+                section:
+                  type: string
+                  description: Chosen primary section name
+                  example: "ESN SGH Warsaw"
+                country:
+                  type: string
+                  description: Chosen primary country name (must be from user's available countries)
+                  example: "Poland"
+                primarySectionChosen:
+                  type: boolean
+                  description: Flag indicating if the user has explicitly chosen/confirmed their primary section
+                  example: true
       responses:
         200:
           $ref: '#/components/responses/User'
@@ -677,6 +693,26 @@ components:
         country:
           type: string
           example: Poland
+        availableSections:
+          type: array
+          items:
+            type: object
+            properties:
+              code:
+                type: string
+              name:
+                type: string
+          example: [{"code": "PL-WAR-SGH", "name": "ESN SGH Warsaw"}]
+        availableCountries:
+          type: array
+          items:
+            type: object
+            properties:
+              code:
+                type: string
+              name:
+                type: string
+          example: [{"code": "PL", "name": "Poland"}]
         avatarURL:
           type: string
           example: https://accounts.esn.org/sites/default/files/pictures/picture-default.png
@@ -697,6 +733,9 @@ components:
           type: boolean
           example: false
         canManageFinances:
+          type: boolean
+          example: true
+        primarySectionChosen:
           type: boolean
           example: true
         permissions:

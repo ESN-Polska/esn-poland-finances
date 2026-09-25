@@ -13,6 +13,11 @@ export interface RoleAssignmentSource {
   matchedExtendedRole: string;
 }
 
+export interface UserMembershipGroup {
+  code: string;
+  name: string;
+}
+
 export class User extends Resource {
   /** Username in ESN Accounts (lowercase) */
   userId: string;
@@ -28,6 +33,10 @@ export class User extends Resource {
   section: string;
   /** Country */
   country: string;
+  /** Available sections from ESN Accounts OAuth */
+  availableSections: UserMembershipGroup[];
+  /** Available countries from ESN Accounts OAuth */
+  availableCountries: UserMembershipGroup[];
   /** Avatar URL from ESN Accounts */
   avatarURL: string;
   /** ESN Accounts roles */
@@ -68,6 +77,8 @@ export class User extends Resource {
   guestInstructions?: LocalizedText;
   /** Types of automatic email notifications disabled by user */
   disabledEmailNotifications?: string[];
+  /** Whether the user has explicitly selected/confirmed their primary section */
+  primarySectionChosen?: boolean;
 
   constructor(data?: any) {
     super();
@@ -222,6 +233,22 @@ export class User extends Resource {
     this.sectionCode = this.clean(x.sectionCode, String);
     this.section = this.clean(x.section, String);
     this.country = this.clean(x.country, String);
+    this.availableSections = Array.isArray(x.availableSections)
+      ? x.availableSections
+          .map((s: any) => ({
+            code: this.clean(s?.code, String),
+            name: this.clean(s?.name || s?.label, String)
+          }))
+          .filter((s: any) => s.code || s.name)
+      : [];
+    this.availableCountries = Array.isArray(x.availableCountries)
+      ? x.availableCountries
+          .map((c: any) => ({
+            code: this.clean(c?.code, String),
+            name: this.clean(c?.name || c?.label, String)
+          }))
+          .filter((c: any) => c.code || c.name)
+      : [];
     this.avatarURL = this.clean(x.avatarURL, String);
     this.roles = this.cleanArray(x.roles, String);
     this.extendedRoles = this.cleanArray(x.extendedRoles, String);
@@ -250,6 +277,12 @@ export class User extends Resource {
       };
     }
     this.disabledEmailNotifications = this.cleanArray(x.disabledEmailNotifications, String);
+    const hasMultipleSections = (this.availableSections?.length || 0) > 1;
+    this.primarySectionChosen = this.clean(
+      x.primarySectionChosen !== undefined ? x.primarySectionChosen : !hasMultipleSections,
+      Boolean,
+      !hasMultipleSections
+    );
   }
 
   isEmailNotificationEnabled(templateType: string): boolean {

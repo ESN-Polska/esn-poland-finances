@@ -2,8 +2,9 @@ import { default as Axios } from 'axios';
 import { sign } from 'jsonwebtoken';
 import { DynamoDB, HandledError, ResourceController, SystemsManager } from 'idea-aws';
 
-import { User } from '../models/user.model';
+import { User, UserMembershipGroup } from '../models/user.model';
 import { Configurations } from '../models/configurations.model';
+import { findCountryMatch, resolveCountriesForSections } from '../services/esnCountries';
 
 const OAUTH_TOKEN_URL = 'https://accounts.esn.org/oauth/token';
 const OAUTH_USERINFO_URL = 'https://accounts.esn.org/oauth/v1/userinfo';
@@ -185,22 +186,84 @@ class Login extends ResourceController {
     const firstName = userInfo.given_name || '';
     const lastName = userInfo.family_name || '';
 
+    let existingUserRecord: any = null;
+    if (DDB_TABLES.users) {
+      try {
+        existingUserRecord = await ddb.get({ TableName: DDB_TABLES.users, Key: { userId } });
+      } catch {}
+    }
+
     const detailedGroups: any[] = Array.isArray(userInfo.detailed_groups)
       ? userInfo.detailed_groups
       : typeof userInfo.detailed_groups === 'object' && userInfo.detailed_groups !== null
       ? Object.values(userInfo.detailed_groups)
       : [];
 
-    const sectionGroup = detailedGroups.find(
-      (g: any) => String(g?.type || '').toLowerCase() === 'section'
-    );
-    const countryGroup = detailedGroups.find(
-      (g: any) => String(g?.type || '').toLowerCase() === 'country'
+    const availableSections: UserMembershipGroup[] = detailedGroups
+      .filter((g: any) => String(g?.type || '').toLowerCase() === 'section')
+      .map((g: any) => ({
+        code: String(g?.scope || '').trim(),
+        name: String(g?.label || g?.name || g?.scope || '').trim()
+      }))
+      .filter(s => s.code || s.name);
+
+    const uniqueSections = availableSections.filter(
+      (s, idx, self) => self.findIndex(o => (o.code && o.code === s.code) || (o.name && o.name === s.name)) === idx
     );
 
-    const sectionCode = sectionGroup?.scope || '';
-    const section = sectionGroup?.label || '';
-    const country = countryGroup?.label || '';
+    const availableCountries: UserMembershipGroup[] = detailedGroups
+      .filter((g: any) => String(g?.type || '').toLowerCase() === 'country')
+      .map((g: any) => ({
+        code: String(g?.scope || '').trim(),
+        name: String(g?.label || g?.name || g?.scope || '').trim()
+      }))
+      .filter(c => c.code || c.name);
+
+    let uniqueCountries = availableCountries.filter(
+      (c, idx, self) => self.findIndex(o => (o.code && o.code === c.code) || (o.name && o.name === c.name)) === idx
+    );
+
+    // If OAuth response has no matching country for a section (e.g. user only has section membership),
+    // treat https://accounts.esn.org/api/v2/countries as countries library to resolve section countries.
+    uniqueCountries = await resolveCountriesForSections(uniqueSections, uniqueCountries);
+
+    // If user has a previously chosen section preference in DB that is still valid, retain it; otherwise default to first
+    let primarySection = uniqueSections[0];
+    let isChosenSectionStillValid = false;
+    if (existingUserRecord?.sectionCode || existingUserRecord?.section) {
+      const match = uniqueSections.find(
+        s => (existingUserRecord.sectionCode && s.code === existingUserRecord.sectionCode) ||
+             (existingUserRecord.section && s.name === existingUserRecord.section)
+      );
+      if (match) {
+        primarySection = match;
+        isChosenSectionStillValid = true;
+      }
+    }
+
+    // If user has a previously chosen country preference in DB that is still valid, retain it; otherwise default to first
+    let primaryCountry = uniqueCountries[0];
+    if (existingUserRecord?.country) {
+      const match = uniqueCountries.find(
+        c => c.name === existingUserRecord.country || c.code === existingUserRecord.country
+      );
+      if (match) {
+        primaryCountry = match;
+      }
+    }
+
+    // Align primaryCountry with primarySection's prefix if available
+    const sectionPrefix = primarySection?.code ? primarySection.code.split('-')[0]?.toUpperCase().trim() : '';
+    if (sectionPrefix && uniqueCountries.length > 0) {
+      const match = findCountryMatch(sectionPrefix, uniqueCountries);
+      if (match) {
+        primaryCountry = match;
+      }
+    }
+
+    const sectionCode = primarySection?.code || existingUserRecord?.sectionCode || '';
+    const section = primarySection?.name || existingUserRecord?.section || '';
+    const country = primaryCountry?.name || existingUserRecord?.country || '';
     const avatarURL = userInfo.picture || '';
 
     this.logger.info('Extracted user attributes from OAuth profile', {
@@ -208,7 +271,9 @@ class Login extends ResourceController {
       email,
       sectionCode,
       section,
-      country
+      country,
+      availableSectionsCount: uniqueSections.length,
+      availableCountriesCount: uniqueCountries.length
     });
 
     let extractedRoles: string[] = [];
@@ -223,13 +288,6 @@ class Login extends ResourceController {
     extractedRoles = extractedRoles.map(r => (typeof r === 'string' ? r.trim() : '')).filter(Boolean);
     extractedRoles = extractedRoles.filter((item, idx) => extractedRoles.indexOf(item) === idx);
 
-    let existingUserRecord: any = null;
-    if (DDB_TABLES.users) {
-      try {
-        existingUserRecord = await ddb.get({ TableName: DDB_TABLES.users, Key: { userId } });
-      } catch {}
-    }
-
     const user = new User({
       userId,
       email,
@@ -240,10 +298,15 @@ class Login extends ResourceController {
       extendedRoles: extractedRoles,
       section,
       country,
+      availableSections: uniqueSections,
+      availableCountries: uniqueCountries,
       avatarURL,
       lastLoginAt: new Date().toISOString(),
       isAdministrator: false,
-      disabledEmailNotifications: existingUserRecord?.disabledEmailNotifications || []
+      disabledEmailNotifications: existingUserRecord?.disabledEmailNotifications || [],
+      primarySectionChosen: isChosenSectionStillValid
+        ? (existingUserRecord?.primarySectionChosen ?? (uniqueSections.length <= 1))
+        : (uniqueSections.length <= 1)
     });
     User.applyConfigurationPermissions(user, configurations);
     this.logger.info('ESN Accounts OAuth login successful', { userId: user.userId, section: user.sectionCode });
@@ -293,13 +356,16 @@ class Login extends ResourceController {
             section: user.section,
             sectionCode: user.sectionCode,
             country: user.country,
+            availableSections: user.availableSections || [],
+            availableCountries: user.availableCountries || [],
             avatarURL: user.avatarURL,
             roles: user.roles,
             extendedRoles: user.extendedRoles,
             isAdministrator: user.isAdministrator,
             canManageFinances: user.canManageFinances,
             lastLoginAt: user.lastLoginAt,
-            disabledEmailNotifications: user.disabledEmailNotifications || []
+            disabledEmailNotifications: user.disabledEmailNotifications || [],
+            primarySectionChosen: user.primarySectionChosen
           }
         });
       } catch (dbErr) {
