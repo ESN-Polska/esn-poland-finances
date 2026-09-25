@@ -198,14 +198,23 @@
 
   .profileGrid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 16px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px 24px;
     margin-bottom: 0;
+
+    @media (max-width: 480px) {
+      grid-template-columns: 1fr;
+    }
 
     .infoField {
       display: flex;
       flex-direction: column;
       gap: 4px;
+      min-width: 0;
+
+      &.fullWidth {
+        grid-column: 1 / -1;
+      }
 
       .fieldLabel {
         font-size: 0.8rem;
@@ -216,6 +225,15 @@
       .fieldValue {
         font-size: 0.95rem;
         color: var(--text-dark);
+        word-break: break-word;
+      }
+
+      .rolesChipsContainer {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-items: center;
+        margin-top: 4px;
       }
     }
   }

@@ -157,6 +157,7 @@
     "NOTIFICATIONS_SAVE_FAILED": "Nie udało się zapisać preferencji powiadomień.",
     "ENABLE_ALL": "Włącz wszystkie",
     "DISABLE_ALL": "Wyłącz wszystkie",
+    "ROLES": "Role w aplikacji",
     "ABOUT": "O aplikacji",
     "CREDITS_AND_LICENSE": "Zasługi i licencja"
   },
