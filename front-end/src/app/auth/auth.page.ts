@@ -93,9 +93,17 @@ export class AuthPage implements OnInit {
   public async ngOnInit(): Promise<void> {
     await this.appService.init();
 
-    // Check for error parameters (e.g. redirected from backend when app is locked)
+    // Check for error parameters (e.g. redirected from backend when app is locked or user is suspended)
     const queryError = this.route.snapshot.queryParamMap.get('error');
-    if (queryError === 'app_locked') {
+    if (queryError === 'user_suspended') {
+      const toast = await this.toastCtrl.create({
+        message: this.translate.instant('AUTH.USER_SUSPENDED_ERROR'),
+        duration: 7000,
+        color: 'danger',
+        position: 'bottom'
+      });
+      await toast.present();
+    } else if (queryError === 'app_locked') {
       const toast = await this.toastCtrl.create({
         message: this.translate.instant('AUTH.APP_LOCKED_NON_ADMIN_ERROR'),
         duration: 5000,
@@ -107,7 +115,7 @@ export class AuthPage implements OnInit {
 
     // Check for OAuth error returned by ESN Accounts
     const oauthError = this.route.snapshot.queryParamMap.get('error');
-    if (oauthError && oauthError !== 'app_locked') {
+    if (oauthError && oauthError !== 'app_locked' && oauthError !== 'user_suspended') {
       const toast = await this.toastCtrl.create({
         message: this.translate.instant('AUTH.LOGIN_FAILED'),
         duration: 5000,
@@ -178,16 +186,25 @@ export class AuthPage implements OnInit {
           (typeof err?.error === 'string' ? err.error : '') ||
           err?.message ||
           '';
+        const isSuspendedErr = String(rawErr).toLowerCase().includes('suspended');
         const isLockedErr =
-          err?.status === 403 ||
-          String(rawErr).toLowerCase().includes('locked');
+          !isSuspendedErr &&
+          (err?.status === 403 || String(rawErr).toLowerCase().includes('locked'));
+
+        let errorMsgKey = 'AUTH.LOGIN_FAILED';
+        let errorColor = 'danger';
+        if (isSuspendedErr) {
+          errorMsgKey = 'AUTH.USER_SUSPENDED_ERROR';
+          errorColor = 'danger';
+        } else if (isLockedErr) {
+          errorMsgKey = 'AUTH.APP_LOCKED_NON_ADMIN_ERROR';
+          errorColor = 'warning';
+        }
 
         const toast = await this.toastCtrl.create({
-          message: this.translate.instant(
-            isLockedErr ? 'AUTH.APP_LOCKED_NON_ADMIN_ERROR' : 'AUTH.LOGIN_FAILED'
-          ),
-          duration: 5000,
-          color: isLockedErr ? 'warning' : 'danger',
+          message: this.translate.instant(errorMsgKey),
+          duration: isSuspendedErr ? 7000 : 5000,
+          color: errorColor,
           position: 'bottom'
         });
         await toast.present();

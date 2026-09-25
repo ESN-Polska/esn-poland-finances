@@ -184,14 +184,27 @@
         gap: 6px;
 
         .sourceTag {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
           font-family: monospace;
           font-size: 0.78rem;
           font-weight: 500;
-          background: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.1);
-          color: var(--ion-color-primary, var(--esn-cyan));
+          background: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.08);
+          color: var(--text-dark);
           padding: 3px 8px;
           border-radius: 6px;
           border: 1px solid rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.2);
+
+          .patternText {
+            color: var(--ion-color-primary, var(--esn-cyan));
+            font-weight: 600;
+          }
+
+          .arrowSep {
+            color: var(--text-medium);
+            font-weight: 400;
+          }
         }
       }
     }
@@ -234,9 +247,17 @@ body.dark {
       box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
 
       .matchedRolesWrapper .tagsContainer .sourceTag {
-        background: rgba(0, 174, 239, 0.16);
-        color: #38bdf8;
-        border-color: rgba(56, 189, 248, 0.2);
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--text-dark);
+        border-color: rgba(255, 255, 255, 0.1);
+
+        .patternText {
+          color: #38bdf8;
+        }
+
+        .arrowSep {
+          color: rgba(255, 255, 255, 0.4);
+        }
       }
     }
   }

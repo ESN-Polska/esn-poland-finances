@@ -83,7 +83,9 @@ import { User } from '@models/user.model';
                 <span class="matchedRolesLabel">{{ 'CONFIGURATIONS.MATCHED_ROLES' | translate }}:</span>
                 <div class="tagsContainer">
                   <span *ngFor="let source of getInheritedSources(user)" class="sourceTag">
-                    {{ source.matchedExtendedRole }}<span *ngIf="source.roleName"> → {{ source.roleName }}</span>
+                    <span class="patternText">{{ source.matchedExtendedRole }}</span>
+                    <span *ngIf="source.roleName" class="arrowSep"> → </span>
+                    <span *ngIf="source.roleName" class="userRoleChip {{ getRoleClass(source.roleId) }}">{{ source.roleName }}</span>
                   </span>
                 </div>
               </div>
@@ -100,6 +102,7 @@ import { User } from '@models/user.model';
 })
 export class UserRoleMappingsComponent implements OnInit {
   users?: User[];
+  configurations?: Configurations;
   filteredUsers: User[] = [];
   search = '';
   selectedCasPermission = '';
@@ -126,6 +129,7 @@ export class UserRoleMappingsComponent implements OnInit {
         this.configurationsService.get()
       ]);
       this.users = users;
+      this.configurations = configurations;
       this.setCasPermissionOptions(configurations);
       this.filterUsers();
     } catch {
@@ -175,11 +179,79 @@ export class UserRoleMappingsComponent implements OnInit {
   }
 
   getUserDisplayName(user: User): string {
-    return user.getDisplayName ? user.getDisplayName() : user.userId;
+    if (!user) return '';
+    if (typeof user.getDisplayName === 'function') {
+      const name = user.getDisplayName();
+      if (name) return name;
+    }
+    const parts = [user.firstName, user.lastName].filter(Boolean);
+    if (parts.length > 0) return parts.join(' ');
+    if ((user as any).name) return (user as any).name;
+    return user.userId || '';
+  }
+
+  getRoleClass(roleId: string): string {
+    const id = (roleId || '').toLowerCase();
+    if (id.includes('admin')) return 'role-administrator';
+    if (id.includes('manager')) return 'role-manager';
+    if (id.includes('auditor')) return 'role-auditor';
+    return 'role-custom';
   }
 
   getInheritedSources(user: User): User['roleAssignmentSources'] {
-    return (user.roleAssignmentSources || []).filter(source => source.matchedExtendedRole !== 'manual');
+    const sources = (user.roleAssignmentSources || []).filter(source => source.matchedExtendedRole !== 'manual');
+    if (!sources.length) return [];
+
+    const getRolePriority = (roleId: string): number => {
+      const id = (roleId || '').toUpperCase();
+      if (id === 'ADMINISTRATOR' || id.includes('ADMIN')) return 1;
+      if (id === 'MANAGER' || id.includes('MANAGER')) return 2;
+      if (id === 'AUDITOR' || id.includes('AUDITOR')) return 3;
+      return 4;
+    };
+
+    const getCustomRoleIndex = (roleId: string): number => {
+      if (!this.configurations?.customRoles) return 0;
+      const idx = this.configurations.customRoles.findIndex(r => r.id === roleId);
+      return idx >= 0 ? idx : 999;
+    };
+
+    const getPatternDeclarationIndex = (roleId: string, pattern: string): number => {
+      if (!this.configurations) return 0;
+      const id = (roleId || '').toUpperCase();
+      if (id.includes('ADMIN')) {
+        const assignment = (this.configurations.automaticRoleAssignments || []).find(a => (a.roleId || '').toUpperCase().includes('ADMIN'));
+        const idx = (assignment?.extendedRolePatterns || []).indexOf(pattern);
+        return idx >= 0 ? idx : 999;
+      }
+      if (id.includes('MANAGER')) {
+        const assignment = (this.configurations.automaticRoleAssignments || []).find(a => (a.roleId || '').toUpperCase().includes('MANAGER'));
+        const idx = (assignment?.extendedRolePatterns || []).indexOf(pattern);
+        return idx >= 0 ? idx : 999;
+      }
+      if (id.includes('AUDITOR')) {
+        const assignment = (this.configurations.automaticRoleAssignments || []).find(a => (a.roleId || '').toUpperCase().includes('AUDITOR'));
+        const idx = (assignment?.extendedRolePatterns || []).indexOf(pattern);
+        return idx >= 0 ? idx : 999;
+      }
+      const customRole = (this.configurations.customRoles || []).find(r => r.id === roleId);
+      const idx = (customRole?.extendedRolePatterns || []).indexOf(pattern);
+      return idx >= 0 ? idx : 999;
+    };
+
+    return [...sources].sort((a, b) => {
+      const prioA = getRolePriority(a.roleId);
+      const prioB = getRolePriority(b.roleId);
+      if (prioA !== prioB) return prioA - prioB;
+
+      if (prioA === 4) {
+        const roleOrderDiff = getCustomRoleIndex(a.roleId) - getCustomRoleIndex(b.roleId);
+        if (roleOrderDiff !== 0) return roleOrderDiff;
+      }
+
+      return getPatternDeclarationIndex(a.roleId, a.matchedExtendedRole) -
+             getPatternDeclarationIndex(b.roleId, b.matchedExtendedRole);
+    });
   }
 
   getLastLoginLabel(lastLoginAt: string): string {

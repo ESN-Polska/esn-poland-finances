@@ -1,6 +1,6 @@
 <ion-header class="ion-no-border">
   <ion-toolbar class="configSubnavToolbar">
-    <ion-segment [scrollable]="true" [(ngModel)]="pageSection">
+    <ion-segment [scrollable]="true" [(ngModel)]="pageSection" (ionChange)="onPageSectionChange($event.detail.value)">
       <ng-container *ngFor="let section of pageSections">
         <ion-segment-button *ngIf="canAccessPageSection(section)" [value]="section">
           <ion-label>{{ 'CONFIGURATIONS.PAGE_SECTIONS.' + section | translate }}</ion-label>
@@ -272,8 +272,147 @@
       </ion-list>
     </div>
 
-    <!-- SUBTAB: USERS -->
-    <ion-list class="aList" *ngIf="pageSection === 'USERS'">
+    <!-- SUBTAB: USERS (DIRECTORY & MODERATION) -->
+    <div *ngIf="pageSection === 'USERS'">
+      <ion-list class="aList">
+        <ion-list-header>
+          <ion-label>
+            <h2>{{ 'CONFIGURATIONS.USERS_DIRECTORY_TITLE' | translate }}</h2>
+            <p>{{ 'CONFIGURATIONS.USERS_DIRECTORY_I' | translate }}</p>
+          </ion-label>
+          <div class="userHeaderActionBtns">
+            <ion-button size="small" *ngIf="canModifyUsers()" (click)="promptSuspendUser()">
+              <ion-icon name="pause-circle-outline" slot="start"></ion-icon>
+              {{ 'CONFIGURATIONS.SUSPEND_USER_MANUALLY' | translate }}
+            </ion-button>
+            <ion-button size="small" fill="clear" color="medium" [disabled]="loadingUsers" (click)="loadUsers(true)" [title]="'COMMON.REFRESH' | translate">
+              <ion-icon name="refresh-outline" slot="icon-only"></ion-icon>
+            </ion-button>
+          </div>
+        </ion-list-header>
+
+        <!-- Search & Status Filter Toolbar -->
+        <div class="guestFilterToolbar userFilterToolbar">
+          <ion-searchbar
+            [(ngModel)]="userSearchQuery"
+            [placeholder]="'CONFIGURATIONS.SEARCH_USERS_PLACEHOLDER' | translate"
+            [debounce]="200"
+          ></ion-searchbar>
+          <ion-segment [scrollable]="true" [(ngModel)]="userFilterStatus" class="guestFilterSegment">
+            <ion-segment-button value="ALL">
+              <ion-label>{{ 'CONFIGURATIONS.FILTER_ALL' | translate }} ({{ totalUsersCount }})</ion-label>
+            </ion-segment-button>
+            <ion-segment-button value="ACTIVE">
+              <ion-label>{{ 'CONFIGURATIONS.STATUS_ACTIVE' | translate }} ({{ activeUsersCount }})</ion-label>
+            </ion-segment-button>
+            <ion-segment-button value="SUSPENDED">
+              <ion-label>{{ 'CONFIGURATIONS.STATUS_SUSPENDED' | translate }} ({{ suspendedUsersCount }})</ion-label>
+            </ion-segment-button>
+          </ion-segment>
+        </div>
+
+        <!-- Loading State -->
+        <ion-item *ngIf="loadingUsers && !usersList.length">
+          <ion-label><ion-skeleton-text animated style="width: 60%;"></ion-skeleton-text></ion-label>
+        </ion-item>
+
+        <!-- Empty State -->
+        <ion-item class="noElements" *ngIf="!loadingUsers && filteredUsers.length === 0">
+          <ion-label>{{ 'CONFIGURATIONS.NO_USERS_FOUND' | translate }}</ion-label>
+        </ion-item>
+
+        <!-- User Items List -->
+        <ion-item *ngFor="let u of filteredUsers" class="userDirectoryItem">
+          <ion-avatar slot="start" class="userDirectoryAvatar">
+            <img *ngIf="u.avatarURL" [src]="u.avatarURL" [alt]="getUserDisplayName(u)" />
+            <div *ngIf="!u.avatarURL" class="avatarInitials">
+              {{ getUserInitials(u) }}
+            </div>
+          </ion-avatar>
+
+          <ion-label class="ion-text-wrap">
+            <div class="userItemHeader">
+              <span class="userDisplayName" *ngIf="u.firstName || u.lastName">{{ getUserDisplayName(u) }}</span>
+              <span class="userHandle">@{{ u.userId }}</span>
+              <span
+                class="status-chip"
+                [ngClass]="isUserSuspended(u.userId) ? 'status-suspended' : 'status-active'"
+              >
+                {{ (isUserSuspended(u.userId) ? 'CONFIGURATIONS.STATUS_SUSPENDED' : 'CONFIGURATIONS.STATUS_ACTIVE') | translate }}
+              </span>
+            </div>
+
+            <div class="userItemMeta" *ngIf="isUnregisteredUser(u)">
+              <span class="unregisteredNotice">{{ 'CONFIGURATIONS.USER_NOT_REGISTERED' | translate }}</span>
+            </div>
+
+            <div class="userItemMeta" *ngIf="!isUnregisteredUser(u) && (u.email || u.country || u.section)">
+              <span *ngIf="u.email">{{ u.email }}</span>
+              <span *ngIf="u.country">{{ u.email ? ' · ' : '' }}{{ u.country }}</span>
+              <span *ngIf="u.section">{{ (u.email || u.country) ? ' · ' : '' }}{{ u.section }}</span>
+              <span *ngIf="u.sectionCode && u.section !== u.sectionCode"> ({{ u.sectionCode }})</span>
+            </div>
+
+            <div class="userItemMeta" *ngIf="!isUnregisteredUser(u)">
+              <span>{{ 'CONFIGURATIONS.LAST_LOGIN' | translate }}: {{ getLastLoginLabel(u.lastLoginAt) }}</span>
+            </div>
+
+            <!-- Roles Chips -->
+            <div class="userRolesWrapper" *ngIf="getUserRoles(u).length">
+              <span class="userRolesLabel">{{ 'CONFIGURATIONS.ROLES_LABEL' | translate }}:</span>
+              <div class="userRoleTags">
+                <span
+                  *ngFor="let role of getUserRoles(u)"
+                  class="userRoleChip {{ role.key }}"
+                  [title]="role.title || role.name"
+                >
+                  {{ role.name }}
+                </span>
+              </div>
+            </div>
+          </ion-label>
+
+          <!-- End Slot Actions -->
+          <div slot="end" class="userActionButtons">
+            <!-- View Profile -->
+            <ion-button
+              fill="clear"
+              color="medium"
+              *ngIf="!isUnregisteredUser(u)"
+              [title]="'CONFIGURATIONS.VIEW_PROFILE' | translate"
+              (click)="app.openUserProfileById(u.userId)"
+            >
+              <ion-icon name="open-outline" slot="icon-only"></ion-icon>
+            </ion-button>
+
+            <!-- Suspend Button -->
+            <ion-button
+              fill="clear"
+              color="danger"
+              *ngIf="canModifyUsers() && !isUserSuspended(u.userId)"
+              [title]="'CONFIGURATIONS.SUSPEND_USER' | translate"
+              (click)="suspendUser(u)"
+            >
+              <ion-icon name="pause-circle-outline" slot="icon-only"></ion-icon>
+            </ion-button>
+
+            <!-- Restore Button -->
+            <ion-button
+              fill="clear"
+              color="success"
+              *ngIf="canModifyUsers() && isUserSuspended(u.userId)"
+              [title]="'CONFIGURATIONS.RESTORE_USER' | translate"
+              (click)="restoreUser(u.userId)"
+            >
+              <ion-icon name="checkmark-circle-outline" slot="icon-only"></ion-icon>
+            </ion-button>
+          </div>
+        </ion-item>
+      </ion-list>
+    </div>
+
+    <!-- SUBTAB: ROLES -->
+    <ion-list class="aList" *ngIf="pageSection === 'ROLES'">
       <!-- Preview Mode (restricted: hidden for auditors) -->
       <ng-container *ngIf="canUsePreview()">
         <ion-list-header class="ion-padding-top">
@@ -352,7 +491,7 @@
           <h2>{{ 'CONFIGURATIONS.ADMINISTRATORS' | translate }}</h2>
           <p>{{ 'CONFIGURATIONS.ADMINISTRATORS_I' | translate }}</p>
         </ion-label>
-        <ion-button size="small" *ngIf="canModifyUsers()" (click)="addAdministrator()">{{ 'COMMON.ADD' | translate }}</ion-button>
+        <ion-button size="small" *ngIf="canModifyRoles()" (click)="addAdministrator()">{{ 'COMMON.ADD' | translate }}</ion-button>
       </ion-list-header>
       <ion-item class="noElements" *ngIf="configurations?.administratorsIds && !configurations.administratorsIds.length">
         <ion-label>{{ 'CONFIGURATIONS.NO_USERS_ADDED' | translate }}</ion-label>
@@ -366,7 +505,7 @@
           fill="clear"
           color="danger"
           slot="end"
-          *ngIf="canModifyUsers() && canRemoveAdministrator()"
+          *ngIf="canModifyRoles() && canRemoveAdministrator()"
           (click)="removeAdministratorById(adminId)"
         >
           <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
@@ -379,7 +518,7 @@
           <h2>{{ 'CONFIGURATIONS.MANAGERS' | translate }}</h2>
           <p>{{ 'CONFIGURATIONS.MANAGERS_I' | translate }}</p>
         </ion-label>
-        <ion-button size="small" *ngIf="canModifyUsers()" (click)="addManager()">{{ 'COMMON.ADD' | translate }}</ion-button>
+        <ion-button size="small" *ngIf="canModifyRoles()" (click)="addManager()">{{ 'COMMON.ADD' | translate }}</ion-button>
       </ion-list-header>
       <ion-item class="noElements" *ngIf="configurations?.managersIds && !configurations.managersIds.length">
         <ion-label>{{ 'CONFIGURATIONS.NO_USERS_ADDED' | translate }}</ion-label>
@@ -389,7 +528,7 @@
         <ion-button fill="clear" color="medium" slot="end" (click)="app.openUserProfileById(managerId)">
           <ion-icon name="open-outline" slot="icon-only"></ion-icon>
         </ion-button>
-        <ion-button fill="clear" color="danger" slot="end" *ngIf="canModifyUsers()" (click)="removeManagerById(managerId)">
+        <ion-button fill="clear" color="danger" slot="end" *ngIf="canModifyRoles()" (click)="removeManagerById(managerId)">
           <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
         </ion-button>
       </ion-item>
@@ -400,7 +539,7 @@
           <h2>{{ 'CONFIGURATIONS.AUDITORS' | translate }}</h2>
           <p>{{ 'CONFIGURATIONS.AUDITORS_I' | translate }}</p>
         </ion-label>
-        <ion-button size="small" *ngIf="canModifyUsers()" (click)="addAuditor()">{{ 'COMMON.ADD' | translate }}</ion-button>
+        <ion-button size="small" *ngIf="canModifyRoles()" (click)="addAuditor()">{{ 'COMMON.ADD' | translate }}</ion-button>
       </ion-list-header>
       <ion-item class="noElements" *ngIf="configurations?.auditorsIds && !configurations.auditorsIds.length">
         <ion-label>{{ 'CONFIGURATIONS.NO_USERS_ADDED' | translate }}</ion-label>
@@ -410,7 +549,7 @@
         <ion-button fill="clear" color="medium" slot="end" (click)="app.openUserProfileById(auditorId)">
           <ion-icon name="open-outline" slot="icon-only"></ion-icon>
         </ion-button>
-        <ion-button fill="clear" color="danger" slot="end" *ngIf="canModifyUsers()" (click)="removeAuditorById(auditorId)">
+        <ion-button fill="clear" color="danger" slot="end" *ngIf="canModifyRoles()" (click)="removeAuditorById(auditorId)">
           <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
         </ion-button>
       </ion-item>
@@ -421,7 +560,7 @@
           <h2>{{ 'CONFIGURATIONS.CUSTOM_ROLES' | translate }}</h2>
           <p>{{ 'CONFIGURATIONS.CUSTOM_ROLES_I' | translate }}</p>
         </ion-label>
-        <ion-button size="small" *ngIf="canModifyUsers()" (click)="addCustomRole()">{{ 'COMMON.ADD' | translate }}</ion-button>
+        <ion-button size="small" *ngIf="canModifyRoles()" (click)="addCustomRole()">{{ 'COMMON.ADD' | translate }}</ion-button>
       </ion-list-header>
       <ion-item class="noElements" *ngIf="configurations?.customRoles && !configurations.customRoles.length">
         <ion-label>{{ 'CONFIGURATIONS.NO_CUSTOM_ROLES' | translate }}</ion-label>
@@ -446,7 +585,7 @@
             </span>
           </p>
         </ion-label>
-        <ion-button fill="clear" color="danger" slot="end" *ngIf="canModifyUsers()" (click)="$event.stopPropagation(); removeCustomRole(role)">
+        <ion-button fill="clear" color="danger" slot="end" *ngIf="canModifyRoles()" (click)="$event.stopPropagation(); removeCustomRole(role)">
           <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
         </ion-button>
       </ion-item>
@@ -788,6 +927,22 @@
         </ion-button>
       </ion-item>
 
+
+      <!-- Users Origin Display Preference -->
+      <ion-item>
+        <ion-label position="stacked">{{ 'CONFIGURATIONS.ORIGIN_DISPLAY_PREFERENCE' | translate }}</ion-label>
+        <ion-select
+          interface="popover"
+          [disabled]="!canModifyOptions()"
+          [(ngModel)]="configurations.usersOriginDisplay"
+          (ionChange)="updateConfigurations()"
+        >
+          <ion-select-option *ngFor="let opt of usersOriginDisplayOptions" [value]="opt.value">
+            {{ 'CONFIGURATIONS.ORIGIN_DISPLAY_PREFERENCES.' + opt.key | translate }}
+          </ion-select-option>
+        </ion-select>
+        <ion-note slot="helper">{{ 'CONFIGURATIONS.ORIGIN_DISPLAY_PREFERENCE_I' | translate }}</ion-note>
+      </ion-item>
 
       <!-- Timezone -->
       <ion-item>

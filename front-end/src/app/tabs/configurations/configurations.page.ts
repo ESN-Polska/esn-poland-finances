@@ -5,6 +5,7 @@ import { TranslateService } from '@ngx-translate/core';
 import { AppService } from '@app/app.service';
 import { ConfigurationsService } from './configurations.service';
 import { MediaService } from '@app/common/media.service';
+import { UsersService } from '@app/common/users.service';
 import { RoleEditorComponent } from './roleEditor.component';
 import { UserRoleMappingsComponent } from './userRoleMappings.component';
 import { GuestInviteModalComponent } from './guestInviteModal.component';
@@ -24,7 +25,8 @@ import {
   FinancialRequestType,
   EmailTemplates,
   EmailTemplateTypes,
-  OAUTH_ROLE_OPTIONS
+  OAUTH_ROLE_OPTIONS,
+  UsersOriginDisplayOptions
 } from '@models/configurations.model';
 import { User } from '@models/user.model';
 
@@ -36,6 +38,12 @@ import { User } from '@models/user.model';
 export class ConfigurationsPage implements OnInit {
   public EmailTemplates = EmailTemplates;
   public EmailTemplateTypes = EmailTemplateTypes;
+  public UODP = UsersOriginDisplayOptions;
+  public usersOriginDisplayOptions = [
+    { key: 'BOTH', value: UsersOriginDisplayOptions.BOTH },
+    { key: 'COUNTRY', value: UsersOriginDisplayOptions.COUNTRY },
+    { key: 'SECTION', value: UsersOriginDisplayOptions.SECTION }
+  ];
 
   configurations: Configurations =
     this.app?.configurations || new Configurations({ PK: Configurations.PK });
@@ -57,6 +65,11 @@ export class ConfigurationsPage implements OnInit {
   guestSearchQuery: string = '';
   oauthRoleOptions: string[] = [];
 
+  usersList: User[] = [];
+  loadingUsers: boolean = false;
+  userSearchQuery: string = '';
+  userFilterStatus: 'ALL' | 'ACTIVE' | 'SUSPENDED' = 'ALL';
+
   constructor(
     private modalCtrl: ModalController,
     private alertCtrl: AlertController,
@@ -65,6 +78,7 @@ export class ConfigurationsPage implements OnInit {
     private translate: TranslateService,
     private configurationsService: ConfigurationsService,
     private mediaService: MediaService,
+    private usersService: UsersService,
     public app: AppService
   ) {}
 
@@ -80,6 +94,9 @@ export class ConfigurationsPage implements OnInit {
     const firstAccessible = this.pageSections.find(s => this.canAccessPageSection(s));
     if (firstAccessible) {
       this.pageSection = firstAccessible;
+      if (this.pageSection === 'USERS') {
+        this.loadUsers();
+      }
     } else {
       this.app.goTo(['/t/home']);
       return;
@@ -109,6 +126,10 @@ export class ConfigurationsPage implements OnInit {
           this.app.goTo(['/t/home']);
         }
       }
+
+      if (this.pageSection === 'USERS') {
+        this.loadUsers();
+      }
     } catch (e) {
       console.error('Failed to load configurations', e);
     }
@@ -133,6 +154,9 @@ export class ConfigurationsPage implements OnInit {
     if (section === 'USERS') {
       return user.hasPermission(AppPermission.CONFIGURATIONS.USERS);
     }
+    if (section === 'ROLES') {
+      return user.hasPermission(AppPermission.CONFIGURATIONS.ROLES);
+    }
     if (section === 'GUESTS') {
       return user.hasPermission(AppPermission.CONFIGURATIONS.GUESTS);
     }
@@ -153,10 +177,7 @@ export class ConfigurationsPage implements OnInit {
     if (!user) return false;
     if (user.isAdministrator) return true;
     if (user.isAuditorOnly) return false;
-    return (
-      user.hasPermission(AppPermission.CONFIGURATIONS.RESOURCES) ||
-      user.hasPermission(AppPermission.CONFIGURATIONS.OPTIONS)
-    );
+    return user.hasPermission(AppPermission.CONFIGURATIONS.RESOURCES);
   }
 
   canModifyOptions(): boolean {
@@ -165,6 +186,14 @@ export class ConfigurationsPage implements OnInit {
     if (user.isAdministrator) return true;
     if (user.isAuditorOnly) return false;
     return user.hasPermission(AppPermission.CONFIGURATIONS.OPTIONS);
+  }
+
+  canModifyRoles(): boolean {
+    const user = this.app.currentUser;
+    if (!user) return false;
+    if (user.isAdministrator) return true;
+    if (user.isAuditorOnly) return false;
+    return user.hasPermission(AppPermission.CONFIGURATIONS.ROLES);
   }
 
   canModifyUsers(): boolean {
@@ -196,7 +225,405 @@ export class ConfigurationsPage implements OnInit {
     if (!user) return false;
     if (user.isAdministrator) return true;
     if (user.isAuditorOnly) return false;
-    return user.hasPermission(AppPermission.CONFIGURATIONS.USERS);
+    return user.hasPermission(AppPermission.CONFIGURATIONS.ROLES);
+  }
+
+  onPageSectionChange(section: ConfigurationPageSection): void {
+    if (section === 'USERS') {
+      this.loadUsers();
+    }
+  }
+
+  isGuestUser(u: User | any): boolean {
+    if (!u) return false;
+    return Boolean(
+      u.isGuest ||
+      (u.userId && String(u.userId).toLowerCase().startsWith('guest_')) ||
+      (Array.isArray(u.roles) && u.roles.includes('GUEST'))
+    );
+  }
+
+  isUnregisteredUser(u: User | any): boolean {
+    return Boolean((u as any)?.isUnregistered);
+  }
+
+  get nonGuestUsers(): User[] {
+    return (this.usersList || []).filter(u => !this.isGuestUser(u));
+  }
+
+  get unregisteredBlockedUsers(): User[] {
+    const registeredIds = new Set((this.usersList || []).map(u => (u.userId || '').replace(/^@+/, '').trim().toLowerCase()));
+    return (this.configurations?.blockedUserIds || [])
+      .map(id => (id || '').replace(/^@+/, '').trim())
+      .filter(id => id && !registeredIds.has(id.toLowerCase()))
+      .map(id => {
+        const u = new User({
+          userId: id,
+          roles: [],
+          extendedRoles: [],
+          customRoleIds: []
+        } as any);
+        (u as any).isUnregistered = true;
+        return u;
+      });
+  }
+
+  get allDirectoryUsers(): User[] {
+    return [...this.nonGuestUsers, ...this.unregisteredBlockedUsers];
+  }
+
+  get filteredUsers(): User[] {
+    const rawQuery = this.userSearchQuery.trim().toLowerCase();
+    const cleanQuery = rawQuery.replace(/^@+/, '');
+
+    return this.allDirectoryUsers
+      .filter(user => {
+        const isSuspended = this.isUserSuspended(user.userId);
+        if (this.userFilterStatus === 'ACTIVE' && isSuspended) return false;
+        if (this.userFilterStatus === 'SUSPENDED' && !isSuspended) return false;
+        return true;
+      })
+      .filter(user => {
+        if (!rawQuery) return true;
+        const displayName = this.getUserDisplayName(user).toLowerCase();
+        const matchesName = displayName.includes(rawQuery) ||
+          displayName.includes(cleanQuery) ||
+          (user.firstName || '').toLowerCase().includes(rawQuery) ||
+          (user.firstName || '').toLowerCase().includes(cleanQuery) ||
+          (user.lastName || '').toLowerCase().includes(rawQuery) ||
+          (user.lastName || '').toLowerCase().includes(cleanQuery);
+        const matchesId = (user.userId || '').toLowerCase().includes(cleanQuery) ||
+          `@${user.userId || ''}`.toLowerCase().includes(rawQuery);
+        const matchesCountry = (user.country || '').toLowerCase().includes(cleanQuery);
+        const matchesSection = (user.section || '').toLowerCase().includes(cleanQuery) ||
+          (user.sectionCode || '').toLowerCase().includes(cleanQuery);
+        const matchesEmail = (user.email || '').toLowerCase().includes(cleanQuery);
+        return matchesName || matchesId || matchesCountry || matchesSection || matchesEmail;
+      });
+  }
+
+  get totalUsersCount(): number {
+    return this.allDirectoryUsers.length;
+  }
+
+  get suspendedUsersCount(): number {
+    return this.allDirectoryUsers.filter(u => this.isUserSuspended(u.userId)).length;
+  }
+
+  get activeUsersCount(): number {
+    return Math.max(0, this.totalUsersCount - this.suspendedUsersCount);
+  }
+
+  getUserDisplayName(user: User): string {
+    if (!user) return '';
+    if (typeof user.getDisplayName === 'function') {
+      const name = user.getDisplayName();
+      if (name && name !== user.userId) return name;
+    }
+    const parts = [user.firstName, user.lastName].filter(Boolean);
+    if (parts.length > 0) return parts.join(' ');
+    if ((user as any).name) return (user as any).name;
+    return user.userId ? `@${user.userId}` : '';
+  }
+
+  getUserIdentifier(userOrId: User | string): string {
+    const user = typeof userOrId === 'string'
+      ? this.allDirectoryUsers.find(u => (u.userId || '').toLowerCase() === userOrId.replace(/^@/, '').trim().toLowerCase())
+      : userOrId;
+    if (user) {
+      const parts = [user.firstName, user.lastName].filter(Boolean);
+      if (parts.length > 0) return parts.join(' ');
+      if (typeof user.getDisplayName === 'function') {
+        const name = user.getDisplayName();
+        if (name && name !== user.userId) return name;
+      }
+      return `@${user.userId}`;
+    }
+    const cleanId = String(userOrId || '').replace(/^@/, '').trim();
+    return cleanId ? `@${cleanId}` : '';
+  }
+
+  getUserInitials(user: User): string {
+    if (!user) return '?';
+    const first = (user.firstName?.[0] || user.userId?.[0] || (user as any).name?.[0] || '').toUpperCase();
+    const last = (user.lastName?.[0] || '').toUpperCase();
+    return `${first}${last}`.trim() || first || '?';
+  }
+
+  getUserRoles(user: User): Array<{ key: string; name: string; title?: string }> {
+    if (!user) return [];
+    const roles: Array<{ key: string; name: string; title?: string }> = [];
+
+    if (this.configurations) {
+      User.applyConfigurationPermissions(user, this.configurations);
+    }
+
+    if (user.isAdministrator) {
+      roles.push({
+        key: 'role-administrator',
+        name: this.translate.instant('CONFIGURATIONS.ADMINISTRATOR')
+      });
+    }
+
+    if (user.isManager) {
+      roles.push({
+        key: 'role-manager',
+        name: this.translate.instant('CONFIGURATIONS.MANAGER')
+      });
+    }
+
+    if (user.isAuditor) {
+      roles.push({
+        key: 'role-auditor',
+        name: this.translate.instant('CONFIGURATIONS.AUDITOR')
+      });
+    }
+
+    // Custom roles with specific names
+    const seenCustomRoleIds = new Set<string>();
+    const customRoles = this.configurations?.customRoles || [];
+    for (const cr of customRoles) {
+      if (seenCustomRoleIds.has(cr.id)) continue;
+      const isExplicit = (cr.userIds || []).map(id => id.toLowerCase()).includes(user.userId.toLowerCase());
+      const matchedPattern = (cr.extendedRolePatterns || []).find(p => User.matchesRolePattern(user, p));
+      const hasId = (user.customRoleIds || []).includes(cr.id);
+
+      if (isExplicit || matchedPattern || hasId) {
+        seenCustomRoleIds.add(cr.id);
+        roles.push({
+          key: 'role-custom',
+          name: cr.name,
+          title: matchedPattern ? `${cr.name} (${matchedPattern})` : cr.name
+        });
+      }
+    }
+
+    for (const src of user.roleAssignmentSources || []) {
+      if (src.roleId && !['ADMINISTRATOR', 'MANAGER', 'AUDITOR'].includes(src.roleId)) {
+        if (!seenCustomRoleIds.has(src.roleId)) {
+          seenCustomRoleIds.add(src.roleId);
+          roles.push({
+            key: 'role-custom',
+            name: src.roleName || src.roleId,
+            title: src.matchedExtendedRole && src.matchedExtendedRole !== 'manual'
+              ? `${src.roleName || src.roleId} (${src.matchedExtendedRole})`
+              : src.roleName || src.roleId
+          });
+        }
+      }
+    }
+
+    return roles;
+  }
+
+  async loadUsers(force = false): Promise<void> {
+    if (this.loadingUsers || (this.usersList.length > 0 && !force)) return;
+    this.loadingUsers = true;
+    try {
+      const allUsers = await this.usersService.getAll({ roleAssignments: true });
+      let list = (allUsers || []).filter(u => !this.isGuestUser(u));
+
+      // Ensure any configured users (administrators, managers, auditors, suspended users, custom role users) appear
+      const existingUserIds = new Set(list.map(u => (u.userId || '').toLowerCase()));
+      const knownConfigUserIds = Array.from(new Set([
+        ...(this.configurations?.administratorsIds || []),
+        ...(this.configurations?.managersIds || []),
+        ...(this.configurations?.auditorsIds || []),
+        ...(this.configurations?.blockedUserIds || []),
+        ...(this.configurations?.customRoles || []).reduce((acc, r) => [...acc, ...(r.userIds || [])], [] as string[])
+      ].map(id => String(id || '').toLowerCase().trim()).filter(Boolean)));
+
+      for (const id of knownConfigUserIds) {
+        if (!existingUserIds.has(id) && !id.startsWith('guest_')) {
+          const syntheticUser = new User({
+            userId: id,
+            firstName: '',
+            lastName: '',
+            email: '',
+            section: '',
+            sectionCode: '',
+            country: '',
+            roles: [],
+            extendedRoles: [],
+            lastLoginAt: ''
+          });
+          if (this.configurations) {
+            User.applyConfigurationPermissions(syntheticUser, this.configurations);
+          }
+          list.push(syntheticUser);
+          existingUserIds.add(id);
+        }
+      }
+      this.usersList = list;
+    } catch (err) {
+      console.error('Failed to load users list', err);
+      this.usersList = [];
+    } finally {
+      this.loadingUsers = false;
+    }
+  }
+
+  isUserSuspended(userId: string): boolean {
+    if (!userId || !this.configurations?.blockedUserIds) return false;
+    return this.configurations.blockedUserIds.some(id => id.toLowerCase() === userId.toLowerCase());
+  }
+
+  isUserBlocked(userId: string): boolean {
+    return this.isUserSuspended(userId);
+  }
+
+  getUserInheritedSources(user: User): User['roleAssignmentSources'] {
+    return (user.roleAssignmentSources || []).filter(source => source.matchedExtendedRole !== 'manual');
+  }
+
+  getLastLoginLabel(lastLoginAt: string): string {
+    if (!lastLoginAt) return this.translate.instant('CONFIGURATIONS.NEVER');
+    const elapsed = Math.max(0, Date.now() - new Date(lastLoginAt).getTime());
+    const minutes = Math.floor(elapsed / 60000);
+    if (minutes < 1) return this.translate.instant('CONFIGURATIONS.JUST_NOW');
+    if (minutes < 60) return this.translate.instant('CONFIGURATIONS.MINUTES_AGO', { count: minutes });
+    const hours = Math.floor(minutes / 60);
+    if (hours <= 24) return this.translate.instant('CONFIGURATIONS.HOURS_AGO', { count: hours });
+    const d = new Date(lastLoginAt);
+    return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`;
+  }
+
+  isAdministratorId(userId: string): boolean {
+    if (!userId || !this.configurations) return false;
+    const cleanId = userId.replace(/^@+/, '').trim().toLowerCase();
+    const adminIds = new Set(
+      (this.configurations.administratorsIds || []).map(id => id.replace(/^@+/, '').trim().toLowerCase())
+    );
+    if (adminIds.has(cleanId)) return true;
+
+    const user = (this.usersList || []).find(
+      u => (u.userId || '').replace(/^@+/, '').trim().toLowerCase() === cleanId
+    );
+    if (user) {
+      User.applyConfigurationPermissions(user, this.configurations);
+      if (user.isAdministrator) return true;
+    }
+    return false;
+  }
+
+  async suspendUser(user: User): Promise<void> {
+    if (!this.canModifyUsers()) return;
+    if (user.isAdministrator || this.isAdministratorId(user.userId)) {
+      const alert = await this.alertCtrl.create({
+        header: this.translate.instant('COMMON.WARNING'),
+        message: this.translate.instant('CONFIGURATIONS.CANNOT_SUSPEND_ADMIN'),
+        buttons: [this.translate.instant('COMMON.OK')]
+      });
+      await alert.present();
+      return;
+    }
+
+    const identifier = this.getUserIdentifier(user);
+    const alert = await this.alertCtrl.create({
+      header: this.translate.instant('CONFIGURATIONS.SUSPEND_USER_CONFIRM_TITLE'),
+      message: this.translate.instant('CONFIGURATIONS.SUSPEND_USER_CONFIRM_MSG', {
+        name: identifier,
+        userId: user.userId
+      }),
+      buttons: [
+        { text: this.translate.instant('COMMON.CANCEL'), role: 'cancel' },
+        {
+          text: this.translate.instant('CONFIGURATIONS.SUSPEND_BUTTON'),
+          role: 'destructive',
+          handler: async () => {
+            const current = (this.configurations.blockedUserIds || []).map(id => id.replace(/^@+/, '').trim().toLowerCase());
+            const targetId = user.userId.replace(/^@+/, '').trim().toLowerCase();
+            if (!current.includes(targetId)) {
+              this.configurations.blockedUserIds = [...current, targetId];
+              await this.updateConfigurations();
+            }
+          }
+        }
+      ]
+    });
+    await alert.present();
+  }
+
+  async blockUser(user: User): Promise<void> {
+    return this.suspendUser(user);
+  }
+
+  async restoreUser(userId: string): Promise<void> {
+    if (!this.canModifyUsers()) return;
+    const targetId = userId.replace(/^@+/, '').trim().toLowerCase();
+    const identifier = this.getUserIdentifier(targetId);
+    const alert = await this.alertCtrl.create({
+      header: this.translate.instant('CONFIGURATIONS.RESTORE_USER_CONFIRM_TITLE'),
+      message: this.translate.instant('CONFIGURATIONS.RESTORE_USER_CONFIRM_MSG', {
+        name: identifier,
+        userId: targetId
+      }),
+      buttons: [
+        { text: this.translate.instant('COMMON.CANCEL'), role: 'cancel' },
+        {
+          text: this.translate.instant('CONFIGURATIONS.RESTORE_BUTTON'),
+          handler: async () => {
+            this.configurations.blockedUserIds = (this.configurations.blockedUserIds || [])
+              .map(id => id.replace(/^@+/, '').trim().toLowerCase())
+              .filter(id => id !== targetId);
+            await this.updateConfigurations();
+          }
+        }
+      ]
+    });
+    await alert.present();
+  }
+
+  async unblockUser(userId: string): Promise<void> {
+    return this.restoreUser(userId);
+  }
+
+  async promptSuspendUser(): Promise<void> {
+    if (!this.canModifyUsers()) return;
+    const alert = await this.alertCtrl.create({
+      header: this.translate.instant('CONFIGURATIONS.SUSPEND_USER_MANUALLY_TITLE'),
+      message: this.translate.instant('CONFIGURATIONS.SUSPEND_USER_MANUALLY_MSG'),
+      inputs: [
+        {
+          name: 'userId',
+          type: 'text',
+          placeholder: this.translate.instant('CONFIGURATIONS.USERNAME_PLACEHOLDER')
+        }
+      ],
+      buttons: [
+        { text: this.translate.instant('COMMON.CANCEL'), role: 'cancel' },
+        {
+          text: this.translate.instant('CONFIGURATIONS.SUSPEND_BUTTON'),
+          role: 'destructive',
+          handler: async (data: any) => {
+            const targetId = (data.userId || '').trim().replace(/^@+/, '').toLowerCase();
+            if (!targetId) return false;
+
+            if (this.isAdministratorId(targetId)) {
+              const warning = await this.alertCtrl.create({
+                header: this.translate.instant('COMMON.WARNING'),
+                message: this.translate.instant('CONFIGURATIONS.CANNOT_SUSPEND_ADMIN'),
+                buttons: [this.translate.instant('COMMON.OK')]
+              });
+              await warning.present();
+              return false;
+            }
+
+            const current = (this.configurations.blockedUserIds || []).map(id => id.replace(/^@+/, '').trim().toLowerCase());
+            if (!current.includes(targetId)) {
+              this.configurations.blockedUserIds = [...current, targetId];
+              await this.updateConfigurations();
+            }
+            return true;
+          }
+        }
+      ]
+    });
+    await alert.present();
+  }
+
+  async promptAddBlockedUser(): Promise<void> {
+    return this.promptSuspendUser();
   }
 
   canReorderPageSections(): boolean {
@@ -746,9 +1173,12 @@ export class ConfigurationsPage implements OnInit {
         {
           text: this.translate.instant('COMMON.ADD'),
           handler: async data => {
-            const userId = data.userId?.trim().toLowerCase();
+            const userId = data.userId?.trim().replace(/^@+/, '').toLowerCase();
             if (!userId) return;
             const updated = new Configurations(this.configurations);
+            updated.blockedUserIds = (updated.blockedUserIds || []).filter(
+              id => id.replace(/^@+/, '').trim().toLowerCase() !== userId
+            );
             if (!updated.administratorsIds.includes(userId)) {
               updated.administratorsIds.push(userId);
               await this.updateConfigurations(updated);
@@ -775,9 +1205,10 @@ export class ConfigurationsPage implements OnInit {
 
   async removeAdministratorById(userId: string): Promise<void> {
     if (!this.canRemoveAdministrator()) return;
+    const cleanId = (userId || '').replace(/^@+/, '').trim().toLowerCase();
     const alert = await this.alertCtrl.create({
       header: this.translate.instant('COMMON.CONFIRM'),
-      message: this.translate.instant('CONFIGURATIONS.REMOVE_ADMINISTRATOR_CONFIRM', { userId }),
+      message: this.translate.instant('CONFIGURATIONS.REMOVE_ADMINISTRATOR_CONFIRM', { userId: cleanId }),
       buttons: [
         { text: this.translate.instant('COMMON.CANCEL'), role: 'cancel' },
         {
@@ -785,7 +1216,7 @@ export class ConfigurationsPage implements OnInit {
           role: 'destructive',
           handler: async () => {
             const updated = new Configurations(this.configurations);
-            updated.administratorsIds = updated.administratorsIds.filter(id => id !== userId);
+            updated.administratorsIds = updated.administratorsIds.filter(id => id.replace(/^@+/, '').trim().toLowerCase() !== cleanId);
             await this.updateConfigurations(updated);
           }
         }
@@ -809,7 +1240,7 @@ export class ConfigurationsPage implements OnInit {
         {
           text: this.translate.instant('COMMON.ADD'),
           handler: async data => {
-            const userId = data.userId?.trim().toLowerCase();
+            const userId = data.userId?.trim().replace(/^@+/, '').toLowerCase();
             if (!userId) return;
             const updated = new Configurations(this.configurations);
             if (!updated.managersIds.includes(userId)) {
@@ -824,9 +1255,10 @@ export class ConfigurationsPage implements OnInit {
   }
 
   async removeManagerById(userId: string): Promise<void> {
+    const cleanId = (userId || '').replace(/^@+/, '').trim().toLowerCase();
     const alert = await this.alertCtrl.create({
       header: this.translate.instant('COMMON.CONFIRM'),
-      message: this.translate.instant('CONFIGURATIONS.REMOVE_MANAGER_CONFIRM', { userId }),
+      message: this.translate.instant('CONFIGURATIONS.REMOVE_MANAGER_CONFIRM', { userId: cleanId }),
       buttons: [
         { text: this.translate.instant('COMMON.CANCEL'), role: 'cancel' },
         {
@@ -834,7 +1266,7 @@ export class ConfigurationsPage implements OnInit {
           role: 'destructive',
           handler: async () => {
             const updated = new Configurations(this.configurations);
-            updated.managersIds = updated.managersIds.filter(id => id !== userId);
+            updated.managersIds = updated.managersIds.filter(id => id.replace(/^@+/, '').trim().toLowerCase() !== cleanId);
             await this.updateConfigurations(updated);
           }
         }
@@ -858,7 +1290,7 @@ export class ConfigurationsPage implements OnInit {
         {
           text: this.translate.instant('COMMON.ADD'),
           handler: async data => {
-            const userId = data.userId?.trim().toLowerCase();
+            const userId = data.userId?.trim().replace(/^@+/, '').toLowerCase();
             if (!userId) return;
             const updated = new Configurations(this.configurations);
             if (!updated.auditorsIds.includes(userId)) {
@@ -873,9 +1305,10 @@ export class ConfigurationsPage implements OnInit {
   }
 
   async removeAuditorById(userId: string): Promise<void> {
+    const cleanId = (userId || '').replace(/^@+/, '').trim().toLowerCase();
     const alert = await this.alertCtrl.create({
       header: this.translate.instant('COMMON.CONFIRM'),
-      message: this.translate.instant('CONFIGURATIONS.REMOVE_AUDITOR_CONFIRM', { userId }),
+      message: this.translate.instant('CONFIGURATIONS.REMOVE_AUDITOR_CONFIRM', { userId: cleanId }),
       buttons: [
         { text: this.translate.instant('COMMON.CANCEL'), role: 'cancel' },
         {
@@ -883,7 +1316,7 @@ export class ConfigurationsPage implements OnInit {
           role: 'destructive',
           handler: async () => {
             const updated = new Configurations(this.configurations);
-            updated.auditorsIds = updated.auditorsIds.filter(id => id !== userId);
+            updated.auditorsIds = updated.auditorsIds.filter(id => id.replace(/^@+/, '').trim().toLowerCase() !== cleanId);
             await this.updateConfigurations(updated);
           }
         }
@@ -902,7 +1335,7 @@ export class ConfigurationsPage implements OnInit {
     const requirePatterns =
       roleId === 'ADMINISTRATOR' &&
       (!this.configurations?.administratorsIds || !this.configurations.administratorsIds.length);
-    const readOnly = !this.canModifyUsers();
+    const readOnly = !this.canModifyRoles();
 
     const modal = await this.modalCtrl.create({
       component: RoleEditorComponent,
@@ -960,7 +1393,7 @@ export class ConfigurationsPage implements OnInit {
   }
 
   async manageCustomRole(role: CustomRole): Promise<void> {
-    const readOnly = !this.canModifyUsers();
+    const readOnly = !this.canModifyRoles();
     const modal = await this.modalCtrl.create({
       component: RoleEditorComponent,
       componentProps: {

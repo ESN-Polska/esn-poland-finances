@@ -386,7 +386,8 @@ body.dark {
     color: #f59e0b;
   }
 
-  &.status-revoked {
+  &.status-revoked,
+  &.status-suspended {
     background: rgba(239, 68, 68, 0.15);
     color: #ef4444;
   }
@@ -397,4 +398,103 @@ body.dark {
   text-transform: none;
   font-size: 0.85rem;
 }
+
+/* USER DIRECTORY & MODERATION STYLES */
+.userHeaderActionBtns {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.userDirectoryItem {
+  --padding-top: 12px;
+  --padding-bottom: 12px;
+
+  .userDirectoryAvatar {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    margin-inline-end: 14px;
+
+    img {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+
+    .avatarInitials {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--ion-color-primary, #00aeef);
+      color: var(--ion-color-primary-contrast, #ffffff);
+      font-weight: 700;
+      font-size: 0.95rem;
+      border-radius: 50%;
+      text-transform: uppercase;
+    }
+  }
+
+  .userItemHeader {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 3px;
+
+    .userDisplayName {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text-dark);
+    }
+
+    .userHandle {
+      font-size: 0.85rem;
+      color: var(--text-medium);
+      font-weight: 500;
+    }
+  }
+
+  .userItemMeta {
+    font-size: 0.85rem;
+    color: var(--text-medium);
+    margin-top: 3px;
+
+    .unregisteredNotice {
+      font-style: italic;
+      color: var(--ion-color-step-600, #888);
+    }
+  }
+
+  .userRolesWrapper {
+    margin-top: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+
+    .userRolesLabel {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text-medium);
+    }
+
+    .userRoleTags {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+  }
+
+  .userActionButtons {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+}
+
 

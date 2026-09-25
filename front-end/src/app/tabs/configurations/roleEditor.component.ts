@@ -233,7 +233,7 @@ export class RoleEditorComponent implements OnInit {
         name: this.name.trim(),
         userIds: this.userIds
           .split(/[\n,]/)
-          .map(userId => userId.trim().toLowerCase())
+          .map(userId => userId.trim().replace(/^@+/, '').toLowerCase())
           .filter(Boolean),
         permissions,
         extendedRolePatterns
