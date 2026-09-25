@@ -4,6 +4,7 @@ import { FinancialRequest } from '../models/financial-request.model';
 import { AppPermission, Configurations, EmailTemplates, EmailTemplateTypes, formatSenderName } from '../models/configurations.model';
 import { User } from '../models/user.model';
 import { isEmailInBlockList } from './sesNotifications';
+import { findCountryMatch, getCountriesLibrary } from '../services/esnCountries';
 
 const STAGE = process.env.STAGE || 'dev';
 const APP_DOMAIN = process.env.APP_DOMAIN || 'finances.esn-poland.link';
@@ -144,7 +145,7 @@ class RequestsHandler extends ResourceController {
    * Creates or submits a new request
    */
   protected async postResource(): Promise<any> {
-    const user = this.getAuthenticatedUser();
+    const user = await this.getFreshAuthenticatedUser();
     const body = this.body || {};
     const status = body.status === 'SUBMITTED' ? 'SUBMITTED' : 'DRAFT';
     delete body.adminRemarks;
@@ -169,6 +170,35 @@ class RequestsHandler extends ResourceController {
       requestId = `draft_${randomUUID().replace(/-/g, '')}`;
     }
 
+    // Always prefer user's current primary section from DynamoDB, falling back to body.section
+    const section = user.section || user.sectionCode || body.section || '';
+    let country = body.country;
+
+    // Resolve country matching the section
+    let sCode = user.sectionCode;
+    if (section && Array.isArray(user.availableSections)) {
+      const matchedSection = user.availableSections.find(
+        (s: any) => s.name === section || s.code === section
+      );
+      if (matchedSection?.code) sCode = matchedSection.code;
+    }
+    const prefix = sCode ? sCode.split('-')[0]?.toUpperCase().trim() : '';
+    const countryMatches = country && prefix ? findCountryMatch(prefix, [{ name: country, code: country }]) : undefined;
+
+    if (!countryMatches && prefix) {
+      let matchedCountry = findCountryMatch(prefix, user.availableCountries || []);
+      if (!matchedCountry) {
+        const library = await getCountriesLibrary();
+        matchedCountry = findCountryMatch(prefix, library);
+      }
+      if (matchedCountry) {
+        country = matchedCountry.name || matchedCountry.code;
+      }
+    }
+    if (!country) {
+      country = user.country || '';
+    }
+
     const request = new FinancialRequest({
       ...body,
       requestId,
@@ -178,8 +208,8 @@ class RequestsHandler extends ResourceController {
       userDisplayName: user.getDisplayName(),
       userEmail: user.email,
       userAvatarURL: user.avatarURL || '',
-      section: user.section || user.sectionCode || '',
-      country: user.country || '',
+      section,
+      country,
       extendedRoles: user.extendedRoles || [],
       isGuest: !!user.isGuest,
       guestInvitationId: user.guestInvitationId,
@@ -280,6 +310,37 @@ class RequestsHandler extends ResourceController {
       targetYear = new Date().getFullYear();
       targetSeqNumber = await this.getNextSequenceNumber(targetYear);
       targetRequestId = `${targetSeqNumber}/${targetYear}`;
+    }
+
+    if (isOwner && existing.status === 'DRAFT') {
+      const freshUser = await this.getFreshAuthenticatedUser();
+      const section = updates.section || freshUser.section || freshUser.sectionCode || existing.section;
+      let country = updates.country || existing.country;
+      let sCode = freshUser.sectionCode;
+      if (section && Array.isArray(freshUser.availableSections)) {
+        const matchedSection = freshUser.availableSections.find(
+          (s: any) => s.name === section || s.code === section
+        );
+        if (matchedSection?.code) sCode = matchedSection.code;
+      }
+      const prefix = sCode ? sCode.split('-')[0]?.toUpperCase().trim() : '';
+      const countryMatches = country && prefix ? findCountryMatch(prefix, [{ name: country, code: country }]) : undefined;
+
+      if (!countryMatches && prefix) {
+        let matchedCountry = findCountryMatch(prefix, freshUser.availableCountries || []);
+        if (!matchedCountry) {
+          const library = await getCountriesLibrary();
+          matchedCountry = findCountryMatch(prefix, library);
+        }
+        if (matchedCountry) {
+          country = matchedCountry.name || matchedCountry.code;
+        }
+      }
+      if (!country) {
+        country = freshUser.country || existing.country || '';
+      }
+      updates.section = section;
+      updates.country = country;
     }
 
     const defaultComment =
@@ -387,6 +448,24 @@ class RequestsHandler extends ResourceController {
       throw new HandledError('Unauthorized');
     }
     return new User(userRaw);
+  }
+
+  private async getFreshAuthenticatedUser(): Promise<User> {
+    const tokenUser = this.getAuthenticatedUser();
+    if (DDB_TABLES.users && tokenUser?.userId) {
+      try {
+        const dbUser = await ddb.get({
+          TableName: DDB_TABLES.users,
+          Key: { userId: tokenUser.userId.toLowerCase() }
+        });
+        if (dbUser) {
+          return new User({ ...tokenUser, ...dbUser });
+        }
+      } catch (err) {
+        this.logger.warn('Failed to load user record from DB in requests handler', err);
+      }
+    }
+    return tokenUser;
   }
 
   private async getNextSequenceNumber(year: number): Promise<number> {

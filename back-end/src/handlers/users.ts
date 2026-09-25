@@ -1,6 +1,7 @@
 import { DynamoDB, HandledError, ResourceController } from 'idea-aws';
 import { AppPermission, Configurations } from '../models/configurations.model';
 import { User } from '../models/user.model';
+import { findCountryMatch, getCountriesLibrary } from '../services/esnCountries';
 
 const DDB_TABLES = {
   users: process.env.DDB_TABLE_users,
@@ -92,6 +93,85 @@ class UsersRC extends ResourceController {
         )
       );
       userRecord.disabledEmailNotifications = sanitized;
+    }
+
+    // Update primary section
+    if (this.body?.sectionCode !== undefined || this.body?.section !== undefined) {
+      userRecord.primarySectionChosen = true;
+      const targetCode = String(this.body.sectionCode || '').trim();
+      const targetName = String(this.body.section || '').trim();
+      const availableSections: any[] = userRecord.availableSections || [];
+
+      if (availableSections.length > 0) {
+        const match = availableSections.find(
+          (s: any) =>
+            (targetCode && String(s.code || '').toLowerCase() === targetCode.toLowerCase()) ||
+            (targetName && String(s.name || '').toLowerCase() === targetName.toLowerCase())
+        );
+        if (!match && !isAdmin) {
+          throw new HandledError('Selected section is not among your available sections');
+        }
+        if (match) {
+          userRecord.sectionCode = match.code || '';
+          userRecord.section = match.name || '';
+        } else if (isAdmin) {
+          userRecord.sectionCode = targetCode;
+          userRecord.section = targetName;
+        }
+      } else if (isAdmin) {
+        userRecord.sectionCode = targetCode;
+        userRecord.section = targetName;
+      }
+
+      // If country not explicitly passed, align country with this section's prefix
+      if (this.body?.country === undefined && userRecord.sectionCode) {
+        const prefix = String(userRecord.sectionCode).split('-')[0]?.toUpperCase().trim();
+        let availableCountries: any[] = userRecord.availableCountries || [];
+        if (prefix) {
+          let matchedCountry = findCountryMatch(prefix, availableCountries);
+          if (!matchedCountry) {
+            const library = await getCountriesLibrary();
+            matchedCountry = findCountryMatch(prefix, library);
+            if (matchedCountry) {
+              if (!availableCountries.some((c: any) => c.code === matchedCountry?.code)) {
+                availableCountries.push(matchedCountry);
+                userRecord.availableCountries = availableCountries;
+              }
+            }
+          }
+          if (matchedCountry) {
+            userRecord.country = matchedCountry.name || matchedCountry.code;
+          }
+        }
+      }
+    }
+
+    // Update primary country
+    if (this.body?.country !== undefined) {
+      const targetCountry = String(this.body.country || '').trim();
+      const availableCountries: any[] = userRecord.availableCountries || [];
+
+      if (availableCountries.length > 0) {
+        const match = availableCountries.find(
+          (c: any) =>
+            (c.name && String(c.name || '').toLowerCase() === targetCountry.toLowerCase()) ||
+            (c.code && String(c.code || '').toLowerCase() === targetCountry.toLowerCase())
+        );
+        if (!match && !isAdmin) {
+          throw new HandledError('Selected country is not among your available countries');
+        }
+        if (match) {
+          userRecord.country = match.name || match.code || targetCountry;
+        } else if (isAdmin) {
+          userRecord.country = targetCountry;
+        }
+      } else if (isAdmin) {
+        userRecord.country = targetCountry;
+      }
+    }
+
+    if (this.body?.primarySectionChosen !== undefined) {
+      userRecord.primarySectionChosen = !!this.body.primarySectionChosen;
     }
 
     await ddb.put({

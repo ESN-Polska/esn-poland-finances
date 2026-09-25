@@ -48,4 +48,22 @@ export class UsersService {
       throw err;
     }
   }
+
+  /**
+   * Update primary section/country preferences for user.
+   */
+  async updateOrigin(
+    userId: string,
+    data: { sectionCode?: string; section?: string; country?: string; primarySectionChosen?: boolean }
+  ): Promise<User | null> {
+    try {
+      const raw = await this.api.patchResource(['users', encodeURIComponent(userId.toLowerCase())], {
+        body: data
+      });
+      return raw ? new User(raw) : null;
+    } catch (err) {
+      console.error('Failed to update user origin preferences', err);
+      throw err;
+    }
+  }
 }
