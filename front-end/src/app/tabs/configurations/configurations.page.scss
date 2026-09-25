@@ -7,6 +7,8 @@
   --border-width: 0;
   border-bottom: 1px solid var(--border-color);
   padding: 8px 16px;
+  --ion-toolbar-segment-indicator-color: var(--ion-color-primary, var(--esn-cyan));
+  --ion-toolbar-segment-color-checked: var(--ion-color-primary, var(--esn-cyan));
 
   @media (max-width: 576px) {
     padding: 6px 8px;
@@ -20,6 +22,7 @@
     max-width: 100%;
     margin: 0 auto;
     scrollbar-width: none;
+    --indicator-color: var(--ion-color-primary, var(--esn-cyan));
 
     &::-webkit-scrollbar {
       display: none;
@@ -28,8 +31,9 @@
     ion-segment-button {
       --color: var(--text-medium);
       --color-checked: var(--ion-color-primary, var(--esn-cyan));
-      --indicator-color: var(--bg-card);
-      --indicator-box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+      --indicator-color: var(--ion-color-primary, var(--esn-cyan)) !important;
+      --indicator-box-shadow: none;
+      --indicator-height: 3px;
       --border-radius: 8px;
       font-weight: 600;
       min-height: 38px;
@@ -235,15 +239,19 @@ body.dark {
   .configSubnavToolbar {
     --background: var(--bg-card);
     border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    --ion-toolbar-segment-indicator-color: var(--ion-color-primary, #38bdf8);
+    --ion-toolbar-segment-color-checked: var(--ion-color-primary, #38bdf8);
 
     ion-segment {
       background: rgba(255, 255, 255, 0.05);
+      --indicator-color: var(--ion-color-primary, #38bdf8);
 
       ion-segment-button {
         --color: var(--text-medium);
-        --color-checked: #38bdf8;
-        --indicator-color: #2a2a2a;
-        --indicator-box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+        --color-checked: var(--ion-color-primary, #38bdf8);
+        --indicator-color: var(--ion-color-primary, #38bdf8) !important;
+        --indicator-box-shadow: none;
+        --indicator-height: 3px;
       }
     }
   }
@@ -312,7 +320,9 @@ body.dark {
     ion-segment-button {
       --color: var(--text-medium);
       --color-checked: var(--ion-color-primary, var(--esn-cyan));
-      --indicator-color: var(--bg-body);
+      --indicator-color: var(--ion-color-primary, var(--esn-cyan)) !important;
+      --indicator-box-shadow: none;
+      --indicator-height: 2px;
       --border-radius: 8px;
       font-size: 0.82rem;
       font-weight: 600;
