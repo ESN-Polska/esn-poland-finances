@@ -248,6 +248,22 @@ class Login extends ResourceController {
     User.applyConfigurationPermissions(user, configurations);
     this.logger.info('ESN Accounts OAuth login successful', { userId: user.userId, section: user.sectionCode });
 
+    if ((configurations.blockedUserIds || []).some((b: string) => b.toLowerCase() === user.userId.toLowerCase())) {
+      this.logger.warn('Login rejected: user account is suspended', { userId: user.userId });
+      const acceptsJson = (this.event.headers?.accept || '').includes('application/json');
+      if (this.httpMethod === 'POST' || (acceptsJson && !this.queryParams?.redirect)) {
+        this.returnStatusCode = 403;
+        throw new HandledError('Your account has been suspended. Please contact the administrator.');
+      }
+      this.callback(null, {
+        statusCode: 302,
+        headers: {
+          Location: `${redirectUri || APP_URL}/auth?error=user_suspended`
+        }
+      });
+      return;
+    }
+
     if (configurations.appLocked && !user.isAdministrator) {
       this.logger.warn('Login rejected: application is locked', { userId: user.userId });
       const acceptsJson = (this.event.headers?.accept || '').includes('application/json');

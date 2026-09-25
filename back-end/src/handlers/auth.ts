@@ -40,6 +40,10 @@ export const handler = async (event: APIGatewayProxyEventV2): Promise<HTTPAuthRe
   if (user) {
     const configurations = await verifyUserPermissions(user);
     if (configurations) {
+      // If the user has been blocked/suspended, deny authorization immediately
+      if ((configurations.blockedUserIds || []).some((b: string) => b.toLowerCase() === user.userId?.toLowerCase())) {
+        return result;
+      }
       // If the app is currently locked, non-administrators are not authorized
       if (configurations.appLocked && !user.isAdministrator) {
         return result;

@@ -109,9 +109,60 @@ class UsersRC extends ResourceController {
     const search = this.queryParams?.search ? String(this.queryParams.search).toLowerCase() : '';
     const includeRoleAssignments = this.queryParams?.roleAssignments === 'true';
     const canViewRoleAssignments =
-      this.callerUser?.isAdministrator || this.callerUser?.hasPermission(AppPermission.CONFIGURATIONS.USERS);
+      this.callerUser?.isAdministrator ||
+      this.callerUser?.hasPermission(AppPermission.CONFIGURATIONS.USERS) ||
+      this.callerUser?.hasPermission(AppPermission.CONFIGURATIONS.ROLES);
 
+    let configurations = new Configurations({ PK: Configurations.PK });
+    if (DDB_TABLES.configurations) {
+      try {
+        const configData = await ddb.get({
+          TableName: DDB_TABLES.configurations,
+          Key: { PK: Configurations.PK }
+        });
+        if (configData) configurations = new Configurations(configData);
+      } catch {}
+    }
+
+    const includeGuests = this.queryParams?.includeGuests === 'true';
     let rawUsers: any[] = (await ddb.scan({ TableName: DDB_TABLES.users })) || [];
+
+    // Skip guest users unless specifically requested with ?includeGuests=true
+    if (!includeGuests) {
+      rawUsers = rawUsers.filter(
+        u => !u.isGuest && !String(u.userId || '').toLowerCase().startsWith('guest_') && !(u.roles || []).includes('GUEST')
+      );
+    }
+
+    // Merge any known configured users who might not have logged in yet
+    const existingIds = new Set(rawUsers.map(u => String(u.userId || '').toLowerCase()));
+    const knownConfigUserIds = Array.from(new Set([
+      ...(configurations.administratorsIds || []),
+      ...(configurations.managersIds || []),
+      ...(configurations.auditorsIds || []),
+      ...(configurations.blockedUserIds || []),
+      ...(configurations.customRoles || []).reduce((acc, r) => [...acc, ...(r.userIds || [])], [] as string[])
+    ].map(id => String(id || '').toLowerCase().trim()).filter(Boolean)));
+
+    for (const configUserId of knownConfigUserIds) {
+      if (!existingIds.has(configUserId) && !configUserId.startsWith('guest_')) {
+        rawUsers.push({
+          userId: configUserId,
+          firstName: '',
+          lastName: '',
+          name: '',
+          email: '',
+          section: '',
+          sectionCode: '',
+          country: '',
+          roles: [],
+          extendedRoles: [],
+          lastLoginAt: ''
+        });
+        existingIds.add(configUserId);
+      }
+    }
+
     if (search) {
       rawUsers = rawUsers.filter(
         u =>
@@ -126,17 +177,6 @@ class UsersRC extends ResourceController {
 
     if (!canViewRoleAssignments || !includeRoleAssignments) {
       return rawUsers.slice(0, 50);
-    }
-
-    let configurations = new Configurations({ PK: Configurations.PK });
-    if (DDB_TABLES.configurations) {
-      try {
-        const configData = await ddb.get({
-          TableName: DDB_TABLES.configurations,
-          Key: { PK: Configurations.PK }
-        });
-        if (configData) configurations = new Configurations(configData);
-      } catch {}
     }
 
     return rawUsers.map(rawUser => {
@@ -155,31 +195,56 @@ class UsersRC extends ResourceController {
           : [])
       ];
 
-      const customSources = (configurations.customRoles || [])
-        .filter(role => user.customRoleIds.includes(role.id))
-        .reduce((sources, role) => {
-          if (role.userIds.includes(user.userId)) {
-            sources.push({ roleId: role.id, roleName: role.name, matchedExtendedRole: 'manual' });
-          }
-          (role.extendedRolePatterns || [])
-            .filter(pattern => User.matchesRolePattern(user, pattern))
-            .forEach(matchedExtendedRole => {
-              sources.push({ roleId: role.id, roleName: role.name, matchedExtendedRole });
-            });
-          return sources;
-        }, [] as { roleId: string; roleName: string; matchedExtendedRole: string }[]);
+      const customSources: Array<{ roleId: string; roleName: string; matchedExtendedRole: string }> = [];
+      const seenCustomKeys = new Set<string>();
 
-      const builtInSources = (configurations.automaticRoleAssignments || [])
-        .filter(assignment => User.hasAnyRole(user, assignment.extendedRolePatterns))
-        .map(assignment => ({
-          roleId: assignment.roleId,
-          roleName: assignment.roleId.replace(/_/g, ' '),
-          matchedExtendedRole: assignment.extendedRolePatterns.find(p => User.matchesRolePattern(user, p)) || ''
-        }));
+      for (const role of configurations.customRoles || []) {
+        if (!user.customRoleIds.includes(role.id)) continue;
+
+        if (role.userIds.includes(user.userId)) {
+          customSources.push({ roleId: role.id, roleName: role.name, matchedExtendedRole: 'manual' });
+        }
+
+        for (const pattern of role.extendedRolePatterns || []) {
+          if (User.matchesRolePattern(user, pattern)) {
+            const key = `${role.id}:::${pattern}`;
+            if (!seenCustomKeys.has(key)) {
+              seenCustomKeys.add(key);
+              customSources.push({ roleId: role.id, roleName: role.name, matchedExtendedRole: pattern });
+            }
+          }
+        }
+      }
+
+      const builtInSources: Array<{ roleId: string; roleName: string; matchedExtendedRole: string }> = [];
+      const seenBuiltInKeys = new Set<string>();
+      const builtInOrder = ['ADMINISTRATOR', 'MANAGER', 'AUDITOR'];
+
+      for (const targetRoleId of builtInOrder) {
+        const matchingAssignments = (configurations.automaticRoleAssignments || []).filter(
+          assignment => assignment.roleId === targetRoleId
+        );
+
+        for (const assignment of matchingAssignments) {
+          for (const pattern of assignment.extendedRolePatterns || []) {
+            if (User.matchesRolePattern(user, pattern)) {
+              const key = `${assignment.roleId}:::${pattern}`;
+              if (!seenBuiltInKeys.has(key)) {
+                seenBuiltInKeys.add(key);
+                builtInSources.push({
+                  roleId: assignment.roleId,
+                  roleName: assignment.roleId.replace(/_/g, ' '),
+                  matchedExtendedRole: pattern
+                });
+              }
+            }
+          }
+        }
+      }
 
       return {
         ...rawUser,
-        roleAssignmentSources: [...manualSources, ...customSources, ...builtInSources]
+        roleAssignmentSources: [...manualSources, ...builtInSources, ...customSources]
       };
     });
   }
