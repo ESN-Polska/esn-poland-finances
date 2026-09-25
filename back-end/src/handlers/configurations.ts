@@ -440,8 +440,10 @@ class ConfigurationsRC extends ResourceController {
       'appLogoURLDarkMode',
       'organisationLogoURL',
       'timezone',
+      'usersOriginDisplay',
       'forcedLanguage',
       'oauthRoleOptions',
+      'blockedUserIds',
       'configurationPageSectionsOrder',
       'administratorsIds',
       'managersIds',
@@ -476,6 +478,7 @@ class ConfigurationsRC extends ResourceController {
       DEFAULT_CONFIGURATION_PAGE_SECTIONS_ORDER.every(section => {
         if (section === 'OPTIONS') return this.user!.hasPermission(AppPermission.CONFIGURATIONS.OPTIONS);
         if (section === 'USERS') return this.user!.hasPermission(AppPermission.CONFIGURATIONS.USERS);
+        if (section === 'ROLES') return this.user!.hasPermission(AppPermission.CONFIGURATIONS.ROLES);
         if (section === 'RESOURCES') return this.user!.hasPermission(AppPermission.CONFIGURATIONS.RESOURCES);
         if (section === 'GUESTS') return this.user!.hasPermission(AppPermission.CONFIGURATIONS.GUESTS);
         if (section === 'TEMPLATES') return this.user!.hasPermission(AppPermission.CONFIGURATIONS.TEMPLATES);
@@ -498,6 +501,7 @@ class ConfigurationsRC extends ResourceController {
       'appLogoURLDarkMode',
       'organisationLogoURL',
       'timezone',
+      'usersOriginDisplay',
       'forcedLanguage',
       'oauthRoleOptions',
       'appLocked',
@@ -510,12 +514,16 @@ class ConfigurationsRC extends ResourceController {
       'delegationInstructionsURL'
     ];
 
-    const userFields = [
+    const roleFields = [
       'administratorsIds',
       'managersIds',
       'auditorsIds',
       'customRoles',
       'automaticRoleAssignments'
+    ];
+
+    const userFields = [
+      'blockedUserIds'
     ];
 
     const guestFields = [
@@ -535,6 +543,7 @@ class ConfigurationsRC extends ResourceController {
     const allowedFields = [
       ...(this.user.hasPermission(AppPermission.CONFIGURATIONS.OPTIONS) ? optionFields : []),
       ...(this.user.hasPermission(AppPermission.CONFIGURATIONS.RESOURCES) || this.user.hasPermission(AppPermission.CONFIGURATIONS.OPTIONS) ? resourceFields : []),
+      ...(this.user.hasPermission(AppPermission.CONFIGURATIONS.ROLES) ? roleFields : []),
       ...(this.user.hasPermission(AppPermission.CONFIGURATIONS.USERS) ? userFields : []),
       ...(this.user.hasPermission(AppPermission.CONFIGURATIONS.GUESTS) ? guestFields : []),
       ...(hasFullConfigurationsRights ? ['configurationPageSectionsOrder'] : []),

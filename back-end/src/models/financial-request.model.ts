@@ -1,4 +1,6 @@
 import { Resource } from 'idea-toolbox';
+import { UsersOriginDisplayOptions } from './configurations.model';
+import { getUserOrigin } from './user.model';
 
 export type FinancialRequestType =
   | 'INVOICE_TO_PAY'
@@ -231,7 +233,14 @@ export class FinancialRequest extends Resource {
     return this.canEdit() && this.userId === user.userId?.toLowerCase();
   }
 
-  getSectionOrCountry(): string {
+  getOrigin(displayOption: UsersOriginDisplayOptions = UsersOriginDisplayOptions.BOTH): string | null {
+    return getUserOrigin(this, displayOption);
+  }
+
+  getSectionOrCountry(displayOption?: UsersOriginDisplayOptions): string {
+    if (displayOption) {
+      return this.getOrigin(displayOption) || '';
+    }
     const section = (this.section || '').trim();
     if (section && section !== 'undefined') {
       return section;

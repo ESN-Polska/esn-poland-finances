@@ -10,6 +10,7 @@ export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
 export const DEFAULT_CONFIGURATION_PAGE_SECTIONS_ORDER = [
   'GUESTS',
   'USERS',
+  'ROLES',
   'RESOURCES',
   'TEMPLATES',
   'OPTIONS'
@@ -83,6 +84,7 @@ export const AppPermission = {
     PARENT: 'configurations',
     GUESTS: 'configurations.guests',
     USERS: 'configurations.users',
+    ROLES: 'configurations.roles',
     RESOURCES: 'configurations.resources',
     TEMPLATES: 'configurations.templates',
     OPTIONS: 'configurations.options'
@@ -226,12 +228,14 @@ export const DEFAULT_CONFIGURATIONS = {
   appLogoURLDarkMode: '',
   organisationLogoURL: '',
   timezone: DEFAULT_TIMEZONE,
+  usersOriginDisplay: UsersOriginDisplayOptions.BOTH,
   configurationPageSectionsOrder: DEFAULT_CONFIGURATION_PAGE_SECTIONS_ORDER,
   administratorsIds: [] as string[],
   managersIds: [] as string[],
   auditorsIds: [] as string[],
   customRoles: [] as CustomRole[],
   automaticRoleAssignments: [] as AutomaticRoleAssignment[],
+  blockedUserIds: [] as string[],
   rulesWarningText: {
     en: 'Please, make sure you have read and understood them before submitting a request. Not complying with the defined deadlines in the rules document might cause your submission being rejected.',
     pl: 'Prosimy o zapoznanie się z zasadami przed złożeniem wniosku. Niedopełnienie terminów określonych w dokumencie może skutkować odrzuceniem wniosku.'
@@ -277,6 +281,8 @@ export class Configurations extends Resource {
   customRoles: CustomRole[];
   /** Automatic role assignments matched against ESN Accounts OAuth extended roles. */
   automaticRoleAssignments: AutomaticRoleAssignment[];
+  /** Blocked/suspended user IDs who are prevented from logging in or submitting requests. */
+  blockedUserIds: string[];
 
   /** The name/title of the platform in supported languages. */
   appTitle: LocalizedText;
@@ -298,6 +304,8 @@ export class Configurations extends Resource {
   organisationLogoURL: string;
   /** The timezone to use for dates and deadlines. */
   timezone: string;
+  /** Origin information to show when presenting users. */
+  usersOriginDisplay: UsersOriginDisplayOptions;
   /** Order of configuration subtabs. */
   configurationPageSectionsOrder: ConfigurationPageSection[];
   /** Last update timestamp (ISO string), used for optimistic concurrency control. */
@@ -351,13 +359,14 @@ export class Configurations extends Resource {
   load(x: any): void {
     super.load(x);
     this.updatedAt = this.clean(x.updatedAt, String);
-    this.administratorsIds = this.cleanArray(x.administratorsIds, String).map(id => id.toLowerCase());
-    this.managersIds = this.cleanArray(x.managersIds, String).map(id => id.toLowerCase());
-    this.auditorsIds = this.cleanArray(x.auditorsIds, String).map(id => id.toLowerCase());
+    const normalizeHandle = (id: string) => String(id || '').replace(/^@+/, '').trim().toLowerCase();
+    this.administratorsIds = this.cleanArray(x.administratorsIds, String).map(normalizeHandle).filter(Boolean);
+    this.managersIds = this.cleanArray(x.managersIds, String).map(normalizeHandle).filter(Boolean);
+    this.auditorsIds = this.cleanArray(x.auditorsIds, String).map(normalizeHandle).filter(Boolean);
     this.customRoles = this.cleanArray(x.customRoles, Object).map((role: any) => ({
       id: this.clean(role.id, String),
       name: this.clean(role.name, String),
-      userIds: this.cleanArray(role.userIds, String).map(id => id.toLowerCase()),
+      userIds: this.cleanArray(role.userIds, String).map(normalizeHandle).filter(Boolean),
       permissions: this.cleanArray(role.permissions, String) as AppPermission[],
       extendedRolePatterns: this.cleanArray(role.extendedRolePatterns, String)
     }));
@@ -365,6 +374,7 @@ export class Configurations extends Resource {
       roleId: this.clean(assignment.roleId, String),
       extendedRolePatterns: this.cleanArray(assignment.extendedRolePatterns, String)
     }));
+    this.blockedUserIds = this.cleanArray(x.blockedUserIds, String).map(normalizeHandle).filter(Boolean);
 
     const defaultTitle = DEFAULT_CONFIGURATIONS.appTitle;
     if (typeof x.appTitle === 'string') {
@@ -425,6 +435,11 @@ export class Configurations extends Resource {
     this.appLogoURLDarkMode = this.clean(x.appLogoURLDarkMode, String);
     this.organisationLogoURL = this.clean(x.organisationLogoURL, String);
     this.timezone = this.clean(x.timezone, String, DEFAULT_TIMEZONE);
+    this.usersOriginDisplay = this.clean(
+      x.usersOriginDisplay,
+      String,
+      DEFAULT_CONFIGURATIONS.usersOriginDisplay || UsersOriginDisplayOptions.BOTH
+    );
 
     const configuredSections = this.cleanArray(x.configurationPageSectionsOrder, String) as ConfigurationPageSection[];
     let resolvedSections = [
@@ -432,9 +447,20 @@ export class Configurations extends Resource {
         DEFAULT_CONFIGURATION_PAGE_SECTIONS_ORDER.includes(section) && configuredSections.indexOf(section) === index
       )
     ];
-    if (resolvedSections.length > 0 && !resolvedSections.includes('RESOURCES')) {
+    if (resolvedSections.length > 0 && !resolvedSections.includes('ROLES')) {
       const usersIdx = resolvedSections.indexOf('USERS');
       if (usersIdx !== -1) {
+        resolvedSections.splice(usersIdx + 1, 0, 'ROLES');
+      } else {
+        resolvedSections.push('ROLES');
+      }
+    }
+    if (resolvedSections.length > 0 && !resolvedSections.includes('RESOURCES')) {
+      const rolesIdx = resolvedSections.indexOf('ROLES');
+      const usersIdx = resolvedSections.indexOf('USERS');
+      if (rolesIdx !== -1) {
+        resolvedSections.splice(rolesIdx + 1, 0, 'RESOURCES');
+      } else if (usersIdx !== -1) {
         resolvedSections.splice(usersIdx + 1, 0, 'RESOURCES');
       } else {
         resolvedSections.push('RESOURCES');
@@ -641,6 +667,9 @@ export class Configurations extends Resource {
     this.appLockMessage = safeData.appLockMessage || DEFAULT_CONFIGURATIONS.appLockMessage;
     this.oauthRoleOptions = safeData.oauthRoleOptions !== undefined ? safeData.oauthRoleOptions : DEFAULT_CONFIGURATIONS.oauthRoleOptions;
     this.forcedLanguage = safeData.forcedLanguage !== undefined ? this.clean(safeData.forcedLanguage, String, DEFAULT_CONFIGURATIONS.forcedLanguage) : DEFAULT_CONFIGURATIONS.forcedLanguage;
+    this.blockedUserIds = safeData.blockedUserIds !== undefined
+      ? this.cleanArray(safeData.blockedUserIds, String).map((id: string) => String(id || '').replace(/^@+/, '').trim().toLowerCase()).filter(Boolean)
+      : DEFAULT_CONFIGURATIONS.blockedUserIds;
   }
 
   hasAdminGroup(): boolean {
@@ -651,6 +680,10 @@ export class Configurations extends Resource {
   validate(): string[] {
     const errors = super.validate();
     if (this.iE(this.administratorsIds) && !this.hasAdminGroup()) errors.push('administratorsIds');
+    const adminIds = new Set((this.administratorsIds || []).map(id => id.toLowerCase()));
+    if ((this.blockedUserIds || []).some(id => adminIds.has(id.toLowerCase()))) {
+      errors.push('blockedUserIds.cannotSuspendAdmin');
+    }
     if (typeof this.appTitle === 'object') {
       if (!this.appTitle?.en?.trim() && !this.appTitle?.pl?.trim()) errors.push('appTitle');
     } else if (this.iE(this.appTitle)) {

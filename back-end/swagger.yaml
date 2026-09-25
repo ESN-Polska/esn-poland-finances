@@ -135,7 +135,7 @@ paths:
           $ref: '#/components/responses/Configurations'
     put:
       summary: Edit the platform's configurations
-      description: Requires Administrator or granular configuration permissions (configurations.options, configurations.users, rules.text, rules.update)
+      description: Requires Administrator or granular configuration permissions (configurations.options, configurations.users, configurations.roles, rules.text, rules.update)
       tags: [Configurations]
       security:
         - AuthFunction: []
@@ -573,14 +573,23 @@ components:
           items:
             type: string
             enum:
-              - OPTIONS
+              - GUESTS
               - USERS
-          example: ["OPTIONS", "USERS"]
+              - ROLES
+              - RESOURCES
+              - TEMPLATES
+              - OPTIONS
+          example: ["GUESTS", "USERS", "ROLES", "RESOURCES", "TEMPLATES", "OPTIONS"]
         administratorsIds:
           type: array
           items:
             type: string
           example: ["admin.user"]
+        blockedUserIds:
+          type: array
+          items:
+            type: string
+          example: ["blocked.user"]
         managersIds:
           type: array
           items:

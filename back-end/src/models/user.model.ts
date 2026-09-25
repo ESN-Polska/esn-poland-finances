@@ -214,6 +214,11 @@ export class User extends Resource {
     this.email = this.clean(x.email, String);
     this.firstName = this.clean(x.firstName, String);
     this.lastName = this.clean(x.lastName, String);
+    if (!this.firstName && !this.lastName && x.name) {
+      const parts = String(x.name).trim().split(/\s+/);
+      this.firstName = parts[0] || '';
+      this.lastName = parts.slice(1).join(' ') || '';
+    }
     this.sectionCode = this.clean(x.sectionCode, String);
     this.section = this.clean(x.section, String);
     this.country = this.clean(x.country, String);
@@ -253,7 +258,9 @@ export class User extends Resource {
 
   getDisplayName(): string {
     const parts = [this.firstName, this.lastName].filter(Boolean);
-    return parts.length > 0 ? parts.join(' ') : this.userId;
+    if (parts.length > 0) return parts.join(' ');
+    if ((this as any).name) return (this as any).name;
+    return this.userId || '';
   }
 
   getAccountsProfileURL(): string {
