@@ -157,6 +157,7 @@
     "NOTIFICATIONS_SAVE_FAILED": "Failed to update email preferences.",
     "ENABLE_ALL": "Enable all",
     "DISABLE_ALL": "Disable all",
+    "ROLES": "Application roles",
     "ABOUT": "About",
     "CREDITS_AND_LICENSE": "Credits & Licence"
   },

@@ -60,6 +60,19 @@
           <span class="fieldLabel">{{ 'USER.SECTION' | translate }}</span>
           <span class="fieldValue">{{ user.section }}</span>
         </div>
+
+        <div class="infoField" *ngIf="userRoles.length">
+          <span class="fieldLabel">{{ 'PROFILE.ROLES' | translate }}</span>
+          <div class="rolesChipsContainer">
+            <span
+              *ngFor="let role of userRoles"
+              class="userRoleChip {{ role.key }}"
+              [title]="role.title || role.name"
+            >
+              {{ role.name }}
+            </span>
+          </div>
+        </div>
       </div>
     </div>
 

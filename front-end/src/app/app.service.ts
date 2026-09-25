@@ -3,7 +3,7 @@ import { Title } from '@angular/platform-browser';
 import { Storage } from '@ionic/storage-angular';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { TranslateService } from '@ngx-translate/core';
-import { Router } from '@angular/router';
+import { NavigationExtras, Router } from '@angular/router';
 import { ToastController } from '@ionic/angular';
 import { IDEAApiService } from '@idea-ionic/common';
 
@@ -40,6 +40,7 @@ export class AppService {
   public isImpersonating = false;
   public impersonatedRole = 'STANDARD_USER';
   public impersonatedPersonaTitle = '';
+  public impersonationSessionId = 0;
 
   public themePreference: ThemePreference = 'auto';
   public accentColor: AccentColor = 'default';
@@ -269,11 +270,11 @@ export class AppService {
     }, 15000);
   }
 
-  public goTo(route: string | any[]): void {
+  public goTo(route: string | any[], extras?: NavigationExtras): void {
     if (Array.isArray(route)) {
-      this.router.navigate(route);
+      this.router.navigate(route, extras);
     } else {
-      this.router.navigate([route]);
+      this.router.navigate([route], extras);
     }
   }
 
@@ -341,6 +342,7 @@ export class AppService {
     this.isImpersonating = true;
     this.impersonatedRole = 'STANDARD_USER';
     this.impersonatedPersonaTitle = this.translate.instant('CONFIGURATIONS.STANDARD_USER');
+    this.impersonationSessionId++;
     this.persistImpersonationRole(this.impersonatedRole);
 
     const impersonated = new User(this.originalUser!);
@@ -367,6 +369,7 @@ export class AppService {
     this.isImpersonating = true;
     this.impersonatedRole = 'MANAGER';
     this.impersonatedPersonaTitle = this.translate.instant('CONFIGURATIONS.MANAGER');
+    this.impersonationSessionId++;
     this.persistImpersonationRole(this.impersonatedRole);
 
     const impersonated = new User(this.originalUser!);
@@ -396,6 +399,7 @@ export class AppService {
     this.isImpersonating = true;
     this.impersonatedRole = 'AUDITOR';
     this.impersonatedPersonaTitle = this.translate.instant('CONFIGURATIONS.AUDITOR');
+    this.impersonationSessionId++;
     this.persistImpersonationRole(this.impersonatedRole);
 
     const impersonated = new User(this.originalUser!);
@@ -426,6 +430,7 @@ export class AppService {
     this.isImpersonating = true;
     this.impersonatedRole = `CUSTOM_ROLE:${customRole.id}`;
     this.impersonatedPersonaTitle = customRole.name;
+    this.impersonationSessionId++;
     this.persistImpersonationRole(this.impersonatedRole);
 
     const impersonated = new User(this.originalUser!);
@@ -464,6 +469,7 @@ export class AppService {
 
   public exitPreview(navigate = true): void {
     this.clearPersistedImpersonationRole();
+    this.impersonationSessionId++;
     if (this.originalUser) {
       const restoredUser = new User(this.originalUser);
       User.applyConfigurationPermissions(restoredUser, this.configurations);
@@ -475,7 +481,7 @@ export class AppService {
     this.impersonatedPersonaTitle = '';
 
     if (navigate) {
-      this.goTo(['/t/configurations']);
+      this.goTo(['/t/configurations'], { queryParams: { section: 'ROLES' } });
     }
   }
 
@@ -1003,5 +1009,120 @@ export class AppService {
   public hasElevatedRole(user?: User | null): boolean {
     const roleKey = this.getUserRoleKey(user);
     return roleKey !== 'STANDARD_USER';
+  }
+
+  public getUserRoles(
+    user?: User | null,
+    includeStandardIfEmpty = false
+  ): Array<{ key: string; name: string; title?: string }> {
+    const isTargetCurrentUser =
+      !user ||
+      user.userId === this.originalUser?.userId ||
+      user.userId === this.currentUser?.userId;
+
+    const targetUser =
+      this.isImpersonating && isTargetCurrentUser
+        ? this.currentUser
+        : (user || this.currentUser);
+
+    if (!targetUser) return [];
+
+    if (targetUser.isGuest) {
+      return [
+        {
+          key: 'role-guest',
+          name: this.translate.instant('CONFIGURATIONS.GUEST_BADGE')
+        }
+      ];
+    }
+
+    const isCurrentImpersonated = this.isImpersonating && isTargetCurrentUser;
+
+    // Apply configuration permissions ONLY for external users (e.g. in Configurations user list)
+    // Never mutate the currently impersonated user object in place.
+    if (
+      this.configurations &&
+      !isCurrentImpersonated &&
+      user &&
+      user !== this.currentUser &&
+      user.userId !== this.originalUser?.userId
+    ) {
+      User.applyConfigurationPermissions(targetUser, this.configurations);
+    }
+
+    const roles: Array<{ key: string; name: string; title?: string }> = [];
+
+    if (targetUser.isAdministrator) {
+      roles.push({
+        key: 'role-administrator',
+        name: this.translate.instant('CONFIGURATIONS.ADMINISTRATOR')
+      });
+    }
+
+    if (targetUser.isManager) {
+      roles.push({
+        key: 'role-manager',
+        name: this.translate.instant('CONFIGURATIONS.MANAGER')
+      });
+    }
+
+    if (targetUser.isAuditor) {
+      roles.push({
+        key: 'role-auditor',
+        name: this.translate.instant('CONFIGURATIONS.AUDITOR')
+      });
+    }
+
+    // Custom roles with specific names
+    const seenCustomRoleIds = new Set<string>();
+    const customRoles = this.configurations?.customRoles || [];
+    const userIdLower = (targetUser.userId || '').toLowerCase();
+
+    for (const cr of customRoles) {
+      if (seenCustomRoleIds.has(cr.id)) continue;
+      const isExplicit =
+        !isCurrentImpersonated &&
+        (cr.userIds || []).map(id => (id || '').toLowerCase()).includes(userIdLower);
+      const matchedPattern =
+        !isCurrentImpersonated &&
+        (cr.extendedRolePatterns || []).find(p => User.matchesRolePattern(targetUser, p));
+      const hasId = (targetUser.customRoleIds || []).includes(cr.id);
+
+      if (isExplicit || matchedPattern || hasId) {
+        seenCustomRoleIds.add(cr.id);
+        roles.push({
+          key: 'role-custom',
+          name: cr.name,
+          title: matchedPattern ? `${cr.name} (${matchedPattern})` : cr.name
+        });
+      }
+    }
+
+    if (!isCurrentImpersonated) {
+      for (const src of targetUser.roleAssignmentSources || []) {
+        if (src.roleId && !['ADMINISTRATOR', 'MANAGER', 'AUDITOR'].includes(src.roleId)) {
+          if (!seenCustomRoleIds.has(src.roleId)) {
+            seenCustomRoleIds.add(src.roleId);
+            roles.push({
+              key: 'role-custom',
+              name: src.roleName || src.roleId,
+              title:
+                src.matchedExtendedRole && src.matchedExtendedRole !== 'manual'
+                  ? `${src.roleName || src.roleId} (${src.matchedExtendedRole})`
+                  : src.roleName || src.roleId
+            });
+          }
+        }
+      }
+    }
+
+    if (roles.length === 0 && includeStandardIfEmpty) {
+      roles.push({
+        key: 'role-standard',
+        name: this.translate.instant('CONFIGURATIONS.STANDARD_USER')
+      });
+    }
+
+    return roles;
   }
 }

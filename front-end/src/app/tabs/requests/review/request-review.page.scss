@@ -90,9 +90,9 @@
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  background: rgba(0, 174, 239, 0.12);
+  background: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.12);
   color: var(--ion-color-primary, #00aeef);
-  border: 1px solid rgba(0, 174, 239, 0.3);
+  border: 1px solid rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.3);
   padding: 0.4rem 0.85rem;
   border-radius: 20px;
   font-size: 0.85rem;
@@ -276,7 +276,7 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  background: rgba(0, 174, 239, 0.08);
+  background: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.08);
   border-left: 4px solid var(--ion-color-primary, #00aeef);
   padding: 0.75rem 1rem;
   border-radius: 8px;
@@ -454,7 +454,7 @@
       font-size: 0.8rem;
       font-weight: 600;
       color: var(--ion-color-primary, #00aeef);
-      background: rgba(0, 174, 239, 0.1);
+      background: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.1);
       padding: 0.25rem 0.65rem;
       border-radius: 12px;
     }
@@ -534,8 +534,8 @@
   }
 
   &.iban-highlight-row {
-    background: rgba(0, 174, 239, 0.06);
-    border: 1px dashed rgba(0, 174, 239, 0.35);
+    background: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.06);
+    border: 1px dashed rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.35);
     padding: 0.6rem 0.8rem;
     border-radius: 8px;
     margin-top: 0.25rem;
@@ -1044,7 +1044,7 @@ body.dark {
   }
 
   .review-status-banner {
-    background: rgba(0, 174, 239, 0.15);
+    background: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.15);
     border-left-color: var(--ion-color-primary, #00aeef);
     color: var(--text-dark);
   }

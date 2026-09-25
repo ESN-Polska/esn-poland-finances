@@ -16,7 +16,11 @@ export class ProfilePage implements OnInit {
     return this.app.currentUser;
   }
   public avatarError = false;
-  
+
+  public get userRoles(): Array<{ key: string; name: string; title?: string }> {
+    return this.app.getUserRoles(this.user, true);
+  }
+
   public activeCurrencyTab: 'PLN' | 'EUR' = 'PLN';
 
   public plnBankDetails = {
