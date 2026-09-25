@@ -33,6 +33,10 @@ export class AppService {
   private _storage: Storage | null = null;
   private _ready = false;
 
+  public get isReady(): boolean {
+    return this._ready;
+  }
+
   public configurations: Configurations = new Configurations({ PK: Configurations.PK });
 
   // Preview / Impersonation State
@@ -113,6 +117,17 @@ export class AppService {
         }
       }
 
+      if (u?.userId && !u.isGuest) {
+        try {
+          await Promise.race([
+            this.refreshUserProfile(u.userId),
+            new Promise(resolve => setTimeout(resolve, 2500))
+          ]);
+        } catch (err) {
+          console.warn('Failed to refresh user profile from backend during init', err);
+        }
+      }
+
       if (u?.isAdministrator && typeof window !== 'undefined' && window.sessionStorage) {
         const savedImpersonationRole = window.sessionStorage.getItem(IMPERSONATION_ROLE_STORAGE_KEY);
         if (savedImpersonationRole) {
@@ -181,11 +196,48 @@ export class AppService {
     if (payload) {
       user = new User(payload);
       User.applyConfigurationPermissions(user, this.configurations);
-      await this._storage?.set(USER_KEY, payload);
+      await this._storage?.set(USER_KEY, JSON.parse(JSON.stringify(user)));
       this.userSubject.next(user);
+      if (user.userId && !user.isGuest) {
+        this.refreshUserProfile(user.userId).catch(() => {});
+      }
     }
     this.tokenSubject.next(token);
     return user;
+  }
+
+  public async updateCurrentUserRecord(userRecord: any): Promise<void> {
+    if (!this.currentUser) return;
+    const current = this.currentUser;
+    current.load(userRecord);
+    if (userRecord?.primarySectionChosen !== undefined) {
+      current.primarySectionChosen = Boolean(userRecord.primarySectionChosen);
+    }
+    User.applyConfigurationPermissions(current, this.configurations);
+    if (this.originalUser) {
+      this.originalUser.load(userRecord);
+      if (userRecord?.primarySectionChosen !== undefined) {
+        this.originalUser.primarySectionChosen = Boolean(userRecord.primarySectionChosen);
+      }
+      User.applyConfigurationPermissions(this.originalUser, this.configurations);
+    }
+    await this._storage?.set(USER_KEY, JSON.parse(JSON.stringify(current)));
+    this.userSubject.next(current);
+  }
+
+  public async refreshUserProfile(userId?: string): Promise<User | null> {
+    const id = userId || this.currentUser?.userId;
+    if (!id || this.currentUser?.isGuest) return null;
+    try {
+      const raw = await this.api.getResource(['users', encodeURIComponent(id.toLowerCase())]);
+      if (raw) {
+        await this.updateCurrentUserRecord(raw);
+        return this.currentUser;
+      }
+    } catch (err) {
+      console.warn('Failed to refresh user profile from backend', err);
+    }
+    return null;
   }
 
   public async logout(reason?: 'lock' | 'suspended' | boolean): Promise<void> {

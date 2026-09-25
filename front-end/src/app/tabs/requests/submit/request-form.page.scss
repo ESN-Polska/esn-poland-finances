@@ -324,7 +324,8 @@
   }
 
   .formInput,
-  .formTextarea {
+  .formTextarea,
+  .formSelect {
     width: 100%;
     background: var(--bg-body);
     border: 1px solid var(--border-color);
@@ -335,7 +336,8 @@
     outline: none !important;
     transition: border-color 0.15s ease;
 
-    &:focus {
+    &:focus,
+    &.ion-focused {
       border-color: var(--ion-color-primary, #00aeef);
     }
 
@@ -351,7 +353,8 @@
       border-color: #ef4444 !important;
       background-color: rgba(239, 68, 68, 0.03) !important;
 
-      &:focus {
+      &:focus,
+      &.ion-focused {
         border-color: #ef4444 !important;
         box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2) !important;
       }
@@ -366,8 +369,34 @@
     display: block;
   }
 
-  .formInput {
+  .formInput,
+  .formSelect {
     height: 42px;
+  }
+
+  ion-select.formSelect {
+    display: flex;
+    align-items: center;
+    --padding-start: 0;
+    --padding-end: 0;
+    --padding-top: 0;
+    --padding-bottom: 0;
+    --placeholder-color: var(--text-medium);
+    --placeholder-opacity: 0.8;
+    --highlight-color: transparent !important;
+    --highlight-color-focused: transparent !important;
+    --highlight-color-valid: transparent !important;
+    --highlight-color-invalid: transparent !important;
+
+    &::part(text) {
+      color: var(--text-dark);
+      font-size: 0.95rem;
+    }
+
+    &::part(icon) {
+      color: var(--text-medium) !important;
+      opacity: 0.8;
+    }
   }
 
   .currencyInputWrapper {

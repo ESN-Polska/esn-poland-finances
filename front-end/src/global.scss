@@ -49,6 +49,52 @@ ion-button:active {
   outline: none;
 }
 
+/* Input Highlights & Underlines - Align with Accent Color */
+ion-item {
+  --highlight-color-valid: var(--ion-color-primary) !important;
+  --highlight-color-focused: var(--ion-color-primary) !important;
+}
+
+ion-input,
+ion-textarea {
+  --highlight-color-valid: var(--ion-color-primary) !important;
+  --highlight-color-focused: var(--ion-color-primary) !important;
+  --caret-color: var(--ion-color-primary);
+  caret-color: var(--ion-color-primary);
+}
+
+ion-select {
+  --highlight-color: transparent !important;
+  --highlight-color-focused: transparent !important;
+  --highlight-color-valid: transparent !important;
+  --highlight-color-invalid: transparent !important;
+}
+
+.item-interactive.ion-valid {
+  --highlight-background: var(--ion-color-primary) !important;
+}
+
+.item-interactive.item-has-focus {
+  --highlight-background: var(--ion-color-primary) !important;
+}
+
+.item-interactive.ion-valid.item-has-focus {
+  --highlight-background: var(--ion-color-primary) !important;
+}
+
+.item-interactive .item-highlight {
+  background: var(--ion-color-primary) !important;
+}
+
+.item-interactive.ion-invalid .item-highlight,
+.item-interactive.ion-invalid.item-has-focus .item-highlight {
+  background: var(--ion-color-danger, #ef4444) !important;
+}
+
+.item-interactive.ion-invalid {
+  --highlight-background: var(--ion-color-danger, #ef4444) !important;
+}
+
 ion-toolbar {
   --background: var(--bg-toolbar);
   --color: #ffffff;
@@ -427,6 +473,23 @@ ion-modal.creditsModal {
     --height: 85vh;
     --max-height: 880px;
     --border-radius: 12px;
+  }
+}
+
+/*
+ * Primary Section Selection Modal
+ * -------------------------------------------
+ */
+ion-modal.selectPrimarySectionModal {
+  --width: 92%;
+  --max-width: 520px;
+  --height: min(600px, 85vh);
+  --border-radius: 16px;
+
+  @media only screen and (max-width: 767px) {
+    --width: 96%;
+    --height: min(620px, 88vh);
+    --border-radius: 14px;
   }
 }
 

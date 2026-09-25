@@ -222,6 +222,116 @@
         font-weight: 500;
       }
 
+      .fieldLabelRow {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .fieldBadge {
+        display: inline-flex;
+        align-items: center;
+        font-size: 0.7rem;
+        font-weight: 600;
+        padding: 2px 7px;
+        border-radius: 10px;
+        background: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.12);
+        color: var(--ion-color-primary, var(--esn-cyan));
+        letter-spacing: 0.02em;
+      }
+
+      .selectFieldWrapper {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        position: relative;
+        width: fit-content;
+        max-width: 100%;
+      }
+
+      .originSelect {
+        flex: 1;
+        min-width: 0;
+        min-height: unset !important;
+        height: auto !important;
+        --padding-top: 0 !important;
+        --padding-bottom: 0 !important;
+        --padding-start: 0 !important;
+        --padding-end: 0 !important;
+        --background: transparent;
+        background: transparent;
+        border: none !important;
+        outline: none !important;
+        box-shadow: none !important;
+        border-radius: 0;
+        --highlight-color-focused: transparent !important;
+        --highlight-color-valid: transparent !important;
+        --highlight-color-invalid: transparent !important;
+        --border-color: transparent !important;
+        --border-width: 0 !important;
+        --color: var(--text-dark, #222428);
+        --placeholder-color: var(--text-medium, #64748b);
+        color: var(--text-dark, #222428);
+        font-family: inherit;
+        font-size: 0.95rem;
+        font-weight: 400;
+        line-height: inherit;
+        cursor: pointer;
+
+        &::part(container) {
+          border: none !important;
+          outline: none !important;
+          box-shadow: none !important;
+        }
+
+        &::part(icon) {
+          color: var(--text-medium, #94a3b8);
+          opacity: 0.6;
+          font-size: 0.75rem;
+          margin-inline-start: 5px;
+          margin-top: 1px;
+          transition: color 0.15s ease, opacity 0.15s ease;
+        }
+
+        &::part(text) {
+          color: var(--text-dark, #222428);
+          font-family: inherit;
+          font-size: 0.95rem;
+          font-weight: 400;
+          line-height: inherit;
+          padding: 0 !important;
+          margin: 0 !important;
+        }
+
+        &:hover:not([disabled]), &:focus-within, &:focus {
+          outline: none !important;
+          box-shadow: none !important;
+          border: none !important;
+
+          &::part(text) {
+            color: var(--ion-color-primary, var(--esn-cyan, #00aeef));
+          }
+
+          &::part(icon) {
+            color: var(--ion-color-primary, var(--esn-cyan, #00aeef));
+            opacity: 1;
+          }
+        }
+
+        &[disabled] {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+      }
+
+      .selectSpinner {
+        width: 16px;
+        height: 16px;
+        flex-shrink: 0;
+        color: var(--ion-color-primary, var(--esn-cyan));
+      }
+
       .fieldValue {
         font-size: 0.95rem;
         color: var(--text-dark);
@@ -737,6 +847,48 @@
         .segmentBtn {
           &.active {
             background: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.15);
+            color: var(--ion-color-primary, #38bdf8);
+          }
+        }
+      }
+    }
+
+    .infoField {
+      .originSelect {
+        --background: transparent;
+        background: transparent;
+        border: none !important;
+        outline: none !important;
+        box-shadow: none !important;
+        border-radius: 0;
+        --highlight-color-focused: transparent !important;
+        --highlight-color-valid: transparent !important;
+        --highlight-color-invalid: transparent !important;
+        --border-color: transparent !important;
+        --border-width: 0 !important;
+        --color: var(--text-dark, #f8fafc);
+        color: var(--text-dark, #f8fafc);
+
+        &::part(container) {
+          border: none !important;
+          outline: none !important;
+          box-shadow: none !important;
+        }
+
+        &::part(text) {
+          color: var(--text-dark, #f8fafc);
+        }
+
+        &::part(icon) {
+          color: var(--text-medium, #94a3b8);
+        }
+
+        &:hover:not([disabled]), &:focus-within, &:focus {
+          outline: none !important;
+          box-shadow: none !important;
+          border: none !important;
+
+          &::part(icon) {
             color: var(--ion-color-primary, #38bdf8);
           }
         }

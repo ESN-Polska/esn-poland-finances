@@ -193,7 +193,15 @@
     "USERNAME": "Nazwa użytkownika",
     "NAME": "Imię i nazwisko",
     "LAST_LOGIN": "Ostatnie logowanie",
-    "VIEW_ON_ACCOUNTS": "Zobacz w ESN Accounts"
+    "VIEW_ON_ACCOUNTS": "Zobacz w ESN Accounts",
+    "MULTIPLE_SECTIONS_COUNT": "{{count}} dostępne",
+    "SECTION_UPDATED": "Sekcja główna została zaktualizowana.",
+    "ORIGIN_UPDATE_FAILED": "Nie udało się zaktualizować preferencji pochodzenia.",
+    "CHOOSE_PRIMARY_SECTION_TITLE": "Wybierz sekcję główną",
+    "CHOOSE_PRIMARY_SECTION_SUBTITLE": "Należysz do wielu sekcji ESN. Wybierz, która sekcja ma być Twoją domyślną sekcją dla wniosków finansowych.",
+    "CHOOSE_PRIMARY_SECTION_NOTE": "Możesz zmienić swoją sekcję główną w dowolnym momencie w Profilu.",
+    "CONFIRM_PRIMARY_SECTION": "Zatwierdź sekcję główną",
+    "PRIMARY_SECTION_CONFIRMED": "Sekcja główna została zapisana."
   },
   "REQUESTS": {
     "MY_REQUESTS_TITLE": "Moje wnioski",
@@ -427,6 +435,7 @@
     },
     "VALIDATION": {
       "FILL_ALL_REQUIRED": "Proszę uzupełnić wszystkie wymagane pola.",
+      "SECTION_REQUIRED": "Sekcja jest wymagana.",
       "POSITION_REQUIRED": "Stanowisko jest wymagane.",
       "FUNDING_REQUIRED": "Źródło finansowania jest wymagane.",
       "ACCOUNT_HOLDER_REQUIRED": "Imię i nazwisko właściciela rachunku jest wymagane.",
