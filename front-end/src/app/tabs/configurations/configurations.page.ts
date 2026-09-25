@@ -1,4 +1,5 @@
 import { Component, OnInit, ViewChild } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { AlertController, IonSelect, LoadingController, ModalController, ToastController } from '@ionic/angular';
 import { TranslateService } from '@ngx-translate/core';
 
@@ -51,6 +52,8 @@ export class ConfigurationsPage implements OnInit {
   @ViewChild('customRoleSelect') customRoleSelect?: IonSelect;
   selectedCustomRoleId: string | null = null;
 
+  private handledImpersonationSessionId = -1;
+
   pageSection: ConfigurationPageSection = DEFAULT_CONFIGURATION_PAGE_SECTIONS_ORDER[0];
   pageSections: ConfigurationPageSection[] =
     this.configurations?.configurationPageSectionsOrder?.length
@@ -79,10 +82,74 @@ export class ConfigurationsPage implements OnInit {
     private configurationsService: ConfigurationsService,
     private mediaService: MediaService,
     private usersService: UsersService,
+    private route: ActivatedRoute,
     public app: AppService
   ) {}
 
+  ionViewWillEnter(): void {
+    if (this.app.isImpersonating) {
+      if (
+        this.handledImpersonationSessionId !== this.app.impersonationSessionId ||
+        !this.canAccessPageSection(this.pageSection)
+      ) {
+        this.handledImpersonationSessionId = this.app.impersonationSessionId;
+        const firstAccessible = this.pageSections.find(s => this.canAccessPageSection(s));
+        if (firstAccessible) {
+          this.pageSection = firstAccessible;
+          if (this.pageSection === 'USERS') {
+            this.loadUsers();
+          }
+        }
+      }
+      return;
+    }
+
+    this.handledImpersonationSessionId = this.app.impersonationSessionId;
+
+    const targetSection = (
+      this.route.snapshot.queryParamMap.get('section') || ''
+    ).toUpperCase() as ConfigurationPageSection;
+    if (
+      targetSection &&
+      this.pageSections.includes(targetSection) &&
+      this.canAccessPageSection(targetSection)
+    ) {
+      this.pageSection = targetSection;
+      if (this.pageSection === 'USERS') {
+        this.loadUsers();
+      }
+      this.app.goTo(['/t/configurations'], { replaceUrl: true, queryParams: {} });
+      return;
+    }
+
+    if (!this.canAccessPageSection(this.pageSection)) {
+      const accessible = this.pageSections.find(s => this.canAccessPageSection(s));
+      if (accessible) {
+        this.pageSection = accessible;
+        if (this.pageSection === 'USERS') {
+          this.loadUsers();
+        }
+      }
+    }
+  }
+
   async ngOnInit(): Promise<void> {
+    this.route.queryParams.subscribe(params => {
+      if (this.app.isImpersonating) return;
+      const targetSection = (params?.['section'] || '').toUpperCase() as ConfigurationPageSection;
+      if (
+        targetSection &&
+        this.pageSections.includes(targetSection) &&
+        this.canAccessPageSection(targetSection)
+      ) {
+        this.pageSection = targetSection;
+        if (this.pageSection === 'USERS') {
+          this.loadUsers();
+        }
+        this.app.goTo(['/t/configurations'], { replaceUrl: true, queryParams: {} });
+      }
+    });
+
     if (this.app?.configurations) {
       this.configurations = this.app.configurations;
       if (this.configurations.configurationPageSectionsOrder?.length) {
@@ -91,15 +158,44 @@ export class ConfigurationsPage implements OnInit {
       this.oauthRoleOptions = this.getActiveOAuthRoleOptions();
     }
 
-    const firstAccessible = this.pageSections.find(s => this.canAccessPageSection(s));
-    if (firstAccessible) {
-      this.pageSection = firstAccessible;
-      if (this.pageSection === 'USERS') {
-        this.loadUsers();
+    if (this.app.isImpersonating) {
+      this.handledImpersonationSessionId = this.app.impersonationSessionId;
+      const firstAccessible = this.pageSections.find(s => this.canAccessPageSection(s));
+      if (firstAccessible) {
+        this.pageSection = firstAccessible;
+        if (this.pageSection === 'USERS') {
+          this.loadUsers();
+        }
+      } else {
+        this.app.goTo(['/t/home']);
+        return;
       }
     } else {
-      this.app.goTo(['/t/home']);
-      return;
+      const paramSection = (
+        this.route.snapshot.queryParamMap.get('section') || ''
+      ).toUpperCase() as ConfigurationPageSection;
+      const requestedSection =
+        paramSection &&
+        this.pageSections.includes(paramSection) &&
+        this.canAccessPageSection(paramSection)
+          ? paramSection
+          : null;
+
+      const firstAccessible =
+        requestedSection || this.pageSections.find(s => this.canAccessPageSection(s));
+      if (firstAccessible) {
+        this.pageSection = firstAccessible;
+        if (this.pageSection === 'USERS') {
+          this.loadUsers();
+        }
+      } else {
+        this.app.goTo(['/t/home']);
+        return;
+      }
+
+      if (paramSection) {
+        this.app.goTo(['/t/configurations'], { replaceUrl: true, queryParams: {} });
+      }
     }
 
     await this.loadData();
@@ -351,69 +447,7 @@ export class ConfigurationsPage implements OnInit {
   }
 
   getUserRoles(user: User): Array<{ key: string; name: string; title?: string }> {
-    if (!user) return [];
-    const roles: Array<{ key: string; name: string; title?: string }> = [];
-
-    if (this.configurations) {
-      User.applyConfigurationPermissions(user, this.configurations);
-    }
-
-    if (user.isAdministrator) {
-      roles.push({
-        key: 'role-administrator',
-        name: this.translate.instant('CONFIGURATIONS.ADMINISTRATOR')
-      });
-    }
-
-    if (user.isManager) {
-      roles.push({
-        key: 'role-manager',
-        name: this.translate.instant('CONFIGURATIONS.MANAGER')
-      });
-    }
-
-    if (user.isAuditor) {
-      roles.push({
-        key: 'role-auditor',
-        name: this.translate.instant('CONFIGURATIONS.AUDITOR')
-      });
-    }
-
-    // Custom roles with specific names
-    const seenCustomRoleIds = new Set<string>();
-    const customRoles = this.configurations?.customRoles || [];
-    for (const cr of customRoles) {
-      if (seenCustomRoleIds.has(cr.id)) continue;
-      const isExplicit = (cr.userIds || []).map(id => id.toLowerCase()).includes(user.userId.toLowerCase());
-      const matchedPattern = (cr.extendedRolePatterns || []).find(p => User.matchesRolePattern(user, p));
-      const hasId = (user.customRoleIds || []).includes(cr.id);
-
-      if (isExplicit || matchedPattern || hasId) {
-        seenCustomRoleIds.add(cr.id);
-        roles.push({
-          key: 'role-custom',
-          name: cr.name,
-          title: matchedPattern ? `${cr.name} (${matchedPattern})` : cr.name
-        });
-      }
-    }
-
-    for (const src of user.roleAssignmentSources || []) {
-      if (src.roleId && !['ADMINISTRATOR', 'MANAGER', 'AUDITOR'].includes(src.roleId)) {
-        if (!seenCustomRoleIds.has(src.roleId)) {
-          seenCustomRoleIds.add(src.roleId);
-          roles.push({
-            key: 'role-custom',
-            name: src.roleName || src.roleId,
-            title: src.matchedExtendedRole && src.matchedExtendedRole !== 'manual'
-              ? `${src.roleName || src.roleId} (${src.matchedExtendedRole})`
-              : src.roleName || src.roleId
-          });
-        }
-      }
-    }
-
-    return roles;
+    return this.app.getUserRoles(user, false);
   }
 
   async loadUsers(force = false): Promise<void> {
