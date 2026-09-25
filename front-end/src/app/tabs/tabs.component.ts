@@ -1,7 +1,9 @@
-import { Component, HostBinding, HostListener } from '@angular/core';
+import { Component, HostBinding, HostListener, OnInit, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
-import { MenuController } from '@ionic/angular';
+import { MenuController, ModalController } from '@ionic/angular';
+import { Subscription } from 'rxjs';
 import { AppPermission } from '@models/configurations.model';
+import { User } from '@models/user.model';
 import { AppService } from '../app.service';
 
 @Component({
@@ -9,9 +11,11 @@ import { AppService } from '../app.service';
   templateUrl: 'tabs.component.html',
   styleUrls: ['tabs.component.scss']
 })
-export class TabsComponent {
+export class TabsComponent implements OnInit, OnDestroy {
   public avatarError = false;
   public isMenuOpen = false;
+  private userSub?: Subscription;
+  private hasPromptedPrimarySection = false;
 
   @HostBinding('class.has-impersonation')
   public get hasImpersonation(): boolean {
@@ -21,8 +25,62 @@ export class TabsComponent {
   constructor(
     public app: AppService,
     private menuCtrl: MenuController,
+    private modalCtrl: ModalController,
     private router: Router
   ) {}
+
+  public ngOnInit(): void {
+    this.userSub = this.app.user$.subscribe(user => {
+      this.checkAndPromptPrimarySection(user);
+    });
+  }
+
+  public ngOnDestroy(): void {
+    if (this.userSub) {
+      this.userSub.unsubscribe();
+    }
+  }
+
+  private async checkAndPromptPrimarySection(user: User | null): Promise<void> {
+    if (!this.app.isReady || this.hasPromptedPrimarySection || this.app.isImpersonating) return;
+    if (!user || user.isGuest) return;
+
+    const availableSections = user.availableSections || [];
+    const currentCode = user.sectionCode || user.section;
+    const isCurrentSectionValid =
+      availableSections.length === 0 ||
+      availableSections.some(s => s.code === currentCode || s.name === currentCode);
+
+    if (availableSections.length === 1 && !isCurrentSectionValid) {
+      const only = availableSections[0];
+      user.sectionCode = only.code;
+      user.section = only.name;
+      user.primarySectionChosen = true;
+      this.app.updateCurrentUserRecord(user).catch(() => {});
+      return;
+    }
+
+    if (
+      (!user.primarySectionChosen || !isCurrentSectionValid) &&
+      availableSections.length > 1
+    ) {
+      this.hasPromptedPrimarySection = true;
+      try {
+        const { SelectPrimarySectionModalComponent } = await import(
+          './select-primary-section-modal/select-primary-section-modal.component'
+        );
+        const modal = await this.modalCtrl.create({
+          component: SelectPrimarySectionModalComponent,
+          componentProps: { user },
+          cssClass: 'selectPrimarySectionModal',
+          backdropDismiss: false
+        });
+        await modal.present();
+      } catch (err) {
+        console.error('Failed to open select primary section modal', err);
+      }
+    }
+  }
 
   @HostListener('window:resize')
   public onResize(): void {

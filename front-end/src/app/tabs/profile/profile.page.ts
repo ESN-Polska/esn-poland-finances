@@ -190,11 +190,11 @@ export class ProfilePage implements OnInit {
       }
       if (this.user.userId) {
         this.usersService.getById(this.user.userId).then(freshUser => {
-          if (freshUser && freshUser.disabledEmailNotifications) {
-            this.disabledEmailNotifications = [...freshUser.disabledEmailNotifications];
-            if (this.user) {
-              this.user.disabledEmailNotifications = this.disabledEmailNotifications;
+          if (freshUser) {
+            if (freshUser.disabledEmailNotifications) {
+              this.disabledEmailNotifications = [...freshUser.disabledEmailNotifications];
             }
+            this.app.updateCurrentUserRecord(freshUser);
           }
         }).catch(() => {});
       }
@@ -460,6 +460,76 @@ export class ProfilePage implements OnInit {
       await this.showToast('Error saving bank details', 'danger');
     } finally {
       this.isSaving = false;
+    }
+  }
+
+  public isSavingOrigin = false;
+
+  public async onSectionChange(event: any): Promise<void> {
+    const selectedVal = event?.detail?.value;
+    if (!selectedVal || !this.user) return;
+
+    const currentCode = this.user.sectionCode || this.user.section;
+    if (selectedVal === currentCode || selectedVal === this.user.section) return;
+
+    const targetSection = (this.user.availableSections || []).find(
+      s => s.code === selectedVal || s.name === selectedVal
+    );
+    const sectionCode = targetSection?.code || selectedVal;
+    const section = targetSection?.name || selectedVal;
+
+    let alignedCountry: string | undefined;
+    if (sectionCode) {
+      const prefix = sectionCode.split('-')[0]?.toUpperCase().trim();
+      if (prefix && prefix.length >= 2) {
+        const matchedCountry = (this.user.availableCountries || []).find(c => {
+          const code = (c.code || '').toUpperCase().trim();
+          const name = (c.name || '').toUpperCase().trim();
+          return (
+            code === prefix ||
+            code === `ESN ${prefix}` ||
+            code.startsWith(prefix) ||
+            name === prefix ||
+            name === `ESN ${prefix}` ||
+            name.startsWith(`ESN ${prefix} `) ||
+            name.endsWith(` (${prefix})`)
+          );
+        });
+        if (matchedCountry) {
+          alignedCountry = matchedCountry.name || matchedCountry.code;
+        }
+      }
+    }
+
+    const payload: { sectionCode: string; section: string; country?: string; primarySectionChosen: boolean } = {
+      sectionCode,
+      section,
+      primarySectionChosen: true
+    };
+    if (alignedCountry && alignedCountry !== this.user.country) {
+      payload.country = alignedCountry;
+    }
+
+    this.isSavingOrigin = true;
+    try {
+      const updatedUser = await this.usersService.updateOrigin(this.user.userId, payload);
+      if (updatedUser) {
+        await this.app.updateCurrentUserRecord(updatedUser);
+      } else {
+        this.user.sectionCode = sectionCode;
+        this.user.section = section;
+        if (payload.country) {
+          this.user.country = payload.country;
+        }
+        this.user.primarySectionChosen = true;
+        await this.app.updateCurrentUserRecord(this.user);
+      }
+      await this.showToast('USER.SECTION_UPDATED', 'success');
+    } catch (err) {
+      console.error('Failed to update primary section', err);
+      await this.showToast('USER.ORIGIN_UPDATE_FAILED', 'danger');
+    } finally {
+      this.isSavingOrigin = false;
     }
   }
 

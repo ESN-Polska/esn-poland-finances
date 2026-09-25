@@ -143,12 +143,21 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy {
 
   public saveDraftLocally(): void {
     if (this.isEditMode || this.hasAttemptedSubmit) return;
-    
+
+    const user = this.appService.currentUser;
+    if (user) {
+      const activeSection = user.section || user.sectionCode;
+      if (activeSection) {
+        this.request.section = activeSection;
+        this.updateCountryFromSection();
+      }
+    }
+
     const draft = {
       ...this.request,
       ticketAttachments: [] // Do not serialize files
     };
-    
+
     if (draft.documents) {
       draft.documents = draft.documents.map(doc => {
         const { attachment, ...rest } = doc;
@@ -184,12 +193,18 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy {
     this.isChangesRequested = existing.status === 'CHANGES_REQUESTED';
     this.request = {
       ...existing,
+      section: existing.section || currentUser?.section || currentUser?.sectionCode || '',
+      country: existing.country || currentUser?.country || '',
       documents: existing.documents ? existing.documents.map(doc => ({
         ...doc,
         currency: (doc.originalCurrency ? doc.originalCurrency : doc.currency) as any
       })) : [],
       ticketAttachments: existing.ticketAttachments ? [...existing.ticketAttachments] : []
     };
+
+    if (!this.request.country) {
+      this.updateCountryFromSection();
+    }
 
     if (
       (this.request.requestType === 'INVOICE_TO_PAY' ||
@@ -234,18 +249,31 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy {
     const plnBank = defaultBank?.pln;
     const eurBank = defaultBank?.eur;
 
+    let initialSection = user?.section || user?.sectionCode || '';
+    if (user?.availableSections?.length) {
+      const match = user.availableSections.find(
+        s => (s.name && s.name === initialSection) || (s.code && s.code === initialSection)
+      );
+      if (match) {
+        initialSection = match.name || match.code;
+      }
+    }
+
     const savedDraft = localStorage.getItem(this.DRAFT_KEY);
     if (savedDraft) {
       try {
         const parsed = JSON.parse(savedDraft);
         if (parsed && Object.keys(parsed).length > 0) {
           this.request = parsed;
+          this.request.section = initialSection;
+          this.request.country = user?.country || '';
+          this.updateCountryFromSection();
           this.request.ticketAttachments = [];
           if (this.request.documents) {
              this.request.documents.forEach(d => delete d.attachment);
           }
           this.recalculateTotals();
-          
+
           this.bankAccountType =
             this.request.swiftBic || (this.request.iban && /^[A-Za-z]{2}/.test(this.request.iban.trim()) && !this.request.iban.trim().toUpperCase().startsWith('PL'))
               ? 'INTERNATIONAL'
@@ -262,6 +290,8 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy {
     }
 
     this.request = {
+      section: initialSection,
+      country: user?.country || '',
       position: user?.isGuest ? (user.guestPosition || '') : '',
       sourceOfFunding: user?.isGuest ? (user.guestDefaultSourceOfFunding || '') : '',
       requestType: defaultType,
@@ -281,6 +311,8 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy {
       ticketAttachments: []
     };
 
+    this.updateCountryFromSection();
+
     this.bankAccountType =
       plnBank?.accountType ||
       (plnBank?.swiftBic || (plnBank?.iban && /^[A-Za-z]{2}/.test(plnBank.iban.trim()) && !plnBank.iban.trim().toUpperCase().startsWith('PL'))
@@ -295,6 +327,53 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy {
 
     if (this.request.requestType === 'INVOICE_TO_PAY' || this.request.requestType === 'INVOICE_REIMBURSEMENT') {
       this.addDocumentItem();
+    }
+  }
+
+  private updateCountryFromSection(): void {
+    const user = this.appService.currentUser;
+    if (!user || !this.request) return;
+
+    const sections = user.availableSections || [];
+    const currentSection = this.request.section;
+    const matchedSection = sections.find(
+      s => s.name === currentSection || s.code === currentSection
+    );
+
+    const sectionCode = matchedSection?.code || user.sectionCode;
+    if (!sectionCode) return;
+
+    const prefix = sectionCode.split('-')[0]?.toUpperCase().trim();
+    if (!prefix || prefix.length < 2) return;
+
+    const countries = user.availableCountries || [];
+    const matchedCountry = countries.find(c => {
+      const code = (c.code || '').toUpperCase().trim();
+      const name = (c.name || '').toUpperCase().trim();
+      return (
+        code === prefix ||
+        code === `ESN ${prefix}` ||
+        code.startsWith(prefix) ||
+        name === prefix ||
+        name === `ESN ${prefix}` ||
+        name.startsWith(`ESN ${prefix} `) ||
+        name.endsWith(` (${prefix})`)
+      );
+    });
+
+    if (matchedCountry) {
+      this.request.country = matchedCountry.name || matchedCountry.code;
+    } else if (user.country) {
+      const uCountry = user.country.toUpperCase().trim();
+      if (
+        uCountry === prefix ||
+        uCountry === `ESN ${prefix}` ||
+        uCountry.startsWith(prefix) ||
+        uCountry.startsWith(`ESN ${prefix} `) ||
+        uCountry.endsWith(` (${prefix})`)
+      ) {
+        this.request.country = user.country;
+      }
     }
   }
 
@@ -505,7 +584,7 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy {
       } else {
         doc.grossAmount = undefined as any;
       }
-      
+
       if (doc.originalVatAmount !== undefined && doc.originalVatAmount !== null) {
         doc.vatAmount = Math.round((Number(doc.originalVatAmount) * doc.exchangeRate) * 100) / 100;
       } else {
@@ -875,7 +954,7 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy {
           this.showToast('REQUESTS.VALIDATION.FILE_TOO_LARGE', 'warning', { max: `${this.MAX_FILE_SIZE_MB}MB` });
           continue;
         }
-        
+
         const res = await this.mediaService.uploadDocument(file);
         this.request[field]!.push({
           fileId: res.id,
@@ -921,7 +1000,17 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy {
     this.isSubmitting = true;
     try {
       this.recalculateTotals();
-      
+
+      if (!this.isEditMode && this.appService.currentUser) {
+        const u = this.appService.currentUser;
+        const activeSection = u.section || u.sectionCode;
+        if (activeSection) {
+          this.request.section = activeSection;
+          this.request.country = u.country || this.request.country || '';
+          this.updateCountryFromSection();
+        }
+      }
+
       const requestToSave: Partial<FinancialRequest> = {
         ...this.request,
         documents: this.request.documents?.map(doc => {
@@ -969,6 +1058,10 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy {
         this.showToast('CONFIGURATIONS.GUEST_LIMIT_EXCEEDED', 'danger', { amount: user.guestMaxAmount });
         return false;
       }
+    }
+
+    if (!this.request.section?.trim()) {
+      this.request.section = user?.section || user?.sectionCode || '';
     }
 
     if (!this.request.position?.trim()) return false;
@@ -1081,8 +1174,8 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy {
       message: this.translate.instant('REQUESTS.CONFIRM_RESET'),
       buttons: [
         { text: this.translate.instant('COMMON.CANCEL'), role: 'cancel' },
-        { 
-          text: this.translate.instant('COMMON.CONFIRM'), 
+        {
+          text: this.translate.instant('COMMON.CONFIRM'),
           handler: async () => {
             this.hasAttemptedSubmit = false;
             const requestIdToReload = this.editId || this.request.requestId;
@@ -1111,7 +1204,7 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy {
               this.requestForm?.form.updateValueAndValidity();
               this.cdr.markForCheck();
             }
-          } 
+          }
         }
       ]
     });

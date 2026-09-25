@@ -30,6 +30,10 @@ $text-white: #ffffff;
   --ion-color-primary-shade: var(--ion-color-ESNdarkBlue-shade);
   --ion-color-primary-tint: var(--ion-color-ESNdarkBlue-tint);
 
+  /** Highlights: match accent color instead of forcing green **/
+  --highlight-color-valid: var(--ion-color-primary);
+  --highlight-color-focused: var(--ion-color-primary);
+
   /** secondary: ESN Dark Blue #002b49 **/
   --ion-color-secondary: #002b49;
   --ion-color-secondary-rgb: 0, 43, 73;

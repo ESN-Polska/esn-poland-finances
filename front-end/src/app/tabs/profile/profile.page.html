@@ -46,21 +46,6 @@
       </div>
 
       <div class="profileGrid">
-        <div class="infoField" *ngIf="user.email">
-          <span class="fieldLabel">{{ 'USER.EMAIL' | translate }}</span>
-          <span class="fieldValue">{{ user.email }}</span>
-        </div>
-
-        <div class="infoField" *ngIf="user.country && !user.isGuest">
-          <span class="fieldLabel">{{ 'USER.COUNTRY' | translate }}</span>
-          <span class="fieldValue">{{ user.country }}</span>
-        </div>
-
-        <div class="infoField" *ngIf="user.section && !user.isGuest">
-          <span class="fieldLabel">{{ 'USER.SECTION' | translate }}</span>
-          <span class="fieldValue">{{ user.section }}</span>
-        </div>
-
         <div class="infoField" *ngIf="userRoles.length">
           <span class="fieldLabel">{{ 'PROFILE.ROLES' | translate }}</span>
           <div class="rolesChipsContainer">
@@ -72,6 +57,45 @@
               {{ role.name }}
             </span>
           </div>
+        </div>
+
+        <div class="infoField" *ngIf="user.email">
+          <span class="fieldLabel">{{ 'USER.EMAIL' | translate }}</span>
+          <span class="fieldValue">{{ user.email }}</span>
+        </div>
+
+        <div class="infoField" *ngIf="user.country && !user.isGuest">
+          <span class="fieldLabel">{{ 'USER.COUNTRY' | translate }}</span>
+          <span class="fieldValue">{{ user.country }}</span>
+        </div>
+
+        <div class="infoField" *ngIf="(user.section || (user.availableSections && user.availableSections.length > 0)) && !user.isGuest">
+          <div class="fieldLabelRow">
+            <span class="fieldLabel">{{ 'USER.SECTION' | translate }}</span>
+            <span class="fieldBadge" *ngIf="user.availableSections && user.availableSections.length > 1">
+              {{ 'USER.MULTIPLE_SECTIONS_COUNT' | translate: { count: user.availableSections.length } }}
+            </span>
+          </div>
+          <div *ngIf="user.availableSections && user.availableSections.length > 1; else singleSection" class="selectFieldWrapper">
+            <ion-select
+              interface="popover"
+              [value]="user.sectionCode || user.section"
+              (ionChange)="onSectionChange($event)"
+              [disabled]="isSavingOrigin"
+              class="originSelect"
+            >
+              <ion-select-option
+                *ngFor="let s of user.availableSections"
+                [value]="s.code || s.name"
+              >
+                {{ s.name || s.code }}
+              </ion-select-option>
+            </ion-select>
+            <ion-spinner *ngIf="isSavingOrigin" name="crescent" class="selectSpinner"></ion-spinner>
+          </div>
+          <ng-template #singleSection>
+            <span class="fieldValue">{{ user.section }}</span>
+          </ng-template>
         </div>
       </div>
     </div>

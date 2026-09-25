@@ -1,0 +1,48 @@
+<ion-header class="ion-no-border modalHeader">
+  <ion-toolbar>
+    <ion-title class="modalTitle">
+      {{ 'USER.CHOOSE_PRIMARY_SECTION_TITLE' | translate }}
+    </ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="modalContent ion-padding">
+  <p class="introSubtitle">{{ 'USER.CHOOSE_PRIMARY_SECTION_SUBTITLE' | translate }}</p>
+
+  <ion-radio-group [(ngModel)]="selectedCode" class="sectionsList">
+    <div
+      *ngFor="let s of sections"
+      class="sectionCard"
+      [class.selected]="selectedCode === s.code || selectedCode === s.name"
+      (click)="selectedCode = s.code || s.name"
+    >
+      <div class="cardRadio">
+        <ion-radio [value]="s.code || s.name"></ion-radio>
+      </div>
+      <div class="cardInfo">
+        <div class="sectionName">{{ s.name || s.code }}</div>
+        <div class="sectionCountry">
+          {{ getSectionCountry(s.code) || s.code }}
+        </div>
+      </div>
+    </div>
+  </ion-radio-group>
+
+  <div class="hintBox">
+    <ion-icon name="information-circle-outline"></ion-icon>
+    <span>{{ 'USER.CHOOSE_PRIMARY_SECTION_NOTE' | translate }}</span>
+  </div>
+</ion-content>
+
+<ion-footer class="ion-no-border modalFooter ion-padding">
+  <ion-button
+    expand="block"
+    shape="round"
+    class="confirmButton"
+    (click)="confirm()"
+    [disabled]="isSaving || !selectedCode"
+  >
+    <ion-spinner *ngIf="isSaving" name="crescent" slot="start"></ion-spinner>
+    {{ 'USER.CONFIRM_PRIMARY_SECTION' | translate }}
+  </ion-button>
+</ion-footer>

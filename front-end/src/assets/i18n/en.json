@@ -193,7 +193,15 @@
     "USERNAME": "Username",
     "NAME": "Name",
     "LAST_LOGIN": "Last Login",
-    "VIEW_ON_ACCOUNTS": "View on ESN Accounts"
+    "VIEW_ON_ACCOUNTS": "View on ESN Accounts",
+    "MULTIPLE_SECTIONS_COUNT": "{{count}} available",
+    "SECTION_UPDATED": "Primary section updated successfully.",
+    "ORIGIN_UPDATE_FAILED": "Failed to update origin preference.",
+    "CHOOSE_PRIMARY_SECTION_TITLE": "Choose Primary Section",
+    "CHOOSE_PRIMARY_SECTION_SUBTITLE": "You are a member of multiple ESN sections. Please choose which section should be your default for financial requests.",
+    "CHOOSE_PRIMARY_SECTION_NOTE": "You can change your primary section at any time in your Profile.",
+    "CONFIRM_PRIMARY_SECTION": "Confirm Primary Section",
+    "PRIMARY_SECTION_CONFIRMED": "Primary section confirmed."
   },
   "REQUESTS": {
     "MY_REQUESTS_TITLE": "My Requests",
@@ -427,6 +435,7 @@
     },
     "VALIDATION": {
       "FILL_ALL_REQUIRED": "Please fill out all of the required fields.",
+      "SECTION_REQUIRED": "Section is required.",
       "POSITION_REQUIRED": "Position is required.",
       "FUNDING_REQUIRED": "Source of funding is required.",
       "ACCOUNT_HOLDER_REQUIRED": "Account holder name is required.",
