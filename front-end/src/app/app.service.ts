@@ -187,14 +187,22 @@ export class AppService {
     return user;
   }
 
-  public async logout(dueToLock = false): Promise<void> {
+  public async logout(reason?: 'lock' | 'suspended' | boolean): Promise<void> {
     if (this.isImpersonating) {
       this.exitPreview(false);
     }
     this.clearPersistedImpersonationRole();
     await this.clearAuth();
     await this.router.navigate(['/auth'], { replaceUrl: true });
-    if (dueToLock) {
+    if (reason === 'suspended') {
+      const toast = await this.toastCtrl.create({
+        message: this.translate.instant('AUTH.USER_SUSPENDED_ERROR'),
+        duration: 7000,
+        color: 'danger',
+        position: 'bottom'
+      });
+      await toast.present();
+    } else if (reason === true || reason === 'lock') {
       const toast = await this.toastCtrl.create({
         message: this.translate.instant('AUTH.APP_LOCKED_NON_ADMIN_ERROR'),
         duration: 5000,
@@ -208,6 +216,14 @@ export class AppService {
   public async checkAppLockForCurrentUser(): Promise<boolean> {
     if (!this.isAuthenticated || !this.realUser || this.realUser.isAdministrator) {
       return false;
+    }
+
+    const isSuspended = (this.configurations?.blockedUserIds || []).some(
+      (id: string) => id.toLowerCase() === this.realUser?.userId?.toLowerCase()
+    );
+    if (isSuspended) {
+      await this.logout('suspended');
+      return true;
     }
 
     const isLocked = Boolean(this.configurations?.appLocked);
@@ -224,7 +240,7 @@ export class AppService {
     }
 
     if (isLocked || isSessionRevoked) {
-      await this.logout(true);
+      await this.logout('lock');
       return true;
     }
 

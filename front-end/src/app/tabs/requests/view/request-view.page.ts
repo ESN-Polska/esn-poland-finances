@@ -3,7 +3,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { AlertController, ToastController } from '@ionic/angular';
 import { TranslateService } from '@ngx-translate/core';
 import { FinancialRequest, FinancialRequestStatus, RequestStatus } from '@models/financial-request.model';
-import { AppPermission } from '@models/configurations.model';
+import { AppPermission, UsersOriginDisplayOptions } from '@models/configurations.model';
 import { RequestsService } from '../../../services/requests.service';
 import { AppService } from '../../../app.service';
 import { NavigationHistoryService } from '../../../services/navigation-history.service';
@@ -139,18 +139,23 @@ export class RequestViewPage implements OnInit {
 
   public getSubmitterSection(): string {
     if (!this.request) return '';
+    const displayOption = this.appService.configurations?.usersOriginDisplay || UsersOriginDisplayOptions.BOTH;
+    if (typeof this.request.getOrigin === 'function') {
+      const origin = this.request.getOrigin(displayOption);
+      if (origin) return origin;
+    }
     if (typeof this.request.getSectionOrCountry === 'function') {
-      return this.request.getSectionOrCountry();
+      return this.request.getSectionOrCountry(displayOption);
     }
-    const section = this.request.section?.trim();
-    if (section && section !== 'undefined') {
-      return section;
+    const cleanSection = this.request.section?.trim();
+    const cleanCountry = this.request.country?.trim();
+    if (displayOption === UsersOriginDisplayOptions.COUNTRY) return cleanCountry || '';
+    if (displayOption === UsersOriginDisplayOptions.SECTION) return cleanSection || '';
+    if (cleanCountry && cleanSection) {
+      if (cleanCountry === cleanSection) return cleanSection;
+      return `${cleanCountry} - ${cleanSection}`;
     }
-    const country = this.request.country?.trim();
-    if (country && country !== 'undefined') {
-      return `ESN ${country}`;
-    }
-    return '';
+    return cleanSection || cleanCountry || '';
   }
 
   public canEdit(): boolean {

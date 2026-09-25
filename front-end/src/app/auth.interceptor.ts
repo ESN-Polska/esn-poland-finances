@@ -25,16 +25,26 @@ export class AuthInterceptor implements HttpInterceptor {
         if (error.status === 401 || error.status === 403) {
           try {
             const appService = this.injector.get(AppService);
+            const rawMsg = String(error?.error?.message || error?.message || '').toLowerCase();
+            const isSuspended =
+              rawMsg.includes('suspended') ||
+              (appService.configurations?.blockedUserIds || []).some(
+                (id: string) => id.toLowerCase() === appService.currentUser?.userId?.toLowerCase()
+              );
             if (
-              (error.status === 401 || (error.status === 403 && appService.configurations?.appLocked)) &&
+              (error.status === 401 ||
+                (error.status === 403 && (appService.configurations?.appLocked || isSuspended))) &&
               appService.isAuthenticated &&
               !appService.currentUser?.isAdministrator
             ) {
-              const isLocked = Boolean(
-                appService.configurations?.appLocked ||
-                String(error?.error?.message || error?.message || '').toLowerCase().includes('locked')
-              );
-              appService.logout(isLocked);
+              if (isSuspended) {
+                appService.logout('suspended');
+              } else {
+                const isLocked = Boolean(
+                  appService.configurations?.appLocked || rawMsg.includes('locked')
+                );
+                appService.logout(isLocked ? 'lock' : false);
+              }
             }
           } catch {
             // Guard against DI resolution issues

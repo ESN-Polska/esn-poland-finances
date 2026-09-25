@@ -27,6 +27,7 @@
     "UPLOAD": "Upload",
     "RESET": "Reset",
     "CONFIRM": "Confirm",
+    "OK": "OK",
     "ADD": "Add",
     "OPEN": "Open",
     "UPDATE": "Update",
@@ -46,7 +47,8 @@
     "STATUS": "Status",
     "ACTIONS": "Actions",
     "SUBMIT": "Submit",
-    "MANAGE": "Manage"
+    "MANAGE": "Manage",
+    "WARNING": "Warning"
   },
   "AUTH": {
     "LOGIN_BUTTON": "Sign in with ESN Accounts",
@@ -62,6 +64,7 @@
     "ADMIN_SIGN_IN": "Administrator sign in",
     "LOGIN_BUTTON_ADMIN": "Sign in as administrator",
     "APP_LOCKED_NON_ADMIN_ERROR": "The application is currently locked for maintenance. Only administrators may sign in.",
+    "USER_SUSPENDED_ERROR": "Your account has been suspended. Please contact an administrator.",
     "LOGOUT": "Log out",
     "SESSION_EXPIRED": "Your session has expired. Please log in again.",
     "LOGIN_FAILED": "Authentication with ESN Accounts failed. Please try again."
@@ -109,7 +112,7 @@
     "STATISTICS_TITLE": "Access Statistics",
     "USER_ACCESSED": "user accessed",
     "USERS_ACCESSED": "users accessed",
-    "SEARCH_USERS_PLACEHOLDER": "Search by name, section or username...",
+    "SEARCH_USERS_PLACEHOLDER": "Search by name, username or section...",
     "LAST_ACCESS": "Last access",
     "NO_USERS_FOUND": "No users found"
   },
@@ -463,6 +466,13 @@
       "EN_ONLY": "English only",
       "PL_ONLY": "Polish only"
     },
+    "ORIGIN_DISPLAY_PREFERENCE": "Users origin display preference",
+    "ORIGIN_DISPLAY_PREFERENCE_I": "When displaying user information (e.g. in activity statistics), this is the origin information you want to show.",
+    "ORIGIN_DISPLAY_PREFERENCES": {
+      "BOTH": "Both",
+      "COUNTRY": "ESN country",
+      "SECTION": "ESN section"
+    },
     "APP_TITLE": "App title",
     "APP_TITLE_I": "This name will be used in the login page and everywhere in the app.",
     "APP_TITLE_EN": "App title (EN)",
@@ -528,10 +538,31 @@
     "PAGE_SECTIONS": {
       "OPTIONS": "Options",
       "USERS": "Users",
+      "ROLES": "Roles",
       "RESOURCES": "Resources",
       "TEMPLATES": "SES Templates",
       "GUESTS": "Guest Access"
     },
+    "USERS_DIRECTORY_TITLE": "User Directory & Moderation",
+    "USERS_DIRECTORY_I": "View all authenticated users across sections, inspect their roles, and manage access restrictions.",
+    "SEARCH_USERS_PLACEHOLDER": "Search by name, username, email, or section...",
+    "NO_USERS_FOUND": "No users found matching your criteria",
+    "ROLES_LABEL": "Roles",
+    "STATUS_SUSPENDED": "Suspended",
+    "SUSPEND_USER": "Suspend user",
+    "RESTORE_USER": "Restore access",
+    "SUSPEND_USER_CONFIRM_TITLE": "Suspend User Account",
+    "SUSPEND_USER_CONFIRM_MSG": "Are you sure you want to suspend {{name}}? They will be immediately prevented from signing in or submitting financial requests.",
+    "RESTORE_USER_CONFIRM_TITLE": "Restore User Account",
+    "RESTORE_USER_CONFIRM_MSG": "Are you sure you want to lift the suspension and restore access for {{name}}?",
+    "SUSPEND_BUTTON": "Suspend",
+    "RESTORE_BUTTON": "Restore",
+    "CANNOT_SUSPEND_ADMIN": "Administrators cannot be suspended.",
+    "USER_NOT_REGISTERED": "Account not registered yet",
+    "SUSPEND_USER_MANUALLY": "Suspend User",
+    "SUSPEND_USER_MANUALLY_TITLE": "Suspend User",
+    "SUSPEND_USER_MANUALLY_MSG": "Enter the ESN Accounts username to suspend their access.",
+    "VIEW_PROFILE": "View profile",
     "RESOURCES_TITLE": "Resources & Templates",
     "RESOURCES_I": "Manage shared document templates and external resources available across the application.",
     "DELEGATION_SHEET_URL": "Delegation Settlement Sheet URL (XLSX)",

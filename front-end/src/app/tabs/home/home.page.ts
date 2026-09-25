@@ -175,6 +175,7 @@ export class HomePage implements OnInit {
       u.userId.toLowerCase().includes(query) ||
       (u.email || '').toLowerCase().includes(query) ||
       (u.section || '').toLowerCase().includes(query) ||
+      (u.sectionCode || '').toLowerCase().includes(query) ||
       (u.country || '').toLowerCase().includes(query) ||
       (u.guestPurpose || '').toLowerCase().includes(query) ||
       (u.guestPosition || '').toLowerCase().includes(query) ||
@@ -201,7 +202,7 @@ export class HomePage implements OnInit {
     if (user.isGuest) {
       return user.guestPosition?.trim() || this.translate.instant('CONFIGURATIONS.GUEST_BADGE');
     }
-    return user.getOrigin() || '';
+    return user.getOrigin(this.app.configurations?.usersOriginDisplay) || '';
   }
 
   public async editHomeText(): Promise<void> {
