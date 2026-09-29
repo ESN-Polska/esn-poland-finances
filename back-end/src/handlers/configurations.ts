@@ -144,6 +144,9 @@ class ConfigurationsRC extends ResourceController {
       if (this.configurations?.appLogoURLDarkMode && newConfigurations.appLogoURLDarkMode !== this.configurations.appLogoURLDarkMode) {
         await this.deleteOldS3File(this.configurations.appLogoURLDarkMode);
       }
+      if (this.configurations?.appLogoURLEmail && newConfigurations.appLogoURLEmail !== this.configurations.appLogoURLEmail) {
+        await this.deleteOldS3File(this.configurations.appLogoURLEmail);
+      }
       if (this.configurations?.organisationLogoURL && newConfigurations.organisationLogoURL !== this.configurations.organisationLogoURL) {
         await this.deleteOldS3File(this.configurations.organisationLogoURL);
       }
@@ -197,6 +200,8 @@ class ConfigurationsRC extends ResourceController {
         return await this.setEmailTemplate(this.body.template, this.body.subject, this.body.content);
       case 'RESET_EMAIL_TEMPLATE':
         return await this.resetEmailTemplate(this.body.template);
+      case 'RESET_ALL_EMAIL_TEMPLATES':
+        return await this.resetAllEmailTemplates();
       case 'TEST_EMAIL_TEMPLATE':
         return await this.testEmailTemplate(this.body.template);
       default:
@@ -263,7 +268,10 @@ class ConfigurationsRC extends ResourceController {
         url: BASE_URL,
         message: 'Example Message',
         requestId: '1/2026',
-        status: 'SUBMITTED'
+        status: 'SUBMITTED',
+        appTitle: this.configurations?.getAppTitle('pl') || 'ESN Poland Finances',
+        appOrganisation: this.configurations?.getAppOrganisation('pl') || 'ESN Poland',
+        appLogo: this.getEmailLogoUrl()
       });
     } catch (err: any) {
       this.logger.warn('Syntax test warning for template', err);
@@ -278,15 +286,24 @@ class ConfigurationsRC extends ResourceController {
 
     const templateName = this.getSESTemplateName(emailTemplate);
     const isEnglish = emailTemplate.endsWith('_EN');
-    const senderName = formatSenderName(this.configurations?.getAppTitle(isEnglish ? 'en' : 'pl') || 'ESN Poland');
+    const lang = isEnglish ? 'en' : 'pl';
+    const appTitle = this.configurations?.getAppTitle(lang) || 'ESN Poland Finances';
+    const appOrganisation = this.configurations?.getAppOrganisation(lang) || 'ESN Poland';
+    const appLogo = this.getEmailLogoUrl();
+    const senderName = formatSenderName(appTitle);
+
+    const isGuest = emailTemplate.startsWith('GUEST_INVITATION');
     const templateData = {
       user: this.user ? this.user.getDisplayName() : 'User',
-      title: isEnglish ? 'National Assembly Reimbursement' : 'Zjazd Krajowy',
-      detail: '250.00 PLN',
-      url: `${BASE_URL}/t/requests`,
-      message: isEnglish ? 'This is an example notification message.' : 'To jest przykładowa treść wiadomości.',
+      title: isGuest ? (isEnglish ? 'National Assembly 2026' : 'Zjazd Krajowy 2026') : (isEnglish ? 'Travel Reimbursement' : 'Zwrot kosztów podróży'),
+      detail: isGuest ? '31.12.2026' : '250.00 PLN',
+      url: isGuest ? `${BASE_URL}/auth?guestToken=sample-token` : `${BASE_URL}/t/requests/view/1/2026`,
+      message: isEnglish ? 'This is an example notification message or reviewer comment.' : 'To jest przykładowa treść wiadomości lub uwagi weryfikującego.',
       requestId: '1/2026',
-      status: 'SUBMITTED'
+      status: 'SUBMITTED',
+      appTitle,
+      appOrganisation,
+      appLogo
     };
 
     try {
@@ -337,6 +354,29 @@ class ConfigurationsRC extends ResourceController {
     await ses.setTemplate(`${templateName}-${STAGE}`, subject, content, true);
   }
 
+  private async resetAllEmailTemplates(): Promise<{ count: number }> {
+    const templates = Object.values(EmailTemplates);
+    let count = 0;
+    for (const template of templates) {
+      await this.resetEmailTemplate(template);
+      count++;
+    }
+    this.logger.info(`Successfully reset all ${count} email templates to stock defaults`);
+    return { count };
+  }
+
+  private getEmailLogoUrl(): string {
+    const defaultLogoUrl = `https://${APP_DOMAIN}/assets/icons/icon.png`;
+    if (this.configurations?.appLogoURLEmail) {
+      return this.configurations.appLogoURLEmail;
+    }
+    const lightLogo = this.configurations?.appLogoURL;
+    if (lightLogo && !lightLogo.toLowerCase().endsWith('.svg')) {
+      return lightLogo;
+    }
+    return defaultLogoUrl;
+  }
+
   private async sendGuestInvitationEmail(params: {
     inviteId: string;
     lang?: 'pl' | 'en';
@@ -378,12 +418,19 @@ class ConfigurationsRC extends ResourceController {
       // Send templated email
       const templateEnum = effectiveLang === 'en' ? EmailTemplates.GUEST_INVITATION_EN : EmailTemplates.GUEST_INVITATION_PL;
       const templateName = this.getSESTemplateName(templateEnum);
+      const appTitle = this.configurations?.getAppTitle(effectiveLang) || 'ESN Poland Finances';
+      const appOrganisation = this.configurations?.getAppOrganisation(effectiveLang) || 'ESN Poland';
+      const appLogo = this.getEmailLogoUrl();
+
       const templateData = {
         user: invite.guestName,
-        title: invite.purpose || 'ESN Polska',
+        title: invite.purpose || appTitle,
         detail: expiryDate,
         url: guestLink,
-        message: invite.instructions?.[effectiveLang] || ''
+        message: invite.instructions?.[effectiveLang] || '',
+        appTitle,
+        appOrganisation,
+        appLogo
       };
 
       try {
@@ -438,6 +485,7 @@ class ConfigurationsRC extends ResourceController {
       'supportEmail',
       'appLogoURL',
       'appLogoURLDarkMode',
+      'appLogoURLEmail',
       'organisationLogoURL',
       'timezone',
       'usersOriginDisplay',
@@ -499,6 +547,7 @@ class ConfigurationsRC extends ResourceController {
       'supportEmail',
       'appLogoURL',
       'appLogoURLDarkMode',
+      'appLogoURLEmail',
       'organisationLogoURL',
       'timezone',
       'usersOriginDisplay',

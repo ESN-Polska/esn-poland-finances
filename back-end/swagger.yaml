@@ -578,6 +578,9 @@ components:
         appLogoURLDarkMode:
           type: string
           example: https://media.finances.esn-poland.link/images/dev/logo-dark.png
+        appLogoURLEmail:
+          type: string
+          example: https://media.finances.esn-poland.link/images/dev/logo-email.png
         organisationLogoURL:
           type: string
           example: https://media.finances.esn-poland.link/images/dev/organisation-logo.png

@@ -686,6 +686,14 @@ class RequestsHandler extends ResourceController {
       const totalAmount = `${Number(request.totalGrossAmount || 0).toFixed(2)} ${request.currency || 'PLN'}`;
       const requestUrl = `${BASE_URL}/t/requests/view/${encodeURIComponent(request.requestId)}`;
 
+      const appTitle = configurations.getAppTitle(lang) || 'ESN Poland Finances';
+      const appOrganisation = configurations.getAppOrganisation(lang) || 'ESN Poland';
+      const defaultLogoUrl = `https://${APP_DOMAIN}/assets/icons/icon.png`;
+      const appLogo =
+        configurations.appLogoURLEmail ||
+        (!configurations.appLogoURL?.toLowerCase().endsWith('.svg') && configurations.appLogoURL) ||
+        defaultLogoUrl;
+
       const templateData = {
         user: request.userDisplayName || request.userId,
         requestId: request.requestId,
@@ -693,10 +701,13 @@ class RequestsHandler extends ResourceController {
         detail: totalAmount,
         url: requestUrl,
         message: this.resolveCommentForEmail(comment, lang),
-        status: targetStatus
+        status: targetStatus,
+        appTitle,
+        appOrganisation,
+        appLogo
       };
 
-      const senderName = formatSenderName(configurations.getAppTitle(lang) || 'ESN Poland');
+      const senderName = formatSenderName(appTitle);
       const replyTo = configurations.supportEmail?.trim() ? [configurations.supportEmail.trim()] : undefined;
 
       try {
@@ -714,10 +725,10 @@ class RequestsHandler extends ResourceController {
           this.logger.warn(`Template ${templateName}-${STAGE} not found in SES, initializing from S3`, { templateName });
           const defaultSubjects: { [key: string]: string } = {
             'notify-guest-invitation-pl': 'Zaproszenie do złożenia wniosku finansowego',
-            'notify-guest-invitation-en': 'Invitation to submit a financial request',
-            'notify-request-submitted-pl': 'Nowy wniosek finansowy {{requestId}} został złożony',
-            'notify-request-submitted-en': 'New financial request {{requestId}} submitted',
-            'notify-request-changes-requested-pl': 'Wymagane poprawki we wniosku finansowym {{requestId}}',
+            'notify-guest-invitation-en': 'Invitation to submit financial request',
+            'notify-request-submitted-pl': 'Potwierdzenie złożenia wniosku finansowego {{requestId}}',
+            'notify-request-submitted-en': 'Financial request submitted {{requestId}}',
+            'notify-request-changes-requested-pl': 'Wymagane poprawki do wniosku finansowego {{requestId}}',
             'notify-request-changes-requested-en': 'Changes requested for financial request {{requestId}}',
             'notify-request-approved-pl': 'Wniosek finansowy {{requestId}} został zatwierdzony',
             'notify-request-approved-en': 'Financial request {{requestId}} approved',

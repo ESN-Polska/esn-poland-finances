@@ -226,6 +226,7 @@ export const DEFAULT_CONFIGURATIONS = {
   supportEmail: '',
   appLogoURL: '',
   appLogoURLDarkMode: '',
+  appLogoURLEmail: '',
   organisationLogoURL: '',
   timezone: DEFAULT_TIMEZONE,
   usersOriginDisplay: UsersOriginDisplayOptions.BOTH,
@@ -300,6 +301,8 @@ export class Configurations extends Resource {
   appLogoURL: string;
   /** The logo of the platform in dark mode (CDN URL). */
   appLogoURLDarkMode: string;
+  /** Rasterized PNG companion logo used for email clients when appLogoURL is SVG (CDN URL). */
+  appLogoURLEmail: string;
   /** The logo of the organisation used across exported documents (CDN URL). */
   organisationLogoURL: string;
   /** The timezone to use for dates and deadlines. */
@@ -433,6 +436,7 @@ export class Configurations extends Resource {
     this.supportEmail = this.clean(x.supportEmail, String, DEFAULT_CONFIGURATIONS.supportEmail);
     this.appLogoURL = this.clean(x.appLogoURL, String);
     this.appLogoURLDarkMode = this.clean(x.appLogoURLDarkMode, String);
+    this.appLogoURLEmail = this.clean(x.appLogoURLEmail, String);
     this.organisationLogoURL = this.clean(x.organisationLogoURL, String);
     this.timezone = this.clean(x.timezone, String, DEFAULT_TIMEZONE);
     this.usersOriginDisplay = this.clean(
