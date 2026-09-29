@@ -102,6 +102,12 @@ export class EmailTemplateComponent implements OnInit {
         { code: 'status', description: this.translate.instant('EMAIL_TEMPLATE.VARIABLES.STATUS') }
       );
     }
+
+    this.variables.push(
+      { code: 'appTitle', description: this.translate.instant('EMAIL_TEMPLATE.VARIABLES.APP_TITLE') },
+      { code: 'appOrganisation', description: this.translate.instant('EMAIL_TEMPLATE.VARIABLES.APP_ORGANISATION') },
+      { code: 'appLogo', description: this.translate.instant('EMAIL_TEMPLATE.VARIABLES.APP_LOGO') }
+    );
   }
 
   public onSubjectChange(): void {
@@ -190,14 +196,30 @@ export class EmailTemplateComponent implements OnInit {
       url: isGuest ? 'https://finances.esn-poland.link/auth?guestToken=abc123xyz' : 'https://finances.esn-poland.link/t/requests/view/1/2026',
       message: isEn ? 'Reviewer note or additional comments.' : 'Uwagi weryfikującego lub dodatkowe informacje.',
       requestId: '1/2026',
-      status: isEn ? 'APPROVED' : 'ZATWIERDZONY'
+      status: isEn ? 'APPROVED' : 'ZATWIERDZONY',
+      appTitle: this.app.configurations?.getAppTitle(this.currentLang) || (isEn ? 'ESN Poland Finances app' : 'ESN Poland Finances app'),
+      appOrganisation: this.app.configurations?.getAppOrganisation(this.currentLang) || (isEn ? 'ESN Poland Federation' : 'Związek stowarzyszeń ESN Polska'),
+      appLogo:
+        this.app.configurations?.appLogoURLEmail ||
+        (!this.app.configurations?.appLogoURL?.toLowerCase().endsWith('.svg') && this.app.configurations?.appLogoURL) ||
+        'assets/icons/icon.png'
     };
 
     let rendered = this.content;
+
+    // Handle Handlebars {{#if key}}...{{else}}...{{/if}} and {{#if key}}...{{/if}}
+    rendered = rendered.replace(/{{\s*#if\s+(\w+)\s*}}([\s\S]*?)(?:{{\s*else\s*}}([\s\S]*?))?{{\s*\/if\s*}}/g, (match, key, trueBranch, falseBranch) => {
+      const val = mockData[key];
+      if (val && val.trim() !== '') {
+        return trueBranch || '';
+      } else {
+        return falseBranch || '';
+      }
+    });
+
     for (const [k, v] of Object.entries(mockData)) {
       rendered = rendered.replace(new RegExp(`{{\\s*${k}\\s*}}`, 'g'), v);
     }
-    rendered = rendered.replace(/{{\\s*#if\\s+message\\s*}}([\\s\\S]*?){{\\s*\/if\\s*}}/g, '$1');
 
     // Scope template styles that target 'body' so they also match .emailPreviewFrame
     rendered = rendered.replace(/(<style[^>]*>[\s\S]*?<\/style>)/gi, (styleBlock) => {

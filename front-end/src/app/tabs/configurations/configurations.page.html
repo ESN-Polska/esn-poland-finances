@@ -740,6 +740,16 @@
           <h2>{{ 'CONFIGURATIONS.EMAIL_TEMPLATES' | translate }}</h2>
           <p>{{ 'CONFIGURATIONS.EMAIL_TEMPLATES_I' | translate }}</p>
         </ion-label>
+        <ion-button
+          size="small"
+          fill="outline"
+          color="danger"
+          *ngIf="canModifyTemplates()"
+          (click)="askAndResetAllTemplates()"
+        >
+          <ion-icon name="refresh-outline" slot="start"></ion-icon>
+          {{ 'CONFIGURATIONS.RESET_ALL' | translate }}
+        </ion-button>
       </ion-list-header>
 
       <!-- Guest Invitations Category Header -->
@@ -905,6 +915,24 @@
           <ion-icon name="cloud-upload-outline" slot="icon-only"></ion-icon>
         </ion-button>
         <ion-button slot="end" fill="clear" color="danger" (click)="resetAppLogo(true)" *ngIf="canModifyOptions() && configurations.appLogoURLDarkMode">
+          <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
+        </ion-button>
+      </ion-item>
+
+      <!-- App Logo Email -->
+      <ion-item>
+        <ion-label class="ion-text-wrap">
+          {{ 'CONFIGURATIONS.APP_LOGO_EMAIL' | translate }}
+          <p>{{ 'CONFIGURATIONS.APP_LOGO_EMAIL_I' | translate }}</p>
+        </ion-label>
+        <ion-thumbnail slot="end" class="logoThumbnail">
+          <ion-img [src]="getAppLogoEmailSrc()"></ion-img>
+        </ion-thumbnail>
+        <input #appLogoEmailInput type="file" accept="image/*" style="display: none" (change)="uploadAppLogoEmail($event)" />
+        <ion-button slot="end" fill="clear" color="medium" *ngIf="canModifyOptions()" (click)="appLogoEmailInput.click()">
+          <ion-icon name="cloud-upload-outline" slot="icon-only"></ion-icon>
+        </ion-button>
+        <ion-button slot="end" fill="clear" color="danger" (click)="resetAppLogoEmail()" *ngIf="canModifyOptions() && configurations.appLogoURLEmail">
           <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
         </ion-button>
       </ion-item>

@@ -39,6 +39,14 @@ export class ConfigurationsService {
   }
 
   /**
+   * Reset all email templates to stock defaults.
+   */
+  async resetAllEmailTemplates(): Promise<void> {
+    const action = 'RESET_ALL_EMAIL_TEMPLATES';
+    await this.api.patchResource('configurations', { body: { action } });
+  }
+
+  /**
    * Get the email template subject and HTML content.
    */
   async getEmailTemplate(template: EmailTemplates): Promise<{ subject: string; content: string }> {

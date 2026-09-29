@@ -26,6 +26,7 @@
     "UPLOADING": "Uploading...",
     "UPLOAD": "Upload",
     "RESET": "Reset",
+    "RESETTING": "Resetting...",
     "CONFIRM": "Confirm",
     "OK": "OK",
     "ADD": "Add",
@@ -502,8 +503,12 @@
     "APP_LOGO_LIGHT_I": "This logo will be used across the application with light backgrounds.",
     "APP_LOGO_DARK": "App logo (dark mode)",
     "APP_LOGO_DARK_I": "This logo will be used across the application with dark backgrounds.",
+    "APP_LOGO_EMAIL": "App logo (email)",
+    "APP_LOGO_EMAIL_I": "This logo will be used in email notification headers. Should be PNG or JPEG.",
     "RESET_APP_LOGO": "Reset app logo",
     "RESET_APP_LOGO_I": "This will reset the app logo to the default one.",
+    "RESET_APP_LOGO_EMAIL": "Reset email logo",
+    "RESET_APP_LOGO_EMAIL_I": "This will reset the email logo to default.",
     "ORGANISATION_LOGO": "Organisation logo",
     "ORGANISATION_LOGO_I": "This logo will be used across exported documents.",
     "RESET_ORGANISATION_LOGO": "Reset organisation logo",
@@ -742,7 +747,10 @@
     "CUSTOMIZE_GUEST_EMAIL": "Customize email subject & message",
     "CUSTOMIZE_GUEST_EMAIL_I": "Review or edit the email text before sending.",
     "GUEST_EMAIL_SENT": "Invitation email sent to {{email}}",
-    "GUEST_EMAIL_FAILED": "Failed to send invitation email"
+    "GUEST_EMAIL_FAILED": "Failed to send invitation email",
+    "RESET_ALL": "Reset All",
+    "RESET_ALL_TEMPLATES": "Reset All Templates",
+    "RESET_ALL_TEMPLATES_CONFIRM": "Are you sure you want to reset all SES email templates to their default versions? Any modifications will be lost."
   },
   "EMAIL_TEMPLATE": {
     "TITLE": "Edit SES Email Template",
@@ -775,7 +783,10 @@
       "URL": "Direct link URL",
       "MESSAGE": "Additional comments or note",
       "REQUEST_ID": "Request ID number",
-      "STATUS": "Current request status"
+      "STATUS": "Current request status",
+      "APP_TITLE": "Application title",
+      "APP_ORGANISATION": "Organisation name",
+      "APP_LOGO": "App logo URL"
     }
   }
 }

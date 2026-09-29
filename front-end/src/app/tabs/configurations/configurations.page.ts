@@ -758,6 +758,48 @@ export class ConfigurationsPage implements OnInit {
     await modal.present();
   }
 
+  async askAndResetAllTemplates(): Promise<void> {
+    if (!this.canModifyTemplates()) return;
+
+    const alert = await this.alertCtrl.create({
+      header: this.translate.instant('CONFIGURATIONS.RESET_ALL_TEMPLATES'),
+      message: this.translate.instant('CONFIGURATIONS.RESET_ALL_TEMPLATES_CONFIRM'),
+      buttons: [
+        { text: this.translate.instant('COMMON.CANCEL'), role: 'cancel' },
+        {
+          text: this.translate.instant('CONFIGURATIONS.RESET_ALL'),
+          role: 'destructive',
+          handler: async () => {
+            const loading = await this.loadingCtrl.create({
+              message: this.translate.instant('COMMON.RESETTING')
+            });
+            await loading.present();
+            try {
+              await this.configurationsService.resetAllEmailTemplates();
+              const toast = await this.toastCtrl.create({
+                message: this.translate.instant('COMMON.OPERATION_COMPLETED'),
+                color: 'success',
+                duration: 3000
+              });
+              await toast.present();
+            } catch (err) {
+              console.error('Failed to reset all email templates', err);
+              const toast = await this.toastCtrl.create({
+                message: this.translate.instant('COMMON.OPERATION_FAILED'),
+                color: 'danger',
+                duration: 3000
+              });
+              await toast.present();
+            } finally {
+              await loading.dismiss();
+            }
+          }
+        }
+      ]
+    });
+    await alert.present();
+  }
+
   //
   // OPTIONS SUBTAB
   //
@@ -1106,6 +1148,7 @@ export class ConfigurationsPage implements OnInit {
     const loading = await this.loadingCtrl.create({ message: this.translate.instant('COMMON.UPLOADING') });
     await loading.present();
     try {
+      const isSvg = file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg');
       const imageURI = await this.mediaService.uploadImage(file);
       const updated = new Configurations(this.configurations);
       const url = this.app.getImageURLByURI(imageURI);
@@ -1113,12 +1156,87 @@ export class ConfigurationsPage implements OnInit {
         updated.appLogoURLDarkMode = url;
       } else {
         updated.appLogoURL = url;
+        if (isSvg) {
+          try {
+            const pngFile = await this.rasterizeSvgToPng(file);
+            const pngURI = await this.mediaService.uploadImage(pngFile);
+            updated.appLogoURLEmail = this.app.getImageURLByURI(pngURI);
+          } catch (err) {
+            console.warn('Failed to rasterize SVG logo to PNG for email clients:', err);
+            updated.appLogoURLEmail = '';
+          }
+        } else {
+          updated.appLogoURLEmail = url;
+        }
       }
       await this.updateConfigurations(updated);
     } finally {
       await loading.dismiss();
       event.target.value = '';
     }
+  }
+
+  private async rasterizeSvgToPng(svgFile: File, size = 256): Promise<File> {
+    const text = await svgFile.text();
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(text, 'image/svg+xml');
+    const svgEl = doc.querySelector('svg');
+    if (svgEl) {
+      if (!svgEl.getAttribute('width') || !svgEl.getAttribute('height')) {
+        const viewBox = svgEl.getAttribute('viewBox');
+        if (viewBox) {
+          const parts = viewBox.trim().split(/[\s,]+/).filter(Boolean);
+          if (parts.length === 4) {
+            svgEl.setAttribute('width', parts[2]);
+            svgEl.setAttribute('height', parts[3]);
+          }
+        } else {
+          svgEl.setAttribute('width', String(size));
+          svgEl.setAttribute('height', String(size));
+        }
+      }
+    }
+    const serializedSvg = new XMLSerializer().serializeToString(doc);
+    const svgBlob = new Blob([serializedSvg], { type: 'image/svg+xml;charset=utf-8' });
+    const blobUrl = URL.createObjectURL(svgBlob);
+
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = size;
+          canvas.height = size;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            URL.revokeObjectURL(blobUrl);
+            reject(new Error('Canvas 2D context not available'));
+            return;
+          }
+          ctx.clearRect(0, 0, size, size);
+          ctx.drawImage(img, 0, 0, size, size);
+          URL.revokeObjectURL(blobUrl);
+
+          canvas.toBlob(blob => {
+            if (blob) {
+              const fileName = svgFile.name.replace(/\.[^/.]+$/, '') + '-email.png';
+              const pngFile = new File([blob], fileName, { type: 'image/png' });
+              resolve(pngFile);
+            } else {
+              reject(new Error('Failed to generate PNG blob from canvas'));
+            }
+          }, 'image/png');
+        } catch (err) {
+          URL.revokeObjectURL(blobUrl);
+          reject(err);
+        }
+      };
+      img.onerror = err => {
+        URL.revokeObjectURL(blobUrl);
+        reject(err);
+      };
+      img.src = blobUrl;
+    });
   }
 
   async resetAppLogo(darkMode = false): Promise<void> {
@@ -1135,7 +1253,64 @@ export class ConfigurationsPage implements OnInit {
               updated.appLogoURLDarkMode = '';
             } else {
               updated.appLogoURL = '';
+              updated.appLogoURLEmail = '';
             }
+            await this.updateConfigurations(updated);
+          }
+        }
+      ]
+    });
+    await alert.present();
+  }
+
+  getAppLogoEmailSrc(): string {
+    if (this.configurations?.appLogoURLEmail) {
+      return this.configurations.appLogoURLEmail;
+    }
+    const light = this.configurations?.appLogoURL;
+    if (light && !light.toLowerCase().endsWith('.svg')) {
+      return light;
+    }
+    return 'assets/icons/icon.png';
+  }
+
+  async uploadAppLogoEmail(event: any): Promise<void> {
+    const file = event.target?.files?.[0];
+    if (!file) return;
+
+    const loading = await this.loadingCtrl.create({ message: this.translate.instant('COMMON.UPLOADING') });
+    await loading.present();
+    try {
+      const isSvg = file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg');
+      let uploadFile = file;
+      if (isSvg) {
+        try {
+          uploadFile = await this.rasterizeSvgToPng(file);
+        } catch (err) {
+          console.warn('Failed to rasterize SVG logo for email:', err);
+        }
+      }
+      const imageURI = await this.mediaService.uploadImage(uploadFile);
+      const updated = new Configurations(this.configurations);
+      updated.appLogoURLEmail = this.app.getImageURLByURI(imageURI);
+      await this.updateConfigurations(updated);
+    } finally {
+      await loading.dismiss();
+      event.target.value = '';
+    }
+  }
+
+  async resetAppLogoEmail(): Promise<void> {
+    const alert = await this.alertCtrl.create({
+      header: this.translate.instant('CONFIGURATIONS.RESET_APP_LOGO_EMAIL'),
+      message: this.translate.instant('CONFIGURATIONS.RESET_APP_LOGO_EMAIL_I'),
+      buttons: [
+        { text: this.translate.instant('COMMON.CANCEL'), role: 'cancel' },
+        {
+          text: this.translate.instant('COMMON.RESET'),
+          handler: async () => {
+            const updated = new Configurations(this.configurations);
+            updated.appLogoURLEmail = '';
             await this.updateConfigurations(updated);
           }
         }

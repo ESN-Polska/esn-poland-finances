@@ -190,10 +190,17 @@
         color: inherit;
       }
 
-      .header {
-        color: #ffffff;
+      .header, .brand-header {
+        background-color: #f0f4f8 !important;
+        color: #0f172a !important;
         * {
           color: inherit;
+        }
+        .brand-title {
+          color: #0f172a !important;
+        }
+        .brand-org {
+          color: #475569 !important;
         }
       }
 
@@ -266,6 +273,24 @@ body.dark {
         --color: #1e293b;
         --ion-text-color: #1e293b;
         color: inherit;
+      }
+
+      .header, .brand-header {
+        background-color: #f0f4f8 !important;
+        color: #0f172a !important;
+        * {
+          color: inherit;
+        }
+        .brand-title {
+          color: #0f172a !important;
+        }
+        .brand-org {
+          color: #475569 !important;
+        }
+      }
+
+      .btn {
+        color: #ffffff !important;
       }
     }
   }

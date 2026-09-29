@@ -26,6 +26,7 @@
     "UPLOADING": "Przesyłanie...",
     "UPLOAD": "Prześlij",
     "RESET": "Zresetuj",
+    "RESETTING": "Resetowanie...",
     "CONFIRM": "Zatwierdź",
     "OK": "OK",
     "ADD": "Dodaj",
@@ -502,8 +503,12 @@
     "APP_LOGO_LIGHT_I": "Logo wyświetlane w aplikacji na jasnym tle.",
     "APP_LOGO_DARK": "Logo aplikacji (tryb ciemny)",
     "APP_LOGO_DARK_I": "Logo wyświetlane w aplikacji w trybie ciemnym.",
+    "APP_LOGO_EMAIL": "Logo aplikacji (e-mail)",
+    "APP_LOGO_EMAIL_I": "To logo będzie używane w nagłówkach powiadomień e-mail. Powinno być w formacie PNG lub JPEG.",
     "RESET_APP_LOGO": "Zresetuj logo aplikacji",
     "RESET_APP_LOGO_I": "Przywróci domyślne logo aplikacji.",
+    "RESET_APP_LOGO_EMAIL": "Zresetuj logo e-mail",
+    "RESET_APP_LOGO_EMAIL_I": "Przywróci domyślne logo dla wiadomości e-mail.",
     "ORGANISATION_LOGO": "Logo organizacji",
     "ORGANISATION_LOGO_I": "To logo będzie używane we wszystkich eksportowanych dokumentach.",
     "RESET_ORGANISATION_LOGO": "Zresetuj logo organizacji",
@@ -742,7 +747,10 @@
     "CUSTOMIZE_GUEST_EMAIL": "Dostosuj temat i treść wiadomości",
     "CUSTOMIZE_GUEST_EMAIL_I": "Przejrzyj lub zmodyfikuj treść wiadomości przed wysyłką.",
     "GUEST_EMAIL_SENT": "Wysłano zaproszenie e-mail na adres {{email}}",
-    "GUEST_EMAIL_FAILED": "Nie udało się wysłać zaproszenia e-mail"
+    "GUEST_EMAIL_FAILED": "Nie udało się wysłać zaproszenia e-mail",
+    "RESET_ALL": "Zresetuj wszystkie",
+    "RESET_ALL_TEMPLATES": "Zresetuj wszystkie szablony",
+    "RESET_ALL_TEMPLATES_CONFIRM": "Czy na pewno chcesz zresetować wszystkie szablony e-mail SES do domyślnych wersji? Wszelkie modyfikacje zostaną utracone."
   },
   "EMAIL_TEMPLATE": {
     "TITLE": "Edycja szablonu SES",
@@ -775,7 +783,10 @@
       "URL": "Bezpośredni link",
       "MESSAGE": "Dodatkowy komentarz lub notatka",
       "REQUEST_ID": "Numer identyfikacyjny wniosku",
-      "STATUS": "Aktualny status wniosku"
+      "STATUS": "Aktualny status wniosku",
+      "APP_TITLE": "Tytuł aplikacji",
+      "APP_ORGANISATION": "Nazwa organizacji",
+      "APP_LOGO": "Adres URL logo aplikacji"
     }
   }
 }
