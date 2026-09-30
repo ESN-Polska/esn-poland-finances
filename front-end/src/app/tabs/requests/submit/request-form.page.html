@@ -358,6 +358,7 @@
                         [(ngModel)]="doc.grossAmount"
                         [name]="'grossAmount_' + i"
                         (input)="recalculateTotals()"
+                        (wheel)="onAmountWheel($event)"
                         required
                         placeholder="0.00"
                       />
@@ -373,6 +374,7 @@
                         [(ngModel)]="doc.originalAmount"
                         [name]="'originalAmount_' + i"
                         (input)="onForeignAmountChange(doc)"
+                        (wheel)="onAmountWheel($event)"
                         required
                         placeholder="0.00"
                       />
@@ -404,6 +406,7 @@
                         [(ngModel)]="doc.vatAmount"
                         [name]="'vatAmount_' + i"
                         (input)="recalculateTotals()"
+                        (wheel)="onAmountWheel($event)"
                         required
                         placeholder="0.00"
                       />
@@ -419,6 +422,7 @@
                         [(ngModel)]="doc.originalVatAmount"
                         [name]="'originalVatAmount_' + i"
                         (input)="onForeignAmountChange(doc)"
+                        (wheel)="onAmountWheel($event)"
                         required
                         placeholder="0.00"
                       />
@@ -646,6 +650,7 @@
                 name="requestedAmountPLN"
                 (input)="onAdvanceAmountChange()"
                 (change)="onAdvanceAmountChange()"
+                (wheel)="onAmountWheel($event)"
                 required
                 placeholder="0.00"
               />
@@ -782,6 +787,7 @@
               name="delegationTotalAmount"
               (input)="onDelegationAmountChange()"
               (change)="onDelegationAmountChange()"
+              (wheel)="onAmountWheel($event)"
               required
               placeholder="0.00"
             />

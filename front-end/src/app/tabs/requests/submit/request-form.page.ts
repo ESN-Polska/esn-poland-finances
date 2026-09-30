@@ -453,6 +453,10 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
+  public onAmountWheel(event: Event): void {
+    (event.target as HTMLElement)?.blur();
+  }
+
   public recalculateTotals(): void {
     if (
       this.request.requestType === 'INVOICE_TO_PAY' ||

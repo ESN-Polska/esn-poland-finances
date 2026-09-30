@@ -84,7 +84,8 @@ export class RequestReviewPage implements OnInit {
     // Permission guard: only managers and administrators can review
     if (!this.canManage) {
       await this.showToast('REQUESTS.REVIEW_PANEL.UNAUTHORIZED_REDIRECT', 'warning');
-      this.navigateToView(requestId);
+      this.navHistory.reset();
+      this.navigateToView(requestId, true);
       return;
     }
 
@@ -138,17 +139,18 @@ export class RequestReviewPage implements OnInit {
     }
   }
 
-  public navigateToView(requestId?: string): void {
+  public navigateToView(requestId?: string, replaceUrl = false): void {
     const idToUse = requestId || this.request?.requestId;
     if (!idToUse) {
       this.router.navigate(['/t/requests']);
       return;
     }
     const [seq, year] = idToUse.split('/');
+    const extras = replaceUrl ? { replaceUrl: true } : undefined;
     if (year && seq) {
-      this.router.navigate(['/t/requests/view', year, seq]);
+      this.router.navigate(['/t/requests/view', year, seq], extras);
     } else {
-      this.router.navigate(['/t/requests/view', encodeURIComponent(idToUse)]);
+      this.router.navigate(['/t/requests/view', encodeURIComponent(idToUse)], extras);
     }
   }
 

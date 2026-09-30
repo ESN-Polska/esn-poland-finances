@@ -67,7 +67,11 @@ export class RequestViewPage implements OnInit {
 
   public get isOwner(): boolean {
     const user = this.appService.currentUser;
-    return !!user && !!this.request && (this.request.userId || '').toLowerCase() === (user.userId || '').toLowerCase();
+    return (
+      !!user &&
+      !!this.request &&
+      (this.request.userId || '').trim().toLowerCase() === (user.userId || '').trim().toLowerCase()
+    );
   }
 
   constructor(
@@ -114,7 +118,8 @@ export class RequestViewPage implements OnInit {
       }
 
       const currentUser = this.appService.currentUser;
-      const isOwner = (found.userId || '').toLowerCase() === (currentUser?.userId || '').toLowerCase();
+      const isOwner =
+        (found.userId || '').trim().toLowerCase() === (currentUser?.userId || '').trim().toLowerCase();
       if (!this.canViewAll && !isOwner) {
         await this.showToast('REQUESTS.ACCESS_DENIED', 'danger');
         this.router.navigate(['/t/requests']);
@@ -228,7 +233,8 @@ export class RequestViewPage implements OnInit {
   }
 
   public goBack(): void {
-    const fallback = this.canManage ? '/t/requests/manage' : '/t/requests';
+    const isSubmitter = this.request ? this.isOwner : !this.canViewAll;
+    const fallback = isSubmitter ? '/t/requests' : '/t/requests/manage';
     this.navHistory.goBack(fallback);
   }
 

@@ -47,13 +47,10 @@ export class NavigationHistoryService {
         this.requestStack.push(url);
       } else {
         // A new request detail flow is starting.
-        // Determine the referrer: prefer prevUrl if it was a valid context URL,
-        // otherwise fallback to the last known valid context URL.
+        // Determine the referrer: prefer prevUrl if it was a valid context URL.
         let referrer: string | null = null;
         if (prevUrl && this.isValidContextUrl(prevUrl)) {
           referrer = prevUrl;
-        } else if (this.lastContextUrl && this.isValidContextUrl(this.lastContextUrl)) {
-          referrer = this.lastContextUrl;
         }
 
         if (referrer && this.normalizeUrl(referrer) !== normUrl) {
@@ -132,6 +129,11 @@ export class NavigationHistoryService {
     return url.replace(/\/+$/, '');
   }
 
+  public reset(): void {
+    this.requestStack = [];
+    this.lastContextUrl = null;
+  }
+
   /**
    * Returns the immediate previous URL in the request navigation stack, if available.
    */
@@ -164,17 +166,6 @@ export class NavigationHistoryService {
         this.router.navigateByUrl(targetUrl);
         return;
       }
-    }
-
-    if (
-      this.lastContextUrl &&
-      this.normalizeUrl(this.lastContextUrl) !== this.normalizeUrl(this.router.url) &&
-      this.isValidContextUrl(this.lastContextUrl)
-    ) {
-      const target = this.lastContextUrl;
-      this.requestStack = [];
-      this.router.navigateByUrl(target);
-      return;
     }
 
     this.requestStack = [];
