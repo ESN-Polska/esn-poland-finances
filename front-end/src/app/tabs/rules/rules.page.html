@@ -19,10 +19,51 @@
 
       <!-- Download Button Action -->
       <div class="downloadSection">
-        <ion-button class="downloadBtn" (click)="downloadRules()">
-          <ion-icon slot="start" name="document-text-outline"></ion-icon>
-          {{ 'RULES.DOWNLOAD_BUTTON' | translate }}
-        </ion-button>
+        <div class="downloadButtonsGroup" *ngIf="hasBothRules">
+          <ion-button
+            class="downloadBtn"
+            [class.primaryDownloadBtn]="currentLang === 'en'"
+            [class.secondaryDownloadBtn]="currentLang !== 'en'"
+            [fill]="currentLang === 'en' ? 'solid' : 'outline'"
+            (click)="downloadRules('en')"
+          >
+            <ion-icon slot="start" name="document-text-outline"></ion-icon>
+            {{ 'RULES.DOWNLOAD_BUTTON_EN' | translate }}
+          </ion-button>
+
+          <ion-button
+            class="downloadBtn"
+            [class.primaryDownloadBtn]="currentLang === 'pl'"
+            [class.secondaryDownloadBtn]="currentLang !== 'pl'"
+            [fill]="currentLang === 'pl' ? 'solid' : 'outline'"
+            (click)="downloadRules('pl')"
+          >
+            <ion-icon slot="start" name="document-text-outline"></ion-icon>
+            {{ 'RULES.DOWNLOAD_BUTTON_PL' | translate }}
+          </ion-button>
+        </div>
+
+        <div class="downloadButtonsGroup" *ngIf="!hasBothRules">
+          <ion-button
+            *ngIf="hasEnRules && !hasPlRules"
+            class="downloadBtn primaryDownloadBtn"
+            fill="solid"
+            (click)="downloadRules('en')"
+          >
+            <ion-icon slot="start" name="document-text-outline"></ion-icon>
+            {{ 'RULES.DOWNLOAD_BUTTON_EN' | translate }}
+          </ion-button>
+
+          <ion-button
+            *ngIf="hasPlRules || !hasEnRules"
+            class="downloadBtn primaryDownloadBtn"
+            fill="solid"
+            (click)="downloadRules('pl')"
+          >
+            <ion-icon slot="start" name="document-text-outline"></ion-icon>
+            {{ (hasEnRules ? 'RULES.DOWNLOAD_BUTTON_PL' : 'RULES.DOWNLOAD_BUTTON') | translate }}
+          </ion-button>
+        </div>
 
         <div class="updateAction" *ngIf="canUpdateDocument()">
           <ion-button fill="outline" size="small" class="updateBtn" (click)="updateDocumentRevision()">

@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { AlertController, LoadingController, ModalController } from '@ionic/angular';
 import { TranslateService } from '@ngx-translate/core';
-import { AppPermission, Configurations } from '@models/configurations.model';
+import { AppPermission, Configurations, LocalizedText } from '@models/configurations.model';
 import { AppService } from '../../app.service';
 import { ConfigurationsService } from '../configurations/configurations.service';
 import { MediaService } from '../../common/media.service';
@@ -16,6 +16,10 @@ import { RulesDocumentModalComponent } from './rulesDocumentModal.component';
 export class RulesPage {
   get configurations(): Configurations {
     return this.app.configurations;
+  }
+
+  get currentLang(): string {
+    return this.translate.currentLang === 'pl' ? 'pl' : 'en';
   }
 
   get warningText(): string {
@@ -33,6 +37,33 @@ export class RulesPage {
       number,
       date: formattedDate
     });
+  }
+
+  get rulesFileURL(): LocalizedText {
+    if (typeof this.configurations?.rulesFileURL === 'string') {
+      return {
+        en: this.configurations.rulesFileURL,
+        pl: this.configurations.rulesFileURL
+      };
+    }
+    return (
+      this.configurations?.rulesFileURL || {
+        en: 'https://media.finances.esn-poland.link/rules/finances-rules.pdf',
+        pl: 'https://media.finances.esn-poland.link/rules/finances-rules.pdf'
+      }
+    );
+  }
+
+  get hasPlRules(): boolean {
+    return !!this.rulesFileURL?.pl?.trim();
+  }
+
+  get hasEnRules(): boolean {
+    return !!this.rulesFileURL?.en?.trim();
+  }
+
+  get hasBothRules(): boolean {
+    return this.hasPlRules && this.hasEnRules;
   }
 
   constructor(
@@ -55,9 +86,12 @@ export class RulesPage {
     return !!user && (user.isAdministrator || user.hasPermission(AppPermission.RULES.UPDATE));
   }
 
-  public downloadRules(): void {
+  public downloadRules(lang?: 'en' | 'pl'): void {
+    const targetLang = lang || (this.currentLang === 'pl' ? 'pl' : 'en');
     const url =
-      this.configurations?.rulesFileURL ||
+      this.configurations?.getRulesFileURL(targetLang) ||
+      this.rulesFileURL?.[targetLang] ||
+      (targetLang === 'en' ? this.rulesFileURL?.pl : this.rulesFileURL?.en) ||
       'https://media.finances.esn-poland.link/rules/finances-rules.pdf';
     window.open(url, '_blank');
   }
@@ -102,6 +136,7 @@ export class RulesPage {
     const modal = await this.modalCtrl.create({
       component: RulesDocumentModalComponent,
       componentProps: {
+        currentRulesFileURL: this.configurations?.rulesFileURL,
         currentResolutionNumber: this.configurations?.rulesResolutionNumber,
         currentRevisionDate: this.configurations?.rulesRevisionDate
       }
@@ -109,16 +144,50 @@ export class RulesPage {
     await modal.present();
 
     const { data } = await modal.onDidDismiss();
-    if (data?.file && data?.resolutionNumber && data?.revisionDate) {
-      const uploading = await this.loadingCtrl.create({
-        message: this.translate.instant('COMMON.UPLOADING')
-      });
-      await uploading.present();
+    if (data?.resolutionNumber && data?.revisionDate) {
+      const hasUploads = !!data.filePl || !!data.fileEn;
+      let uploading: any = null;
+
+      if (hasUploads) {
+        uploading = await this.loadingCtrl.create({
+          message: this.translate.instant('COMMON.UPLOADING')
+        });
+        await uploading.present();
+      }
 
       try {
-        const { url } = await this.mediaService.uploadDocument(data.file);
+        const currentRules: LocalizedText =
+          typeof this.configurations?.rulesFileURL === 'object' && this.configurations?.rulesFileURL
+            ? { ...this.configurations.rulesFileURL }
+            : {
+                en: typeof this.configurations?.rulesFileURL === 'string' ? this.configurations.rulesFileURL : '',
+                pl: typeof this.configurations?.rulesFileURL === 'string' ? this.configurations.rulesFileURL : ''
+              };
+
+        const uploadPromises: Promise<void>[] = [];
+
+        if (data.filePl) {
+          uploadPromises.push(
+            this.mediaService.uploadDocument(data.filePl).then(({ url }) => {
+              currentRules.pl = url;
+            })
+          );
+        }
+
+        if (data.fileEn) {
+          uploadPromises.push(
+            this.mediaService.uploadDocument(data.fileEn).then(({ url }) => {
+              currentRules.en = url;
+            })
+          );
+        }
+
+        if (uploadPromises.length > 0) {
+          await Promise.all(uploadPromises);
+        }
+
         const updated = new Configurations(this.configurations);
-        updated.rulesFileURL = url;
+        updated.rulesFileURL = currentRules;
         updated.rulesResolutionNumber = data.resolutionNumber;
         updated.rulesRevisionDate = data.revisionDate;
         await this.saveConfigurations(updated);
@@ -130,7 +199,9 @@ export class RulesPage {
         });
         await alert.present();
       } finally {
-        await uploading.dismiss();
+        if (uploading) {
+          await uploading.dismiss();
+        }
       }
     }
   }

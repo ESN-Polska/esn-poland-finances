@@ -93,6 +93,7 @@ export class EmailTemplateComponent implements OnInit {
       { code: 'title', description: isGuest ? this.translate.instant('EMAIL_TEMPLATE.VARIABLES.PURPOSE') : this.translate.instant('EMAIL_TEMPLATE.VARIABLES.TITLE') },
       { code: 'detail', description: isGuest ? this.translate.instant('EMAIL_TEMPLATE.VARIABLES.EXPIRATION') : this.translate.instant('EMAIL_TEMPLATE.VARIABLES.DETAIL') },
       { code: 'url', description: this.translate.instant('EMAIL_TEMPLATE.VARIABLES.URL') },
+      { code: 'portalUrl', description: this.translate.instant('EMAIL_TEMPLATE.VARIABLES.PORTAL_URL') },
       { code: 'message', description: this.translate.instant('EMAIL_TEMPLATE.VARIABLES.MESSAGE') }
     ];
 
@@ -193,7 +194,8 @@ export class EmailTemplateComponent implements OnInit {
       user: this.app.currentUser?.getDisplayName() || (isEn ? 'John Smith' : 'Jan Kowalski'),
       title: isGuest ? (isEn ? 'Guest Speaker & Trainer' : 'Prelegent i trener') : (isEn ? 'Travel Reimbursement' : 'Zwrot kosztów podróży'),
       detail: isGuest ? '31.12.2026' : '250.00 PLN',
-      url: isGuest ? 'https://finances.esn-poland.link/auth?guestToken=abc123xyz' : 'https://finances.esn-poland.link/t/requests/view/1/2026',
+      url: isGuest ? 'https://finances.esn-poland.link/auth?guestToken=abc123xyz' : 'https://finances.esn-poland.link/t/requests/view/2026/1',
+      portalUrl: 'https://finances.esn-poland.link',
       message: isEn ? 'Reviewer note or additional comments.' : 'Uwagi weryfikującego lub dodatkowe informacje.',
       requestId: '1/2026',
       status: isEn ? 'APPROVED' : 'ZATWIERDZONY',

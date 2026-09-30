@@ -1,6 +1,8 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { AlertController, ModalController } from '@ionic/angular';
 import { TranslateService } from '@ngx-translate/core';
+import { LocalizedText } from '@models/configurations.model';
+import { AppService } from '@app/app.service';
 
 @Component({
   selector: 'app-rules-document-modal',
@@ -24,36 +26,141 @@ import { TranslateService } from '@ngx-translate/core';
     <ion-content class="ion-padding">
       <div class="maxWidthContainer">
         <ion-list class="aList">
-          <!-- Document File Picker -->
-          <ion-list-header>
-            <ion-label>
-              <h2>{{ 'RULES.DOCUMENT_FILE' | translate }}</h2>
-              <p>{{ 'RULES.DOCUMENT_FILE_I' | translate }}</p>
-            </ion-label>
-          </ion-list-header>
+          <!-- English Document File Picker -->
+          <ng-container *ngIf="app.isLanguageAvailable('en')">
+            <ion-list-header>
+              <ion-label>
+                <h2>{{ 'RULES.DOCUMENT_FILE_EN' | translate }}</h2>
+                <p>{{ 'RULES.DOCUMENT_FILE_EN_I' | translate }}</p>
+              </ion-label>
+            </ion-list-header>
 
-          <input
-            type="file"
-            #fileInput
-            (change)="onFileSelected($event)"
-            accept="application/pdf,.pdf"
-            style="display: none"
-          />
+            <input
+              type="file"
+              #fileInputEn
+              (change)="onFileSelected($event, 'en')"
+              accept="application/pdf,.pdf"
+              style="display: none"
+            />
 
-          <ion-item class="filePickerItem" (click)="fileInput.click()">
-            <ion-icon name="cloud-upload-outline" slot="start" color="primary"></ion-icon>
-            <ion-label *ngIf="!selectedFile">
-              <h3>{{ 'RULES.CHOOSE_NEW_DOCUMENT' | translate }}</h3>
-              <p>{{ 'RULES.SUPPORTED_FORMATS' | translate }}</p>
-            </ion-label>
-            <ion-label *ngIf="selectedFile">
-              <h3>{{ selectedFile.name }}</h3>
-              <p>{{ formatFileSize(selectedFile.size) }}</p>
-            </ion-label>
-            <ion-button slot="end" fill="outline" size="small">
-              {{ (selectedFile ? 'COMMON.EDIT' : 'COMMON.ADD') | translate }}
-            </ion-button>
-          </ion-item>
+            <ion-item class="filePickerItem" (click)="fileInputEn.click()">
+              <ion-icon
+                [name]="selectedFileEn || currentFileEn ? 'document-text-outline' : 'cloud-upload-outline'"
+                slot="start"
+                [color]="selectedFileEn ? 'success' : (currentFileEn ? 'primary' : 'medium')"
+              ></ion-icon>
+
+              <ion-label *ngIf="!selectedFileEn && !currentFileEn">
+                <h3>{{ 'RULES.CHOOSE_NEW_DOCUMENT_EN' | translate }}</h3>
+                <p>{{ 'RULES.SUPPORTED_FORMATS' | translate }}</p>
+              </ion-label>
+
+              <ion-label *ngIf="!selectedFileEn && currentFileEn">
+                <h3>{{ 'RULES.CURRENT_DOCUMENT_EN' | translate }}</h3>
+                <p>{{ 'RULES.ALREADY_UPLOADED' | translate }}</p>
+              </ion-label>
+
+              <ion-label *ngIf="selectedFileEn">
+                <h3>{{ selectedFileEn.name }}</h3>
+                <p>{{ formatFileSize(selectedFileEn.size) }}</p>
+              </ion-label>
+
+              <div slot="end" class="fileActions">
+                <ion-button
+                  *ngIf="!selectedFileEn && currentFileEn"
+                  fill="clear"
+                  size="small"
+                  (click)="viewCurrentDocument(currentFileEn, $event)"
+                  [title]="'RULES.VIEW_CURRENT_DOCUMENT' | translate"
+                >
+                  <ion-icon name="eye-outline" slot="icon-only"></ion-icon>
+                </ion-button>
+
+                <ion-button
+                  *ngIf="selectedFileEn"
+                  fill="clear"
+                  color="danger"
+                  size="small"
+                  (click)="removeSelectedFile('en', $event)"
+                  [title]="'RULES.REMOVE_FILE' | translate"
+                >
+                  <ion-icon name="close-circle-outline" slot="icon-only"></ion-icon>
+                </ion-button>
+
+                <ion-button fill="outline" size="small">
+                  {{ (selectedFileEn || currentFileEn ? 'COMMON.EDIT' : 'COMMON.ADD') | translate }}
+                </ion-button>
+              </div>
+            </ion-item>
+          </ng-container>
+
+          <!-- Polish Document File Picker -->
+          <ng-container *ngIf="app.isLanguageAvailable('pl')">
+            <ion-list-header>
+              <ion-label>
+                <h2>{{ 'RULES.DOCUMENT_FILE_PL' | translate }}</h2>
+                <p>{{ 'RULES.DOCUMENT_FILE_PL_I' | translate }}</p>
+              </ion-label>
+            </ion-list-header>
+
+            <input
+              type="file"
+              #fileInputPl
+              (change)="onFileSelected($event, 'pl')"
+              accept="application/pdf,.pdf"
+              style="display: none"
+            />
+
+            <ion-item class="filePickerItem" (click)="fileInputPl.click()">
+              <ion-icon
+                [name]="selectedFilePl || currentFilePl ? 'document-text-outline' : 'cloud-upload-outline'"
+                slot="start"
+                [color]="selectedFilePl ? 'success' : (currentFilePl ? 'primary' : 'medium')"
+              ></ion-icon>
+
+              <ion-label *ngIf="!selectedFilePl && !currentFilePl">
+                <h3>{{ 'RULES.CHOOSE_NEW_DOCUMENT_PL' | translate }}</h3>
+                <p>{{ 'RULES.SUPPORTED_FORMATS' | translate }}</p>
+              </ion-label>
+
+              <ion-label *ngIf="!selectedFilePl && currentFilePl">
+                <h3>{{ 'RULES.CURRENT_DOCUMENT_PL' | translate }}</h3>
+                <p>{{ 'RULES.ALREADY_UPLOADED' | translate }}</p>
+              </ion-label>
+
+              <ion-label *ngIf="selectedFilePl">
+                <h3>{{ selectedFilePl.name }}</h3>
+                <p>{{ formatFileSize(selectedFilePl.size) }}</p>
+              </ion-label>
+
+              <div slot="end" class="fileActions">
+                <ion-button
+                  *ngIf="!selectedFilePl && currentFilePl"
+                  fill="clear"
+                  size="small"
+                  (click)="viewCurrentDocument(currentFilePl, $event)"
+                  [title]="'RULES.VIEW_CURRENT_DOCUMENT' | translate"
+                >
+                  <ion-icon name="eye-outline" slot="icon-only"></ion-icon>
+                </ion-button>
+
+                <ion-button
+                  *ngIf="selectedFilePl"
+                  fill="clear"
+                  color="danger"
+                  size="small"
+                  (click)="removeSelectedFile('pl', $event)"
+                  [title]="'RULES.REMOVE_FILE' | translate"
+                >
+                  <ion-icon name="close-circle-outline" slot="icon-only"></ion-icon>
+                </ion-button>
+
+                <ion-button fill="outline" size="small">
+                  {{ (selectedFilePl || currentFilePl ? 'COMMON.EDIT' : 'COMMON.ADD') | translate }}
+                </ion-button>
+              </div>
+            </ion-item>
+          </ng-container>
 
           <!-- Resolution / Revision Details -->
           <ion-list-header>
@@ -108,6 +215,15 @@ import { TranslateService } from '@ngx-translate/core';
         margin-bottom: 16px;
         border: 2px dashed var(--ion-color-step-300, #ccc);
         border-radius: 8px;
+        transition: border-color 0.2s ease, background 0.2s ease;
+      }
+      .filePickerItem:hover {
+        border-color: var(--ion-color-primary, #00aeef);
+      }
+      .fileActions {
+        display: flex;
+        align-items: center;
+        gap: 6px;
       }
       ion-item {
         --padding-start: 16px;
@@ -124,14 +240,24 @@ import { TranslateService } from '@ngx-translate/core';
 export class RulesDocumentModalComponent implements OnInit {
   @Input() currentResolutionNumber?: string;
   @Input() currentRevisionDate?: string;
+  @Input() currentRulesFileURL?: LocalizedText | string;
 
-  selectedFile: File | null = null;
+  selectedFilePl: File | null = null;
+  selectedFileEn: File | null = null;
+  currentFilePl = '';
+  currentFileEn = '';
   resolutionNumber = '';
   revisionDate = '';
 
   get isValid(): boolean {
+    const hasAtLeastOneDoc =
+      !!this.selectedFilePl ||
+      !!this.selectedFileEn ||
+      !!this.currentFilePl ||
+      !!this.currentFileEn;
+
     return (
-      !!this.selectedFile &&
+      hasAtLeastOneDoc &&
       !!this.resolutionNumber.trim() &&
       !!this.revisionDate
     );
@@ -149,15 +275,24 @@ export class RulesDocumentModalComponent implements OnInit {
   constructor(
     private modalCtrl: ModalController,
     private alertCtrl: AlertController,
-    private translate: TranslateService
+    private translate: TranslateService,
+    public app: AppService
   ) {}
 
   ngOnInit(): void {
     this.resolutionNumber = this.currentResolutionNumber || '';
     this.revisionDate = this.currentRevisionDate || new Date().toISOString().split('T')[0];
+
+    if (typeof this.currentRulesFileURL === 'string') {
+      this.currentFilePl = this.currentRulesFileURL;
+      this.currentFileEn = this.currentRulesFileURL;
+    } else if (this.currentRulesFileURL) {
+      this.currentFilePl = this.currentRulesFileURL.pl || '';
+      this.currentFileEn = this.currentRulesFileURL.en || '';
+    }
   }
 
-  async onFileSelected(event: any): Promise<void> {
+  async onFileSelected(event: any, lang: 'pl' | 'en'): Promise<void> {
     const file = event.target?.files?.[0];
     if (!file) return;
 
@@ -176,7 +311,31 @@ export class RulesDocumentModalComponent implements OnInit {
       return;
     }
 
-    this.selectedFile = file;
+    if (lang === 'pl') {
+      this.selectedFilePl = file;
+    } else {
+      this.selectedFileEn = file;
+    }
+  }
+
+  removeSelectedFile(lang: 'pl' | 'en', event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+    }
+    if (lang === 'pl') {
+      this.selectedFilePl = null;
+    } else {
+      this.selectedFileEn = null;
+    }
+  }
+
+  viewCurrentDocument(url: string, event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+    }
+    if (url) {
+      window.open(url, '_blank');
+    }
   }
 
   formatFileSize(bytes: number): string {
@@ -210,7 +369,8 @@ export class RulesDocumentModalComponent implements OnInit {
     if (!this.isValid) return;
 
     this.modalCtrl.dismiss({
-      file: this.selectedFile,
+      filePl: this.selectedFilePl,
+      fileEn: this.selectedFileEn,
       resolutionNumber: this.resolutionNumber.trim(),
       revisionDate: this.revisionDate
     });
