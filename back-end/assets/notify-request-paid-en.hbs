@@ -156,6 +156,14 @@
         border-left: 4px solid #7c3aed;
         color: #5b21b6;
       }
+      .callout-title {
+        font-weight: 700;
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-bottom: 6px;
+        color: #6d28d9;
+      }
       .btn-container {
         text-align: center;
         margin: 28px 0 20px 0;
@@ -248,6 +256,13 @@
         <div class="callout-box">
           <div class="callout-title">Note:</div>
           {{message}}
+        </div>
+        {{/if}}
+
+        {{#if hasPaymentConfirmation}}
+        <div class="callout-box" style="background-color: #f0fdf4; border-color: #86efac; border-left: 4px solid #16a34a; color: #166534;">
+          <div class="callout-title" style="color: #15803d;">Payment Confirmation:</div>
+          The payment confirmation has been attached to this email and is also available in the portal.
         </div>
         {{/if}}
 
