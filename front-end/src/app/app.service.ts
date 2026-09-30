@@ -18,6 +18,7 @@ const LANG_KEY = 'app_lang';
 const THEME_PREFERENCE_STORAGE_KEY = 'themePreference';
 const DEFAULT_BANK_KEY = 'user_default_bank';
 const IMPERSONATION_ROLE_STORAGE_KEY = 'app_impersonation_role';
+const RETURN_URL_KEY = 'auth_return_url';
 
 const APP_ICON_DEFAULT = 'assets/icons/icon.svg';
 const ORGANISATION_LOGO_DEFAULT = 'assets/images/esn-poland-logo.png';
@@ -246,7 +247,19 @@ export class AppService {
     }
     this.clearPersistedImpersonationRole();
     await this.clearAuth();
-    await this.router.navigate(['/auth'], { replaceUrl: true });
+
+    let queryParams: any = {};
+    if (reason === 'lock' || reason === true) {
+      const returnUrl = this.getValidReturnUrl(this.router.url);
+      if (returnUrl) {
+        this.setReturnUrl(returnUrl);
+        queryParams = { returnUrl };
+      }
+    } else {
+      this.clearReturnUrl();
+    }
+
+    await this.router.navigate(['/auth'], { replaceUrl: true, queryParams });
     if (reason === 'suspended') {
       const toast = await this.toastCtrl.create({
         message: this.translate.instant('AUTH.USER_SUSPENDED_ERROR'),
@@ -787,7 +800,139 @@ export class AppService {
     return `https://${domain}/auth`;
   }
 
-  public async startLoginFlow(): Promise<void> {
+  public getValidReturnUrl(candidateUrl?: string | null): string | null {
+    let raw: string | null = null;
+    if (candidateUrl && typeof candidateUrl === 'string' && candidateUrl.trim().length > 0) {
+      raw = candidateUrl.trim();
+    } else {
+      raw = this.getReturnUrl();
+    }
+    if (!raw || typeof raw !== 'string') return null;
+
+    let trimmed = raw.trim();
+    // Must start with '/' but not '//' or '/\'
+    if (!trimmed.startsWith('/') || trimmed.startsWith('//') || trimmed.startsWith('/\\')) {
+      return null;
+    }
+
+    // Must not be root, home, or an auth route
+    const lower = trimmed.toLowerCase();
+    if (
+      lower === '/' ||
+      lower === '/home' ||
+      lower === '/t/home' ||
+      lower === '/t' ||
+      lower === '/t/' ||
+      lower.startsWith('/auth')
+    ) {
+      return null;
+    }
+
+    // Normalize known routes without '/t/' prefix (e.g. /requests/view/1/2026 -> /t/requests/view/1/2026)
+    const cleanLeading = trimmed.replace(/^\/+/, '');
+    const firstSegment = cleanLeading.split('/')[0].split('?')[0];
+    const knownTabs = ['requests', 'rules', 'profile', 'configurations', 'credits'];
+    if (knownTabs.includes(firstSegment)) {
+      trimmed = `/t/${cleanLeading}`;
+    }
+
+    return trimmed;
+  }
+
+  public setReturnUrl(url: string | null | undefined): void {
+    if (!url) {
+      this.clearReturnUrl();
+      return;
+    }
+    const valid = this.getValidReturnUrl(url);
+    if (!valid) {
+      this.clearReturnUrl();
+      return;
+    }
+    const payload = JSON.stringify({
+      url: valid,
+      timestamp: Date.now()
+    });
+    try {
+      sessionStorage.setItem(RETURN_URL_KEY, payload);
+    } catch {}
+    try {
+      localStorage.setItem(RETURN_URL_KEY, payload);
+    } catch {}
+  }
+
+  public getReturnUrl(): string | null {
+    let raw: string | null = null;
+    try {
+      raw = sessionStorage.getItem(RETURN_URL_KEY);
+    } catch {}
+    if (!raw) {
+      try {
+        raw = localStorage.getItem(RETURN_URL_KEY);
+      } catch {}
+    }
+    if (!raw) return null;
+
+    try {
+      if (raw.startsWith('{')) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.url && typeof parsed.url === 'string') {
+          const age = Date.now() - (parsed.timestamp || 0);
+          if (age >= 0 && age < 24 * 60 * 60 * 1000) {
+            return parsed.url;
+          }
+          this.clearReturnUrl();
+          return null;
+        }
+      }
+    } catch {}
+
+    return raw;
+  }
+
+  public clearReturnUrl(): void {
+    try {
+      sessionStorage.removeItem(RETURN_URL_KEY);
+    } catch {}
+    try {
+      localStorage.removeItem(RETURN_URL_KEY);
+    } catch {}
+  }
+
+  public getReturnUrlFromState(state?: string | null): string | null {
+    if (!state || typeof state !== 'string') return null;
+    try {
+      if (state.startsWith('ret:')) {
+        const parts = state.split(':');
+        if (parts.length >= 2 && parts[1]) {
+          let rawB64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+          while (rawB64.length % 4 !== 0) {
+            rawB64 += '=';
+          }
+          let decoded: string;
+          try {
+            decoded = decodeURIComponent(escape(atob(rawB64)));
+          } catch {
+            decoded = atob(rawB64);
+          }
+          return this.getValidReturnUrl(decoded);
+        }
+      } else if (state.startsWith('local:')) {
+        const parts = state.split(':');
+        if (parts.length >= 4 && parts[3]) {
+          const rawUrl = decodeURIComponent(parts.slice(3).join(':'));
+          return this.getValidReturnUrl(rawUrl);
+        }
+      }
+    } catch {}
+    return null;
+  }
+
+  public async startLoginFlow(returnUrl?: string): Promise<void> {
+    const effectiveReturnUrl = this.getValidReturnUrl(returnUrl);
+    if (effectiveReturnUrl) {
+      this.setReturnUrl(effectiveReturnUrl);
+    }
     // Dynamically retrieve OAuth config from backend (which securely loads clientId from SSM)
     let oauthConfig: any;
     try {
@@ -831,8 +976,18 @@ export class AppService {
     sessionStorage.setItem('oauth_redirect_uri', redirectUri);
 
     let state = this.generateRandomString(16);
+    if (effectiveReturnUrl) {
+      const b64Return = btoa(unescape(encodeURIComponent(effectiveReturnUrl)))
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/, '');
+      state = `ret:${b64Return}:${state}`;
+    }
     if (isLocal) {
       state = `local:${localHost}:${codeVerifier}`;
+      if (effectiveReturnUrl) {
+        state += `:${encodeURIComponent(effectiveReturnUrl)}`;
+      }
       sessionStorage.setItem('oauth_localhost', localHost);
     }
 

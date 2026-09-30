@@ -67,7 +67,11 @@ export class RequestReviewPage implements OnInit {
     let requestId: string | null = null;
 
     if (year && id) {
-      requestId = `${id}/${year}`;
+      if (/^\d{4}$/.test(id) && !/^\d{4}$/.test(year)) {
+        requestId = `${year}/${id}`;
+      } else {
+        requestId = `${id}/${year}`;
+      }
     } else if (id) {
       requestId = decodeURIComponent(id);
     }

@@ -12,6 +12,7 @@ import { AppService } from '../app.service';
 })
 export class AuthPage implements OnInit {
   @Input() token?: string;
+  @Input() returnUrl?: string;
 
   public isProcessing = false;
   public isGuestLogin = false;
@@ -131,6 +132,15 @@ export class AuthPage implements OnInit {
     const code = this.route.snapshot.queryParamMap.get('code');
     const state = this.route.snapshot.queryParamMap.get('state');
 
+    const stateReturnUrl = this.appService.getReturnUrlFromState(state);
+    const queryReturnUrl = this.returnUrl || this.route.snapshot.queryParamMap.get('returnUrl');
+    const validReturnUrl =
+      this.appService.getValidReturnUrl(stateReturnUrl) ||
+      this.appService.getValidReturnUrl(queryReturnUrl);
+    if (validReturnUrl) {
+      this.appService.setReturnUrl(validReturnUrl);
+    }
+
     if (code) {
       // If returning to dev callback from a localhost session, bounce to localhost
       if (
@@ -140,18 +150,16 @@ export class AuthPage implements OnInit {
         !this.appService.isLocalHost(window.location.hostname)
       ) {
         const raw = state.replace('local:', '');
-        const lastColon = raw.lastIndexOf(':');
-        let localTarget = raw;
-        let verifierFromState = '';
-        if (lastColon !== -1 && raw.length - lastColon - 1 >= 32) {
-          localTarget = raw.substring(0, lastColon);
-          verifierFromState = raw.substring(lastColon + 1);
-        }
-        const verifier =
-          verifierFromState ||
-          sessionStorage.getItem('oauth_verifier') ||
-          '';
-        window.location.href = `http://${localTarget}/auth?code=${encodeURIComponent(code)}&v=${encodeURIComponent(verifier)}`;
+        const parts = raw.split(':');
+        const localTarget = `${parts[0]}:${parts[1]}`;
+        const verifier = parts[2] || sessionStorage.getItem('oauth_verifier') || '';
+        const bounceReturnUrl =
+          (parts[3] ? decodeURIComponent(parts.slice(3).join(':')) : null) ||
+          this.returnUrl ||
+          this.route.snapshot.queryParamMap.get('returnUrl') ||
+          this.appService.getReturnUrl();
+        const returnUrlQuery = bounceReturnUrl ? `&returnUrl=${encodeURIComponent(bounceReturnUrl)}` : '';
+        window.location.href = `http://${localTarget}/auth?code=${encodeURIComponent(code)}&v=${encodeURIComponent(verifier)}${returnUrlQuery}`;
         return;
       }
 
@@ -170,7 +178,7 @@ export class AuthPage implements OnInit {
         sessionStorage.removeItem('oauth_verifier');
         sessionStorage.removeItem('oauth_redirect_uri');
         sessionStorage.removeItem('oauth_localhost');
-        await this.router.navigate(['/'], { replaceUrl: true });
+        await this.navigateToReturnUrlOrHome();
         return;
       } catch (err: any) {
         console.error('Failed to process OAuth code authentication', err);
@@ -217,6 +225,18 @@ export class AuthPage implements OnInit {
       this.isProcessing = true;
       try {
         await this.appService.loginWithGuestToken(guestToken);
+        const fromState = this.appService.getReturnUrlFromState(this.route.snapshot.queryParamMap.get('state'));
+        const fromInput = this.appService.getValidReturnUrl(this.returnUrl);
+        const fromQuery = this.appService.getValidReturnUrl(this.route.snapshot.queryParamMap.get('returnUrl'));
+        const fromStorage = this.appService.getReturnUrl();
+        const resolvedReturnUrl = fromState || fromInput || fromQuery || fromStorage;
+        this.appService.clearReturnUrl();
+        if (resolvedReturnUrl) {
+          try {
+            const navigated = await this.router.navigateByUrl(resolvedReturnUrl, { replaceUrl: true });
+            if (navigated) return;
+          } catch {}
+        }
         await this.router.navigate(['/t/requests/submit'], { replaceUrl: true });
         return;
       } catch (err: any) {
@@ -246,7 +266,7 @@ export class AuthPage implements OnInit {
       this.isProcessing = true;
       try {
         await this.appService.setToken(queryToken);
-        await this.router.navigate(['/'], { replaceUrl: true });
+        await this.navigateToReturnUrlOrHome();
       } catch (err) {
         console.error('Failed to process authentication token', err);
         this.isProcessing = false;
@@ -258,7 +278,7 @@ export class AuthPage implements OnInit {
           return;
         }
       }
-      await this.router.navigate(['/'], { replaceUrl: true });
+      await this.navigateToReturnUrlOrHome();
     }
   }
 
@@ -272,7 +292,38 @@ export class AuthPage implements OnInit {
 
   public login(): void {
     this.isProcessing = true;
-    this.appService.startLoginFlow();
+    const queryReturnUrl = this.returnUrl || this.route.snapshot.queryParamMap.get('returnUrl');
+    const resolvedReturnUrl =
+      this.appService.getValidReturnUrl(queryReturnUrl) ||
+      this.appService.getValidReturnUrl();
+    if (resolvedReturnUrl) {
+      this.appService.setReturnUrl(resolvedReturnUrl);
+    }
+    this.appService.startLoginFlow(resolvedReturnUrl || undefined);
+  }
+
+  private async navigateToReturnUrlOrHome(): Promise<void> {
+    const fromState = this.appService.getReturnUrlFromState(this.route.snapshot.queryParamMap.get('state'));
+    const fromInput = this.appService.getValidReturnUrl(this.returnUrl);
+    const fromQuery = this.appService.getValidReturnUrl(this.route.snapshot.queryParamMap.get('returnUrl'));
+    const fromStorage = this.appService.getReturnUrl();
+
+    const returnUrl = fromState || fromInput || fromQuery || fromStorage;
+
+    this.appService.clearReturnUrl();
+
+    if (returnUrl) {
+      try {
+        const navigated = await this.router.navigateByUrl(returnUrl, { replaceUrl: true });
+        if (navigated) {
+          return;
+        }
+      } catch (err) {
+        console.warn('Failed to navigate to returnUrl:', returnUrl, err);
+      }
+    }
+
+    await this.router.navigate(['/'], { replaceUrl: true });
   }
 
   private async showToast(messageKey: string, color: string): Promise<void> {

@@ -1,5 +1,5 @@
-import { NgModule } from '@angular/core';
-import { PreloadAllModules, RouterModule, Routes } from '@angular/router';
+import { inject, NgModule } from '@angular/core';
+import { PreloadAllModules, Router, RouterModule, Routes } from '@angular/router';
 import { initGuard } from './init.guard';
 import { authGuard } from './auth.guard';
 
@@ -26,7 +26,20 @@ const routes: Routes = [
   },
   {
     path: '**',
-    redirectTo: 't/home'
+    canActivate: [
+      (_route, state) => {
+        const router = inject(Router);
+        const url = state?.url || '';
+        const clean = url.replace(/^\/+/, '');
+        const firstSegment = clean.split('/')[0].split('?')[0];
+        const knownTabs = ['home', 'rules', 'requests', 'profile', 'configurations', 'credits'];
+        if (knownTabs.includes(firstSegment)) {
+          return router.parseUrl('/t/' + clean);
+        }
+        return router.parseUrl('/t/home');
+      }
+    ],
+    children: []
   }
 ];
 

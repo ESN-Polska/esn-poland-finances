@@ -144,6 +144,7 @@ export class TabsComponent implements OnInit, OnDestroy {
 
   public async logout(): Promise<void> {
     await this.closeMenu();
+    this.app.clearReturnUrl();
     await this.app.logout();
   }
 }

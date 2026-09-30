@@ -110,7 +110,11 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy {
     let editId: string | null = null;
 
     if (year && id) {
-      editId = `${id}/${year}`;
+      if (/^\d{4}$/.test(id) && !/^\d{4}$/.test(year)) {
+        editId = `${year}/${id}`;
+      } else {
+        editId = `${id}/${year}`;
+      }
     } else if (id) {
       editId = decodeURIComponent(id);
     }
