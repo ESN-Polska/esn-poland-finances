@@ -138,7 +138,8 @@ export class TabsComponent implements OnInit, OnDestroy {
       user.hasPermission(AppPermission.CONFIGURATIONS.ROLES) ||
       user.hasPermission(AppPermission.CONFIGURATIONS.GUESTS) ||
       user.hasPermission(AppPermission.CONFIGURATIONS.RESOURCES) ||
-      user.hasPermission(AppPermission.CONFIGURATIONS.TEMPLATES)
+      user.hasPermission(AppPermission.CONFIGURATIONS.TEMPLATES) ||
+      user.hasPermission(AppPermission.CONFIGURATIONS.EXPORTS)
     );
   }
 

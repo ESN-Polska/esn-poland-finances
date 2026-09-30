@@ -289,6 +289,55 @@ body.dark {
     background: #0f172a;
     border-color: rgba(255, 255, 255, 0.1);
   }
+
+  .templateIconSubmitted {
+    color: #38bdf8 !important;
+  }
+
+  .templateIconPaid {
+    color: #a78bfa !important;
+  }
+
+  .exportColumnItem {
+    .customHeaderInputWrap {
+      .customHeaderInput {
+        background: rgba(255, 255, 255, 0.06);
+        border-color: rgba(255, 255, 255, 0.14);
+        color: #f8fafc;
+
+        &:focus-within {
+          border-color: var(--ion-color-primary, #38bdf8);
+        }
+      }
+    }
+
+    .customHeaderReadonly {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+
+      .customHeaderDisplay {
+        color: #f8fafc;
+      }
+    }
+  }
+
+  .exportPreviewContainer {
+    background: #0f172a;
+    border-color: rgba(255, 255, 255, 0.1);
+
+    .exportPreviewCode {
+      color: #f8fafc;
+    }
+  }
+}
+
+/* SES TEMPLATES TAB ICON ACCENTS */
+.templateIconSubmitted {
+  color: #0284c7;
+}
+
+.templateIconPaid {
+  color: #8b5cf6;
 }
 
 /* GUEST ACCESS STYLES */
@@ -511,6 +560,149 @@ body.dark {
   display: flex;
   justify-content: center;
   margin: 28px 0 16px 0;
+}
+
+// Exports Tab Styling
+.exportActionsBar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+
+  .categoryFilterSegment {
+    width: 100%;
+  }
+
+  .exportButtonsRow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+  }
+}
+
+.headerLangTabs {
+  max-width: 380px;
+  margin-bottom: 8px;
+}
+
+.exportColumnItem {
+  --padding-start: 12px;
+  --inner-padding-end: 12px;
+
+  ion-checkbox {
+    margin-inline-end: 16px;
+  }
+
+  .exportColLabel {
+    margin: 8px 0;
+    min-width: 160px;
+
+    .exportColMeta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 4px;
+
+      .exportColCategoryBadge {
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        padding: 2px 7px;
+        border-radius: 6px;
+        background: rgba(var(--ion-color-primary-rgb), 0.12);
+        color: var(--ion-color-primary);
+      }
+
+      .exportColKey {
+        font-family: var(--font-mono, monospace);
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--text-dark);
+      }
+    }
+
+    .exportDefaultHeader {
+      font-size: 0.8rem;
+      color: var(--text-medium);
+      margin: 0;
+    }
+  }
+
+  .customHeaderInputWrap {
+    min-width: 200px;
+    max-width: 280px;
+    width: 100%;
+    margin-inline-start: 12px;
+
+    .customHeaderInput {
+      background: var(--input-background, rgba(0, 0, 0, 0.04));
+      border: 1px solid var(--border-light, rgba(0, 0, 0, 0.1));
+      border-radius: 8px;
+      padding: 4px 10px;
+      font-size: 0.88rem;
+      font-weight: 500;
+      color: var(--text-dark);
+      --padding-start: 8px;
+      --padding-end: 8px;
+      --padding-top: 4px;
+      --padding-bottom: 4px;
+      transition: border-color 0.2s ease;
+
+      &:focus-within {
+        border-color: var(--ion-color-primary);
+      }
+    }
+  }
+
+  .customHeaderReadonly {
+    margin-inline-start: 12px;
+    padding: 6px 12px;
+    background: var(--border-light, rgba(0, 0, 0, 0.05));
+    border-radius: 8px;
+
+    .customHeaderDisplay {
+      font-size: 0.88rem;
+      font-weight: 500;
+      color: var(--text-dark);
+    }
+  }
+
+  ion-reorder {
+    margin-inline-start: 8px;
+  }
+}
+
+.exportPreviewContainer {
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px solid var(--border-color, #e2e8f0);
+  overflow-x: auto;
+  margin: 0 16px 16px 16px;
+
+  .exportPreviewCode {
+    margin: 0;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Roboto Mono', monospace;
+    font-size: 0.82rem;
+    line-height: 1.5;
+    color: #1e293b;
+    white-space: pre;
+    overflow-x: auto;
+  }
+}
+
+@media (max-width: 768px) {
+  .exportColumnItem {
+    flex-wrap: wrap;
+
+    .customHeaderInputWrap {
+      max-width: 100%;
+      min-width: 100%;
+      margin: 8px 0 0 0;
+    }
+  }
 }
 
 

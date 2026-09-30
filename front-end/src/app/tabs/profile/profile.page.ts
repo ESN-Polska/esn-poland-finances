@@ -57,7 +57,7 @@ export class ProfilePage implements OnInit {
       titleKey: 'CONFIGURATIONS.EMAIL_TEMPLATES_TYPES.REQUEST_SUBMITTED',
       descKey: 'CONFIGURATIONS.EMAIL_TEMPLATES_TYPES.REQUEST_SUBMITTED_I',
       icon: 'send-outline',
-      colorClass: 'icon-primary'
+      colorClass: 'icon-submitted'
     },
     {
       type: EmailTemplateTypes.REQUEST_CHANGES_REQUESTED,

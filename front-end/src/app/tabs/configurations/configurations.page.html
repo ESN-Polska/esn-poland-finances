@@ -758,7 +758,7 @@
       </ion-item-divider>
 
       <ion-item button detail (click)="openTemplateEmailModal(EmailTemplateTypes.GUEST_INVITATION)">
-        <ion-icon name="mail-outline" slot="start" color="primary"></ion-icon>
+        <ion-icon name="mail-outline" slot="start" class="templateIconSubmitted" style="color: #0284c7;"></ion-icon>
         <ion-label class="ion-text-wrap">
           <h3>{{ 'CONFIGURATIONS.EMAIL_TEMPLATES_TYPES.GUEST_INVITATION' | translate }}</h3>
           <p>{{ 'CONFIGURATIONS.EMAIL_TEMPLATES_TYPES.GUEST_INVITATION_I' | translate }}</p>
@@ -770,8 +770,38 @@
         <ion-label>{{ 'CONFIGURATIONS.EMAIL_CATEGORIES.REQUESTS' | translate }}</ion-label>
       </ion-item-divider>
 
+      <!-- Threading Switch for Financial Requests -->
+      <ion-item>
+        <ion-icon name="git-merge-outline" slot="start" color="primary"></ion-icon>
+        <ion-label class="ion-text-wrap">
+          <h3>{{ 'CONFIGURATIONS.THREAD_REQUEST_EMAILS' | translate }}</h3>
+          <p>{{ 'CONFIGURATIONS.THREAD_REQUEST_EMAILS_I' | translate }}</p>
+        </ion-label>
+        <ion-toggle
+          slot="end"
+          [disabled]="!canModifyTemplates()"
+          [(ngModel)]="configurations.threadRequestEmails"
+          (ionChange)="updateConfigurations()"
+        ></ion-toggle>
+      </ion-item>
+
+      <!-- Unified Thread Subject Config (active when threading is enabled) -->
+      <ion-item
+        button
+        detail
+        *ngIf="configurations.threadRequestEmails"
+        [disabled]="!canModifyTemplates()"
+        (click)="openThreadSubjectModal()"
+      >
+        <ion-icon name="text-outline" slot="start" color="primary"></ion-icon>
+        <ion-label class="ion-text-wrap">
+          <h3>{{ 'CONFIGURATIONS.THREAD_SUBJECT_TITLE' | translate }}</h3>
+          <p>{{ getThreadSubjectDisplay() }}</p>
+        </ion-label>
+      </ion-item>
+
       <ion-item button detail (click)="openTemplateEmailModal(EmailTemplateTypes.REQUEST_SUBMITTED)">
-        <ion-icon name="send-outline" slot="start" color="primary"></ion-icon>
+        <ion-icon name="send-outline" slot="start" class="templateIconSubmitted" style="color: #0284c7;"></ion-icon>
         <ion-label class="ion-text-wrap">
           <h3>{{ 'CONFIGURATIONS.EMAIL_TEMPLATES_TYPES.REQUEST_SUBMITTED' | translate }}</h3>
           <p>{{ 'CONFIGURATIONS.EMAIL_TEMPLATES_TYPES.REQUEST_SUBMITTED_I' | translate }}</p>
@@ -795,7 +825,7 @@
       </ion-item>
 
       <ion-item button detail (click)="openTemplateEmailModal(EmailTemplateTypes.REQUEST_PAID)">
-        <ion-icon name="cash-outline" slot="start" style="color: #8b5cf6;"></ion-icon>
+        <ion-icon name="cash-outline" slot="start" class="templateIconPaid" style="color: #8b5cf6;"></ion-icon>
         <ion-label class="ion-text-wrap">
           <h3>{{ 'CONFIGURATIONS.EMAIL_TEMPLATES_TYPES.REQUEST_PAID' | translate }}</h3>
           <p>{{ 'CONFIGURATIONS.EMAIL_TEMPLATES_TYPES.REQUEST_PAID_I' | translate }}</p>
@@ -810,6 +840,223 @@
         </ion-label>
       </ion-item>
     </ion-list>
+
+    <!-- SUBTAB: EXPORTS -->
+    <div *ngIf="pageSection === 'EXPORTS'">
+      <!-- Format and Locale Options -->
+      <ion-list class="aList">
+        <ion-list-header>
+          <ion-label>
+            <h2>{{ 'CONFIGURATIONS.EXPORTS_FORMAT_TITLE' | translate }}</h2>
+            <p>{{ 'CONFIGURATIONS.EXPORTS_FORMAT_I' | translate }}</p>
+          </ion-label>
+        </ion-list-header>
+
+        <!-- Delimiter -->
+        <ion-item>
+          <ion-label position="stacked">{{ 'CONFIGURATIONS.EXPORTS_DELIMITER' | translate }}</ion-label>
+          <ion-select
+            interface="popover"
+            [disabled]="!canModifyExports()"
+            [(ngModel)]="configurations.csvExportSettings.delimiter"
+            (ionChange)="updateConfigurations()"
+          >
+            <ion-select-option value=";">{{ 'CONFIGURATIONS.EXPORTS_DELIMITER_SEMICOLON' | translate }}</ion-select-option>
+            <ion-select-option value=",">{{ 'CONFIGURATIONS.EXPORTS_DELIMITER_COMMA' | translate }}</ion-select-option>
+            <ion-select-option value="&#9;">{{ 'CONFIGURATIONS.EXPORTS_DELIMITER_TAB' | translate }}</ion-select-option>
+          </ion-select>
+        </ion-item>
+
+        <!-- Date Format -->
+        <ion-item>
+          <ion-label position="stacked">{{ 'CONFIGURATIONS.EXPORTS_DATE_FORMAT' | translate }}</ion-label>
+          <ion-select
+            interface="popover"
+            [disabled]="!canModifyExports()"
+            [(ngModel)]="configurations.csvExportSettings.dateFormat"
+            (ionChange)="updateConfigurations()"
+          >
+            <ion-select-option value="YYYY-MM-DD">YYYY-MM-DD (ISO)</ion-select-option>
+            <ion-select-option value="DD.MM.YYYY">DD.MM.YYYY (PL / EU)</ion-select-option>
+            <ion-select-option value="DD/MM/YYYY">DD/MM/YYYY</ion-select-option>
+          </ion-select>
+        </ion-item>
+
+        <!-- Decimal Separator -->
+        <ion-item>
+          <ion-label position="stacked">{{ 'CONFIGURATIONS.EXPORTS_DECIMAL_SEPARATOR' | translate }}</ion-label>
+          <ion-select
+            interface="popover"
+            [disabled]="!canModifyExports()"
+            [(ngModel)]="configurations.csvExportSettings.decimalSeparator"
+            (ionChange)="updateConfigurations()"
+          >
+            <ion-select-option value=",">{{ 'CONFIGURATIONS.EXPORTS_DECIMAL_COMMA' | translate }}</ion-select-option>
+            <ion-select-option value=".">{{ 'CONFIGURATIONS.EXPORTS_DECIMAL_DOT' | translate }}</ion-select-option>
+          </ion-select>
+        </ion-item>
+
+        <!-- Boolean Values Format -->
+        <ion-item>
+          <ion-label position="stacked">{{ 'CONFIGURATIONS.EXPORTS_BOOLEAN_FORMAT' | translate }}</ion-label>
+          <ion-select
+            interface="popover"
+            [disabled]="!canModifyExports()"
+            [(ngModel)]="configurations.csvExportSettings.booleanFormat"
+            (ionChange)="updateConfigurations()"
+          >
+            <ion-select-option value="TRUE_FALSE">{{ 'CONFIGURATIONS.EXPORTS_BOOLEAN_TRUE_FALSE' | translate }}</ion-select-option>
+            <ion-select-option value="1_0">{{ 'CONFIGURATIONS.EXPORTS_BOOLEAN_1_0' | translate }}</ion-select-option>
+          </ion-select>
+        </ion-item>
+
+        <!-- UTF-8 BOM Toggle -->
+        <ion-item>
+          <ion-label class="ion-text-wrap">
+            {{ 'CONFIGURATIONS.EXPORTS_INCLUDE_BOM' | translate }}
+            <p>{{ 'CONFIGURATIONS.EXPORTS_INCLUDE_BOM_I' | translate }}</p>
+          </ion-label>
+          <ion-toggle
+            slot="end"
+            [disabled]="!canModifyExports()"
+            [(ngModel)]="configurations.csvExportSettings.includeBom"
+            (ionChange)="updateConfigurations()"
+          ></ion-toggle>
+        </ion-item>
+      </ion-list>
+
+      <!-- Columns & Headers -->
+      <ion-list class="aList ion-margin-top">
+        <ion-list-header>
+          <ion-label>
+            <h2>{{ 'CONFIGURATIONS.EXPORTS_COLUMNS_TITLE' | translate }}</h2>
+            <p>{{ 'CONFIGURATIONS.EXPORTS_COLUMNS_I' | translate }}</p>
+          </ion-label>
+        </ion-list-header>
+
+        <!-- Actions & Category Filter Chips -->
+        <div class="exportActionsBar ion-padding-horizontal">
+          <div class="categoryFilterSegment">
+            <ion-segment
+              [scrollable]="true"
+              [(ngModel)]="selectedExportCategory"
+              class="subFilterSegment"
+            >
+              <ion-segment-button *ngFor="let cat of exportCategories" [value]="cat">
+                <ion-label>{{ 'CONFIGURATIONS.EXPORTS_CATEGORIES.' + cat | translate }}</ion-label>
+              </ion-segment-button>
+            </ion-segment>
+          </div>
+
+          <div class="exportButtonsRow" *ngIf="canModifyExports()">
+            <ion-button
+              size="small"
+              fill="outline"
+              (click)="setAllExportColumns(true)"
+              [disabled]="isAllExportColumnsEnabled"
+            >
+              <ion-icon name="checkmark-done-outline" slot="start"></ion-icon>
+              {{ 'CONFIGURATIONS.EXPORTS_SELECT_ALL' | translate }}
+            </ion-button>
+            <ion-button
+              size="small"
+              fill="outline"
+              color="medium"
+              (click)="setAllExportColumns(false)"
+            >
+              <ion-icon name="close-outline" slot="start"></ion-icon>
+              {{ 'CONFIGURATIONS.EXPORTS_DESELECT_ALL' | translate }}
+            </ion-button>
+            <ion-button
+              size="small"
+              fill="clear"
+              color="warning"
+              (click)="resetExportSettingsConfirm()"
+            >
+              <ion-icon name="refresh-outline" slot="start"></ion-icon>
+              {{ 'CONFIGURATIONS.EXPORTS_RESET_DEFAULTS' | translate }}
+            </ion-button>
+          </div>
+        </div>
+
+        <!-- Language switcher for header editing (EN / PL) -->
+        <div class="headerLangTabs ion-padding-horizontal ion-margin-top">
+          <ion-segment [(ngModel)]="exportHeaderLangTab" class="subFilterSegment">
+            <ion-segment-button value="en">
+              <ion-label>{{ 'CONFIGURATIONS.EXPORTS_HEADER_EN' | translate }}</ion-label>
+            </ion-segment-button>
+            <ion-segment-button value="pl">
+              <ion-label>{{ 'CONFIGURATIONS.EXPORTS_HEADER_PL' | translate }}</ion-label>
+            </ion-segment-button>
+          </ion-segment>
+        </div>
+
+        <!-- Reorderable List of Columns -->
+        <ion-reorder-group
+          [disabled]="!canModifyExports()"
+          (ionItemReorder)="reorderExportColumns($event)"
+        >
+          <ion-item
+            *ngFor="let col of filteredExportColumns; trackBy: trackByColumnId"
+            class="exportColumnItem"
+          >
+            <!-- Checkbox -->
+            <ion-checkbox
+              slot="start"
+              [disabled]="!canModifyExports()"
+              [checked]="col.enabled"
+              (ionChange)="toggleExportColumn(col.id)"
+            ></ion-checkbox>
+
+            <ion-label class="exportColLabel">
+              <div class="exportColMeta">
+                <span class="exportColCategoryBadge">
+                  {{ 'CONFIGURATIONS.EXPORTS_CATEGORIES.' + col.category | translate }}
+                </span>
+                <span class="exportColKey">{{ col.id }}</span>
+              </div>
+              <p class="exportDefaultHeader">
+                {{ 'CONFIGURATIONS.EXPORTS_DEFAULT_HEADER' | translate: { header: exportHeaderLangTab === 'pl' ? col.defaultHeader.pl : col.defaultHeader.en } }}
+              </p>
+            </ion-label>
+
+            <!-- Custom Header Input -->
+            <div class="customHeaderInputWrap" slot="end" *ngIf="canModifyExports()">
+              <ion-input
+                class="customHeaderInput"
+                type="text"
+                [placeholder]="exportHeaderLangTab === 'pl' ? col.defaultHeader.pl : col.defaultHeader.en"
+                [value]="col.customHeader ? (exportHeaderLangTab === 'pl' ? (col.customHeader.pl || '') : (col.customHeader.en || '')) : ''"
+                (ionBlur)="onCustomHeaderChange(col, exportHeaderLangTab, $event.target.value)"
+              ></ion-input>
+            </div>
+
+            <div class="customHeaderReadonly" slot="end" *ngIf="!canModifyExports()">
+              <span class="customHeaderDisplay">
+                {{ col.customHeader ? (exportHeaderLangTab === 'pl' ? (col.customHeader.pl || col.defaultHeader.pl) : (col.customHeader.en || col.defaultHeader.en)) : (exportHeaderLangTab === 'pl' ? col.defaultHeader.pl : col.defaultHeader.en) }}
+              </span>
+            </div>
+
+            <!-- Reorder Handle -->
+            <ion-reorder slot="end" *ngIf="canModifyExports()"></ion-reorder>
+          </ion-item>
+        </ion-reorder-group>
+      </ion-list>
+
+      <!-- Live CSV Preview -->
+      <ion-list class="aList ion-margin-top">
+        <ion-list-header>
+          <ion-label>
+            <h2>{{ 'CONFIGURATIONS.EXPORTS_PREVIEW_TITLE' | translate }}</h2>
+            <p>{{ 'CONFIGURATIONS.EXPORTS_PREVIEW_I' | translate }}</p>
+          </ion-label>
+        </ion-list-header>
+
+        <div class="exportPreviewContainer ion-padding">
+          <pre class="exportPreviewCode"><code>{{ exportCsvPreview }}</code></pre>
+        </div>
+      </ion-list>
+    </div>
 
     <!-- SUBTAB: OPTIONS -->
     <ion-list class="aList" *ngIf="pageSection === 'OPTIONS'">

@@ -57,9 +57,21 @@
         </ion-list-header>
 
         <div class="variablesList">
-          <div class="variableChip" *ngFor="let v of variables">
+          <div
+            class="variableChip"
+            *ngFor="let v of variables"
+            (click)="copyVariable(v.code)"
+            [title]="'COMMON.COPY' | translate"
+            role="button"
+            tabindex="0"
+          >
             <code>{{ '{{' + v.code + '}}' }}</code>
             <span class="varDesc">{{ v.description }}</span>
+            <ion-icon
+              [name]="copiedVariable === v.code ? 'checkmark-outline' : 'copy-outline'"
+              class="copyIcon"
+              [class.copied]="copiedVariable === v.code"
+            ></ion-icon>
           </div>
         </div>
 

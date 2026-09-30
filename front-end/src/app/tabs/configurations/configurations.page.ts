@@ -14,6 +14,7 @@ import { GuestInstructionsModalComponent } from './guestInstructionsModal.compon
 import { AppLockMessageModalComponent } from './appLockMessageModal.component';
 import { EmailTemplateComponent } from './emailTemplate/emailTemplate.component';
 import { OAuthRolesModalComponent } from './oauthRolesModal.component';
+import { ThreadSubjectModalComponent } from './threadSubjectModal.component';
 
 import {
   AppPermission,
@@ -27,7 +28,10 @@ import {
   EmailTemplates,
   EmailTemplateTypes,
   OAUTH_ROLE_OPTIONS,
-  UsersOriginDisplayOptions
+  UsersOriginDisplayOptions,
+  CsvColumnCategory,
+  CsvExportColumnConfig,
+  DEFAULT_CSV_EXPORT_SETTINGS
 } from '@models/configurations.model';
 import { User } from '@models/user.model';
 
@@ -72,6 +76,17 @@ export class ConfigurationsPage implements OnInit {
   loadingUsers: boolean = false;
   userSearchQuery: string = '';
   userFilterStatus: 'ALL' | 'ACTIVE' | 'SUSPENDED' = 'ALL';
+
+  selectedExportCategory: CsvColumnCategory | 'ALL' = 'ALL';
+  exportCategories: (CsvColumnCategory | 'ALL')[] = [
+    'ALL',
+    'METADATA',
+    'APPLICANT',
+    'FINANCIAL',
+    'BANKING',
+    'REMARKS'
+  ];
+  exportHeaderLangTab: 'en' | 'pl' = 'en';
 
   constructor(
     private modalCtrl: ModalController,
@@ -259,6 +274,12 @@ export class ConfigurationsPage implements OnInit {
     if (section === 'TEMPLATES') {
       return user.hasPermission(AppPermission.CONFIGURATIONS.TEMPLATES);
     }
+    if (section === 'EXPORTS') {
+      return (
+        user.hasPermission(AppPermission.CONFIGURATIONS.EXPORTS) ||
+        user.hasPermission(AppPermission.CONFIGURATIONS.OPTIONS)
+      );
+    }
     if (section === 'RESOURCES') {
       return (
         user.hasPermission(AppPermission.CONFIGURATIONS.RESOURCES) ||
@@ -266,6 +287,17 @@ export class ConfigurationsPage implements OnInit {
       );
     }
     return false;
+  }
+
+  canModifyExports(): boolean {
+    const user = this.app.currentUser;
+    if (!user) return false;
+    if (user.isAdministrator) return true;
+    if (user.isAuditorOnly) return false;
+    return (
+      user.hasPermission(AppPermission.CONFIGURATIONS.EXPORTS) ||
+      user.hasPermission(AppPermission.CONFIGURATIONS.OPTIONS)
+    );
   }
 
   canModifyResources(): boolean {
@@ -756,6 +788,29 @@ export class ConfigurationsPage implements OnInit {
       }
     });
     await modal.present();
+  }
+
+  async openThreadSubjectModal(): Promise<void> {
+    if (!this.canModifyTemplates()) return;
+    const modal = await this.modalCtrl.create({
+      component: ThreadSubjectModalComponent,
+      componentProps: {
+        subject: this.configurations.threadRequestEmailsSubject
+      }
+    });
+    await modal.present();
+    const { data } = await modal.onWillDismiss();
+    if (data?.subject) {
+      const updated = new Configurations(this.configurations);
+      updated.threadRequestEmailsSubject = data.subject;
+      await this.updateConfigurations(updated);
+    }
+  }
+
+  getThreadSubjectDisplay(): string {
+    const lang = this.app.currentLanguage || 'pl';
+    return this.configurations?.getThreadRequestEmailsSubject?.(lang) ||
+      (lang === 'en' ? 'Financial request {{requestId}}' : 'Wniosek finansowy {{requestId}}');
   }
 
   async askAndResetAllTemplates(): Promise<void> {
@@ -2020,5 +2075,177 @@ export class ConfigurationsPage implements OnInit {
     const updated = new Configurations(this.configurations);
     updated.oauthRoleOptions = reordered;
     await this.updateConfigurations(updated, { silent: true, noLoading: true });
+  }
+
+  //
+  // EXPORTS SUBTAB
+  //
+
+  get filteredExportColumns(): CsvExportColumnConfig[] {
+    const cols = this.configurations?.csvExportSettings?.columns || [];
+    if (this.selectedExportCategory === 'ALL') return cols;
+    return cols.filter(c => c.category === this.selectedExportCategory);
+  }
+
+  get isAllExportColumnsEnabled(): boolean {
+    const target = this.filteredExportColumns;
+    return target.length > 0 && target.every(c => c.enabled);
+  }
+
+  async toggleExportColumn(colId: string): Promise<void> {
+    if (!this.canModifyExports() || !this.configurations?.csvExportSettings) return;
+    const col = this.configurations.csvExportSettings.columns.find(c => c.id === colId);
+    if (!col) return;
+    col.enabled = !col.enabled;
+    const updated = new Configurations(this.configurations);
+    await this.updateConfigurations(updated, { silent: true, noLoading: true });
+  }
+
+  async setAllExportColumns(enabled: boolean): Promise<void> {
+    if (!this.canModifyExports() || !this.configurations?.csvExportSettings) return;
+    const target = this.filteredExportColumns;
+    for (const c of target) {
+      c.enabled = enabled;
+    }
+    const updated = new Configurations(this.configurations);
+    await this.updateConfigurations(updated);
+  }
+
+  async reorderExportColumns(event: any): Promise<void> {
+    if (!this.canModifyExports() || !this.configurations?.csvExportSettings) {
+      event.detail.complete();
+      return;
+    }
+    const allCols = [...this.configurations.csvExportSettings.columns];
+    if (this.selectedExportCategory === 'ALL') {
+      const reordered = event.detail.complete(allCols);
+      this.configurations.csvExportSettings.columns = reordered;
+    } else {
+      const filtered = this.filteredExportColumns;
+      const fromIdx = event.detail.from;
+      const toIdx = event.detail.to;
+      const movedItem = filtered[fromIdx];
+      event.detail.complete();
+      if (!movedItem) return;
+      const currentGlobalIdx = allCols.indexOf(movedItem);
+      allCols.splice(currentGlobalIdx, 1);
+      const targetItem = filtered[toIdx];
+      const targetGlobalIdx = allCols.indexOf(targetItem);
+      if (toIdx > fromIdx) {
+        allCols.splice(targetGlobalIdx + 1, 0, movedItem);
+      } else {
+        allCols.splice(targetGlobalIdx, 0, movedItem);
+      }
+      this.configurations.csvExportSettings.columns = allCols;
+    }
+    const updated = new Configurations(this.configurations);
+    await this.updateConfigurations(updated, { silent: true, noLoading: true });
+  }
+
+  async onCustomHeaderChange(col: CsvExportColumnConfig, lang: 'en' | 'pl', value: any): Promise<void> {
+    if (!this.canModifyExports()) return;
+    const strVal = String(value || '').trim();
+    if (!col.customHeader) {
+      col.customHeader = {};
+    }
+    col.customHeader[lang] = strVal ? strVal : undefined;
+    if (!col.customHeader.en && !col.customHeader.pl) {
+      col.customHeader = undefined;
+    }
+    const updated = new Configurations(this.configurations);
+    await this.updateConfigurations(updated, { silent: true, noLoading: true });
+  }
+
+  async resetExportSettingsConfirm(): Promise<void> {
+    if (!this.canModifyExports()) return;
+    const alert = await this.alertCtrl.create({
+      header: this.translate.instant('CONFIGURATIONS.EXPORTS_RESET_DEFAULTS'),
+      message: this.translate.instant('CONFIGURATIONS.EXPORTS_RESET_CONFIRM'),
+      buttons: [
+        { text: this.translate.instant('COMMON.CANCEL'), role: 'cancel' },
+        {
+          text: this.translate.instant('COMMON.RESET'),
+          handler: async () => {
+            if (!this.configurations) return;
+            const updated = new Configurations(this.configurations);
+            updated.csvExportSettings = JSON.parse(JSON.stringify(DEFAULT_CSV_EXPORT_SETTINGS));
+            this.configurations = updated;
+            await this.updateConfigurations(updated);
+          }
+        }
+      ]
+    });
+    await alert.present();
+  }
+
+  trackByColumnId(_: number, col: CsvExportColumnConfig): string {
+    return col.id;
+  }
+
+  get exportCsvPreview(): string {
+    const settings = this.configurations?.csvExportSettings || DEFAULT_CSV_EXPORT_SETTINGS;
+    const previewLang: 'en' | 'pl' = this.exportHeaderLangTab || 'en';
+
+    const enabledColumns = (settings.columns || []).filter(c => c.enabled);
+    if (!enabledColumns.length) {
+      return '(No columns selected for export)';
+    }
+
+    const headers = enabledColumns.map(col => {
+      const custom = col.customHeader
+        ? col.customHeader[previewLang] ||
+          (typeof col.customHeader === 'string' ? col.customHeader : '')
+        : '';
+      if (custom && custom.trim()) return custom.trim();
+      return col.defaultHeader?.[previewLang] || col.defaultHeader?.['en'] || col.id;
+    });
+
+    const delimiter = settings.delimiter || ';';
+
+    const sampleValues: Record<string, string> = {
+      displayId: '"1/2026"',
+      createdAt:
+        settings.dateFormat === 'DD.MM.YYYY'
+          ? '"15.03.2026"'
+          : settings.dateFormat === 'DD/MM/YYYY'
+          ? '"15/03/2026"'
+          : '"2026-03-15"',
+      submittedAt:
+        settings.dateFormat === 'DD.MM.YYYY'
+          ? '"16.03.2026"'
+          : settings.dateFormat === 'DD/MM/YYYY'
+          ? '"16/03/2026"'
+          : '"2026-03-16"',
+      status: '"APPROVED"',
+      requestType: '"INVOICE_REIMBURSEMENT"',
+      applicantName: '"Jan Kowalski"',
+      applicantEmail: '"jan.kowalski@esn.pl"',
+      sectionOrCountry: '"ESN Warsaw"',
+      isGuest: settings.booleanFormat === '1_0' ? '"0"' : '"FALSE"',
+      position: '"Treasurer"',
+      sourceOfFunding: '"National Board Grant"',
+      grossPLN: settings.decimalSeparator === ',' ? '"1250,50"' : '"1250.50"',
+      vatPLN: settings.decimalSeparator === ',' ? '"287,62"' : '"287.62"',
+      plnIban: '"PL61109010140000071219812874"',
+      plnSwift: '"WBKPPLLPP"',
+      plnAccountHolder: '"Jan Kowalski"',
+      grossEUR: settings.decimalSeparator === ',' ? '"0,00"' : '"0.00"',
+      vatEUR: settings.decimalSeparator === ',' ? '"0,00"' : '"0.00"',
+      eurIban: '""',
+      eurSwift: '""',
+      eurAccountHolder: '""',
+      adminRemarks: '"Approved for payment"',
+      currency: '"PLN"',
+      totalGrossAmount: settings.decimalSeparator === ',' ? '"1250,50"' : '"1250.50"',
+      totalVatAmount: settings.decimalSeparator === ',' ? '"287,62"' : '"287.62"',
+      generalExplanation: '"Reimbursement for printouts"',
+      accountHolderAddress: '"ul. Krakowska 10, 00-001 Warszawa"',
+      accountHolderAddressEUR: '""',
+      guestPurpose: '""'
+    };
+
+    const sampleRow = enabledColumns.map(col => sampleValues[col.id] || '""').join(delimiter);
+    const headerRow = headers.map(h => `"${h.replace(/"/g, '""')}"`).join(delimiter);
+    return `${headerRow}\n${sampleRow}`;
   }
 }

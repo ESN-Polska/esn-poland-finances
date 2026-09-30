@@ -13,6 +13,7 @@ import { GuestInstructionsModalComponent } from './guestInstructionsModal.compon
 import { AppLockMessageModalComponent } from './appLockMessageModal.component';
 import { EmailTemplateComponent } from './emailTemplate/emailTemplate.component';
 import { OAuthRolesModalComponent } from './oauthRolesModal.component';
+import { ThreadSubjectModalComponent } from './threadSubjectModal.component';
 
 @NgModule({
   imports: [
@@ -30,7 +31,8 @@ import { OAuthRolesModalComponent } from './oauthRolesModal.component';
     GuestInstructionsModalComponent,
     AppLockMessageModalComponent,
     EmailTemplateComponent,
-    OAuthRolesModalComponent
+    OAuthRolesModalComponent,
+    ThreadSubjectModalComponent
   ]
 })
 export class ConfigurationsModule {}

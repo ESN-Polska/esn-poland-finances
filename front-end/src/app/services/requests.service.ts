@@ -11,7 +11,11 @@ import {
   InvoiceDocumentItem,
   RequestStatus
 } from '@models/financial-request.model';
-import { AppPermission } from '@models/configurations.model';
+import {
+  AppPermission,
+  CsvExportSettings,
+  DEFAULT_CSV_EXPORT_SETTINGS
+} from '@models/configurations.model';
 import { AppService } from '../app.service';
 
 const REQUESTS_STORAGE_KEY = 'financial_requests_list';
@@ -209,97 +213,185 @@ export class RequestsService {
   }
 
   /**
+   * Helper to extract raw value for a specific CSV export column ID
+   */
+  private getRequestColumnRawValue(req: FinancialRequest, colId: string): any {
+    const grossPLN =
+      typeof req.getGrossAmountPLN === 'function'
+        ? req.getGrossAmountPLN()
+        : (req.currency || 'PLN').toUpperCase() === 'PLN'
+        ? req.totalGrossAmount || 0
+        : 0;
+
+    const vatPLN =
+      typeof req.getVatAmountPLN === 'function'
+        ? req.getVatAmountPLN()
+        : (req.currency || 'PLN').toUpperCase() === 'PLN'
+        ? req.totalVatAmount || 0
+        : 0;
+
+    const grossEUR =
+      typeof req.getGrossAmountEUR === 'function'
+        ? req.getGrossAmountEUR()
+        : (req.currency || '').toUpperCase() === 'EUR'
+        ? req.totalGrossAmount || 0
+        : 0;
+
+    const vatEUR =
+      typeof req.getVatAmountEUR === 'function'
+        ? req.getVatAmountEUR()
+        : (req.currency || '').toUpperCase() === 'EUR'
+        ? req.totalVatAmount || 0
+        : 0;
+
+    const isSingleEur = (req.currency || '').toUpperCase() === 'EUR' && !req.isMixedCurrency?.();
+
+    switch (colId) {
+      case 'displayId':
+        return req.displayId;
+      case 'createdAt':
+        return req.createdAt ? new Date(req.createdAt) : null;
+      case 'submittedAt':
+        return req.submittedAt ? new Date(req.submittedAt) : null;
+      case 'status':
+        return req.status;
+      case 'requestType':
+        return req.requestType;
+      case 'applicantName':
+        return req.userDisplayName || '';
+      case 'applicantEmail':
+        return req.userEmail || '';
+      case 'sectionOrCountry':
+        return typeof req.getSectionOrCountry === 'function'
+          ? req.getSectionOrCountry()
+          : req.section || req.country || '';
+      case 'isGuest':
+        return Boolean(req.isGuest);
+      case 'position':
+        return req.position || '';
+      case 'sourceOfFunding':
+        return req.sourceOfFunding || '';
+      case 'grossPLN':
+        return grossPLN;
+      case 'vatPLN':
+        return vatPLN;
+      case 'plnIban':
+        return isSingleEur ? '' : req.iban || '';
+      case 'plnSwift':
+        return isSingleEur ? '' : req.swiftBic || '';
+      case 'plnAccountHolder':
+        return isSingleEur ? '' : req.accountHolderName || '';
+      case 'grossEUR':
+        return grossEUR;
+      case 'vatEUR':
+        return vatEUR;
+      case 'eurIban':
+        return req.ibanEUR || (isSingleEur ? req.iban : '');
+      case 'eurSwift':
+        return req.swiftBicEUR || (isSingleEur ? req.swiftBic : '');
+      case 'eurAccountHolder':
+        return req.accountHolderNameEUR || (isSingleEur ? req.accountHolderName : '');
+      case 'adminRemarks':
+        return req.adminRemarks || '';
+      case 'currency':
+        return req.currency || 'PLN';
+      case 'totalGrossAmount':
+        return req.totalGrossAmount || 0;
+      case 'totalVatAmount':
+        return req.totalVatAmount || 0;
+      case 'generalExplanation':
+        return req.generalExplanation || req.explanationAndBudget || '';
+      case 'accountHolderAddress':
+        return req.accountHolderAddress || '';
+      case 'accountHolderAddressEUR':
+        return req.accountHolderAddressEUR || '';
+      case 'guestPurpose':
+        return req.guestPurpose || '';
+      default:
+        return (req as any)[colId] ?? '';
+    }
+  }
+
+  /**
+   * Format a raw value according to CSV export settings
+   */
+  private formatCsvValue(val: any, settings: CsvExportSettings): string {
+    if (val === null || val === undefined) return '""';
+
+    if (val instanceof Date) {
+      if (isNaN(val.getTime())) return '""';
+      const yyyy = val.getFullYear();
+      const mm = String(val.getMonth() + 1).padStart(2, '0');
+      const dd = String(val.getDate()).padStart(2, '0');
+      let dateStr = `${yyyy}-${mm}-${dd}`;
+      if (settings.dateFormat === 'DD.MM.YYYY') {
+        dateStr = `${dd}.${mm}.${yyyy}`;
+      } else if (settings.dateFormat === 'DD/MM/YYYY') {
+        dateStr = `${dd}/${mm}/${yyyy}`;
+      }
+      return `"${dateStr}"`;
+    }
+
+    if (typeof val === 'boolean') {
+      const boolStr = settings.booleanFormat === '1_0' ? (val ? '1' : '0') : val ? 'TRUE' : 'FALSE';
+      return `"${boolStr}"`;
+    }
+
+    if (typeof val === 'number') {
+      let numStr = val.toFixed(2);
+      if (settings.decimalSeparator === ',') {
+        numStr = numStr.replace('.', ',');
+      }
+      return `"${numStr}"`;
+    }
+
+    const str = String(val).replace(/"/g, '""');
+    return `"${str}"`;
+  }
+
+  /**
    * Export financial requests to a downloadable CSV spreadsheet
    */
   public exportToCsv(
     requests: FinancialRequest[],
     filename = `requests-export-${new Date().toISOString().slice(0, 10)}.csv`
   ): void {
-    const headers = [
-      'ID',
-      'Date Created',
-      'Date Submitted',
-      'Status',
-      'Type',
-      'Applicant Name',
-      'Applicant Email',
-      'Section / Country',
-      'Guest',
-      'Position',
-      'Funding Source',
-      'PLN Gross Amount',
-      'PLN VAT Amount',
-      'PLN IBAN',
-      'PLN SWIFT/BIC',
-      'PLN Account Holder',
-      'EUR Gross Amount',
-      'EUR VAT Amount',
-      'EUR IBAN',
-      'EUR SWIFT/BIC',
-      'EUR Account Holder',
-      'Reviewer Remarks'
-    ];
+    const settings = this.appService.configurations?.csvExportSettings || DEFAULT_CSV_EXPORT_SETTINGS;
+    const currentLang =
+      this.appService.configurations?.forcedLanguage &&
+      this.appService.configurations.forcedLanguage !== 'ALL'
+        ? this.appService.configurations.forcedLanguage
+        : this.appService.currentLanguage || 'en';
 
-    const rows = requests.map((req) => {
-      const escape = (val: any) => {
-        if (val === null || val === undefined) return '""';
-        const str = String(val).replace(/"/g, '""');
-        return `"${str}"`;
-      };
+    const enabledColumns = (settings.columns || []).filter(c => c.enabled);
+    if (!enabledColumns.length) {
+      enabledColumns.push(...DEFAULT_CSV_EXPORT_SETTINGS.columns.filter(c => c.enabled));
+    }
 
-      const grossPLN = typeof req.getGrossAmountPLN === 'function'
-        ? req.getGrossAmountPLN()
-        : ((req.currency || 'PLN').toUpperCase() === 'PLN' ? (req.totalGrossAmount || 0) : 0);
-
-      const vatPLN = typeof req.getVatAmountPLN === 'function'
-        ? req.getVatAmountPLN()
-        : ((req.currency || 'PLN').toUpperCase() === 'PLN' ? (req.totalVatAmount || 0) : 0);
-
-      const grossEUR = typeof req.getGrossAmountEUR === 'function'
-        ? req.getGrossAmountEUR()
-        : ((req.currency || '').toUpperCase() === 'EUR' ? (req.totalGrossAmount || 0) : 0);
-
-      const vatEUR = typeof req.getVatAmountEUR === 'function'
-        ? req.getVatAmountEUR()
-        : ((req.currency || '').toUpperCase() === 'EUR' ? (req.totalVatAmount || 0) : 0);
-
-      const isSingleEur = (req.currency || '').toUpperCase() === 'EUR' && !req.isMixedCurrency?.();
-
-      const plnIban = isSingleEur ? '' : (req.iban || '');
-      const plnSwift = isSingleEur ? '' : (req.swiftBic || '');
-      const plnHolder = isSingleEur ? '' : (req.accountHolderName || '');
-
-      const eurIban = req.ibanEUR || (isSingleEur ? req.iban : '');
-      const eurSwift = req.swiftBicEUR || (isSingleEur ? req.swiftBic : '');
-      const eurHolder = req.accountHolderNameEUR || (isSingleEur ? req.accountHolderName : '');
-
-      return [
-        escape(req.displayId),
-        escape(req.createdAt ? new Date(req.createdAt).toISOString().slice(0, 10) : ''),
-        escape(req.submittedAt ? new Date(req.submittedAt).toISOString().slice(0, 10) : ''),
-        escape(req.status),
-        escape(req.requestType),
-        escape(req.userDisplayName || ''),
-        escape(req.userEmail || ''),
-        escape(typeof req.getSectionOrCountry === 'function' ? req.getSectionOrCountry() : req.section || req.country || ''),
-        escape(req.isGuest ? 'Yes' : 'No'),
-        escape(req.position || ''),
-        escape(req.sourceOfFunding || ''),
-        escape(grossPLN),
-        escape(vatPLN),
-        escape(plnIban),
-        escape(plnSwift),
-        escape(plnHolder),
-        escape(grossEUR),
-        escape(vatEUR),
-        escape(eurIban),
-        escape(eurSwift),
-        escape(eurHolder),
-        escape(req.adminRemarks || '')
-      ].join(';');
+    const headers = enabledColumns.map(col => {
+      const custom = col.customHeader
+        ? col.customHeader[currentLang as 'en' | 'pl'] ||
+          (typeof col.customHeader === 'string' ? col.customHeader : '')
+        : '';
+      if (custom && custom.trim()) {
+        return custom.trim();
+      }
+      return col.defaultHeader?.[currentLang as 'en' | 'pl'] || col.defaultHeader?.['en'] || col.id;
     });
 
-    const csvContent = '\uFEFF' + [headers.join(';'), ...rows].join('\r\n');
+    const delimiter = settings.delimiter || ';';
+
+    const rows = requests.map(req => {
+      return enabledColumns
+        .map(col => {
+          const raw = this.getRequestColumnRawValue(req, col.id);
+          return this.formatCsvValue(raw, settings);
+        })
+        .join(delimiter);
+    });
+
+    const prefix = settings.includeBom !== false ? '\uFEFF' : '';
+    const csvContent = prefix + [headers.join(delimiter), ...rows].join('\r\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');

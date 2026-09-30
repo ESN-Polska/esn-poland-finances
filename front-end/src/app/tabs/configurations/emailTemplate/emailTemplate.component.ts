@@ -36,6 +36,8 @@ export class EmailTemplateComponent implements OnInit {
   public errors: Set<string> = new Set();
   public isLoading = false;
 
+  public copiedVariable: string | null = null;
+
   // In-memory cache to preserve edits across language tabs
   public templatesState: {
     pl?: { subject: string; content: string; isLoaded: boolean };
@@ -393,6 +395,44 @@ export class EmailTemplateComponent implements OnInit {
       position: 'bottom'
     });
     await toast.present();
+  }
+
+  public async copyVariable(variableCode: string): Promise<void> {
+    const textToCopy = `{{${variableCode}}}`;
+    let copied = false;
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(textToCopy);
+        copied = true;
+      }
+    } catch {
+      copied = false;
+    }
+
+    if (!copied) {
+      try {
+        const textarea = document.createElement('textarea');
+        textarea.value = textToCopy;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        copied = document.execCommand('copy');
+        document.body.removeChild(textarea);
+      } catch {
+        copied = false;
+      }
+    }
+
+    if (copied) {
+      this.copiedVariable = variableCode;
+      setTimeout(() => {
+        if (this.copiedVariable === variableCode) {
+          this.copiedVariable = null;
+        }
+      }, 2000);
+      await this.showToast(this.translate.instant('COMMON.COPY_SUCCESS'), 'success');
+    }
   }
 
   public close(): void {
