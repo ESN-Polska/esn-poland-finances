@@ -13,10 +13,41 @@ export const DEFAULT_CONFIGURATION_PAGE_SECTIONS_ORDER = [
   'ROLES',
   'RESOURCES',
   'TEMPLATES',
+  'EXPORTS',
   'OPTIONS'
 ] as const;
 
 export type ConfigurationPageSection = (typeof DEFAULT_CONFIGURATION_PAGE_SECTIONS_ORDER)[number];
+
+export type CsvDelimiter = ';' | ',' | '\t';
+export type CsvDateFormat = 'YYYY-MM-DD' | 'DD.MM.YYYY' | 'DD/MM/YYYY';
+export type CsvDecimalSeparator = ',' | '.';
+export type CsvBooleanFormat = 'TRUE_FALSE' | '1_0';
+
+export type CsvColumnCategory = 'METADATA' | 'APPLICANT' | 'FINANCIAL' | 'BANKING' | 'REMARKS';
+
+export interface CsvExportColumnConfig {
+  id: string;
+  enabled: boolean;
+  category: CsvColumnCategory;
+  defaultHeader: {
+    en: string;
+    pl: string;
+  };
+  customHeader?: {
+    en?: string;
+    pl?: string;
+  };
+}
+
+export interface CsvExportSettings {
+  delimiter: CsvDelimiter;
+  includeBom: boolean;
+  dateFormat: CsvDateFormat;
+  decimalSeparator: CsvDecimalSeparator;
+  booleanFormat: CsvBooleanFormat;
+  columns: CsvExportColumnConfig[];
+}
 
 export enum EmailTemplateTypes {
   GUEST_INVITATION = 'GUEST_INVITATION',
@@ -87,6 +118,7 @@ export const AppPermission = {
     ROLES: 'configurations.roles',
     RESOURCES: 'configurations.resources',
     TEMPLATES: 'configurations.templates',
+    EXPORTS: 'configurations.exports',
     OPTIONS: 'configurations.options'
   }
 } as const;
@@ -198,6 +230,120 @@ export interface HomeNotice {
   text: LocalizedText;
 }
 
+export const DEFAULT_CSV_EXPORT_COLUMNS: CsvExportColumnConfig[] = [
+  { id: 'displayId', enabled: true, category: 'METADATA', defaultHeader: { en: 'ID', pl: 'Nr wniosku' } },
+  { id: 'createdAt', enabled: true, category: 'METADATA', defaultHeader: { en: 'Date Created', pl: 'Data utworzenia' } },
+  { id: 'submittedAt', enabled: true, category: 'METADATA', defaultHeader: { en: 'Date Submitted', pl: 'Data złożenia' } },
+  { id: 'status', enabled: true, category: 'METADATA', defaultHeader: { en: 'Status', pl: 'Status' } },
+  { id: 'requestType', enabled: true, category: 'METADATA', defaultHeader: { en: 'Type', pl: 'Typ' } },
+  { id: 'applicantName', enabled: true, category: 'APPLICANT', defaultHeader: { en: 'Applicant Name', pl: 'Wnioskodawca' } },
+  { id: 'applicantEmail', enabled: true, category: 'APPLICANT', defaultHeader: { en: 'Applicant Email', pl: 'E-mail wnioskodawcy' } },
+  { id: 'sectionOrCountry', enabled: true, category: 'APPLICANT', defaultHeader: { en: 'Section / Country', pl: 'Sekcja / Kraj' } },
+  { id: 'isGuest', enabled: true, category: 'APPLICANT', defaultHeader: { en: 'Guest', pl: 'Gość' } },
+  { id: 'position', enabled: true, category: 'APPLICANT', defaultHeader: { en: 'Position', pl: 'Pozycja' } },
+  { id: 'sourceOfFunding', enabled: true, category: 'FINANCIAL', defaultHeader: { en: 'Funding Source', pl: 'Źródło finansowania' } },
+  { id: 'grossPLN', enabled: true, category: 'FINANCIAL', defaultHeader: { en: 'PLN Gross Amount', pl: 'Kwota brutto PLN' } },
+  { id: 'vatPLN', enabled: true, category: 'FINANCIAL', defaultHeader: { en: 'PLN VAT Amount', pl: 'Kwota VAT PLN' } },
+  { id: 'plnIban', enabled: true, category: 'BANKING', defaultHeader: { en: 'PLN IBAN', pl: 'IBAN PLN' } },
+  { id: 'plnSwift', enabled: true, category: 'BANKING', defaultHeader: { en: 'PLN SWIFT/BIC', pl: 'SWIFT/BIC PLN' } },
+  { id: 'plnAccountHolder', enabled: true, category: 'BANKING', defaultHeader: { en: 'PLN Account Holder', pl: 'Właściciel konta PLN' } },
+  { id: 'grossEUR', enabled: true, category: 'FINANCIAL', defaultHeader: { en: 'EUR Gross Amount', pl: 'Kwota brutto EUR' } },
+  { id: 'vatEUR', enabled: true, category: 'FINANCIAL', defaultHeader: { en: 'EUR VAT Amount', pl: 'Kwota VAT EUR' } },
+  { id: 'eurIban', enabled: true, category: 'BANKING', defaultHeader: { en: 'EUR IBAN', pl: 'IBAN EUR' } },
+  { id: 'eurSwift', enabled: true, category: 'BANKING', defaultHeader: { en: 'EUR SWIFT/BIC', pl: 'SWIFT/BIC EUR' } },
+  { id: 'eurAccountHolder', enabled: true, category: 'BANKING', defaultHeader: { en: 'EUR Account Holder', pl: 'Właściciel konta EUR' } },
+  { id: 'adminRemarks', enabled: true, category: 'REMARKS', defaultHeader: { en: 'Reviewer Remarks', pl: 'Uwagi weryfikatora' } },
+  // Optional columns (disabled by default)
+  { id: 'currency', enabled: false, category: 'FINANCIAL', defaultHeader: { en: 'Request Currency', pl: 'Waluta wniosku' } },
+  { id: 'totalGrossAmount', enabled: false, category: 'FINANCIAL', defaultHeader: { en: 'Total Gross (Original)', pl: 'Łączna kwota brutto' } },
+  { id: 'totalVatAmount', enabled: false, category: 'FINANCIAL', defaultHeader: { en: 'Total VAT (Original)', pl: 'Łączna kwota VAT' } },
+  { id: 'generalExplanation', enabled: false, category: 'REMARKS', defaultHeader: { en: 'Explanation / Budget', pl: 'Uzasadnienie / Kosztorys' } },
+  { id: 'accountHolderAddress', enabled: false, category: 'BANKING', defaultHeader: { en: 'PLN Holder Address', pl: 'Adres właściciela konta PLN' } },
+  { id: 'accountHolderAddressEUR', enabled: false, category: 'BANKING', defaultHeader: { en: 'EUR Holder Address', pl: 'Adres właściciela konta EUR' } },
+  { id: 'guestPurpose', enabled: false, category: 'APPLICANT', defaultHeader: { en: 'Guest Purpose', pl: 'Cel zaproszenia gościa' } }
+];
+
+export const DEFAULT_CSV_EXPORT_SETTINGS: CsvExportSettings = {
+  delimiter: ';',
+  includeBom: true,
+  dateFormat: 'YYYY-MM-DD',
+  decimalSeparator: ',',
+  booleanFormat: 'TRUE_FALSE',
+  columns: DEFAULT_CSV_EXPORT_COLUMNS
+};
+
+export function cleanCsvExportSettings(raw: any): CsvExportSettings {
+  if (!raw || typeof raw !== 'object') {
+    return JSON.parse(JSON.stringify(DEFAULT_CSV_EXPORT_SETTINGS));
+  }
+  const validDelimiters: CsvDelimiter[] = [';', ',', '\t'];
+  const validDateFormats: CsvDateFormat[] = ['YYYY-MM-DD', 'DD.MM.YYYY', 'DD/MM/YYYY'];
+  const validDecimalSeparators: CsvDecimalSeparator[] = [',', '.'];
+  const validBooleanFormats: CsvBooleanFormat[] = ['TRUE_FALSE', '1_0'];
+
+  const delimiter: CsvDelimiter = validDelimiters.includes(raw.delimiter)
+    ? raw.delimiter
+    : DEFAULT_CSV_EXPORT_SETTINGS.delimiter;
+  const includeBom =
+    raw.includeBom !== undefined ? Boolean(raw.includeBom) : DEFAULT_CSV_EXPORT_SETTINGS.includeBom;
+  const dateFormat: CsvDateFormat = validDateFormats.includes(raw.dateFormat)
+    ? raw.dateFormat
+    : DEFAULT_CSV_EXPORT_SETTINGS.dateFormat;
+  const decimalSeparator: CsvDecimalSeparator = validDecimalSeparators.includes(raw.decimalSeparator)
+    ? raw.decimalSeparator
+    : DEFAULT_CSV_EXPORT_SETTINGS.decimalSeparator;
+  const booleanFormat: CsvBooleanFormat = validBooleanFormats.includes(raw.booleanFormat)
+    ? raw.booleanFormat
+    : DEFAULT_CSV_EXPORT_SETTINGS.booleanFormat;
+
+  const defaultColsMap = new Map(DEFAULT_CSV_EXPORT_COLUMNS.map(c => [c.id, c]));
+  const seenIds = new Set<string>();
+  const resolvedCols: CsvExportColumnConfig[] = [];
+
+  if (Array.isArray(raw.columns)) {
+    for (const c of raw.columns) {
+      if (
+        c &&
+        typeof c === 'object' &&
+        typeof c.id === 'string' &&
+        defaultColsMap.has(c.id) &&
+        !seenIds.has(c.id)
+      ) {
+        seenIds.add(c.id);
+        const def = defaultColsMap.get(c.id)!;
+        resolvedCols.push({
+          id: c.id,
+          enabled: Boolean(c.enabled),
+          category: def.category,
+          defaultHeader: { ...def.defaultHeader },
+          customHeader:
+            c.customHeader && typeof c.customHeader === 'object'
+              ? {
+                  en: typeof c.customHeader.en === 'string' ? c.customHeader.en.trim() : undefined,
+                  pl: typeof c.customHeader.pl === 'string' ? c.customHeader.pl.trim() : undefined
+                }
+              : undefined
+        });
+      }
+    }
+  }
+
+  for (const def of DEFAULT_CSV_EXPORT_COLUMNS) {
+    if (!seenIds.has(def.id)) {
+      resolvedCols.push(JSON.parse(JSON.stringify(def)));
+    }
+  }
+
+  return {
+    delimiter,
+    includeBom,
+    dateFormat,
+    decimalSeparator,
+    booleanFormat,
+    columns: resolvedCols
+  };
+}
+
 export const DEFAULT_CONFIGURATIONS = {
   appTitle: {
     en: 'ESN Poland Finances app',
@@ -265,7 +411,13 @@ export const DEFAULT_CONFIGURATIONS = {
     pl: 'Aplikacja jest tymczasowo zablokowana z powodu prac konserwacyjnych. Prosimy spróbować później.'
   },
   oauthRoleOptions: [...OAUTH_ROLE_OPTIONS] as string[],
-  forcedLanguage: 'ALL'
+  forcedLanguage: 'ALL',
+  threadRequestEmails: false,
+  threadRequestEmailsSubject: {
+    en: 'Financial request {{requestId}}',
+    pl: 'Wniosek finansowy {{requestId}}'
+  },
+  csvExportSettings: DEFAULT_CSV_EXPORT_SETTINGS
 };
 
 /**
@@ -354,6 +506,12 @@ export class Configurations extends Resource {
   oauthRoleOptions: string[];
   /** When set to a specific language code ('en', 'pl', etc.), forces that language everywhere and disables multi-language switches. 'ALL' enables all supported languages. */
   forcedLanguage: string;
+  /** Whether financial request email notifications are grouped into a single unified thread. */
+  threadRequestEmails: boolean;
+  /** Configured unified email subject for financial requests in supported languages. */
+  threadRequestEmailsSubject: LocalizedText;
+  /** Configured CSV export settings including delimiter, encoding BOM, date format, and column customizations. */
+  csvExportSettings: CsvExportSettings;
 
   constructor(data?: any) {
     super();
@@ -471,6 +629,14 @@ export class Configurations extends Resource {
         resolvedSections.splice(usersIdx + 1, 0, 'RESOURCES');
       } else {
         resolvedSections.push('RESOURCES');
+      }
+    }
+    if (resolvedSections.length > 0 && !resolvedSections.includes('EXPORTS')) {
+      const optionsIdx = resolvedSections.indexOf('OPTIONS');
+      if (optionsIdx !== -1) {
+        resolvedSections.splice(optionsIdx, 0, 'EXPORTS');
+      } else {
+        resolvedSections.push('EXPORTS');
       }
     }
     for (const section of DEFAULT_CONFIGURATION_PAGE_SECTIONS_ORDER) {
@@ -596,6 +762,29 @@ export class Configurations extends Resource {
       DEFAULT_CONFIGURATIONS.oauthRoleOptions
     );
     this.forcedLanguage = this.clean(x.forcedLanguage, String, DEFAULT_CONFIGURATIONS.forcedLanguage);
+    this.threadRequestEmails =
+      x.threadRequestEmails !== undefined
+        ? Boolean(x.threadRequestEmails)
+        : DEFAULT_CONFIGURATIONS.threadRequestEmails;
+    const defaultThreadSubject = DEFAULT_CONFIGURATIONS.threadRequestEmailsSubject;
+    if (typeof x.threadRequestEmailsSubject === 'string') {
+      this.threadRequestEmailsSubject = { en: x.threadRequestEmailsSubject, pl: x.threadRequestEmailsSubject };
+    } else {
+      this.threadRequestEmailsSubject = {
+        en: this.clean(x.threadRequestEmailsSubject?.en, String, defaultThreadSubject.en),
+        pl: this.clean(x.threadRequestEmailsSubject?.pl, String, defaultThreadSubject.pl)
+      };
+    }
+    this.csvExportSettings = cleanCsvExportSettings(x.csvExportSettings);
+  }
+
+  getThreadRequestEmailsSubject(lang: string = 'en'): string {
+    const effectiveLang = (this.forcedLanguage && this.forcedLanguage !== 'ALL') ? this.forcedLanguage : lang;
+    if (typeof this.threadRequestEmailsSubject === 'string') return this.threadRequestEmailsSubject;
+    return (this.threadRequestEmailsSubject as any)?.[effectiveLang] ||
+      this.threadRequestEmailsSubject?.en ||
+      this.threadRequestEmailsSubject?.pl ||
+      (effectiveLang === 'en' ? 'Financial request {{requestId}}' : 'Wniosek finansowy {{requestId}}');
   }
 
   getAppTitle(lang: string = 'en'): string {
@@ -705,6 +894,22 @@ export class Configurations extends Resource {
     this.blockedUserIds = safeData.blockedUserIds !== undefined
       ? this.cleanArray(safeData.blockedUserIds, String).map((id: string) => String(id || '').replace(/^@+/, '').trim().toLowerCase()).filter(Boolean)
       : DEFAULT_CONFIGURATIONS.blockedUserIds;
+    this.threadRequestEmails =
+      safeData.threadRequestEmails !== undefined
+        ? Boolean(safeData.threadRequestEmails)
+        : DEFAULT_CONFIGURATIONS.threadRequestEmails;
+    const defaultThreadSubject = DEFAULT_CONFIGURATIONS.threadRequestEmailsSubject;
+    if (typeof safeData.threadRequestEmailsSubject === 'string') {
+      this.threadRequestEmailsSubject = { en: safeData.threadRequestEmailsSubject, pl: safeData.threadRequestEmailsSubject };
+    } else if (safeData.threadRequestEmailsSubject && typeof safeData.threadRequestEmailsSubject === 'object') {
+      this.threadRequestEmailsSubject = {
+        en: typeof safeData.threadRequestEmailsSubject.en === 'string' ? safeData.threadRequestEmailsSubject.en : defaultThreadSubject.en,
+        pl: typeof safeData.threadRequestEmailsSubject.pl === 'string' ? safeData.threadRequestEmailsSubject.pl : defaultThreadSubject.pl
+      };
+    } else {
+      this.threadRequestEmailsSubject = defaultThreadSubject;
+    }
+    this.csvExportSettings = cleanCsvExportSettings(safeData.csvExportSettings);
   }
 
   hasAdminGroup(): boolean {
@@ -765,6 +970,17 @@ export class Configurations extends Resource {
         errors.push('guestInvitations.purpose');
       }
     }
+
+    if (this.csvExportSettings) {
+      const validDelimiters = [';', ',', '\t'];
+      if (!validDelimiters.includes(this.csvExportSettings.delimiter)) {
+        errors.push('csvExportSettings.delimiter');
+      }
+      if (!Array.isArray(this.csvExportSettings.columns) || this.csvExportSettings.columns.length === 0) {
+        errors.push('csvExportSettings.columns');
+      }
+    }
+
     return errors;
   }
 }

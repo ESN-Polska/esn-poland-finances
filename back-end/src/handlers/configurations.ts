@@ -355,7 +355,7 @@ class ConfigurationsRC extends ResourceController {
       [EmailTemplates.GUEST_INVITATION_PL]: 'Zaproszenie do złożenia wniosku finansowego',
       [EmailTemplates.GUEST_INVITATION_EN]: 'Invitation to submit financial request',
       [EmailTemplates.REQUEST_SUBMITTED_PL]: 'Potwierdzenie złożenia wniosku finansowego {{requestId}}',
-      [EmailTemplates.REQUEST_SUBMITTED_EN]: 'Financial request submitted {{requestId}}',
+      [EmailTemplates.REQUEST_SUBMITTED_EN]: 'Financial request {{requestId}} submitted',
       [EmailTemplates.REQUEST_CHANGES_REQUESTED_PL]: 'Wymagane poprawki do wniosku finansowego {{requestId}}',
       [EmailTemplates.REQUEST_CHANGES_REQUESTED_EN]: 'Changes requested for financial request {{requestId}}',
       [EmailTemplates.REQUEST_APPROVED_PL]: 'Wniosek finansowy {{requestId}} został zatwierdzony',
@@ -534,7 +534,9 @@ class ConfigurationsRC extends ResourceController {
       'guestInvitations',
       'appLocked',
       'appLockedAt',
-      'appLockMessage'
+      'appLockMessage',
+      'threadRequestEmails',
+      'threadRequestEmailsSubject'
     ].filter(field => JSON.stringify(this.body[field]) !== JSON.stringify((this.configurations as any)[field]));
 
     if (!changedFields.length) return;
@@ -552,6 +554,7 @@ class ConfigurationsRC extends ResourceController {
         if (section === 'RESOURCES') return this.user!.hasPermission(AppPermission.CONFIGURATIONS.RESOURCES);
         if (section === 'GUESTS') return this.user!.hasPermission(AppPermission.CONFIGURATIONS.GUESTS);
         if (section === 'TEMPLATES') return this.user!.hasPermission(AppPermission.CONFIGURATIONS.TEMPLATES);
+        if (section === 'EXPORTS') return this.user!.hasPermission(AppPermission.CONFIGURATIONS.EXPORTS);
         return false;
       });
 
@@ -578,6 +581,15 @@ class ConfigurationsRC extends ResourceController {
       'appLocked',
       'appLockedAt',
       'appLockMessage'
+    ];
+
+    const templateFields = [
+      'threadRequestEmails',
+      'threadRequestEmailsSubject'
+    ];
+
+    const exportFields = [
+      'csvExportSettings'
     ];
 
     const resourceFields = [
@@ -613,6 +625,8 @@ class ConfigurationsRC extends ResourceController {
 
     const allowedFields = [
       ...(this.user.hasPermission(AppPermission.CONFIGURATIONS.OPTIONS) ? optionFields : []),
+      ...(this.user.hasPermission(AppPermission.CONFIGURATIONS.TEMPLATES) ? templateFields : []),
+      ...(this.user.hasPermission(AppPermission.CONFIGURATIONS.EXPORTS) || this.user.hasPermission(AppPermission.CONFIGURATIONS.OPTIONS) ? exportFields : []),
       ...(this.user.hasPermission(AppPermission.CONFIGURATIONS.RESOURCES) || this.user.hasPermission(AppPermission.CONFIGURATIONS.OPTIONS) ? resourceFields : []),
       ...(this.user.hasPermission(AppPermission.CONFIGURATIONS.ROLES) ? roleFields : []),
       ...(this.user.hasPermission(AppPermission.CONFIGURATIONS.USERS) ? userFields : []),

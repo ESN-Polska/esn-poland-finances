@@ -1,4 +1,5 @@
 import { DynamoDB, HandledError, ResourceController, S3, SES } from 'idea-aws';
+import { SESv2Client, SendEmailCommand as SESv2SendEmailCommand } from '@aws-sdk/client-sesv2';
 import { randomUUID } from 'crypto';
 import { FinancialRequest } from '../models/financial-request.model';
 import { AppPermission, Configurations, EmailTemplates, EmailTemplateTypes, formatSenderName } from '../models/configurations.model';
@@ -24,6 +25,7 @@ const S3_ASSETS_FOLDER = process.env.S3_ASSETS_FOLDER || `assets/${STAGE}`;
 
 const ddb = new DynamoDB();
 const ses = new SES();
+const sesv2 = new SESv2Client({ region: SES_CONFIG.region });
 const s3 = new S3();
 
 export const handler = (ev: any, _: any, cb: any): Promise<void> => new RequestsHandler(ev, cb).handleRequest();
@@ -762,6 +764,87 @@ class RequestsHandler extends ResourceController {
           }
         } catch (attErr) {
           this.logger.warn('Failed to retrieve payment confirmation attachment from S3 for email', { err: attErr });
+        }
+      }
+
+      const isThreaded = !!configurations.threadRequestEmails;
+      const cleanRequestId = request.requestId.replace(/[\/\s]/g, '-');
+      const emailDomain = (SES_CONFIG.source || '').split('@')[1] || APP_DOMAIN;
+      const stageSuffix = STAGE && STAGE !== 'prod' ? `-${STAGE}` : '';
+      const rootMessageId = `<financial-request-${cleanRequestId}${stageSuffix}@${emailDomain}>`;
+
+      if (isThreaded) {
+        try {
+          let rawRendered = '';
+          try {
+            rawRendered = await ses.testTemplate(`${templateName}-${STAGE}`, templateData);
+          } catch (tplErr: any) {
+            if (tplErr?.name === 'NotFoundException' || tplErr?.message?.includes('does not exist')) {
+              await this.ensureSESTemplateExists(templateName);
+              rawRendered = await ses.testTemplate(`${templateName}-${STAGE}`, templateData);
+            } else {
+              throw tplErr;
+            }
+          }
+
+          let renderedHtml = rawRendered;
+          const htmlStartIndex = rawRendered.search(/<!DOCTYPE|<html/i);
+          if (htmlStartIndex > 0) {
+            renderedHtml = rawRendered.slice(htmlStartIndex);
+          } else {
+            const doubleNewlineIndex = rawRendered.search(/\r?\n\r?\n/);
+            if (doubleNewlineIndex > 0) {
+              renderedHtml = rawRendered.slice(doubleNewlineIndex).trim();
+            }
+          }
+
+          const subjectPattern = configurations.getThreadRequestEmailsSubject(lang);
+          const emailSubject = subjectPattern.replace(/\{\{\s*requestId\s*\}\}/g, request.requestId);
+
+          const threadHeaders = [
+            ...(targetStatus !== 'SUBMITTED' ? [
+              { Name: 'In-Reply-To', Value: rootMessageId },
+              { Name: 'References', Value: rootMessageId }
+            ] : [
+              { Name: 'References', Value: rootMessageId }
+            ])
+          ];
+
+          const sesv2Attachments = emailAttachments && emailAttachments.length > 0
+            ? emailAttachments.map(att => ({
+                FileName: att.filename,
+                ContentType: att.contentType,
+                RawContent: new Uint8Array(att.content)
+              }))
+            : undefined;
+
+          await sesv2.send(new SESv2SendEmailCommand({
+            FromEmailAddress: senderName ? `${senderName} <${SES_CONFIG.source}>` : SES_CONFIG.source,
+            FromEmailAddressIdentityArn: SES_CONFIG.sourceArn,
+            Destination: {
+              ToAddresses: [request.userEmail]
+            },
+            ReplyToAddresses: replyTo,
+            Content: {
+              Simple: {
+                Subject: {
+                  Data: emailSubject,
+                  Charset: 'UTF-8'
+                },
+                Body: {
+                  Html: {
+                    Data: renderedHtml,
+                    Charset: 'UTF-8'
+                  }
+                },
+                Headers: threadHeaders,
+                Attachments: sesv2Attachments
+              }
+            }
+          }));
+          return;
+        } catch (threadSendErr) {
+          this.logger.error('Failed to send threaded email via SESv2, falling back to standard template send', threadSendErr);
         }
       }
 

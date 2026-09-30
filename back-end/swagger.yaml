@@ -650,6 +650,12 @@ components:
           example: false
         appLockMessage:
           $ref: '#/components/schemas/LocalizedText'
+        threadRequestEmails:
+          type: boolean
+          description: Whether financial request email notifications are grouped into a single unified thread
+          example: false
+        threadRequestEmailsSubject:
+          $ref: '#/components/schemas/LocalizedText'
 
     RoleAssignmentSource:
       type: object
