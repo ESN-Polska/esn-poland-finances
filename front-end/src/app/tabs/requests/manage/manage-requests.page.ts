@@ -1,8 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
-import { AlertController, ToastController } from '@ionic/angular';
+import { AlertController, ModalController, ToastController } from '@ionic/angular';
 import { TranslateService } from '@ngx-translate/core';
 import {
+  AttachmentFile,
   FinancialRequest,
   FinancialRequestType,
   RequestStatus
@@ -10,6 +11,7 @@ import {
 import { AppPermission } from '@models/configurations.model';
 import { RequestsService } from '../../../services/requests.service';
 import { AppService } from '../../../app.service';
+import { MarkPaidModalComponent } from '../markPaidModal.component';
 
 @Component({
   selector: 'app-manage-requests',
@@ -154,6 +156,7 @@ export class ManageRequestsPage implements OnInit {
   constructor(
     private router: Router,
     private alertCtrl: AlertController,
+    private modalCtrl: ModalController,
     private toastCtrl: ToastController,
     private translate: TranslateService,
     private requestsService: RequestsService,
@@ -441,35 +444,22 @@ export class ManageRequestsPage implements OnInit {
     if (event) event.stopPropagation();
     if (!this.canManage) return;
 
-    const amountDisplay = req.isMixedCurrency?.()
-      ? `${req.getGrossAmountPLN()} PLN + ${req.getGrossAmountEUR()} EUR`
-      : `${req.totalGrossAmount} ${req.currency}`;
-
-    const alert = await this.alertCtrl.create({
-      header: this.translate.instant('REQUESTS.MANAGE_PANEL.MARK_PAID_HEADER') || 'Mark as Paid',
-      message: `${this.translate.instant('REQUESTS.MANAGE_PANEL.MARK_PAID_CONFIRM')} ${req.displayId} (${amountDisplay})?`,
-      inputs: [
-        {
-          name: 'comment',
-          type: 'text',
-          placeholder: this.translate.instant('REQUESTS.MANAGE_PANEL.OPTIONAL_PAYMENT_REF') || 'Optional transfer reference / note'
-        }
-      ],
-      buttons: [
-        {
-          text: this.translate.instant('COMMON.CANCEL') || 'Cancel',
-          role: 'cancel'
-        },
-        {
-          text: this.translate.instant('REQUESTS.STATUSES.PAID') || 'Mark Paid',
-          handler: async (data) => {
-            const comment = (data.comment || '').trim();
-            await this.executeStatusChange(req.requestId, 'PAID', comment || 'REQUESTS.HISTORY_COMMENTS.PAYOUT_COMPLETED');
-          }
-        }
-      ]
+    const modal = await this.modalCtrl.create({
+      component: MarkPaidModalComponent,
+      componentProps: { request: req }
     });
-    await alert.present();
+    await modal.present();
+
+    const { data, role } = await modal.onWillDismiss();
+    if (role === 'confirm' && data) {
+      await this.executeStatusChange(
+        req.requestId,
+        'PAID',
+        data.comment || 'REQUESTS.HISTORY_COMMENTS.PAYOUT_COMPLETED',
+        undefined,
+        data.paymentConfirmationAttachment
+      );
+    }
   }
 
   public async promptReject(req: FinancialRequest, event?: Event): Promise<void> {
@@ -513,10 +503,17 @@ export class ManageRequestsPage implements OnInit {
     requestId: string,
     newStatus: RequestStatus,
     comment?: string,
-    adminRemarks?: string
+    adminRemarks?: string,
+    paymentConfirmationAttachment?: AttachmentFile
   ): Promise<void> {
     try {
-      await this.requestsService.updateRequestStatus(requestId, newStatus, comment, adminRemarks);
+      await this.requestsService.updateRequestStatus(
+        requestId,
+        newStatus,
+        comment,
+        adminRemarks,
+        paymentConfirmationAttachment
+      );
       await this.loadRequests();
       await this.showToast('REQUESTS.MANAGE_PANEL.STATUS_UPDATED', 'success');
     } catch (err: any) {

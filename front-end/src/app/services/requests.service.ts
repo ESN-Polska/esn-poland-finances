@@ -5,6 +5,7 @@ import { BehaviorSubject, Observable } from 'rxjs';
 import { IDEAApiService } from '@idea-ionic/common';
 import { environment as env } from '@env';
 import {
+  AttachmentFile,
   FinancialRequest,
   FinancialRequestType,
   InvoiceDocumentItem,
@@ -137,7 +138,8 @@ export class RequestsService {
     requestId: string,
     status: RequestStatus,
     comment?: string,
-    adminRemarks?: string
+    adminRemarks?: string,
+    paymentConfirmationAttachment?: AttachmentFile
   ): Promise<FinancialRequest> {
     const user = this.appService.currentUser;
     const now = new Date().toISOString();
@@ -145,6 +147,7 @@ export class RequestsService {
     const body: any = { status, requestId };
     if (comment) body.historyNote = comment;
     if (typeof adminRemarks !== 'undefined') body.adminRemarks = adminRemarks;
+    if (paymentConfirmationAttachment) body.paymentConfirmationAttachment = paymentConfirmationAttachment;
 
     try {
       let updatedRaw: any = null;
@@ -194,6 +197,7 @@ export class RequestsService {
       ...rawList[idx],
       status,
       adminRemarks: typeof adminRemarks !== 'undefined' ? adminRemarks : existing.adminRemarks,
+      paymentConfirmationAttachment: paymentConfirmationAttachment || existing.paymentConfirmationAttachment,
       statusHistory: [...(existing.statusHistory || []), newHistory],
       updatedAt: now
     };

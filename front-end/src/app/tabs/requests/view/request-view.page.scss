@@ -278,6 +278,17 @@
   }
 }
 
+.payment-confirmation-card {
+  border-left: 4px solid #10b981 !important;
+
+  .confirmation-desc {
+    font-size: 0.88rem;
+    color: var(--text-medium, #64748b);
+    margin: 4px 0 12px 0;
+    line-height: 1.4;
+  }
+}
+
 /* Header Card */
 .header-card {
   background: var(--bg-card);

@@ -188,8 +188,8 @@
       }
 
       .applicant-section {
-        font-weight: 600;
-        color: var(--ion-color-primary, #00aeef);
+        font-weight: 500;
+        color: var(--text-medium);
       }
 
       .request-type-tag {
@@ -1115,6 +1115,10 @@ body.dark {
     box-shadow: none !important;
     border: none !important;
   }
+}
+
+.payment-confirmation-card {
+  border-left: 4px solid #10b981 !important;
 }
 
 

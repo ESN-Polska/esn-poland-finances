@@ -204,6 +204,27 @@
       <!-- Left Column: Verification & Documents -->
       <div class="details-main">
 
+        <!-- Payment Confirmation Section (when available) -->
+        <div class="section-card payment-confirmation-card" *ngIf="request.paymentConfirmationAttachment">
+          <div class="section-header">
+            <div class="header-icon-title">
+              <ion-icon name="checkmark-done-circle-outline" style="color: #10b981; font-size: 1.4rem;"></ion-icon>
+              <h3>{{ 'REQUESTS.PAYMENT_CONFIRMATION' | translate }}</h3>
+            </div>
+          </div>
+          <p style="margin: 4px 0 12px 0; font-size: 0.88rem; color: var(--text-medium, #64748b);">
+            {{ 'REQUESTS.PAYMENT_CONFIRMATION_ATTACHED' | translate }}
+          </p>
+          <a class="attachment-item mt-1" (click)="openAttachment(request.paymentConfirmationAttachment)" style="text-decoration: none; color: inherit; cursor: pointer;">
+            <ion-icon name="document-text-outline" style="color: #10b981; font-size: 1.5rem;"></ion-icon>
+            <div class="att-meta">
+              <span class="att-name">{{ request.paymentConfirmationAttachment.fileName }}</span>
+              <span class="att-sub">{{ (request.paymentConfirmationAttachment.fileSize / 1024) | number:'1.0-1' }} KB</span>
+            </div>
+            <ion-icon name="download-outline" slot="end" style="margin-left: auto; font-size: 1.25rem; color: var(--text-medium, #64748b);"></ion-icon>
+          </a>
+        </div>
+
         <!-- General Info Section -->
         <div class="section-card">
           <div class="section-header">

@@ -11,6 +11,7 @@ import { RequestViewPage } from './view/request-view.page';
 import { RequestReviewPage } from './review/request-review.page';
 import { ManageRequestsPage } from './manage/manage-requests.page';
 import { StatusCommentPipe } from './pipes/status-comment.pipe';
+import { MarkPaidModalComponent } from './markPaidModal.component';
 
 @NgModule({
   declarations: [
@@ -19,7 +20,8 @@ import { StatusCommentPipe } from './pipes/status-comment.pipe';
     RequestViewPage,
     RequestReviewPage,
     ManageRequestsPage,
-    StatusCommentPipe
+    StatusCommentPipe,
+    MarkPaidModalComponent
   ],
   exports: [
     StatusCommentPipe
