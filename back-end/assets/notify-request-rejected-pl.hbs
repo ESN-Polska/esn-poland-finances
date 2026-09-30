@@ -26,7 +26,7 @@
         box-shadow: 0 4px 20px -2px rgba(0, 43, 73, 0.08);
       }
       .brand-header {
-        background-color: #f0f4f8;
+        background-color: #f8fafc;
         padding: 22px 28px;
       }
       .brand-table {
@@ -170,14 +170,14 @@
       }
       .btn {
         display: inline-block;
-        background-color: #00aeef;
+        background-color: #dc2626;
         color: #ffffff !important;
         font-size: 14px;
         font-weight: 600;
         text-decoration: none;
         padding: 13px 32px;
         border-radius: 8px;
-        box-shadow: 0 4px 14px rgba(0, 174, 239, 0.35);
+        box-shadow: 0 4px 14px rgba(220, 38, 38, 0.35);
         letter-spacing: 0.01em;
       }
       .subtext {
@@ -228,7 +228,7 @@
   </head>
   <body>
     <div class="container">
-      <div class="brand-header" style="background-color: #f0f4f8;">
+      <div class="brand-header" style="background-color: #f8fafc;">
         <table class="brand-table" cellpadding="0" cellspacing="0" border="0">
           <tr>
             {{#if appLogo}}
@@ -248,13 +248,13 @@
       <div class="content">
         <span class="status-pill">Odrzucony</span>
         <h1 class="page-title">Wniosek został odrzucony</h1>
-        
+
         <div class="greeting">Dzień dobry {{user}},</div>
-        <p class="lead-text">Twój wniosek finansowy <b>{{requestId}}</b> został odrzucony przez Zespół Finansowy.</p>
+        <p class="lead-text">Twój wniosek finansowy <b>{{requestId}}</b> został odrzucony.</p>
 
         {{#if message}}
         <div class="callout-box">
-          <div class="callout-title">Uzasadnienie odrzucenia:</div>
+          <div class="callout-title">Uzasadnienie:</div>
           {{message}}
         </div>
         {{/if}}
@@ -280,13 +280,13 @@
           <a href="{{url}}" class="btn" target="_blank">Zobacz wniosek</a>
         </div>
 
-        <p class="subtext">W razie pytań lub wątpliwości prosimy o kontakt ze Skarbnikiem lub Zespołem Finansowym.</p>
+        <p class="subtext">W razie pytań lub wątpliwości prosimy o kontakt z Członkiem Zarządu ds. Finansów.</p>
       </div>
 
       <div class="footer">
         <p class="footer-org">{{appOrganisation}}</p>
         <p class="footer-app">{{appTitle}}</p>
-        <a href="{{url}}" class="footer-link" target="_blank">Przejdź do portalu &rarr;</a>
+        <a href="{{portalUrl}}" class="footer-link" target="_blank">Przejdź do portalu &rarr;</a>
         <p class="footer-note">Wiadomość wygenerowana automatycznie &bull; Prosimy nie odpowiadać na ten adres.</p>
       </div>
     </div>
