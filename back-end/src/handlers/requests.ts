@@ -684,7 +684,10 @@ class RequestsHandler extends ResourceController {
 
       const templateName = this.getSESTemplateName(templateEnum);
       const totalAmount = `${Number(request.totalGrossAmount || 0).toFixed(2)} ${request.currency || 'PLN'}`;
-      const requestUrl = `${BASE_URL}/t/requests/view/${encodeURIComponent(request.requestId)}`;
+      const formattedRequestId = request.requestId.includes('/')
+        ? request.requestId.split('/').map(p => encodeURIComponent(p)).join('/')
+        : encodeURIComponent(request.requestId);
+      const requestUrl = `${BASE_URL}/t/requests/view/${formattedRequestId}`;
 
       const appTitle = configurations.getAppTitle(lang) || 'ESN Poland Finances';
       const appOrganisation = configurations.getAppOrganisation(lang) || 'ESN Poland';
