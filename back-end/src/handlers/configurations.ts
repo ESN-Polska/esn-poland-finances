@@ -129,8 +129,25 @@ class ConfigurationsRC extends ResourceController {
       }
 
       // Clean up previous files from S3 if URLs were replaced
-      if (this.configurations?.rulesFileURL && newConfigurations.rulesFileURL !== this.configurations.rulesFileURL) {
-        await this.deleteOldS3File(this.configurations.rulesFileURL);
+      const oldRulesPl = typeof this.configurations?.rulesFileURL === 'string'
+        ? this.configurations.rulesFileURL
+        : this.configurations?.rulesFileURL?.pl;
+      const oldRulesEn = typeof this.configurations?.rulesFileURL === 'string'
+        ? this.configurations.rulesFileURL
+        : this.configurations?.rulesFileURL?.en;
+
+      const newRulesPl = typeof newConfigurations.rulesFileURL === 'string'
+        ? newConfigurations.rulesFileURL
+        : newConfigurations.rulesFileURL?.pl;
+      const newRulesEn = typeof newConfigurations.rulesFileURL === 'string'
+        ? newConfigurations.rulesFileURL
+        : newConfigurations.rulesFileURL?.en;
+
+      if (oldRulesPl && newRulesPl !== oldRulesPl && newRulesEn !== oldRulesPl) {
+        await this.deleteOldS3File(oldRulesPl);
+      }
+      if (oldRulesEn && newRulesEn !== oldRulesEn && newRulesPl !== oldRulesEn) {
+        await this.deleteOldS3File(oldRulesEn);
       }
       if (this.configurations?.delegationSettlementSheetURL && newConfigurations.delegationSettlementSheetURL !== this.configurations.delegationSettlementSheetURL) {
         await this.deleteOldS3File(this.configurations.delegationSettlementSheetURL);
@@ -266,6 +283,7 @@ class ConfigurationsRC extends ResourceController {
         title: 'Example Purpose',
         detail: '150.00 PLN',
         url: BASE_URL,
+        portalUrl: BASE_URL,
         message: 'Example Message',
         requestId: '1/2026',
         status: 'SUBMITTED',
@@ -297,7 +315,8 @@ class ConfigurationsRC extends ResourceController {
       user: this.user ? this.user.getDisplayName() : 'User',
       title: isGuest ? (isEnglish ? 'National Assembly 2026' : 'Zjazd Krajowy 2026') : (isEnglish ? 'Travel Reimbursement' : 'Zwrot kosztów podróży'),
       detail: isGuest ? '31.12.2026' : '250.00 PLN',
-      url: isGuest ? `${BASE_URL}/auth?guestToken=sample-token` : `${BASE_URL}/t/requests/view/1/2026`,
+      url: isGuest ? `${BASE_URL}/auth?guestToken=sample-token` : `${BASE_URL}/t/requests/view/2026/1`,
+      portalUrl: BASE_URL,
       message: isEnglish ? 'This is an example notification message or reviewer comment.' : 'To jest przykładowa treść wiadomości lub uwagi weryfikującego.',
       requestId: '1/2026',
       status: 'SUBMITTED',
@@ -427,6 +446,7 @@ class ConfigurationsRC extends ResourceController {
         title: invite.purpose || appTitle,
         detail: expiryDate,
         url: guestLink,
+        portalUrl: BASE_URL,
         message: invite.instructions?.[effectiveLang] || '',
         appTitle,
         appOrganisation,

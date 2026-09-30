@@ -241,7 +241,10 @@ export const DEFAULT_CONFIGURATIONS = {
     en: 'Please, make sure you have read and understood them before submitting a request. Not complying with the defined deadlines in the rules document might cause your submission being rejected.',
     pl: 'Prosimy o zapoznanie się z zasadami przed złożeniem wniosku. Niedopełnienie terminów określonych w dokumencie może skutkować odrzuceniem wniosku.'
   },
-  rulesFileURL: 'https://media.finances.esn-poland.link/rules/finances-rules.pdf',
+  rulesFileURL: {
+    en: 'https://media.finances.esn-poland.link/rules/finances-rules.pdf',
+    pl: 'https://media.finances.esn-poland.link/rules/finances-rules.pdf'
+  },
   rulesResolutionNumber: 'XX/XX',
   rulesRevisionDate: '',
   delegationSettlementSheetURL: '',
@@ -316,8 +319,8 @@ export class Configurations extends Resource {
 
   /** Rules warning notice text in supported languages. */
   rulesWarningText: LocalizedText;
-  /** Rules document URL to download. */
-  rulesFileURL: string;
+  /** Rules document URLs in supported languages (English and Polish). */
+  rulesFileURL: LocalizedText;
   /** Delegation settlement blank template sheet URL to download (XLSX). */
   delegationSettlementSheetURL: string;
   /** Delegation instructions guide URL to download or view (e.g. PDF or wiki). */
@@ -487,7 +490,20 @@ export class Configurations extends Resource {
       };
     }
 
-    this.rulesFileURL = this.clean(x.rulesFileURL, String, DEFAULT_CONFIGURATIONS.rulesFileURL);
+    const defaultRulesFileURL = DEFAULT_CONFIGURATIONS.rulesFileURL;
+    if (typeof x.rulesFileURL === 'string') {
+      this.rulesFileURL = { en: x.rulesFileURL, pl: x.rulesFileURL };
+    } else if (x.rulesFileURL && typeof x.rulesFileURL === 'object') {
+      this.rulesFileURL = {
+        en: typeof x.rulesFileURL.en === 'string' ? x.rulesFileURL.en : (defaultRulesFileURL?.en || ''),
+        pl: typeof x.rulesFileURL.pl === 'string' ? x.rulesFileURL.pl : (defaultRulesFileURL?.pl || '')
+      };
+    } else {
+      this.rulesFileURL = {
+        en: defaultRulesFileURL?.en || '',
+        pl: defaultRulesFileURL?.pl || ''
+      };
+    }
     this.delegationSettlementSheetURL = this.clean(
       x.delegationSettlementSheetURL,
       String,
@@ -604,6 +620,12 @@ export class Configurations extends Resource {
     return (this.rulesWarningText as any)?.[effectiveLang] || this.rulesWarningText?.en || this.rulesWarningText?.pl || '';
   }
 
+  getRulesFileURL(lang: string = 'en'): string {
+    const effectiveLang = (this.forcedLanguage && this.forcedLanguage !== 'ALL') ? this.forcedLanguage : lang;
+    if (typeof this.rulesFileURL === 'string') return this.rulesFileURL;
+    return (this.rulesFileURL as any)?.[effectiveLang] || (effectiveLang === 'en' ? this.rulesFileURL?.pl : this.rulesFileURL?.en) || this.rulesFileURL?.pl || this.rulesFileURL?.en || '';
+  }
+
   getHomeWelcomeTitle(lang: string = 'en'): string {
     const effectiveLang = (this.forcedLanguage && this.forcedLanguage !== 'ALL') ? this.forcedLanguage : lang;
     if (typeof this.homeWelcomeTitle === 'string') return this.homeWelcomeTitle;
@@ -647,7 +669,16 @@ export class Configurations extends Resource {
     this.homeWelcomeSubtitle = safeData.homeWelcomeSubtitle;
     this.homeNotice = safeData.homeNotice;
     this.rulesWarningText = safeData.rulesWarningText;
-    this.rulesFileURL = safeData.rulesFileURL;
+    if (typeof safeData.rulesFileURL === 'string') {
+      this.rulesFileURL = { en: safeData.rulesFileURL, pl: safeData.rulesFileURL };
+    } else if (safeData.rulesFileURL && typeof safeData.rulesFileURL === 'object') {
+      this.rulesFileURL = {
+        en: typeof safeData.rulesFileURL.en === 'string' ? safeData.rulesFileURL.en : (DEFAULT_CONFIGURATIONS.rulesFileURL?.en || ''),
+        pl: typeof safeData.rulesFileURL.pl === 'string' ? safeData.rulesFileURL.pl : (DEFAULT_CONFIGURATIONS.rulesFileURL?.pl || '')
+      };
+    } else {
+      this.rulesFileURL = safeData.rulesFileURL || DEFAULT_CONFIGURATIONS.rulesFileURL;
+    }
     this.delegationSettlementSheetURL = this.clean(
       safeData.delegationSettlementSheetURL,
       String,

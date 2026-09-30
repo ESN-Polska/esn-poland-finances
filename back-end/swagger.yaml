@@ -635,9 +635,7 @@ components:
         rulesWarningText:
           $ref: '#/components/schemas/LocalizedText'
         rulesFileURL:
-          type: string
-          description: Public CDN URL to download the financial rules PDF
-          example: https://media.finances.esn-poland.link/documents/dev/Regulamin_Finansowy_2026_c8542f27.pdf
+          $ref: '#/components/schemas/LocalizedText'
         rulesResolutionNumber:
           type: string
           description: Resolution number adopting this revision (e.g. 17/26)

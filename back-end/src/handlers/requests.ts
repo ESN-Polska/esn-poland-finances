@@ -684,10 +684,21 @@ class RequestsHandler extends ResourceController {
 
       const templateName = this.getSESTemplateName(templateEnum);
       const totalAmount = `${Number(request.totalGrossAmount || 0).toFixed(2)} ${request.currency || 'PLN'}`;
-      const formattedRequestId = request.requestId.includes('/')
-        ? request.requestId.split('/').map(p => encodeURIComponent(p)).join('/')
-        : encodeURIComponent(request.requestId);
-      const requestUrl = `${BASE_URL}/t/requests/view/${formattedRequestId}`;
+      let formattedPath = encodeURIComponent(request.requestId);
+      if (request.requestId.includes('/')) {
+        const parts = request.requestId.split('/');
+        if (parts.length === 2) {
+          const [first, second] = parts;
+          if (/^\d{4}$/.test(first)) {
+            formattedPath = `${encodeURIComponent(first)}/${encodeURIComponent(second)}`;
+          } else {
+            formattedPath = `${encodeURIComponent(second)}/${encodeURIComponent(first)}`;
+          }
+        } else {
+          formattedPath = parts.map(p => encodeURIComponent(p)).join('/');
+        }
+      }
+      const requestUrl = `${BASE_URL}/t/requests/view/${formattedPath}`;
 
       const appTitle = configurations.getAppTitle(lang) || 'ESN Poland Finances';
       const appOrganisation = configurations.getAppOrganisation(lang) || 'ESN Poland';
@@ -697,13 +708,27 @@ class RequestsHandler extends ResourceController {
         (!configurations.appLogoURL?.toLowerCase().endsWith('.svg') && configurations.appLogoURL) ||
         defaultLogoUrl;
 
+      let emailMessage = this.resolveCommentForEmail(comment, lang);
+      if (this.isDefaultSystemComment(comment)) {
+        const isResubmission =
+          comment === 'Resubmitted after corrections' ||
+          comment === 'REQUESTS.HISTORY_COMMENTS.RESUBMITTED_AFTER_CORRECTIONS' ||
+          comment === 'Ponownie przesłano po poprawkach';
+        if (targetStatus === 'SUBMITTED' && isResubmission) {
+          emailMessage = this.resolveCommentForEmail(comment, lang);
+        } else {
+          emailMessage = '';
+        }
+      }
+
       const templateData = {
         user: request.userDisplayName || request.userId,
         requestId: request.requestId,
-        title: request.requestType || 'Financial Request',
+        title: this.resolveRequestTypeTitle(request.requestType, lang),
         detail: totalAmount,
         url: requestUrl,
-        message: this.resolveCommentForEmail(comment, lang),
+        portalUrl: BASE_URL,
+        message: emailMessage,
         status: targetStatus,
         appTitle,
         appOrganisation,
@@ -785,6 +810,14 @@ class RequestsHandler extends ResourceController {
         pl: 'Wypłata została zrealizowana',
         en: 'Payment has been processed'
       },
+      'Resubmitted after corrections': {
+        pl: 'Ponownie przesłano po poprawkach',
+        en: 'Resubmitted after corrections'
+      },
+      'REQUESTS.HISTORY_COMMENTS.RESUBMITTED_AFTER_CORRECTIONS': {
+        pl: 'Ponownie przesłano po poprawkach',
+        en: 'Resubmitted after corrections'
+      },
       'REQUESTS.HISTORY_COMMENTS.INITIAL_SUBMISSION': {
         pl: 'Wniosek został złożony',
         en: 'Request submitted'
@@ -799,4 +832,86 @@ class RequestsHandler extends ResourceController {
     }
     return comment;
   }
+
+  private resolveRequestTypeTitle(type?: string, lang: 'pl' | 'en' = 'pl'): string {
+    if (!type) {
+      return lang === 'en' ? 'Financial Request' : 'Wniosek finansowy';
+    }
+    const normalizedType = type.trim();
+    const typeMap: { [key: string]: { pl: string; en: string } } = {
+      INVOICE_REIMBURSEMENT: {
+        pl: 'Wniosek o zwrot',
+        en: 'Reimbursement request'
+      },
+      INVOICE_TO_PAY: {
+        pl: 'Wniosek o płatność',
+        en: 'Payment request'
+      },
+      ADVANCE_PAYMENT: {
+        pl: 'Wniosek o zaliczkę',
+        en: 'Advance request'
+      },
+      DELEGATION_SETTLEMENT: {
+        pl: 'Rozliczenie delegacji',
+        en: 'Delegation settlement'
+      }
+    };
+    if (typeMap[normalizedType]) {
+      return typeMap[normalizedType][lang];
+    }
+    return type;
+  }
+
+  private isDefaultSystemComment(comment?: string): boolean {
+    if (!comment) return true;
+    const trimmed = comment.trim();
+    if (!trimmed) return true;
+
+    const defaultKeys = [
+      'REQUESTS.HISTORY_COMMENTS.REQUEST_APPROVED',
+      'REQUESTS.HISTORY_COMMENTS.PAYOUT_COMPLETED',
+      'REQUESTS.HISTORY_COMMENTS.IN_REVIEW',
+      'REQUESTS.HISTORY_COMMENTS.INITIAL_SUBMISSION',
+      'REQUESTS.HISTORY_COMMENTS.SUBMITTED_BY_APPLICANT',
+      'REQUESTS.HISTORY_COMMENTS.DRAFT_CREATED',
+      'REQUESTS.HISTORY_COMMENTS.DRAFT_SAVED',
+      'REQUESTS.HISTORY_COMMENTS.UPDATED'
+    ];
+    if (defaultKeys.includes(trimmed)) return true;
+
+    const defaultTexts = [
+      'initial submission',
+      'request submitted',
+      'submitted by applicant',
+      'wniosek został złożony',
+      'złożenie wniosku',
+      'złożono przez wnioskodawcę',
+      'review started',
+      'weryfikacja rozpoczęta',
+      'request approved',
+      'financial request approved',
+      'wniosek został zatwierdzony',
+      'wniosek zatwierdzony',
+      'payout completed',
+      'payment has been processed',
+      'payment processed',
+      'wypłata została zrealizowana',
+      'wypłata zrealizowana',
+      'updated',
+      'zaktualizowano',
+      'draft created',
+      'utworzono wersję roboczą',
+      'draft saved',
+      'zapisano wersję roboczą'
+    ];
+    const lower = trimmed.toLowerCase();
+    if (defaultTexts.includes(lower)) return true;
+
+    if (lower.startsWith('status changed to') || lower.startsWith('status zmieniony na')) {
+      return true;
+    }
+
+    return false;
+  }
 }
+
