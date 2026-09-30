@@ -483,13 +483,13 @@
           detail
           lines="none"
           class="aboutItem"
-          *ngIf="app.configurations?.supportEmail"
+          *ngIf="supportEmail"
           (click)="openSupportContact()"
         >
           <ion-icon name="help-buoy-outline" slot="start"></ion-icon>
           <ion-label>
             <h3>{{ 'SUPPORT.TITLE' | translate }}</h3>
-            <p>{{ app.configurations.supportEmail }}</p>
+            <p>{{ supportEmail }}</p>
           </ion-label>
         </ion-item>
 

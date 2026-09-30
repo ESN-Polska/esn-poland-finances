@@ -1141,9 +1141,28 @@ export class ConfigurationsPage implements OnInit {
         {
           text: this.translate.instant('COMMON.CONFIRM'),
           handler: async data => {
-            if (!data.supportEmail?.trim()) return;
             const updated = new Configurations(this.configurations);
-            updated.supportEmail = data.supportEmail.trim();
+            updated.supportEmail = data.supportEmail?.trim() || '';
+            await this.updateConfigurations(updated);
+          }
+        }
+      ]
+    });
+    await alert.present();
+  }
+
+  async clearSupportEmail(): Promise<void> {
+    const alert = await this.alertCtrl.create({
+      header: this.translate.instant('CONFIGURATIONS.CLEAR_SUPPORT_EMAIL'),
+      message: this.translate.instant('CONFIGURATIONS.CLEAR_SUPPORT_EMAIL_CONFIRM'),
+      buttons: [
+        { text: this.translate.instant('COMMON.CANCEL'), role: 'cancel' },
+        {
+          text: this.translate.instant('COMMON.REMOVE'),
+          role: 'destructive',
+          handler: async () => {
+            const updated = new Configurations(this.configurations);
+            updated.supportEmail = '';
             await this.updateConfigurations(updated);
           }
         }
@@ -1203,7 +1222,6 @@ export class ConfigurationsPage implements OnInit {
     const loading = await this.loadingCtrl.create({ message: this.translate.instant('COMMON.UPLOADING') });
     await loading.present();
     try {
-      const isSvg = file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg');
       const imageURI = await this.mediaService.uploadImage(file);
       const updated = new Configurations(this.configurations);
       const url = this.app.getImageURLByURI(imageURI);
@@ -1211,18 +1229,6 @@ export class ConfigurationsPage implements OnInit {
         updated.appLogoURLDarkMode = url;
       } else {
         updated.appLogoURL = url;
-        if (isSvg) {
-          try {
-            const pngFile = await this.rasterizeSvgToPng(file);
-            const pngURI = await this.mediaService.uploadImage(pngFile);
-            updated.appLogoURLEmail = this.app.getImageURLByURI(pngURI);
-          } catch (err) {
-            console.warn('Failed to rasterize SVG logo to PNG for email clients:', err);
-            updated.appLogoURLEmail = '';
-          }
-        } else {
-          updated.appLogoURLEmail = url;
-        }
       }
       await this.updateConfigurations(updated);
     } finally {
@@ -1308,7 +1314,6 @@ export class ConfigurationsPage implements OnInit {
               updated.appLogoURLDarkMode = '';
             } else {
               updated.appLogoURL = '';
-              updated.appLogoURLEmail = '';
             }
             await this.updateConfigurations(updated);
           }

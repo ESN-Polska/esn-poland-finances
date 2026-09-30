@@ -1128,6 +1128,17 @@
         <ion-button slot="end" fill="clear" color="medium" class="ion-margin-top" *ngIf="canModifyOptions()" (click)="changeSupportEmail()">
           <ion-icon name="pencil" slot="icon-only"></ion-icon>
         </ion-button>
+        <ion-button
+          slot="end"
+          fill="clear"
+          color="danger"
+          class="ion-margin-top"
+          *ngIf="canModifyOptions() && configurations.supportEmail?.trim()"
+          (click)="clearSupportEmail()"
+          [title]="'COMMON.DELETE' | translate"
+        >
+          <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
+        </ion-button>
       </ion-item>
 
       <!-- App Logo Light Mode -->

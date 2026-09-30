@@ -98,8 +98,12 @@ export class ProfilePage implements OnInit {
     private translate: TranslateService
   ) {}
 
+  public get supportEmail(): string {
+    return this.app.configurations?.supportEmail?.trim() || '';
+  }
+
   public async openSupportContact(): Promise<void> {
-    const email = this.app.configurations?.supportEmail?.trim();
+    const email = this.supportEmail;
     if (!email) return;
 
     const actionSheet = await this.actionSheetCtrl.create({
