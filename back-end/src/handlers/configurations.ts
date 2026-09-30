@@ -287,6 +287,7 @@ class ConfigurationsRC extends ResourceController {
         message: 'Example Message',
         requestId: '1/2026',
         status: 'SUBMITTED',
+        hasPaymentConfirmation: true,
         appTitle: this.configurations?.getAppTitle('pl') || 'ESN Poland Finances',
         appOrganisation: this.configurations?.getAppOrganisation('pl') || 'ESN Poland',
         appLogo: this.getEmailLogoUrl()
@@ -320,6 +321,7 @@ class ConfigurationsRC extends ResourceController {
       message: isEnglish ? 'This is an example notification message or reviewer comment.' : 'To jest przykładowa treść wiadomości lub uwagi weryfikującego.',
       requestId: '1/2026',
       status: 'SUBMITTED',
+      hasPaymentConfirmation: true,
       appTitle,
       appOrganisation,
       appLogo

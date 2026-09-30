@@ -106,6 +106,7 @@ export class FinancialRequest extends Resource {
   otherReceipts?: AttachmentFile[];
 
   generalExplanation?: string;
+  paymentConfirmationAttachment?: AttachmentFile;
 
   // Payout Bank Details (PLN / Primary)
   accountHolderName: string;
@@ -187,6 +188,7 @@ export class FinancialRequest extends Resource {
     this.delegationFormAttachment = x.delegationFormAttachment || undefined;
     this.ticketAttachments = Array.isArray(x.ticketAttachments) ? x.ticketAttachments : [];
     this.otherReceipts = Array.isArray(x.otherReceipts) ? x.otherReceipts : [];
+    this.paymentConfirmationAttachment = x.paymentConfirmationAttachment || undefined;
 
     this.generalExplanation = this.clean(x.generalExplanation, String);
 

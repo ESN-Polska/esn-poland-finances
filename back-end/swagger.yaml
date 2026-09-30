@@ -983,6 +983,8 @@ components:
         generalExplanation:
           type: string
           example: Financial settlement for council event
+        paymentConfirmationAttachment:
+          $ref: '#/components/schemas/AttachmentFile'
         accountHolderName:
           type: string
           example: John Doe
@@ -1134,6 +1136,8 @@ components:
             $ref: '#/components/schemas/AttachmentFile'
         generalExplanation:
           type: string
+        paymentConfirmationAttachment:
+          $ref: '#/components/schemas/AttachmentFile'
         accountHolderName:
           type: string
         accountHolderAddress:
