@@ -109,7 +109,8 @@ export const AppPermission = {
     PARENT: 'requests',
     VIEW_ALL: 'requests.view_all',
     EXPORT: 'requests.export',
-    MANAGE: 'requests.manage'
+    MANAGE: 'requests.manage',
+    PAYOUTS: 'requests.payouts'
   },
   CONFIGURATIONS: {
     PARENT: 'configurations',
@@ -344,6 +345,62 @@ export function cleanCsvExportSettings(raw: any): CsvExportSettings {
   };
 }
 
+export type BankExportElixirType = '0' | '1' | '6' | '8';
+export type BankExportGrouping = 'PER_DOCUMENT' | 'PER_REQUEST';
+
+export interface BankExportSettings {
+  senderAccountNumber: string;
+  templateVersion: string;
+  packageType: string;
+  transferType: BankExportElixirType;
+  grouping: BankExportGrouping;
+  includeAddress: boolean;
+  includeExecutionDate: boolean;
+  reimbursementTitleTemplate: string;
+  reimbursementMultipleTitleTemplate: string;
+  invoiceToPayTitleTemplate: string;
+  advanceTitleTemplate: string;
+  delegationTitleTemplate: string;
+}
+
+export const DEFAULT_BANK_EXPORT_SETTINGS: BankExportSettings = {
+  senderAccountNumber: '',
+  templateVersion: '4120414',
+  packageType: '1',
+  transferType: '1',
+  grouping: 'PER_DOCUMENT',
+  includeAddress: false,
+  includeExecutionDate: true,
+  reimbursementTitleTemplate: 'Zwrot za opłaconą fakturę numer {invoiceNumber}',
+  reimbursementMultipleTitleTemplate: 'Zwrot za opłacone faktury numer {invoiceNumbers}',
+  invoiceToPayTitleTemplate: 'Faktura numer {invoiceNumber}',
+  advanceTitleTemplate: 'Zaliczka numer XX/{year}',
+  delegationTitleTemplate: 'Delegacja numer XX/{year}'
+};
+
+export function cleanBankExportSettings(raw: any): BankExportSettings {
+  if (!raw || typeof raw !== 'object') {
+    return JSON.parse(JSON.stringify(DEFAULT_BANK_EXPORT_SETTINGS));
+  }
+  const validTransferTypes: BankExportElixirType[] = ['0', '1', '6', '8'];
+  const validGroupings: BankExportGrouping[] = ['PER_DOCUMENT', 'PER_REQUEST'];
+
+  return {
+    senderAccountNumber: typeof raw.senderAccountNumber === 'string' ? raw.senderAccountNumber.replace(/\s+/g, '') : '',
+    templateVersion: typeof raw.templateVersion === 'string' && raw.templateVersion.trim() ? raw.templateVersion.trim() : DEFAULT_BANK_EXPORT_SETTINGS.templateVersion,
+    packageType: typeof raw.packageType === 'string' && raw.packageType.trim() ? raw.packageType.trim() : DEFAULT_BANK_EXPORT_SETTINGS.packageType,
+    transferType: validTransferTypes.includes(raw.transferType) ? raw.transferType : DEFAULT_BANK_EXPORT_SETTINGS.transferType,
+    grouping: validGroupings.includes(raw.grouping) ? raw.grouping : DEFAULT_BANK_EXPORT_SETTINGS.grouping,
+    includeAddress: raw.includeAddress !== undefined ? Boolean(raw.includeAddress) : DEFAULT_BANK_EXPORT_SETTINGS.includeAddress,
+    includeExecutionDate: raw.includeExecutionDate !== undefined ? Boolean(raw.includeExecutionDate) : DEFAULT_BANK_EXPORT_SETTINGS.includeExecutionDate,
+    reimbursementTitleTemplate: typeof raw.reimbursementTitleTemplate === 'string' && raw.reimbursementTitleTemplate.trim() ? raw.reimbursementTitleTemplate : DEFAULT_BANK_EXPORT_SETTINGS.reimbursementTitleTemplate,
+    reimbursementMultipleTitleTemplate: typeof raw.reimbursementMultipleTitleTemplate === 'string' && raw.reimbursementMultipleTitleTemplate.trim() ? raw.reimbursementMultipleTitleTemplate : DEFAULT_BANK_EXPORT_SETTINGS.reimbursementMultipleTitleTemplate,
+    invoiceToPayTitleTemplate: typeof raw.invoiceToPayTitleTemplate === 'string' && raw.invoiceToPayTitleTemplate.trim() ? raw.invoiceToPayTitleTemplate : DEFAULT_BANK_EXPORT_SETTINGS.invoiceToPayTitleTemplate,
+    advanceTitleTemplate: typeof raw.advanceTitleTemplate === 'string' && raw.advanceTitleTemplate.trim() ? raw.advanceTitleTemplate : DEFAULT_BANK_EXPORT_SETTINGS.advanceTitleTemplate,
+    delegationTitleTemplate: typeof raw.delegationTitleTemplate === 'string' && raw.delegationTitleTemplate.trim() ? raw.delegationTitleTemplate : DEFAULT_BANK_EXPORT_SETTINGS.delegationTitleTemplate
+  };
+}
+
 export const DEFAULT_CONFIGURATIONS = {
   appTitle: {
     en: 'ESN Poland Finances app',
@@ -417,7 +474,8 @@ export const DEFAULT_CONFIGURATIONS = {
     en: 'Financial request {{requestId}}',
     pl: 'Wniosek finansowy {{requestId}}'
   },
-  csvExportSettings: DEFAULT_CSV_EXPORT_SETTINGS
+  csvExportSettings: DEFAULT_CSV_EXPORT_SETTINGS,
+  bankExportSettings: DEFAULT_BANK_EXPORT_SETTINGS
 };
 
 /**
@@ -512,6 +570,8 @@ export class Configurations extends Resource {
   threadRequestEmailsSubject: LocalizedText;
   /** Configured CSV export settings including delimiter, encoding BOM, date format, and column customizations. */
   csvExportSettings: CsvExportSettings;
+  /** Configured bank transfer export settings (.txt / Erste Bank Polska format). */
+  bankExportSettings: BankExportSettings;
 
   constructor(data?: any) {
     super();
@@ -776,6 +836,7 @@ export class Configurations extends Resource {
       };
     }
     this.csvExportSettings = cleanCsvExportSettings(x.csvExportSettings);
+    this.bankExportSettings = cleanBankExportSettings(x.bankExportSettings);
   }
 
   getThreadRequestEmailsSubject(lang: string = 'en'): string {

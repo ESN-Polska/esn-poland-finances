@@ -158,14 +158,14 @@ paths:
   /requests:
     get:
       summary: List financial requests
-      description: Returns requests belonging to current user, or all requests across the federation if called with all=true by users with requests.view_all, requests.manage, requests.export, auditor, manager, or administrator
+      description: Returns requests belonging to current user, or all requests across the federation if called with all=true by users with requests.view_all, requests.manage, requests.export, requests.payouts, auditor, manager, or administrator
       tags: [Requests]
       security:
         - AuthFunction: []
       parameters:
         - name: all
           in: query
-          description: Retrieve all requests across all users (requires requests.view_all, requests.manage, requests.export, or auditor/manager/administrator role)
+          description: Retrieve all requests across all users (requires requests.view_all, requests.manage, requests.export, requests.payouts, or auditor/manager/administrator role)
           required: false
           schema:
             type: boolean
@@ -757,6 +757,7 @@ components:
             - requests.view_all
             - requests.manage
             - requests.export
+            - requests.payouts
         customRoleIds:
           type: array
           items:

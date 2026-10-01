@@ -536,7 +536,8 @@ class ConfigurationsRC extends ResourceController {
       'appLockedAt',
       'appLockMessage',
       'threadRequestEmails',
-      'threadRequestEmailsSubject'
+      'threadRequestEmailsSubject',
+      'bankExportSettings'
     ].filter(field => JSON.stringify(this.body[field]) !== JSON.stringify((this.configurations as any)[field]));
 
     if (!changedFields.length) return;
@@ -589,7 +590,8 @@ class ConfigurationsRC extends ResourceController {
     ];
 
     const exportFields = [
-      'csvExportSettings'
+      'csvExportSettings',
+      'bankExportSettings'
     ];
 
     const resourceFields = [

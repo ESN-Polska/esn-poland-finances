@@ -73,6 +73,7 @@ class RequestsHandler extends ResourceController {
       user.isAuditor ||
       user.hasPermission(AppPermission.REQUESTS.VIEW_ALL) ||
       user.hasPermission(AppPermission.REQUESTS.MANAGE) ||
+      user.hasPermission(AppPermission.REQUESTS.PAYOUTS) ||
       user.hasPermission(AppPermission.REQUESTS.PARENT);
 
     const requestId = this.getRequestId();
@@ -272,21 +273,25 @@ class RequestsHandler extends ResourceController {
       user.isManager ||
       user.hasPermission(AppPermission.REQUESTS.PARENT) ||
       user.hasPermission(AppPermission.REQUESTS.MANAGE);
-
-    // Permission check: either owner modifying an editable request, or a manager
-    if (!isOwner && !canManage) {
-      throw new HandledError('Access denied');
-    }
-
-    if (isOwner && !canManage && !existing.canEdit()) {
-      throw new HandledError('This request cannot be modified in its current status');
-    }
+    const canPayouts =
+      canManage ||
+      user.hasPermission(AppPermission.REQUESTS.PAYOUTS);
 
     const updates = this.body || {};
     const updatedStatus = updates.status || existing.status;
 
-    // Security check: non-managers cannot mutate administrative fields or perform manager status transitions
-    if (!canManage) {
+    // Permission check: either owner modifying an editable request, a manager, or payout officer marking as paid
+    const isAuthorizedPayout = canPayouts && updatedStatus === 'PAID';
+    if (!isOwner && !canManage && !isAuthorizedPayout) {
+      throw new HandledError('Access denied');
+    }
+
+    if (isOwner && !canManage && !isAuthorizedPayout && !existing.canEdit()) {
+      throw new HandledError('This request cannot be modified in its current status');
+    }
+
+    // Security check: non-managers cannot mutate administrative fields or perform unauthorized status transitions
+    if (!canManage && !isAuthorizedPayout) {
       if (updatedStatus !== 'DRAFT' && updatedStatus !== 'SUBMITTED') {
         throw new HandledError('Requesters can only transition requests to DRAFT or SUBMITTED');
       }
