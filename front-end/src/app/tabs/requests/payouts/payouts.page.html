@@ -1,0 +1,361 @@
+<ion-header>
+  <ion-toolbar color="ideaToolbar">
+    <ion-buttons slot="start">
+      <ion-button (click)="goBack()">
+        <ion-icon name="arrow-back-outline" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>{{ 'REQUESTS.PAYOUTS.TITLE' | translate }}</ion-title>
+    <ion-buttons slot="end">
+      <ion-button
+        *ngIf="canConfigureExports"
+        (click)="goToConfigurations()"
+        [title]="'CONFIGURATIONS.BANK_EXPORT_TITLE' | translate"
+      >
+        <ion-icon name="settings-outline" slot="icon-only"></ion-icon>
+      </ion-button>
+      <ion-button
+        color="primary"
+        fill="solid"
+        class="exportBtn"
+        (click)="openBankExportModal()"
+        [disabled]="domesticPlnCount === 0"
+      >
+        <ion-icon name="download-outline" slot="start"></ion-icon>
+        <span class="exportBtnText">{{ 'REQUESTS.PAYOUTS.EXPORT_BTN' | translate }}</span>
+        <ion-badge color="light" class="exportBadge" *ngIf="domesticPlnCount > 0">{{ domesticPlnCount }}</ion-badge>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+
+</ion-header>
+
+<ion-content class="payoutsContent ion-padding">
+  <ion-refresher slot="fixed" (ionRefresh)="doRefresh($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+
+  <div class="maxWidthContainer">
+    <!-- Metrics Ribbon -->
+    <div class="metricsRibbon">
+      <div class="metricCard">
+        <span class="mLabel">{{ 'REQUESTS.PAYOUTS.METRIC_PENDING' | translate }}</span>
+        <span class="mValue font-bold">{{ totalApprovedCount }}</span>
+      </div>
+      <div class="metricCard">
+        <span class="mLabel">{{ 'REQUESTS.PAYOUTS.METRIC_TOTAL_PLN' | translate }}</span>
+        <span class="mValue font-bold text-pln">{{ totalPlnAmount | number:'1.2-2' }} PLN</span>
+      </div>
+      <div class="metricCard" *ngIf="totalEurAmount > 0">
+        <span class="mLabel">{{ 'REQUESTS.PAYOUTS.METRIC_TOTAL_EUR' | translate }}</span>
+        <span class="mValue font-bold text-eur">{{ totalEurAmount | number:'1.2-2' }} EUR</span>
+      </div>
+      <div class="metricCard">
+        <span class="mLabel">{{ 'REQUESTS.PAYOUTS.METRIC_DOMESTIC_EXPORTABLE' | translate }}</span>
+        <span class="mValue font-bold text-success">{{ domesticPlnCount }}</span>
+      </div>
+    </div>
+
+    <!-- Filters & Search Toolbar -->
+    <div class="toolbarCard">
+      <div class="searchWrapper">
+        <ion-icon name="search-outline" class="searchIcon"></ion-icon>
+        <input
+          type="text"
+          class="searchInput"
+          [(ngModel)]="searchQuery"
+          [disabled]="isLoading"
+          [placeholder]="'REQUESTS.PAYOUTS.SEARCH_PLACEHOLDER' | translate"
+        />
+        <button *ngIf="searchQuery && !isLoading" class="clearBtn" (click)="clearSearch()">
+          <ion-icon name="close-circle"></ion-icon>
+        </button>
+      </div>
+
+      <div class="filterDropdowns">
+        <!-- Currency Filter -->
+        <div class="dropdownGroup">
+          <span class="dropdownLabel">{{ 'REQUESTS.FIELDS.CURRENCY' | translate }}:</span>
+          <ion-select
+            interface="popover"
+            class="filterSelect currencySelect"
+            [(ngModel)]="selectedCurrency"
+            [disabled]="isLoading"
+          >
+            <ion-select-option value="ALL">{{ 'COMMON.ALL' | translate }}</ion-select-option>
+            <ion-select-option value="PLN">PLN</ion-select-option>
+            <ion-select-option value="EUR">EUR</ion-select-option>
+          </ion-select>
+        </div>
+
+        <!-- Scope Filter -->
+        <div class="dropdownGroup">
+          <span class="dropdownLabel">{{ 'REQUESTS.PAYOUTS.SCOPE_LABEL' | translate }}:</span>
+          <ion-select
+            interface="popover"
+            class="filterSelect scopeSelect"
+            [(ngModel)]="selectedScope"
+            [disabled]="isLoading"
+          >
+            <ion-select-option value="ALL">{{ 'COMMON.ALL' | translate }}</ion-select-option>
+            <ion-select-option value="DOMESTIC">{{ 'REQUESTS.PAYOUTS.DOMESTIC' | translate }}</ion-select-option>
+            <ion-select-option value="INTERNATIONAL">{{ 'REQUESTS.PAYOUTS.INTERNATIONAL' | translate }}</ion-select-option>
+          </ion-select>
+        </div>
+
+        <!-- Request Type Filter -->
+        <div class="dropdownGroup">
+          <span class="dropdownLabel">{{ 'COMMON.TYPE' | translate }}:</span>
+          <ion-select
+            interface="popover"
+            class="filterSelect typeSelect"
+            [(ngModel)]="selectedType"
+            [disabled]="isLoading"
+          >
+            <ion-select-option value="ALL">{{ 'COMMON.ALL' | translate }}</ion-select-option>
+            <ion-select-option *ngFor="let t of requestTypes" [value]="t">
+              {{ ('REQUESTS.TYPES_SHORT.' + t) | translate }}
+            </ion-select-option>
+          </ion-select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Active Filters Feedback bar -->
+    <div class="resultsCountBar">
+      <span *ngIf="!isLoading">
+        {{ 'REQUESTS.PAYOUTS.SHOWING_RESULTS' | translate:{ current: filteredTransactions.length, total: transactions.length } }}
+      </span>
+      <ion-skeleton-text *ngIf="isLoading" [animated]="true" class="skeletonResultsCount"></ion-skeleton-text>
+
+      <ion-button
+        *ngIf="!isLoading && isFiltered"
+        fill="clear"
+        size="small"
+        class="resetFiltersBtn"
+        (click)="resetFilters()"
+      >
+        {{ 'REQUESTS.MANAGE_PANEL.RESET_FILTERS' | translate }}
+      </ion-button>
+    </div>
+
+    <!-- Empty State -->
+    <div class="emptyStateCard" *ngIf="!isLoading && filteredTransactions.length === 0">
+      <ion-icon [name]="isFiltered ? 'search-outline' : 'checkmark-done-circle-outline'" class="emptyIcon"></ion-icon>
+      <h3>{{ (isFiltered ? 'REQUESTS.NO_MATCHING_REQUESTS' : 'REQUESTS.PAYOUTS.EMPTY_TITLE') | translate }}</h3>
+      <p>{{ (isFiltered ? 'REQUESTS.MANAGE_PANEL.NO_MATCHING_REQUESTS' : 'REQUESTS.PAYOUTS.EMPTY_DESC') | translate }}</p>
+      <ion-button *ngIf="isFiltered" fill="outline" (click)="resetFilters()">
+        <ion-icon slot="start" name="refresh-outline"></ion-icon>
+        {{ 'REQUESTS.MANAGE_PANEL.RESET_FILTERS' | translate }}
+      </ion-button>
+      <ion-button *ngIf="!isFiltered" fill="outline" (click)="goBack()">
+        {{ 'REQUESTS.PAYOUTS.BACK_TO_PANEL' | translate }}
+      </ion-button>
+    </div>
+
+    <!-- Transactions / Payout Cards -->
+    <div class="payoutCardsGrid" *ngIf="filteredTransactions.length > 0">
+      <div class="payoutCard" *ngFor="let t of filteredTransactions">
+        <!-- Card Header -->
+        <div class="cardHeaderRow">
+          <div class="badgeGroup">
+            <span class="displayIdBadge font-mono" (click)="viewRequest(t.requestId)">{{ t.displayId }}</span>
+            <span class="typeBadge">{{ 'REQUESTS.TYPES_SHORT.' + t.requestType | translate }}</span>
+            <span class="scopeBadge" [class.isDomestic]="t.isDomesticPln" [class.isInternational]="!t.isDomesticPln">
+              {{ (t.isDomesticPln ? 'REQUESTS.PAYOUTS.DOMESTIC' : 'REQUESTS.PAYOUTS.INTERNATIONAL') | translate }}
+            </span>
+          </div>
+          <div class="amountBadge font-mono">
+            {{ t.amount | number:'1.2-2' }} {{ t.currency }}
+          </div>
+        </div>
+
+        <div class="applicantRow">
+          <span class="applicantLabel">{{ 'REQUESTS.MANAGE_PANEL.APPLICANT' | translate }}:</span>
+          <span class="applicantVal">{{ t.originalRequest.userDisplayName || t.originalRequest.userId }}</span>
+          <span class="dateVal" *ngIf="t.originalRequest.createdAt">
+            {{ t.originalRequest.createdAt | date:'dd.MM.yyyy' }}
+          </span>
+        </div>
+
+        <!-- Transfer Data Box (With 1-Click Copy Buttons) -->
+        <div class="transferDataBox">
+          <div class="boxHeader">
+            <span class="boxTitle">{{ 'REQUESTS.PAYOUTS.TRANSFER_DATA' | translate }}</span>
+          </div>
+
+          <!-- Recipient Name -->
+          <div class="dataItem">
+            <div class="dataItemLeft">
+              <span class="itemLabel">{{ 'REQUESTS.PAYOUTS.RECIPIENT_NAME' | translate }}</span>
+              <span class="itemVal font-medium">{{ t.recipientName || '—' }}</span>
+            </div>
+            <ion-button
+              fill="clear"
+              size="small"
+              class="copyBtn"
+              [color]="isFieldCopied(t.id + '_recipient') ? 'success' : 'medium'"
+              (click)="copyToClipboard(t.recipientName, t.id + '_recipient', 'REQUESTS.PAYOUTS.RECIPIENT_NAME')"
+            >
+              <ion-icon [name]="isFieldCopied(t.id + '_recipient') ? 'checkmark-outline' : 'copy-outline'" slot="icon-only"></ion-icon>
+            </ion-button>
+          </div>
+
+          <!-- Bank Account -->
+          <div class="dataItem">
+            <div class="dataItemLeft">
+              <span class="itemLabel">{{ 'REQUESTS.PAYOUTS.ACCOUNT_NUMBER' | translate }}</span>
+              <span class="itemVal font-mono font-bold">{{ formatIbanDisplay(t.recipientAccount) }}</span>
+            </div>
+            <ion-button
+              fill="clear"
+              size="small"
+              class="copyBtn"
+              [color]="isFieldCopied(t.id + '_acc') ? 'success' : 'medium'"
+              (click)="copyToClipboard(t.cleanRecipientAccount || t.recipientAccount, t.id + '_acc', 'REQUESTS.PAYOUTS.ACCOUNT_NUMBER')"
+            >
+              <ion-icon [name]="isFieldCopied(t.id + '_acc') ? 'checkmark-outline' : 'copy-outline'" slot="icon-only"></ion-icon>
+            </ion-button>
+          </div>
+
+          <!-- Amount -->
+          <div class="dataItem">
+            <div class="dataItemLeft">
+              <span class="itemLabel">{{ 'REQUESTS.FIELDS.GROSS_AMOUNT' | translate }}</span>
+              <span class="itemVal font-mono font-bold">{{ t.amount | number:'1.2-2' }} {{ t.currency }}</span>
+            </div>
+            <ion-button
+              fill="clear"
+              size="small"
+              class="copyBtn"
+              [color]="isFieldCopied(t.id + '_amt') ? 'success' : 'medium'"
+              (click)="copyToClipboard(t.amount.toFixed(2), t.id + '_amt', 'REQUESTS.FIELDS.GROSS_AMOUNT')"
+            >
+              <ion-icon [name]="isFieldCopied(t.id + '_amt') ? 'checkmark-outline' : 'copy-outline'" slot="icon-only"></ion-icon>
+            </ion-button>
+          </div>
+
+          <!-- Title -->
+          <div class="dataItem">
+            <div class="dataItemLeft">
+              <div class="titleLabelBar">
+                <span class="itemLabel">{{ 'REQUESTS.PAYOUTS.TRANSFER_TITLE' | translate }}</span>
+                <span class="charCounter" [class.isWarn]="t.title.length > 120">{{ t.title.length }} / 140</span>
+              </div>
+              <span class="itemVal titleVal">{{ t.title }}</span>
+              <span class="xxWarningNote" *ngIf="t.title.includes('XX')">
+                <ion-icon name="alert-circle-outline"></ion-icon> {{ 'REQUESTS.PAYOUTS.XX_WARNING_HINT' | translate }}
+              </span>
+            </div>
+            <ion-button
+              fill="clear"
+              size="small"
+              class="copyBtn"
+              [color]="isFieldCopied(t.id + '_title') ? 'success' : 'medium'"
+              (click)="copyToClipboard(t.title, t.id + '_title', 'REQUESTS.PAYOUTS.TRANSFER_TITLE')"
+            >
+              <ion-icon [name]="isFieldCopied(t.id + '_title') ? 'checkmark-outline' : 'copy-outline'" slot="icon-only"></ion-icon>
+            </ion-button>
+          </div>
+
+          <!-- Recipient Address (if present) -->
+          <div class="dataItem" *ngIf="t.recipientAddress">
+            <div class="dataItemLeft">
+              <span class="itemLabel">{{ 'REQUESTS.FIELDS.ACCOUNT_HOLDER_ADDRESS' | translate }}</span>
+              <span class="itemVal">{{ t.recipientAddress }}</span>
+            </div>
+            <ion-button
+              fill="clear"
+              size="small"
+              class="copyBtn"
+              [color]="isFieldCopied(t.id + '_addr') ? 'success' : 'medium'"
+              (click)="copyToClipboard(t.recipientAddress, t.id + '_addr', 'REQUESTS.FIELDS.ACCOUNT_HOLDER_ADDRESS')"
+            >
+              <ion-icon [name]="isFieldCopied(t.id + '_addr') ? 'checkmark-outline' : 'copy-outline'" slot="icon-only"></ion-icon>
+            </ion-button>
+          </div>
+
+          <!-- SWIFT/BIC (if present / international) -->
+          <div class="dataItem" *ngIf="t.originalRequest.swiftBic || t.originalRequest.swiftBicEUR">
+            <div class="dataItemLeft">
+              <span class="itemLabel">{{ 'REQUESTS.FIELDS.SWIFT_BIC' | translate }}</span>
+              <span class="itemVal font-mono">{{ t.originalRequest.swiftBicEUR || t.originalRequest.swiftBic }}</span>
+            </div>
+            <ion-button
+              fill="clear"
+              size="small"
+              class="copyBtn"
+              [color]="isFieldCopied(t.id + '_swift') ? 'success' : 'medium'"
+              (click)="copyToClipboard(t.originalRequest.swiftBicEUR || t.originalRequest.swiftBic, t.id + '_swift', 'REQUESTS.FIELDS.SWIFT_BIC')"
+            >
+              <ion-icon [name]="isFieldCopied(t.id + '_swift') ? 'checkmark-outline' : 'copy-outline'" slot="icon-only"></ion-icon>
+            </ion-button>
+          </div>
+        </div>
+
+        <!-- Document / Invoice / KSeF Numbers Block -->
+        <div class="documentNumbersBox" *ngIf="t.invoiceNumber || t.ksefNumber">
+          <div class="docBoxTitle">{{ 'REQUESTS.PAYOUTS.DOCUMENT_DETAILS' | translate }}</div>
+
+          <!-- Invoice Number -->
+          <div class="docItem" *ngIf="t.invoiceNumber">
+            <div class="docLeft">
+              <span class="docLabel">{{ 'REQUESTS.FIELDS.INVOICE_NUMBER' | translate }}:</span>
+              <span class="docVal font-mono font-bold">{{ t.invoiceNumber }}</span>
+            </div>
+            <ion-button
+              fill="clear"
+              size="small"
+              class="copyBtn"
+              [color]="isFieldCopied(t.id + '_inv') ? 'success' : 'medium'"
+              (click)="copyToClipboard(t.invoiceNumber, t.id + '_inv', 'REQUESTS.FIELDS.INVOICE_NUMBER')"
+            >
+              <ion-icon [name]="isFieldCopied(t.id + '_inv') ? 'checkmark-outline' : 'copy-outline'" slot="icon-only"></ion-icon>
+            </ion-button>
+          </div>
+
+          <!-- KSeF Number -->
+          <div class="docItem" *ngIf="t.ksefNumber">
+            <div class="docLeft">
+              <span class="docLabel">KSeF:</span>
+              <span class="docVal font-mono">{{ t.ksefNumber }}</span>
+            </div>
+            <ion-button
+              fill="clear"
+              size="small"
+              class="copyBtn"
+              [color]="isFieldCopied(t.id + '_ksef') ? 'success' : 'medium'"
+              (click)="copyToClipboard(t.ksefNumber, t.id + '_ksef', 'KSeF')"
+            >
+              <ion-icon [name]="isFieldCopied(t.id + '_ksef') ? 'checkmark-outline' : 'copy-outline'" slot="icon-only"></ion-icon>
+            </ion-button>
+          </div>
+        </div>
+
+        <!-- Card Footer Actions -->
+        <div class="cardFooterActions">
+          <ion-button
+            fill="outline"
+            size="small"
+            color="medium"
+            (click)="viewRequest(t.requestId)"
+          >
+            <ion-icon name="eye-outline" slot="start"></ion-icon>
+            {{ 'REQUESTS.VIEW_DETAILS' | translate }}
+          </ion-button>
+
+          <ion-button
+            fill="solid"
+            size="small"
+            color="success"
+            *ngIf="canManage"
+            (click)="promptMarkPaid(t.originalRequest, $event)"
+          >
+            <ion-icon name="checkmark-done-circle-outline" slot="start"></ion-icon>
+            {{ 'REQUESTS.STATUSES.PAID' | translate }}
+          </ion-button>
+        </div>
+      </div>
+    </div>
+  </div>
+</ion-content>

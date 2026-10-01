@@ -513,3 +513,112 @@ ion-modal.selectPrimarySectionModal {
   min-width: 44px;
 }
 
+/*
+ * Payouts & Bank Export Modal Dark Mode Global Fallbacks
+ * -------------------------------------------
+ */
+body.dark {
+  app-bank-export-modal,
+  .bankExportModal {
+    .configCard,
+    .metricBadge,
+    .transactionsList {
+      background: var(--bg-card, #1e1e1e) !important;
+      border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    }
+
+    .senderInput {
+      background: rgba(255, 255, 255, 0.05) !important;
+      border-color: rgba(255, 255, 255, 0.15) !important;
+      color: var(--text-dark, #f8fafc) !important;
+    }
+
+    .warningBanner {
+      background: rgba(245, 158, 11, 0.12) !important;
+      border: 1px solid rgba(245, 158, 11, 0.25) !important;
+      border-left: 4px solid #f59e0b !important;
+      color: #fde68a !important;
+
+      ion-icon {
+        color: #fbbf24 !important;
+      }
+      p {
+        color: #fcd34d !important;
+      }
+    }
+
+    .transactionsList {
+      .listHeader {
+        background: rgba(255, 255, 255, 0.04) !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+      }
+
+      .transactionCard {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+
+        .titleEditorSection {
+          border-top-color: rgba(255, 255, 255, 0.08) !important;
+
+          .titleLabel {
+            color: var(--text-medium, #94a3b8) !important;
+          }
+
+          .titleInputWrap .titleInput {
+            background: rgba(255, 255, 255, 0.05) !important;
+            border-color: rgba(255, 255, 255, 0.15) !important;
+            color: var(--text-dark, #f8fafc) !important;
+
+            &:focus {
+              border-color: var(--ion-color-primary, #00aeef) !important;
+            }
+
+            &.has-placeholder-warning {
+              border-color: #f59e0b !important;
+              background: rgba(245, 158, 11, 0.18) !important;
+              color: #fef08a !important;
+
+              &:focus {
+                border-color: #fbbf24 !important;
+                box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.35) !important;
+              }
+            }
+
+            &.has-length-error {
+              border-color: #ef4444 !important;
+              background: rgba(239, 68, 68, 0.18) !important;
+              color: #fca5a5 !important;
+
+              &:focus {
+                border-color: #f87171 !important;
+                box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.35) !important;
+              }
+            }
+          }
+
+          .placeholderAlert {
+            color: #fcd34d !important;
+            ion-icon {
+              color: #fbbf24 !important;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  app-payouts {
+    .metricCard,
+    .emptyStateCard,
+    .payoutCard {
+      background: var(--bg-card, #1e1e1e) !important;
+      border: 1px solid rgba(255, 255, 255, 0.08) !important;
+      outline: none !important;
+
+      &:hover {
+        outline: none !important;
+      }
+    }
+  }
+}
+
+

@@ -1,0 +1,161 @@
+<ion-header>
+  <ion-toolbar color="ideaToolbar">
+    <ion-buttons slot="start">
+      <ion-button (click)="close()">
+        <ion-icon name="close-circle-outline" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>{{ 'REQUESTS.PAYOUTS.EXPORT_MODAL_TITLE' | translate }}</ion-title>
+    <ion-buttons slot="end">
+      <ion-button
+        color="primary"
+        fill="solid"
+        (click)="export()"
+        [disabled]="!selectedItems.length || !isSenderAccountValid || hasOverlengthTitles"
+      >
+        <ion-icon name="download-outline" slot="start"></ion-icon>
+        {{ 'REQUESTS.PAYOUTS.DOWNLOAD_TXT' | translate }}
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="modal-content ion-padding">
+  <div class="maxWidthContainer">
+    <!-- Notice / Sender Account Configuration -->
+    <div class="configCard">
+      <div class="configCardHeader">
+        <ion-icon name="business-outline" class="cardIcon"></ion-icon>
+        <div class="cardTitleWrap">
+          <span class="cardTitle">{{ 'REQUESTS.PAYOUTS.SENDER_ACCOUNT_HEADER' | translate }}</span>
+          <span class="cardSubtitle">{{ 'REQUESTS.PAYOUTS.SENDER_ACCOUNT_SUB' | translate }}</span>
+        </div>
+      </div>
+      <div class="senderAccountInputRow">
+        <ion-input
+          type="text"
+          class="font-mono senderInput"
+          [(ngModel)]="senderAccount"
+          placeholder="00 0000 0000 0000 0000 0000 0000"
+          [class.has-error]="!isSenderAccountValid"
+        ></ion-input>
+        <span class="validBadge" *ngIf="isSenderAccountValid && senderAccount">
+          <ion-icon name="checkmark-circle"></ion-icon> 26 cyfr (NRB)
+        </span>
+        <span class="errorBadge" *ngIf="!isSenderAccountValid">
+          <ion-icon name="alert-circle"></ion-icon> {{ 'REQUESTS.PAYOUTS.SENDER_ACCOUNT_REQUIRED' | translate }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Warnings / Summary Bar -->
+    <div class="summaryRow">
+      <div class="metricBadge">
+        <span class="metricLabel">{{ 'REQUESTS.PAYOUTS.SELECTED_COUNT' | translate }}:</span>
+        <span class="metricVal">{{ selectedItems.length }} / {{ items.length }}</span>
+      </div>
+      <div class="metricBadge">
+        <span class="metricLabel">{{ 'REQUESTS.PAYOUTS.SELECTED_TOTAL' | translate }}:</span>
+        <span class="metricVal font-bold">{{ selectedTotalAmount | number:'1.2-2' }} PLN</span>
+      </div>
+      <div class="metricBadge formatBadge">
+        <span class="metricLabel">{{ 'REQUESTS.PAYOUTS.TARGET_BANK' | translate }}:</span>
+        <span class="metricVal">Erste Bank Polska (.txt)</span>
+      </div>
+    </div>
+
+    <!-- Warning banner for unresolved XX placeholders -->
+    <div class="warningBanner" *ngIf="hasUnresolvedPlaceholders">
+      <ion-icon name="warning-outline"></ion-icon>
+      <div>
+        <strong>{{ 'REQUESTS.PAYOUTS.UNRESOLVED_XX_TITLE' | translate }}</strong>
+        <p>{{ 'REQUESTS.PAYOUTS.UNRESOLVED_XX_DESC' | translate }}</p>
+      </div>
+    </div>
+
+    <!-- Items list with inline title editor -->
+    <div class="transactionsList">
+      <div class="listHeader">
+        <div class="selectAllWrap">
+          <ion-checkbox
+            [checked]="selectedItems.length === items.length && items.length > 0"
+            [indeterminate]="selectedItems.length > 0 && selectedItems.length < items.length"
+            (ionChange)="onSelectAll($event)"
+          ></ion-checkbox>
+          <span class="listHeaderTitle">{{ 'REQUESTS.PAYOUTS.TRANSACTIONS_LIST' | translate }}</span>
+        </div>
+        <span class="countNote">{{ 'REQUESTS.PAYOUTS.PLN_ONLY_NOTE' | translate }}</span>
+      </div>
+
+      <div
+        class="transactionCard"
+        *ngFor="let item of items; let idx = index"
+        [class.is-deselected]="!item.selected"
+        [class.is-invalid-scope]="!item.isDomesticPln"
+      >
+        <div class="cardTopRow">
+          <div class="checkboxCol">
+            <ion-checkbox
+              [(ngModel)]="item.selected"
+              [disabled]="!item.isDomesticPln"
+            ></ion-checkbox>
+          </div>
+          <div class="infoCol">
+            <div class="typeAndIdRow">
+              <span class="reqBadge font-mono">{{ item.displayId }}</span>
+              <span class="typeBadge">{{ 'REQUESTS.TYPES_SHORT.' + item.requestType | translate }}</span>
+              <span class="nonDomesticBadge" *ngIf="!item.isDomesticPln">
+                {{ 'REQUESTS.PAYOUTS.NON_DOMESTIC' | translate }}
+              </span>
+            </div>
+            <div class="recipientRow">
+              <span class="recipientName font-bold">{{ item.recipientName }}</span>
+              <span class="accountNum font-mono">{{ item.cleanRecipientAccount || item.recipientAccount }}</span>
+            </div>
+          </div>
+          <div class="amountCol">
+            <span class="amountText font-mono">{{ item.amount | number:'1.2-2' }} {{ item.currency }}</span>
+          </div>
+        </div>
+
+        <!-- Transfer Title Inline Editor -->
+        <div class="titleEditorSection">
+          <div class="titleHeaderRow">
+            <label class="titleLabel">{{ 'REQUESTS.PAYOUTS.TRANSFER_TITLE' | translate }}:</label>
+            <div class="titleMeta">
+              <span
+                class="charCount"
+                [class.charCountWarn]="item.title.length > 120 && item.title.length <= 140"
+                [class.charCountError]="item.title.length > 140"
+              >
+                {{ item.title.length }} / 140
+              </span>
+              <button
+                type="button"
+                class="resetTitleBtn"
+                *ngIf="item.title !== item.originalTitle"
+                (click)="resetTitle(item)"
+              >
+                {{ 'COMMON.RESET' | translate }}
+              </button>
+            </div>
+          </div>
+          <div class="titleInputWrap">
+            <input
+              type="text"
+              class="titleInput"
+              [(ngModel)]="item.title"
+              maxlength="140"
+              [class.has-placeholder-warning]="item.title.includes('XX')"
+              [class.has-length-error]="item.title.length > 140"
+            />
+          </div>
+          <div class="placeholderAlert" *ngIf="item.title.includes('XX')">
+            <ion-icon name="alert-circle-outline"></ion-icon>
+            {{ 'REQUESTS.PAYOUTS.XX_WARNING_HINT' | translate }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</ion-content>

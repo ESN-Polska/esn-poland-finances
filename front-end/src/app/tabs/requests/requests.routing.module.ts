@@ -6,6 +6,7 @@ import { RequestFormPage } from './submit/request-form.page';
 import { RequestViewPage } from './view/request-view.page';
 import { RequestReviewPage } from './review/request-review.page';
 import { ManageRequestsPage } from './manage/manage-requests.page';
+import { PayoutsPage } from './payouts/payouts.page';
 
 const routes: Routes = [
   {
@@ -13,8 +14,16 @@ const routes: Routes = [
     component: RequestsPage
   },
   {
+    path: 'payouts',
+    component: PayoutsPage
+  },
+  {
     path: 'manage',
     component: ManageRequestsPage
+  },
+  {
+    path: 'manage/payouts',
+    component: PayoutsPage
   },
   {
     path: 'manage/review/:id',

@@ -14,9 +14,112 @@ import {
 import {
   AppPermission,
   CsvExportSettings,
-  DEFAULT_CSV_EXPORT_SETTINGS
+  DEFAULT_CSV_EXPORT_SETTINGS,
+  BankExportSettings,
+  DEFAULT_BANK_EXPORT_SETTINGS,
+  BankExportElixirType,
+  BankExportGrouping
 } from '@models/configurations.model';
 import { AppService } from '../app.service';
+
+export interface BankTransactionItem {
+  id: string;
+  requestId: string;
+  displayId: string;
+  requestType: FinancialRequestType;
+  invoiceIndex?: number;
+  invoiceNumber?: string;
+  ksefNumber?: string;
+  recipientName: string;
+  recipientAccount: string;
+  cleanRecipientAccount: string;
+  recipientAddress: string;
+  recipientNip?: string;
+  amount: number;
+  currency: string;
+  title: string;
+  isDomesticPln: boolean;
+  status: RequestStatus;
+  originalRequest: FinancialRequest;
+}
+
+export function transliteratePolishToAscii(str: string | null | undefined): string {
+  if (!str) return '';
+  const mapping: { [key: string]: string } = {
+    'ą': 'a', 'Ą': 'A',
+    'ć': 'c', 'Ć': 'C',
+    'ę': 'e', 'Ę': 'E',
+    'ł': 'l', 'Ł': 'L',
+    'ń': 'n', 'Ń': 'N',
+    'ó': 'o', 'Ó': 'O',
+    'ś': 's', 'Ś': 'S',
+    'ź': 'z', 'Ź': 'Z',
+    'ż': 'z', 'Ż': 'Z'
+  };
+  let res = str.replace(/[ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/g, m => mapping[m] || m);
+  res = res.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  return res;
+}
+
+export function cleanPolishBankAccount(account: string | null | undefined): string {
+  if (!account) return '';
+  let acc = account.trim().replace(/\s+/g, '').replace(/-/g, '');
+  if (acc.toUpperCase().startsWith('PL')) {
+    acc = acc.substring(2);
+  }
+  return acc;
+}
+
+export function isDomesticPlnAccount(account: string | null | undefined, currency?: string): boolean {
+  if (currency && currency !== 'PLN') return false;
+  const clean = cleanPolishBankAccount(account);
+  return /^[0-9]{26}$/.test(clean);
+}
+
+export function formatBankTransferTitle(
+  template: string,
+  context: {
+    invoiceNumber?: string;
+    invoiceNumbers?: string[];
+    ksefNumber?: string;
+    displayId?: string;
+    requestId?: string;
+    applicantName?: string;
+    year?: string | number;
+  }
+): string {
+  if (!template) return '';
+  const yearStr = String(context.year || new Date().getFullYear());
+  const singleInv = context.invoiceNumber || (context.invoiceNumbers && context.invoiceNumbers.length > 0 ? context.invoiceNumbers[0] : '');
+  const multiInvs = context.invoiceNumbers && context.invoiceNumbers.length > 0 ? context.invoiceNumbers.join(', ') : singleInv;
+
+  let title = template
+    .replace(/{invoiceNumber}/g, singleInv || '—')
+    .replace(/{invoiceNumbers}/g, multiInvs || '—')
+    .replace(/{ksefNumber}/g, context.ksefNumber || '')
+    .replace(/{displayId}/g, context.displayId || '')
+    .replace(/{requestId}/g, context.requestId || '')
+    .replace(/{applicantName}/g, context.applicantName || '')
+    .replace(/{year}/g, yearStr);
+
+  if (title.length > 140 && context.invoiceNumbers && context.invoiceNumbers.length > 1) {
+    let currentInvs = [...context.invoiceNumbers];
+    while (currentInvs.length > 1 && title.length > 140) {
+      currentInvs.pop();
+      const shortened = currentInvs.join(', ') + '...';
+      title = template
+        .replace(/{invoiceNumber}/g, singleInv || '—')
+        .replace(/{invoiceNumbers}/g, shortened)
+        .replace(/{ksefNumber}/g, context.ksefNumber || '')
+        .replace(/{displayId}/g, context.displayId || '')
+        .replace(/{requestId}/g, context.requestId || '')
+        .replace(/{applicantName}/g, context.applicantName || '')
+        .replace(/{year}/g, yearStr);
+    }
+  }
+
+  return title.substring(0, 140).trim();
+}
 
 const REQUESTS_STORAGE_KEY = 'financial_requests_list';
 const SEQUENCE_STORAGE_KEY = 'financial_requests_seq_';
@@ -107,6 +210,7 @@ export class RequestsService {
       user?.isAuditor ||
       user?.hasPermission(AppPermission.REQUESTS.VIEW_ALL) ||
       user?.hasPermission(AppPermission.REQUESTS.MANAGE) ||
+      user?.hasPermission(AppPermission.REQUESTS.PAYOUTS) ||
       user?.hasPermission(AppPermission.REQUESTS.PARENT);
 
     if (!canViewAll) {
@@ -404,6 +508,251 @@ export class RequestsService {
   }
 
   /**
+   * Builds bank transaction items from financial requests based on export settings
+   */
+  public buildBankTransactions(
+    requests: FinancialRequest[],
+    settings?: BankExportSettings
+  ): BankTransactionItem[] {
+    const s = settings || this.appService.configurations?.bankExportSettings || DEFAULT_BANK_EXPORT_SETTINGS;
+    const transactions: BankTransactionItem[] = [];
+
+    for (const req of requests) {
+      const year = req.year || new Date(req.createdAt).getFullYear();
+      const applicantName = req.accountHolderName || req.userDisplayName || '';
+      const applicantAddress = req.accountHolderAddress || '';
+      const applicantAccount = req.currency === 'EUR' && req.ibanEUR ? req.ibanEUR : (req.iban || '');
+      const cleanAppAccount = cleanPolishBankAccount(applicantAccount);
+
+      if (req.requestType === 'INVOICE_REIMBURSEMENT') {
+        const docs = req.documents || [];
+        if (s.grouping === 'PER_DOCUMENT' && docs.length > 0) {
+          docs.forEach((doc, idx) => {
+            const docAmount = Number(doc.grossAmount) || 0;
+            const title = formatBankTransferTitle(s.reimbursementTitleTemplate, {
+              invoiceNumber: doc.invoiceNumber,
+              ksefNumber: doc.ksefNumber,
+              displayId: req.displayId,
+              requestId: req.requestId,
+              applicantName,
+              year
+            });
+            transactions.push({
+              id: `${req.requestId}_doc_${idx}`,
+              requestId: req.requestId,
+              displayId: req.displayId,
+              requestType: req.requestType,
+              invoiceIndex: idx,
+              invoiceNumber: doc.invoiceNumber || '',
+              ksefNumber: doc.ksefNumber || '',
+              recipientName: applicantName,
+              recipientAccount: applicantAccount,
+              cleanRecipientAccount: cleanAppAccount,
+              recipientAddress: applicantAddress,
+              amount: docAmount,
+              currency: doc.currency || req.currency || 'PLN',
+              title,
+              isDomesticPln: isDomesticPlnAccount(applicantAccount, doc.currency || req.currency),
+              status: req.status,
+              originalRequest: req
+            });
+          });
+        } else {
+          const invNumbers = docs.map(d => d.invoiceNumber).filter(Boolean);
+          const tmpl = docs.length > 1 ? s.reimbursementMultipleTitleTemplate : s.reimbursementTitleTemplate;
+          const title = formatBankTransferTitle(tmpl, {
+            invoiceNumber: invNumbers[0] || '',
+            invoiceNumbers: invNumbers,
+            ksefNumber: docs[0]?.ksefNumber,
+            displayId: req.displayId,
+            requestId: req.requestId,
+            applicantName,
+            year
+          });
+          transactions.push({
+            id: req.requestId,
+            requestId: req.requestId,
+            displayId: req.displayId,
+            requestType: req.requestType,
+            invoiceNumber: invNumbers.join(', '),
+            ksefNumber: docs.map(d => d.ksefNumber).filter(Boolean).join(', '),
+            recipientName: applicantName,
+            recipientAccount: applicantAccount,
+            cleanRecipientAccount: cleanAppAccount,
+            recipientAddress: applicantAddress,
+            amount: Number(req.totalGrossAmount) || 0,
+            currency: req.currency || 'PLN',
+            title,
+            isDomesticPln: isDomesticPlnAccount(applicantAccount, req.currency),
+            status: req.status,
+            originalRequest: req
+          });
+        }
+      } else if (req.requestType === 'INVOICE_TO_PAY') {
+        const docs = req.documents || [];
+        if (s.grouping === 'PER_DOCUMENT' && docs.length > 0) {
+          docs.forEach((doc, idx) => {
+            const docAmount = Number(doc.grossAmount) || 0;
+            const contractorAccount = doc.bankAccountDetails || '';
+            const cleanContractorAcc = cleanPolishBankAccount(contractorAccount);
+            const title = formatBankTransferTitle(s.invoiceToPayTitleTemplate, {
+              invoiceNumber: doc.invoiceNumber,
+              ksefNumber: doc.ksefNumber,
+              displayId: req.displayId,
+              requestId: req.requestId,
+              applicantName: doc.issuedBy || applicantName,
+              year
+            });
+            transactions.push({
+              id: `${req.requestId}_doc_${idx}`,
+              requestId: req.requestId,
+              displayId: req.displayId,
+              requestType: req.requestType,
+              invoiceIndex: idx,
+              invoiceNumber: doc.invoiceNumber || '',
+              ksefNumber: doc.ksefNumber || '',
+              recipientName: doc.issuedBy || applicantName,
+              recipientAccount: contractorAccount,
+              cleanRecipientAccount: cleanContractorAcc,
+              recipientAddress: applicantAddress,
+              amount: docAmount,
+              currency: doc.currency || req.currency || 'PLN',
+              title,
+              isDomesticPln: isDomesticPlnAccount(contractorAccount, doc.currency || req.currency),
+              status: req.status,
+              originalRequest: req
+            });
+          });
+        } else {
+          const invNumbers = docs.map(d => d.invoiceNumber).filter(Boolean);
+          const firstDoc = docs[0];
+          const contractorAccount = firstDoc?.bankAccountDetails || '';
+          const cleanContractorAcc = cleanPolishBankAccount(contractorAccount);
+          const title = formatBankTransferTitle(s.invoiceToPayTitleTemplate, {
+            invoiceNumber: invNumbers.join(', '),
+            invoiceNumbers: invNumbers,
+            ksefNumber: firstDoc?.ksefNumber,
+            displayId: req.displayId,
+            requestId: req.requestId,
+            applicantName: firstDoc?.issuedBy || applicantName,
+            year
+          });
+          transactions.push({
+            id: req.requestId,
+            requestId: req.requestId,
+            displayId: req.displayId,
+            requestType: req.requestType,
+            invoiceNumber: invNumbers.join(', '),
+            ksefNumber: docs.map(d => d.ksefNumber).filter(Boolean).join(', '),
+            recipientName: firstDoc?.issuedBy || applicantName,
+            recipientAccount: contractorAccount,
+            cleanRecipientAccount: cleanContractorAcc,
+            recipientAddress: applicantAddress,
+            amount: Number(req.totalGrossAmount) || 0,
+            currency: req.currency || 'PLN',
+            title,
+            isDomesticPln: isDomesticPlnAccount(contractorAccount, req.currency),
+            status: req.status,
+            originalRequest: req
+          });
+        }
+      } else if (req.requestType === 'ADVANCE_PAYMENT') {
+        const title = formatBankTransferTitle(s.advanceTitleTemplate, {
+          displayId: req.displayId,
+          requestId: req.requestId,
+          applicantName,
+          year
+        });
+        transactions.push({
+          id: req.requestId,
+          requestId: req.requestId,
+          displayId: req.displayId,
+          requestType: req.requestType,
+          recipientName: applicantName,
+          recipientAccount: applicantAccount,
+          cleanRecipientAccount: cleanAppAccount,
+          recipientAddress: applicantAddress,
+          amount: Number(req.totalGrossAmount) || 0,
+          currency: req.currency || 'PLN',
+          title,
+          isDomesticPln: isDomesticPlnAccount(applicantAccount, req.currency),
+          status: req.status,
+          originalRequest: req
+        });
+      } else if (req.requestType === 'DELEGATION_SETTLEMENT') {
+        const title = formatBankTransferTitle(s.delegationTitleTemplate, {
+          displayId: req.displayId,
+          requestId: req.requestId,
+          applicantName,
+          year
+        });
+        transactions.push({
+          id: req.requestId,
+          requestId: req.requestId,
+          displayId: req.displayId,
+          requestType: req.requestType,
+          recipientName: applicantName,
+          recipientAccount: applicantAccount,
+          cleanRecipientAccount: cleanAppAccount,
+          recipientAddress: applicantAddress,
+          amount: Number(req.totalGrossAmount) || 0,
+          currency: req.currency || 'PLN',
+          title,
+          isDomesticPln: isDomesticPlnAccount(applicantAccount, req.currency),
+          status: req.status,
+          originalRequest: req
+        });
+      }
+    }
+
+    return transactions;
+  }
+
+  /**
+   * Export transactions to Erste Bank Polska .txt format (4120414|1)
+   */
+  public exportToErsteBankTxt(
+    transactions: BankTransactionItem[],
+    settings?: BankExportSettings,
+    filename = `przelewy-erste-${new Date().toISOString().slice(0, 10)}.txt`
+  ): void {
+    const s = settings || this.appService.configurations?.bankExportSettings || DEFAULT_BANK_EXPORT_SETTINGS;
+    const cleanSender = cleanPolishBankAccount(s.senderAccountNumber);
+
+    const header = `${s.templateVersion || '4120414'}|${s.packageType || '1'}\r\n`;
+
+    const executionDateStr = s.includeExecutionDate ? (() => {
+      const d = new Date();
+      const dd = String(d.getDate()).padStart(2, '0');
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      return `${dd}-${mm}-${d.getFullYear()}`;
+    })() : '';
+
+    const lines = transactions.map(item => {
+      const rachunekMa = item.cleanRecipientAccount || cleanPolishBankAccount(item.recipientAccount);
+      const recipientNameAscii = transliteratePolishToAscii(item.recipientName).replace(/\|/g, ' ').substring(0, 105);
+      const addressAscii = s.includeAddress ? transliteratePolishToAscii(item.recipientAddress).replace(/\|/g, ' ').substring(0, 105) : '';
+      const amountStr = item.amount.toFixed(2).replace('.', ',');
+      const transferType = s.transferType || '1';
+      const titleAscii = transliteratePolishToAscii(item.title).replace(/\|/g, ' ').substring(0, 140);
+      const nip = (item.recipientNip || '').replace(/[^0-9]/g, '');
+
+      return `1|${cleanSender}|${rachunekMa}|${recipientNameAscii}|${addressAscii}|${amountStr}|${transferType}|${titleAscii}|${executionDateStr}|${nip}|`;
+    });
+
+    const fileContent = header + lines.join('\r\n') + (lines.length > 0 ? '\r\n' : '');
+    const blob = new Blob([fileContent], { type: 'text/plain;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+
+  /**
    * Get the single most recent request for user dashboard widget
    */
   public async getLatestRequest(): Promise<FinancialRequest | null> {
@@ -485,6 +834,7 @@ export class RequestsService {
       user?.isAuditor ||
       user?.hasPermission(AppPermission.REQUESTS.VIEW_ALL) ||
       user?.hasPermission(AppPermission.REQUESTS.MANAGE) ||
+      user?.hasPermission(AppPermission.REQUESTS.PAYOUTS) ||
       user?.hasPermission(AppPermission.REQUESTS.PARENT);
 
     const storage = await this.initStorage();

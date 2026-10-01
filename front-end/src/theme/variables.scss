@@ -184,6 +184,15 @@ $text-white: #ffffff;
 
   --notice-quote-bg: #ffffff;
   --notice-quote-text: #1e293b;
+
+  --input-warning-bg: #fffbeb;
+  --input-warning-border: #f59e0b;
+  --input-warning-text: #78350f;
+  --input-warning-focus-border: #d97706;
+  --input-error-bg: #fef2f2;
+  --input-error-border: #ef4444;
+  --input-error-text: #991b1b;
+  --input-error-focus-border: #dc2626;
 }
 
 .ion-color-ideaToolbar {
@@ -327,6 +336,15 @@ body.dark {
 
   --notice-quote-bg: rgba(0, 0, 0, 0.35);
   --notice-quote-text: #f8fafc;
+
+  --input-warning-bg: rgba(245, 158, 11, 0.16);
+  --input-warning-border: #f59e0b;
+  --input-warning-text: #fef08a;
+  --input-warning-focus-border: #fbbf24;
+  --input-error-bg: rgba(239, 68, 68, 0.16);
+  --input-error-border: #ef4444;
+  --input-error-text: #fca5a5;
+  --input-error-focus-border: #f87171;
 }
 
 /*

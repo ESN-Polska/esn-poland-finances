@@ -19,6 +19,12 @@
       </div>
 
       <div class="headerRight">
+        <ion-button *ngIf="canAccessPayouts" class="payoutsHeaderBtn" fill="solid" color="primary" (click)="goToPayouts()" [title]="'REQUESTS.PAYOUTS.TITLE' | translate">
+          <ion-icon slot="start" name="card-outline"></ion-icon>
+          {{ 'REQUESTS.PAYOUTS.TITLE' | translate }}
+          <ion-badge color="light" *ngIf="approvedCount > 0" class="headerBadge">{{ approvedCount }}</ion-badge>
+        </ion-button>
+
         <ion-button *ngIf="canExport" class="exportBtn" fill="outline" (click)="exportData()" [disabled]="isLoading" [title]="'REQUESTS.MANAGE_PANEL.EXPORT_CSV' | translate">
           <ion-icon slot="start" name="download-outline"></ion-icon>
           {{ 'REQUESTS.MANAGE_PANEL.EXPORT_CSV' | translate }}

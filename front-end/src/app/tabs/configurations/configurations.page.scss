@@ -705,4 +705,40 @@ body.dark {
   }
 }
 
+.templateEditorItem {
+  --padding-bottom: 8px;
+
+  .templateChipBar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    margin-top: 8px;
+    margin-bottom: 4px;
+    width: 100%;
+
+    .chipLabel {
+      font-size: 0.78rem;
+      color: var(--text-medium);
+      margin-right: 4px;
+    }
+
+    ion-chip {
+      --background: transparent;
+      --color: var(--ion-color-primary, var(--esn-cyan));
+      border-color: var(--ion-color-primary, var(--esn-cyan));
+      font-family: 'JetBrains Mono', 'Fira Code', 'Roboto Mono', monospace;
+      font-size: 0.76rem;
+      height: 24px;
+      cursor: pointer;
+      margin: 2px 0;
+      transition: background-color 0.15s ease;
+
+      &:hover {
+        --background: rgba(var(--ion-color-primary-rgb, 10, 132, 255), 0.1);
+      }
+    }
+  }
+}
+
 

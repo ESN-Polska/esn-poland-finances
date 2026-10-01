@@ -57,6 +57,7 @@ export class RequestViewPage implements OnInit {
       user.isAuditor ||
       user.hasPermission(AppPermission.REQUESTS.VIEW_ALL) ||
       user.hasPermission(AppPermission.REQUESTS.MANAGE) ||
+      user.hasPermission(AppPermission.REQUESTS.PAYOUTS) ||
       user.hasPermission(AppPermission.REQUESTS.PARENT)
     );
   }
@@ -233,6 +234,11 @@ export class RequestViewPage implements OnInit {
   }
 
   public goBack(): void {
+    const lastContext = this.navHistory.getLastNonDetailUrl();
+    if (lastContext && (lastContext === '/t/requests/payouts' || lastContext === '/t/requests/manage/payouts')) {
+      this.navHistory.goBack(lastContext);
+      return;
+    }
     const isSubmitter = this.request ? this.isOwner : !this.canViewAll;
     const fallback = isSubmitter ? '/t/requests' : '/t/requests/manage';
     this.navHistory.goBack(fallback);

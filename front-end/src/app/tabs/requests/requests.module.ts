@@ -12,6 +12,8 @@ import { RequestReviewPage } from './review/request-review.page';
 import { ManageRequestsPage } from './manage/manage-requests.page';
 import { StatusCommentPipe } from './pipes/status-comment.pipe';
 import { MarkPaidModalComponent } from './markPaidModal.component';
+import { PayoutsPage } from './payouts/payouts.page';
+import { BankExportModalComponent } from './payouts/bank-export-modal/bank-export-modal.component';
 
 @NgModule({
   declarations: [
@@ -21,7 +23,9 @@ import { MarkPaidModalComponent } from './markPaidModal.component';
     RequestReviewPage,
     ManageRequestsPage,
     StatusCommentPipe,
-    MarkPaidModalComponent
+    MarkPaidModalComponent,
+    PayoutsPage,
+    BankExportModalComponent
   ],
   exports: [
     StatusCommentPipe

@@ -31,9 +31,16 @@ import {
   UsersOriginDisplayOptions,
   CsvColumnCategory,
   CsvExportColumnConfig,
-  DEFAULT_CSV_EXPORT_SETTINGS
+  DEFAULT_CSV_EXPORT_SETTINGS,
+  BankExportSettings,
+  DEFAULT_BANK_EXPORT_SETTINGS
 } from '@models/configurations.model';
 import { User } from '@models/user.model';
+import {
+  transliteratePolishToAscii,
+  cleanPolishBankAccount,
+  formatBankTransferTitle
+} from '@app/services/requests.service';
 
 @Component({
   selector: 'app-configurations',
@@ -2252,5 +2259,99 @@ export class ConfigurationsPage implements OnInit {
     const sampleRow = enabledColumns.map(col => sampleValues[col.id] || '""').join(delimiter);
     const headerRow = headers.map(h => `"${h.replace(/"/g, '""')}"`).join(delimiter);
     return `${headerRow}\n${sampleRow}`;
+  }
+
+  isBankSenderAccountValid(): boolean {
+    const raw = this.configurations?.bankExportSettings?.senderAccountNumber;
+    if (!raw || !raw.trim()) return true; // empty by default is valid for storage until export
+    const clean = cleanPolishBankAccount(raw);
+    return clean.length === 26;
+  }
+
+  onBankSenderAccountInput(event: any): void {
+    if (!this.canModifyExports() || !this.configurations?.bankExportSettings) return;
+    const val = event?.target?.value || '';
+    const digitsOnly = val.replace(/[^0-9]/g, '').slice(0, 26);
+    this.configurations.bankExportSettings.senderAccountNumber = digitsOnly;
+  }
+
+  insertBankTitlePlaceholder(
+    field: 'reimbursementTitleTemplate' | 'reimbursementMultipleTitleTemplate' | 'invoiceToPayTitleTemplate' | 'advanceTitleTemplate' | 'delegationTitleTemplate',
+    token: string
+  ): void {
+    if (!this.canModifyExports() || !this.configurations?.bankExportSettings) return;
+    const current = this.configurations.bankExportSettings[field] || '';
+    if (!current.includes(token)) {
+      this.configurations.bankExportSettings[field] = current ? `${current} ${token}` : token;
+      this.updateConfigurations();
+    }
+  }
+
+  async resetBankExportSettings(): Promise<void> {
+    if (!this.canModifyExports()) return;
+    const alert = await this.alertCtrl.create({
+      header: this.translate.instant('CONFIGURATIONS.BANK_EXPORT_RESET_DEFAULTS'),
+      message: this.translate.instant('CONFIGURATIONS.BANK_EXPORT_RESET_CONFIRM'),
+      buttons: [
+        { text: this.translate.instant('COMMON.CANCEL'), role: 'cancel' },
+        {
+          text: this.translate.instant('COMMON.RESET'),
+          handler: async () => {
+            if (!this.configurations) return;
+            const updated = new Configurations(this.configurations);
+            updated.bankExportSettings = JSON.parse(JSON.stringify(DEFAULT_BANK_EXPORT_SETTINGS));
+            this.configurations = updated;
+            await this.updateConfigurations(updated);
+          }
+        }
+      ]
+    });
+    await alert.present();
+  }
+
+  get exportBankPreview(): string {
+    const s = this.configurations?.bankExportSettings || DEFAULT_BANK_EXPORT_SETTINGS;
+    const sender = cleanPolishBankAccount(s.senderAccountNumber) || '27105012141000002345678901';
+    const header = `${s.templateVersion || '4120414'}|${s.packageType || '1'}`;
+    const execDate = s.includeExecutionDate ? '30-09-2026' : '';
+    const type = s.transferType || '1';
+
+    // Sample 1: Reimbursement
+    const titleReimburse = transliteratePolishToAscii(
+      formatBankTransferTitle(s.reimbursementTitleTemplate, {
+        invoiceNumber: 'FV/2026/09/01',
+        displayId: '12/2026',
+        requestId: '12/2026',
+        applicantName: 'Jan Kowalski',
+        year: 2026
+      })
+    ).substring(0, 140);
+    const addr1 = s.includeAddress ? transliteratePolishToAscii('ul. Krakowska 10, 00-001 Warszawa').substring(0, 105) : '';
+    const line1 = `1|${sender}|61109010140000071219812874|Jan Kowalski|${addr1}|29,95|${type}|${titleReimburse}|${execDate}||`;
+
+    // Sample 2: Invoice to pay
+    const titlePay = transliteratePolishToAscii(
+      formatBankTransferTitle(s.invoiceToPayTitleTemplate, {
+        invoiceNumber: 'FV/552/2026',
+        displayId: '13/2026',
+        requestId: '13/2026',
+        applicantName: 'Drukarnia ABC Sp. z o.o.',
+        year: 2026
+      })
+    ).substring(0, 140);
+    const line2 = `1|${sender}|12102030000000456789012345|Drukarnia ABC Sp. z o.o.||450,00|${type}|${titlePay}|${execDate}|1234567890|`;
+
+    // Sample 3: Advance
+    const titleAdv = transliteratePolishToAscii(
+      formatBankTransferTitle(s.advanceTitleTemplate, {
+        displayId: '14/2026',
+        requestId: '14/2026',
+        applicantName: 'Anna Nowak',
+        year: 2026
+      })
+    ).substring(0, 140);
+    const line3 = `1|${sender}|98109010140000071219812999|Anna Nowak||1200,00|${type}|${titleAdv}|${execDate}||`;
+
+    return `${header}\r\n${line1}\r\n${line2}\r\n${line3}`;
   }
 }

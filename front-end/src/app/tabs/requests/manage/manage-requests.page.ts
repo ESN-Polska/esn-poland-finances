@@ -81,6 +81,18 @@ export class ManageRequestsPage implements OnInit {
       user.isAuditor ||
       user.hasPermission(AppPermission.REQUESTS.VIEW_ALL) ||
       user.hasPermission(AppPermission.REQUESTS.MANAGE) ||
+      user.hasPermission(AppPermission.REQUESTS.PAYOUTS) ||
+      user.hasPermission(AppPermission.REQUESTS.PARENT)
+    );
+  }
+
+  public get canAccessPayouts(): boolean {
+    const user = this.appService.currentUser;
+    if (!user) return false;
+    return (
+      user.isAdministrator ||
+      user.isManager ||
+      user.hasPermission(AppPermission.REQUESTS.PAYOUTS) ||
       user.hasPermission(AppPermission.REQUESTS.PARENT)
     );
   }
@@ -352,6 +364,10 @@ export class ManageRequestsPage implements OnInit {
 
   public goBackToMyRequests(): void {
     this.router.navigate(['/t/requests']);
+  }
+
+  public goToPayouts(): void {
+    this.router.navigate(['/t/requests/payouts']);
   }
 
   // --- Manager Status Actions ---

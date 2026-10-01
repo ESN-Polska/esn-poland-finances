@@ -1056,6 +1056,245 @@
           <pre class="exportPreviewCode"><code>{{ exportCsvPreview }}</code></pre>
         </div>
       </ion-list>
+
+      <!-- Bank Transfer Export Settings (.txt / Erste Bank Polska) -->
+      <ion-list class="aList ion-margin-top" *ngIf="configurations.bankExportSettings">
+        <ion-list-header>
+          <ion-label>
+            <h2>{{ 'CONFIGURATIONS.BANK_EXPORT_TITLE' | translate }}</h2>
+            <p>{{ 'CONFIGURATIONS.BANK_EXPORT_SUBTITLE' | translate }}</p>
+          </ion-label>
+          <ion-button
+            fill="clear"
+            size="small"
+            color="medium"
+            *ngIf="canModifyExports()"
+            (click)="resetBankExportSettings()"
+          >
+            <ion-icon name="refresh-outline" slot="start"></ion-icon>
+            {{ 'CONFIGURATIONS.BANK_EXPORT_RESET' | translate }}
+          </ion-button>
+        </ion-list-header>
+
+        <!-- Sender Bank Account Number -->
+        <ion-item>
+          <ion-label position="stacked">
+            {{ 'CONFIGURATIONS.BANK_EXPORT_SENDER_ACCOUNT' | translate }}
+          </ion-label>
+          <ion-input
+            type="text"
+            class="font-mono"
+            [disabled]="!canModifyExports()"
+            [(ngModel)]="configurations.bankExportSettings.senderAccountNumber"
+            (ionInput)="onBankSenderAccountInput($event)"
+            (ionBlur)="updateConfigurations()"
+            placeholder="00 0000 0000 0000 0000 0000 0000"
+          ></ion-input>
+          <ion-note slot="helper">{{ 'CONFIGURATIONS.BANK_EXPORT_SENDER_ACCOUNT_I' | translate }}</ion-note>
+          <ion-note slot="error" *ngIf="!isBankSenderAccountValid()">
+            {{ 'CONFIGURATIONS.BANK_EXPORT_INVALID_ACCOUNT' | translate }}
+          </ion-note>
+        </ion-item>
+
+        <!-- Granularity / Grouping -->
+        <ion-item>
+          <ion-label position="stacked">{{ 'CONFIGURATIONS.BANK_EXPORT_GROUPING' | translate }}</ion-label>
+          <ion-select
+            interface="popover"
+            [disabled]="!canModifyExports()"
+            [(ngModel)]="configurations.bankExportSettings.grouping"
+            (ionChange)="updateConfigurations()"
+          >
+            <ion-select-option value="PER_DOCUMENT">{{ 'CONFIGURATIONS.BANK_EXPORT_GROUPING_DOC' | translate }}</ion-select-option>
+            <ion-select-option value="PER_REQUEST">{{ 'CONFIGURATIONS.BANK_EXPORT_GROUPING_REQ' | translate }}</ion-select-option>
+          </ion-select>
+          <ion-note slot="helper">{{ 'CONFIGURATIONS.BANK_EXPORT_GROUPING_I' | translate }}</ion-note>
+        </ion-item>
+
+        <!-- Transfer Type (Elixir) -->
+        <ion-item>
+          <ion-label position="stacked">{{ 'CONFIGURATIONS.BANK_EXPORT_TRANSFER_TYPE' | translate }}</ion-label>
+          <ion-select
+            interface="popover"
+            [disabled]="!canModifyExports()"
+            [(ngModel)]="configurations.bankExportSettings.transferType"
+            (ionChange)="updateConfigurations()"
+          >
+            <ion-select-option value="1">{{ 'CONFIGURATIONS.BANK_EXPORT_TYPE_STANDARD' | translate }} (1 - Standard Elixir)</ion-select-option>
+            <ion-select-option value="0">{{ 'CONFIGURATIONS.BANK_EXPORT_TYPE_TAX' | translate }} (0 - Tax / ZUS / Other)</ion-select-option>
+            <ion-select-option value="6">{{ 'CONFIGURATIONS.BANK_EXPORT_TYPE_EXPRESS' | translate }} (6 - Express Elixir)</ion-select-option>
+            <ion-select-option value="8">{{ 'CONFIGURATIONS.BANK_EXPORT_TYPE_SORBNET' | translate }} (8 - Sorbnet)</ion-select-option>
+          </ion-select>
+        </ion-item>
+
+        <!-- Template Version & Package Type -->
+        <ion-item>
+          <ion-label position="stacked">{{ 'CONFIGURATIONS.BANK_EXPORT_TEMPLATE_VERSION' | translate }}</ion-label>
+          <ion-input
+            type="text"
+            class="font-mono"
+            [disabled]="!canModifyExports()"
+            [(ngModel)]="configurations.bankExportSettings.templateVersion"
+            (ionBlur)="updateConfigurations()"
+            placeholder="4120414"
+          ></ion-input>
+          <ion-note slot="helper">{{ 'CONFIGURATIONS.BANK_EXPORT_TEMPLATE_VERSION_I' | translate }}</ion-note>
+        </ion-item>
+
+        <!-- Include Execution Date Toggle -->
+        <ion-item>
+          <ion-label class="ion-text-wrap">
+            {{ 'CONFIGURATIONS.BANK_EXPORT_INCLUDE_DATE' | translate }}
+            <p>{{ 'CONFIGURATIONS.BANK_EXPORT_INCLUDE_DATE_I' | translate }}</p>
+          </ion-label>
+          <ion-toggle
+            slot="end"
+            [disabled]="!canModifyExports()"
+            [(ngModel)]="configurations.bankExportSettings.includeExecutionDate"
+            (ionChange)="updateConfigurations()"
+          ></ion-toggle>
+        </ion-item>
+
+        <!-- Include Address Toggle -->
+        <ion-item>
+          <ion-label class="ion-text-wrap">
+            {{ 'CONFIGURATIONS.BANK_EXPORT_INCLUDE_ADDRESS' | translate }}
+            <p>{{ 'CONFIGURATIONS.BANK_EXPORT_INCLUDE_ADDRESS_I' | translate }}</p>
+          </ion-label>
+          <ion-toggle
+            slot="end"
+            [disabled]="!canModifyExports()"
+            [(ngModel)]="configurations.bankExportSettings.includeAddress"
+            (ionChange)="updateConfigurations()"
+          ></ion-toggle>
+        </ion-item>
+      </ion-list>
+
+      <!-- Bank Transfer Title Templates -->
+      <ion-list class="aList ion-margin-top" *ngIf="configurations.bankExportSettings">
+        <ion-list-header>
+          <ion-label>
+            <h2>{{ 'CONFIGURATIONS.BANK_EXPORT_TITLES_TITLE' | translate }}</h2>
+            <p>{{ 'CONFIGURATIONS.BANK_EXPORT_TITLES_I' | translate }}</p>
+          </ion-label>
+        </ion-list-header>
+
+        <!-- Invoice Reimbursement (Single Invoice) -->
+        <ion-item class="templateEditorItem">
+          <ion-label position="stacked">
+            {{ 'CONFIGURATIONS.BANK_TITLE_REIMBURSEMENT' | translate }}
+          </ion-label>
+          <ion-input
+            type="text"
+            [disabled]="!canModifyExports()"
+            [(ngModel)]="configurations.bankExportSettings.reimbursementTitleTemplate"
+            (ionBlur)="updateConfigurations()"
+            maxlength="140"
+          ></ion-input>
+          <div class="templateChipBar" *ngIf="canModifyExports()">
+            <span class="chipLabel">{{ 'CONFIGURATIONS.INSERT_PLACEHOLDER' | translate }}:</span>
+            <ion-chip outline size="small" (click)="insertBankTitlePlaceholder('reimbursementTitleTemplate', '{invoiceNumber}')" [innerText]="'{invoiceNumber}'"></ion-chip>
+            <ion-chip outline size="small" (click)="insertBankTitlePlaceholder('reimbursementTitleTemplate', '{displayId}')" [innerText]="'{displayId}'"></ion-chip>
+            <ion-chip outline size="small" (click)="insertBankTitlePlaceholder('reimbursementTitleTemplate', '{applicantName}')" [innerText]="'{applicantName}'"></ion-chip>
+            <ion-chip outline size="small" (click)="insertBankTitlePlaceholder('reimbursementTitleTemplate', '{year}')" [innerText]="'{year}'"></ion-chip>
+          </div>
+        </ion-item>
+
+        <!-- Invoice Reimbursement (Multiple Invoices Aggregated) -->
+        <ion-item class="templateEditorItem" *ngIf="configurations.bankExportSettings.grouping === 'PER_REQUEST'">
+          <ion-label position="stacked">
+            {{ 'CONFIGURATIONS.BANK_TITLE_REIMBURSEMENT_MULTIPLE' | translate }}
+          </ion-label>
+          <ion-input
+            type="text"
+            [disabled]="!canModifyExports()"
+            [(ngModel)]="configurations.bankExportSettings.reimbursementMultipleTitleTemplate"
+            (ionBlur)="updateConfigurations()"
+            maxlength="140"
+          ></ion-input>
+          <div class="templateChipBar" *ngIf="canModifyExports()">
+            <span class="chipLabel">{{ 'CONFIGURATIONS.INSERT_PLACEHOLDER' | translate }}:</span>
+            <ion-chip outline size="small" (click)="insertBankTitlePlaceholder('reimbursementMultipleTitleTemplate', '{invoiceNumbers}')" [innerText]="'{invoiceNumbers}'"></ion-chip>
+            <ion-chip outline size="small" (click)="insertBankTitlePlaceholder('reimbursementMultipleTitleTemplate', '{displayId}')" [innerText]="'{displayId}'"></ion-chip>
+            <ion-chip outline size="small" (click)="insertBankTitlePlaceholder('reimbursementMultipleTitleTemplate', '{year}')" [innerText]="'{year}'"></ion-chip>
+          </div>
+        </ion-item>
+
+        <!-- Invoice to Pay -->
+        <ion-item class="templateEditorItem">
+          <ion-label position="stacked">
+            {{ 'CONFIGURATIONS.BANK_TITLE_INVOICE_TO_PAY' | translate }}
+          </ion-label>
+          <ion-input
+            type="text"
+            [disabled]="!canModifyExports()"
+            [(ngModel)]="configurations.bankExportSettings.invoiceToPayTitleTemplate"
+            (ionBlur)="updateConfigurations()"
+            maxlength="140"
+          ></ion-input>
+          <div class="templateChipBar" *ngIf="canModifyExports()">
+            <span class="chipLabel">{{ 'CONFIGURATIONS.INSERT_PLACEHOLDER' | translate }}:</span>
+            <ion-chip outline size="small" (click)="insertBankTitlePlaceholder('invoiceToPayTitleTemplate', '{invoiceNumber}')" [innerText]="'{invoiceNumber}'"></ion-chip>
+            <ion-chip outline size="small" (click)="insertBankTitlePlaceholder('invoiceToPayTitleTemplate', '{ksefNumber}')" [innerText]="'{ksefNumber}'"></ion-chip>
+            <ion-chip outline size="small" (click)="insertBankTitlePlaceholder('invoiceToPayTitleTemplate', '{displayId}')" [innerText]="'{displayId}'"></ion-chip>
+            <ion-chip outline size="small" (click)="insertBankTitlePlaceholder('invoiceToPayTitleTemplate', '{year}')" [innerText]="'{year}'"></ion-chip>
+          </div>
+        </ion-item>
+
+        <!-- Advance Payment -->
+        <ion-item class="templateEditorItem">
+          <ion-label position="stacked">
+            {{ 'CONFIGURATIONS.BANK_TITLE_ADVANCE' | translate }}
+          </ion-label>
+          <ion-input
+            type="text"
+            [disabled]="!canModifyExports()"
+            [(ngModel)]="configurations.bankExportSettings.advanceTitleTemplate"
+            (ionBlur)="updateConfigurations()"
+            maxlength="140"
+          ></ion-input>
+          <div class="templateChipBar" *ngIf="canModifyExports()">
+            <span class="chipLabel">{{ 'CONFIGURATIONS.INSERT_PLACEHOLDER' | translate }}:</span>
+            <ion-chip outline size="small" (click)="insertBankTitlePlaceholder('advanceTitleTemplate', '{year}')" [innerText]="'{year}'"></ion-chip>
+            <ion-chip outline size="small" (click)="insertBankTitlePlaceholder('advanceTitleTemplate', '{displayId}')" [innerText]="'{displayId}'"></ion-chip>
+            <ion-chip outline size="small" (click)="insertBankTitlePlaceholder('advanceTitleTemplate', '{applicantName}')" [innerText]="'{applicantName}'"></ion-chip>
+          </div>
+        </ion-item>
+
+        <!-- Delegation Settlement -->
+        <ion-item class="templateEditorItem">
+          <ion-label position="stacked">
+            {{ 'CONFIGURATIONS.BANK_TITLE_DELEGATION' | translate }}
+          </ion-label>
+          <ion-input
+            type="text"
+            [disabled]="!canModifyExports()"
+            [(ngModel)]="configurations.bankExportSettings.delegationTitleTemplate"
+            (ionBlur)="updateConfigurations()"
+            maxlength="140"
+          ></ion-input>
+          <div class="templateChipBar" *ngIf="canModifyExports()">
+            <span class="chipLabel">{{ 'CONFIGURATIONS.INSERT_PLACEHOLDER' | translate }}:</span>
+            <ion-chip outline size="small" (click)="insertBankTitlePlaceholder('delegationTitleTemplate', '{year}')" [innerText]="'{year}'"></ion-chip>
+            <ion-chip outline size="small" (click)="insertBankTitlePlaceholder('delegationTitleTemplate', '{displayId}')" [innerText]="'{displayId}'"></ion-chip>
+            <ion-chip outline size="small" (click)="insertBankTitlePlaceholder('delegationTitleTemplate', '{applicantName}')" [innerText]="'{applicantName}'"></ion-chip>
+          </div>
+        </ion-item>
+      </ion-list>
+
+      <!-- Live Erste Bank .txt Preview -->
+      <ion-list class="aList ion-margin-top" *ngIf="configurations.bankExportSettings">
+        <ion-list-header>
+          <ion-label>
+            <h2>{{ 'CONFIGURATIONS.BANK_EXPORT_PREVIEW_TITLE' | translate }}</h2>
+            <p>{{ 'CONFIGURATIONS.BANK_EXPORT_PREVIEW_I' | translate }}</p>
+          </ion-label>
+        </ion-list-header>
+
+        <div class="exportPreviewContainer ion-padding">
+          <pre class="exportPreviewCode"><code>{{ exportBankPreview }}</code></pre>
+        </div>
+      </ion-list>
     </div>
 
     <!-- SUBTAB: OPTIONS -->

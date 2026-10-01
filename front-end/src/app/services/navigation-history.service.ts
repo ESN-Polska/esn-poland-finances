@@ -65,7 +65,12 @@ export class NavigationHistoryService {
         this.lastContextUrl = url;
         // When user explicitly visits the primary request list pages, reset the request flow stack
         const clean = this.normalizeUrl(url).split('?')[0].split('#')[0];
-        if (clean === '/t/requests' || clean === '/t/requests/manage') {
+        if (
+          clean === '/t/requests' ||
+          clean === '/t/requests/manage' ||
+          clean === '/t/requests/payouts' ||
+          clean === '/t/requests/manage/payouts'
+        ) {
           this.requestStack = [];
         }
       }
@@ -96,10 +101,12 @@ export class NavigationHistoryService {
     }
 
     // Valid entry points: /t/requests (My Requests), /t/requests/manage (Manage Requests),
-    // /t/home (Dashboard), /t/configurations (Configurations)
+    // /t/requests/payouts (Payouts), /t/home (Dashboard), /t/configurations (Configurations)
     return (
       cleanUrl === '/t/requests' ||
       cleanUrl === '/t/requests/manage' ||
+      cleanUrl === '/t/requests/payouts' ||
+      cleanUrl === '/t/requests/manage/payouts' ||
       cleanUrl.startsWith('/t/home') ||
       cleanUrl.startsWith('/t/configurations')
     );
@@ -166,6 +173,11 @@ export class NavigationHistoryService {
         this.router.navigateByUrl(targetUrl);
         return;
       }
+    }
+
+    if (this.lastContextUrl && this.normalizeUrl(this.lastContextUrl) !== this.normalizeUrl(this.router.url)) {
+      this.router.navigateByUrl(this.lastContextUrl);
+      return;
     }
 
     this.requestStack = [];
