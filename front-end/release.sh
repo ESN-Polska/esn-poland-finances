@@ -54,7 +54,7 @@ aws s3 sync ./www s3://${BUCKET} --profile ${AWS_PROFILE} --delete --exclude ".w
 # invalidate old common files from the CloudFront distribution
 echo -e "${C}Cleaning...${NC}"
 aws cloudfront create-invalidation --profile ${AWS_PROFILE} --distribution-id ${DISTRIBUTION} \
-  --paths "/index.html" "/assets/i18n*" \
+  --paths "/*" \
   1>/dev/null
 
 echo -e "${C}Done!${NC}"

@@ -381,12 +381,18 @@ export class RequestsService {
     const targetStatus = updates.status || existing.status;
     const nowTs = new Date();
 
+    const isAdvanceOrDelegation =
+      existing.requestType === 'ADVANCE_PAYMENT' ||
+      existing.requestType === 'DELEGATION_SETTLEMENT';
+
     const isDocPayoutSettlingRequest =
+      !isAdvanceOrDelegation &&
       existing.status === 'APPROVED' &&
       targetStatus === 'PAID' &&
       Array.isArray(updates.documents) &&
       updates.documents.length > 0 &&
-      Boolean(updates.historyNote);
+      Boolean(updates.historyNote) &&
+      updates.historyNote !== 'REQUESTS.HISTORY_COMMENTS.PAYOUT_COMPLETED';
 
     const hasExplicitConfirmations = Array.isArray(updates.paymentConfirmationAttachments);
     const confirmations = hasExplicitConfirmations
@@ -471,9 +477,44 @@ export class RequestsService {
       : (paymentConfirmationAttachment ? [paymentConfirmationAttachment] : []);
     const primaryConfirmation = confirmations[0] || paymentConfirmationAttachment;
 
+    // If paymentConfirmationAttachments array was explicitly provided (e.g. managed in modal),
+    // respect the user's full list (including additions and removals). Otherwise merge.
+    let finalConfirmations: AttachmentFile[];
+    if (Array.isArray(paymentConfirmationAttachments)) {
+      finalConfirmations = paymentConfirmationAttachments;
+    } else if (paymentConfirmationAttachment) {
+      const existingReqConfirmations: AttachmentFile[] = Array.isArray(request.paymentConfirmationAttachments)
+        ? [...request.paymentConfirmationAttachments]
+        : (request.paymentConfirmationAttachment ? [request.paymentConfirmationAttachment] : []);
+      if (!existingReqConfirmations.some(x => x.fileId === paymentConfirmationAttachment.fileId || (x.s3Key && x.s3Key === paymentConfirmationAttachment.s3Key))) {
+        existingReqConfirmations.push(paymentConfirmationAttachment);
+      }
+      finalConfirmations = existingReqConfirmations;
+    } else {
+      finalConfirmations = Array.isArray(request.paymentConfirmationAttachments)
+        ? [...request.paymentConfirmationAttachments]
+        : (request.paymentConfirmationAttachment ? [request.paymentConfirmationAttachment] : []);
+    }
+
+    const reqType = request?.requestType || transaction?.requestType;
+    const isAdvanceOrDelegation =
+      reqType === 'ADVANCE_PAYMENT' ||
+      reqType === 'DELEGATION_SETTLEMENT';
+
+    if (isAdvanceOrDelegation || allDocs.length === 0) {
+      return this.updateRequestStatus(
+        request.requestId,
+        'PAID',
+        comment || 'REQUESTS.HISTORY_COMMENTS.PAYOUT_COMPLETED',
+        undefined,
+        finalConfirmations[0] || undefined,
+        finalConfirmations
+      );
+    }
+
     const paidDocs: any[] = [];
 
-    if (mode === 'ALL' || !transaction || allDocs.length === 0) {
+    if (mode === 'ALL' || !transaction) {
       for (const d of allDocs) {
         if (!d.payoutPaidOn) {
           paidDocs.push(d);
@@ -533,25 +574,6 @@ export class RequestsService {
     const allPaid = allDocs.length > 0 && allDocs.every((d: any) => Boolean(d.payoutPaidOn));
     const targetStatus: RequestStatus = allPaid ? 'PAID' : 'APPROVED';
 
-    // If paymentConfirmationAttachments array was explicitly provided (e.g. managed in modal),
-    // respect the user's full list (including additions and removals). Otherwise merge.
-    let finalConfirmations: AttachmentFile[];
-    if (Array.isArray(paymentConfirmationAttachments)) {
-      finalConfirmations = paymentConfirmationAttachments;
-    } else if (paymentConfirmationAttachment) {
-      const existingReqConfirmations: AttachmentFile[] = Array.isArray(request.paymentConfirmationAttachments)
-        ? [...request.paymentConfirmationAttachments]
-        : (request.paymentConfirmationAttachment ? [request.paymentConfirmationAttachment] : []);
-      if (!existingReqConfirmations.some(x => x.fileId === paymentConfirmationAttachment.fileId || (x.s3Key && x.s3Key === paymentConfirmationAttachment.s3Key))) {
-        existingReqConfirmations.push(paymentConfirmationAttachment);
-      }
-      finalConfirmations = existingReqConfirmations;
-    } else {
-      finalConfirmations = Array.isArray(request.paymentConfirmationAttachments)
-        ? [...request.paymentConfirmationAttachments]
-        : (request.paymentConfirmationAttachment ? [request.paymentConfirmationAttachment] : []);
-    }
-
     // Determine status history comment: "{invoice(s) number(s)} marked as paid"
     const invoiceNums = paidDocs
       .map((d: any) => d.invoiceNumber?.trim())
@@ -568,8 +590,17 @@ export class RequestsService {
       invoicesStr = 'Document';
     }
 
-    const defaultComment = `${invoicesStr} marked as paid`;
-    const finalComment = comment ? `${defaultComment} (${comment})` : defaultComment;
+    let defaultComment: string;
+    if (allPaid && invoiceNums.length === 0) {
+      defaultComment = 'REQUESTS.HISTORY_COMMENTS.PAYOUT_COMPLETED';
+    } else {
+      defaultComment = `${invoicesStr} marked as paid`;
+    }
+
+    const finalComment =
+      defaultComment === 'REQUESTS.HISTORY_COMMENTS.PAYOUT_COMPLETED'
+        ? (comment || defaultComment)
+        : (comment ? `${defaultComment} (${comment})` : defaultComment);
 
     return this.updateRequestStatusWithUpdates(request.requestId, {
       status: targetStatus,

@@ -334,14 +334,30 @@ export class PayoutsPage implements OnInit, OnDestroy {
     const { data, role } = await modal.onWillDismiss();
     if (role === 'confirm' && data) {
       try {
-        await this.requestsService.markPayoutItemPaid(
-          req,
-          data.transaction || tx,
-          data.mode || 'SINGLE',
-          data.comment,
-          data.paymentConfirmationAttachment,
-          data.paymentConfirmationAttachments
-        );
+        const reqType = req?.requestType || tx?.requestType || (txOrReq as any)?.requestType;
+        const isAdvanceOrDelegation =
+          reqType === 'ADVANCE_PAYMENT' ||
+          reqType === 'DELEGATION_SETTLEMENT';
+
+        if (isAdvanceOrDelegation) {
+          await this.requestsService.updateRequestStatus(
+            req.requestId,
+            'PAID',
+            data.comment || 'REQUESTS.HISTORY_COMMENTS.PAYOUT_COMPLETED',
+            undefined,
+            data.paymentConfirmationAttachment,
+            data.paymentConfirmationAttachments
+          );
+        } else {
+          await this.requestsService.markPayoutItemPaid(
+            req,
+            data.transaction || tx,
+            data.mode || 'SINGLE',
+            data.comment,
+            data.paymentConfirmationAttachment,
+            data.paymentConfirmationAttachments
+          );
+        }
         await this.loadData();
         this.showToast('REQUESTS.MANAGE_PANEL.STATUS_UPDATED', 'success');
       } catch (err: any) {
