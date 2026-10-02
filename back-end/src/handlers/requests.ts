@@ -280,8 +280,8 @@ class RequestsHandler extends ResourceController {
     const updates = this.body || {};
     const updatedStatus = updates.status || existing.status;
 
-    // Permission check: either owner modifying an editable request, a manager, or payout officer marking as paid
-    const isAuthorizedPayout = canPayouts && updatedStatus === 'PAID';
+    // Permission check: either owner modifying an editable request, a manager, or payout officer marking as paid / partial payout
+    const isAuthorizedPayout = canPayouts && (updatedStatus === 'PAID' || (existing.status === 'APPROVED' && updates.documents));
     if (!isOwner && !canManage && !isAuthorizedPayout) {
       throw new HandledError('Access denied');
     }
@@ -350,21 +350,56 @@ class RequestsHandler extends ResourceController {
       updates.country = country;
     }
 
+    // Auto-transition to PAID if all documents are paid
+    let finalStatus = updatedStatus;
+    const isApprovedWithDocs = existing.status === 'APPROVED' && Array.isArray(updates.documents) && updates.documents.length > 0;
+    const isLastDocumentPaid = isApprovedWithDocs && updates.documents.every((d: any) => Boolean(d.payoutPaidOn));
+    if (isLastDocumentPaid) {
+      finalStatus = 'PAID';
+    }
+
+    const skipStatusHistory = Boolean(updates.skipStatusHistory);
+    delete updates.skipStatusHistory;
+
     const defaultComment =
       isTransitioningFromDraftToSubmitted
         ? 'Initial submission'
         : updatedStatus === 'SUBMITTED'
         ? 'Resubmitted after corrections'
-        : canManage && existing.status !== updatedStatus
-        ? `Status changed to ${updatedStatus}`
+        : canManage && existing.status !== finalStatus
+        ? `Status changed to ${finalStatus}`
         : 'Updated';
 
-    const newHistoryEntry = {
-      status: updatedStatus,
-      timestamp: new Date().toISOString(),
-      updatedBy: user.getDisplayName() || user.userId,
-      comment: updates.historyNote || defaultComment
-    };
+    const shouldAddHistory = !skipStatusHistory && (existing.status !== finalStatus || Boolean(updates.historyNote));
+
+    const now = new Date();
+    const newHistoryEntries: any[] = [];
+
+    if (shouldAddHistory) {
+      if (existing.status === 'APPROVED' && finalStatus === 'PAID' && isApprovedWithDocs && updates.historyNote) {
+        // Record the document(s) marked as paid under APPROVED status
+        newHistoryEntries.push({
+          status: 'APPROVED',
+          timestamp: now.toISOString(),
+          updatedBy: user.getDisplayName() || user.userId,
+          comment: updates.historyNote
+        });
+        // Follow up with request transition to PAID (Payout completed)
+        newHistoryEntries.push({
+          status: 'PAID',
+          timestamp: new Date(now.getTime() + 100).toISOString(),
+          updatedBy: user.getDisplayName() || user.userId,
+          comment: 'REQUESTS.HISTORY_COMMENTS.PAYOUT_COMPLETED'
+        });
+      } else {
+        newHistoryEntries.push({
+          status: finalStatus,
+          timestamp: now.toISOString(),
+          updatedBy: user.getDisplayName() || user.userId,
+          comment: updates.historyNote || defaultComment
+        });
+      }
+    }
 
     const updated = new FinancialRequest({
       ...existing,
@@ -373,10 +408,10 @@ class RequestsHandler extends ResourceController {
       year: targetYear,
       sequenceNumber: targetSeqNumber,
       userId: existing.userId,
-      status: updatedStatus,
+      status: finalStatus,
       adminRemarks: typeof updates.adminRemarks !== 'undefined' ? updates.adminRemarks : existing.adminRemarks,
-      statusHistory: [...(existing.statusHistory || []), newHistoryEntry],
-      updatedAt: new Date().toISOString()
+      statusHistory: [...(existing.statusHistory || []), ...newHistoryEntries],
+      updatedAt: now.toISOString()
     });
 
     if (updatedStatus === 'SUBMITTED' && !updated.submittedAt) {
@@ -402,12 +437,13 @@ class RequestsHandler extends ResourceController {
       }
     }
 
-    // Send email notification on status transition or reviewer comments
-    if (existing.status !== updatedStatus || updates.historyNote) {
+    // Send email notification on status transition
+    if (existing.status !== finalStatus) {
+      const emailComment = newHistoryEntries[newHistoryEntries.length - 1]?.comment || updates.historyNote || defaultComment;
       await this.sendRequestNotificationEmail(
         updated,
-        updatedStatus,
-        updates.historyNote || newHistoryEntry.comment
+        finalStatus,
+        emailComment
       );
     }
 
@@ -582,6 +618,13 @@ class RequestsHandler extends ResourceController {
         if (doc.proofOfPaymentAttachment?.s3Key) {
           doc.proofOfPaymentAttachment.url = (await s3.signedURLGet(S3_BUCKET_MEDIA, doc.proofOfPaymentAttachment.s3Key)).url;
         }
+        if (Array.isArray(doc.proofOfPaymentAttachments)) {
+          for (const att of doc.proofOfPaymentAttachments) {
+            if (att.s3Key) {
+              att.url = (await s3.signedURLGet(S3_BUCKET_MEDIA, att.s3Key)).url;
+            }
+          }
+        }
       }
     }
     if (request.delegationFormAttachment?.s3Key) {
@@ -596,6 +639,13 @@ class RequestsHandler extends ResourceController {
     }
     if (request.paymentConfirmationAttachment?.s3Key) {
       request.paymentConfirmationAttachment.url = (await s3.signedURLGet(S3_BUCKET_MEDIA, request.paymentConfirmationAttachment.s3Key)).url;
+    }
+    if (Array.isArray(request.paymentConfirmationAttachments)) {
+      for (const att of request.paymentConfirmationAttachments) {
+        if (att.s3Key) {
+          att.url = (await s3.signedURLGet(S3_BUCKET_MEDIA, att.s3Key)).url;
+        }
+      }
     }
   }
 
@@ -740,7 +790,7 @@ class RequestsHandler extends ResourceController {
         portalUrl: BASE_URL,
         message: emailMessage,
         status: targetStatus,
-        hasPaymentConfirmation: !!request.paymentConfirmationAttachment,
+        hasPaymentConfirmation: (Array.isArray(request.paymentConfirmationAttachments) && request.paymentConfirmationAttachments.length > 0) || !!request.paymentConfirmationAttachment,
         appTitle,
         appOrganisation,
         appLogo
@@ -749,26 +799,36 @@ class RequestsHandler extends ResourceController {
       const senderName = formatSenderName(appTitle);
       const replyTo = configurations.supportEmail?.trim() ? [configurations.supportEmail.trim()] : undefined;
 
-      // Handle payment confirmation attachment for PAID status
+      // Handle payment confirmation attachments for PAID status
       let emailAttachments: any[] | undefined = undefined;
-      if (targetStatus === 'PAID' && request.paymentConfirmationAttachment?.s3Key) {
-        try {
-          const s3Obj = await s3.getObject({
-            bucket: S3_BUCKET_MEDIA,
-            key: request.paymentConfirmationAttachment.s3Key
-          });
-          if (s3Obj?.Body) {
-            const fileBuffer = Buffer.from(await (s3Obj.Body as any).transformToByteArray());
-            emailAttachments = [
-              {
-                filename: request.paymentConfirmationAttachment.fileName || 'payment-confirmation.pdf',
-                content: fileBuffer,
-                contentType: request.paymentConfirmationAttachment.contentType || 'application/pdf'
+      const confirmations: any[] = Array.isArray(request.paymentConfirmationAttachments) && request.paymentConfirmationAttachments.length > 0
+        ? request.paymentConfirmationAttachments
+        : (request.paymentConfirmationAttachment ? [request.paymentConfirmationAttachment] : []);
+
+      if (targetStatus === 'PAID' && confirmations.length > 0) {
+        const attList: any[] = [];
+        for (const att of confirmations) {
+          if (att.s3Key) {
+            try {
+              const s3Obj = await s3.getObject({
+                bucket: S3_BUCKET_MEDIA,
+                key: att.s3Key
+              });
+              if (s3Obj?.Body) {
+                const fileBuffer = Buffer.from(await (s3Obj.Body as any).transformToByteArray());
+                attList.push({
+                  filename: att.fileName || 'payment-confirmation.pdf',
+                  content: fileBuffer,
+                  contentType: att.contentType || 'application/pdf'
+                });
               }
-            ];
+            } catch (attErr) {
+              this.logger.warn('Failed to retrieve payment confirmation attachment from S3 for email', { err: attErr, key: att.s3Key });
+            }
           }
-        } catch (attErr) {
-          this.logger.warn('Failed to retrieve payment confirmation attachment from S3 for email', { err: attErr });
+        }
+        if (attList.length > 0) {
+          emailAttachments = attList;
         }
       }
 

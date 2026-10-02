@@ -39,6 +39,7 @@ export interface InvoiceDocumentItem {
   issuedOn: string;
   paymentDeadline?: string;
   paidOn?: string;
+  payoutPaidOn?: string;
   bankAccountDetails?: string;
   currency: Currency;
   grossAmount: number;
@@ -46,6 +47,7 @@ export interface InvoiceDocumentItem {
   explanation?: string;
   attachment?: AttachmentFile;
   proofOfPaymentAttachment?: AttachmentFile;
+  proofOfPaymentAttachments?: AttachmentFile[];
   
   hasDifferentSaleDate?: boolean;
   saleDate?: string;
@@ -107,6 +109,7 @@ export class FinancialRequest extends Resource {
 
   generalExplanation?: string;
   paymentConfirmationAttachment?: AttachmentFile;
+  paymentConfirmationAttachments?: AttachmentFile[];
 
   // Payout Bank Details (PLN / Primary)
   accountHolderName: string;
@@ -189,6 +192,16 @@ export class FinancialRequest extends Resource {
     this.ticketAttachments = Array.isArray(x.ticketAttachments) ? x.ticketAttachments : [];
     this.otherReceipts = Array.isArray(x.otherReceipts) ? x.otherReceipts : [];
     this.paymentConfirmationAttachment = x.paymentConfirmationAttachment || undefined;
+    if (Array.isArray(x.paymentConfirmationAttachments)) {
+      this.paymentConfirmationAttachments = x.paymentConfirmationAttachments;
+    } else if (this.paymentConfirmationAttachment) {
+      this.paymentConfirmationAttachments = [this.paymentConfirmationAttachment];
+    } else {
+      this.paymentConfirmationAttachments = [];
+    }
+    if (!this.paymentConfirmationAttachment && this.paymentConfirmationAttachments.length > 0) {
+      this.paymentConfirmationAttachment = this.paymentConfirmationAttachments[0];
+    }
 
     this.generalExplanation = this.clean(x.generalExplanation, String);
 

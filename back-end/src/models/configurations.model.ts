@@ -345,7 +345,7 @@ export function cleanCsvExportSettings(raw: any): CsvExportSettings {
   };
 }
 
-export type BankExportElixirType = '0' | '1' | '6' | '8';
+export type BankExportElixirType = '1' | '6' | '8';
 export type BankExportGrouping = 'PER_DOCUMENT' | 'PER_REQUEST';
 
 export interface BankExportSettings {
@@ -361,6 +361,8 @@ export interface BankExportSettings {
   invoiceToPayTitleTemplate: string;
   advanceTitleTemplate: string;
   delegationTitleTemplate: string;
+  detectUnresolvedPlaceholders?: boolean;
+  unresolvedPlaceholderTag?: string;
 }
 
 export const DEFAULT_BANK_EXPORT_SETTINGS: BankExportSettings = {
@@ -375,14 +377,16 @@ export const DEFAULT_BANK_EXPORT_SETTINGS: BankExportSettings = {
   reimbursementMultipleTitleTemplate: 'Zwrot za opłacone faktury numer {invoiceNumbers}',
   invoiceToPayTitleTemplate: 'Faktura numer {invoiceNumber}',
   advanceTitleTemplate: 'Zaliczka numer XX/{year}',
-  delegationTitleTemplate: 'Delegacja numer XX/{year}'
+  delegationTitleTemplate: 'Delegacja numer XX/{year}',
+  detectUnresolvedPlaceholders: true,
+  unresolvedPlaceholderTag: 'XX'
 };
 
 export function cleanBankExportSettings(raw: any): BankExportSettings {
   if (!raw || typeof raw !== 'object') {
     return JSON.parse(JSON.stringify(DEFAULT_BANK_EXPORT_SETTINGS));
   }
-  const validTransferTypes: BankExportElixirType[] = ['0', '1', '6', '8'];
+  const validTransferTypes: BankExportElixirType[] = ['1', '6', '8'];
   const validGroupings: BankExportGrouping[] = ['PER_DOCUMENT', 'PER_REQUEST'];
 
   return {
@@ -397,7 +401,9 @@ export function cleanBankExportSettings(raw: any): BankExportSettings {
     reimbursementMultipleTitleTemplate: typeof raw.reimbursementMultipleTitleTemplate === 'string' && raw.reimbursementMultipleTitleTemplate.trim() ? raw.reimbursementMultipleTitleTemplate : DEFAULT_BANK_EXPORT_SETTINGS.reimbursementMultipleTitleTemplate,
     invoiceToPayTitleTemplate: typeof raw.invoiceToPayTitleTemplate === 'string' && raw.invoiceToPayTitleTemplate.trim() ? raw.invoiceToPayTitleTemplate : DEFAULT_BANK_EXPORT_SETTINGS.invoiceToPayTitleTemplate,
     advanceTitleTemplate: typeof raw.advanceTitleTemplate === 'string' && raw.advanceTitleTemplate.trim() ? raw.advanceTitleTemplate : DEFAULT_BANK_EXPORT_SETTINGS.advanceTitleTemplate,
-    delegationTitleTemplate: typeof raw.delegationTitleTemplate === 'string' && raw.delegationTitleTemplate.trim() ? raw.delegationTitleTemplate : DEFAULT_BANK_EXPORT_SETTINGS.delegationTitleTemplate
+    delegationTitleTemplate: typeof raw.delegationTitleTemplate === 'string' && raw.delegationTitleTemplate.trim() ? raw.delegationTitleTemplate : DEFAULT_BANK_EXPORT_SETTINGS.delegationTitleTemplate,
+    detectUnresolvedPlaceholders: raw.detectUnresolvedPlaceholders !== undefined ? Boolean(raw.detectUnresolvedPlaceholders) : DEFAULT_BANK_EXPORT_SETTINGS.detectUnresolvedPlaceholders,
+    unresolvedPlaceholderTag: typeof raw.unresolvedPlaceholderTag === 'string' ? raw.unresolvedPlaceholderTag.trim() : DEFAULT_BANK_EXPORT_SETTINGS.unresolvedPlaceholderTag
   };
 }
 
