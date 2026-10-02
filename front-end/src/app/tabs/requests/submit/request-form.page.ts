@@ -461,6 +461,11 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy {
       explanation: ''
     };
 
+    if (isReimbursement && defaultCurrency !== 'PLN' && defaultCurrency !== 'EUR') {
+      newItem.originalCurrency = defaultCurrency;
+      this.onForeignCurrencyAmountOrDateChange(newItem);
+    }
+
     this.request.documents.push(newItem);
     this.recalculateTotals();
   }
@@ -566,14 +571,18 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy {
 
   public onCurrencyChange(doc?: InvoiceDocumentItem): void {
     if (doc) {
-      if (doc.currency !== 'PLN' && doc.currency !== 'EUR' && (doc.currency as string) !== (doc.originalCurrency as string)) {
+      if (doc.currency !== 'PLN' && doc.currency !== 'EUR') {
         if (!doc.originalCurrency && doc.grossAmount !== undefined) {
           // Switching from PLN/EUR to Foreign: transfer the typed amount
           doc.originalAmount = doc.grossAmount;
           doc.originalVatAmount = doc.vatAmount;
         }
-        doc.originalCurrency = doc.currency;
-        this.onForeignCurrencyAmountOrDateChange(doc);
+        if (doc.originalCurrency !== doc.currency || !doc.exchangeRate) {
+          doc.originalCurrency = doc.currency;
+          doc.exchangeRate = undefined;
+          doc.exchangeDate = undefined;
+          this.onForeignCurrencyAmountOrDateChange(doc);
+        }
       } else if (doc.currency === 'PLN' || doc.currency === 'EUR') {
         if (doc.originalCurrency && doc.originalAmount !== undefined) {
           // Switching from Foreign to PLN/EUR: transfer the typed amount
@@ -606,17 +615,13 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy {
 
   public onForeignAmountChange(doc: InvoiceDocumentItem): void {
     if (doc.exchangeRate) {
-      if (doc.originalAmount !== undefined && doc.originalAmount !== null) {
-        doc.grossAmount = Math.round((Number(doc.originalAmount) * doc.exchangeRate) * 100) / 100;
-      } else {
-        doc.grossAmount = undefined as any;
-      }
+      const originalAmount = Number(doc.originalAmount) || 0;
+      doc.grossAmount = Math.round((originalAmount * doc.exchangeRate) * 100) / 100;
 
-      if (doc.originalVatAmount !== undefined && doc.originalVatAmount !== null) {
-        doc.vatAmount = Math.round((Number(doc.originalVatAmount) * doc.exchangeRate) * 100) / 100;
-      } else {
-        doc.vatAmount = 0;
-      }
+      const originalVat = Number(doc.originalVatAmount) || 0;
+      doc.vatAmount = Math.round((originalVat * doc.exchangeRate) * 100) / 100;
+    } else {
+      this.onForeignCurrencyAmountOrDateChange(doc);
     }
     this.recalculateTotals();
   }
@@ -643,7 +648,7 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy {
     doc.originalCurrency = currencyToUse;
 
     const baseDate = doc.hasDifferentSaleDate ? doc.saleDate : doc.issuedOn;
-    if (!baseDate || doc.originalAmount === undefined || doc.originalAmount === null) return;
+    if (!baseDate) return;
 
     let dateObj = new Date(baseDate);
     dateObj.setDate(dateObj.getDate() - 1);
@@ -662,12 +667,10 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy {
           if (data && data.rates && data.rates[0]) {
             doc.exchangeRate = data.rates[0].mid;
             doc.exchangeDate = dateStr;
-            doc.grossAmount = Math.round((Number(doc.originalAmount) * doc.exchangeRate) * 100) / 100;
-            if (doc.originalVatAmount !== undefined && doc.originalVatAmount !== null) {
-              doc.vatAmount = Math.round((Number(doc.originalVatAmount) * doc.exchangeRate) * 100) / 100;
-            } else {
-              doc.vatAmount = 0; // Default VAT to 0 if not provided yet, recalculateTotals will use it
-            }
+            const originalGross = Number(doc.originalAmount) || 0;
+            const originalVat = Number(doc.originalVatAmount) || 0;
+            doc.grossAmount = Math.round((originalGross * doc.exchangeRate) * 100) / 100;
+            doc.vatAmount = Math.round((originalVat * doc.exchangeRate) * 100) / 100;
             foundRate = true;
           }
         }
