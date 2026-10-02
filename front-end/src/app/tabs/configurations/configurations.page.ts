@@ -94,6 +94,7 @@ export class ConfigurationsPage implements OnInit {
     'REMARKS'
   ];
   exportHeaderLangTab: 'en' | 'pl' = 'en';
+  exportSubtab: 'REQUESTS' | 'BANK' = 'REQUESTS';
 
   constructor(
     private modalCtrl: ModalController,
@@ -159,6 +160,10 @@ export class ConfigurationsPage implements OnInit {
     this.route.queryParams.subscribe(params => {
       if (this.app.isImpersonating) return;
       const targetSection = (params?.['section'] || '').toUpperCase() as ConfigurationPageSection;
+      const targetSubtab = (params?.['subtab'] || '').toUpperCase();
+      if (targetSubtab === 'BANK' || targetSubtab === 'REQUESTS') {
+        this.exportSubtab = targetSubtab;
+      }
       if (
         targetSection &&
         this.pageSections.includes(targetSection) &&

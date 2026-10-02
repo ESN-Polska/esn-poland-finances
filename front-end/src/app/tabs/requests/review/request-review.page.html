@@ -205,7 +205,7 @@
       <div class="details-main">
 
         <!-- Payment Confirmation Section (when available) -->
-        <div class="section-card payment-confirmation-card" *ngIf="request.paymentConfirmationAttachment">
+        <div class="section-card payment-confirmation-card" *ngIf="getPaymentConfirmations().length > 0">
           <div class="section-header">
             <div class="header-icon-title">
               <ion-icon name="checkmark-done-circle-outline" style="color: #10b981; font-size: 1.4rem;"></ion-icon>
@@ -215,14 +215,16 @@
           <p style="margin: 4px 0 12px 0; font-size: 0.88rem; color: var(--text-medium, #64748b);">
             {{ 'REQUESTS.PAYMENT_CONFIRMATION_ATTACHED' | translate }}
           </p>
-          <a class="attachment-item mt-1" (click)="openAttachment(request.paymentConfirmationAttachment)" style="text-decoration: none; color: inherit; cursor: pointer;">
-            <ion-icon name="document-text-outline" style="color: #10b981; font-size: 1.5rem;"></ion-icon>
-            <div class="att-meta">
-              <span class="att-name">{{ request.paymentConfirmationAttachment.fileName }}</span>
-              <span class="att-sub">{{ (request.paymentConfirmationAttachment.fileSize / 1024) | number:'1.0-1' }} KB</span>
-            </div>
-            <ion-icon name="download-outline" slot="end" style="margin-left: auto; font-size: 1.25rem; color: var(--text-medium, #64748b);"></ion-icon>
-          </a>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <a class="attachment-item mt-1" *ngFor="let att of getPaymentConfirmations()" (click)="openAttachment(att)" style="text-decoration: none; color: inherit; cursor: pointer;">
+              <ion-icon name="document-text-outline" style="color: #10b981; font-size: 1.5rem;"></ion-icon>
+              <div class="att-meta">
+                <span class="att-name">{{ att.fileName }}</span>
+                <span class="att-sub">{{ (att.fileSize / 1024) | number:'1.0-1' }} KB</span>
+              </div>
+              <ion-icon name="download-outline" slot="end" style="margin-left: auto; font-size: 1.25rem; color: var(--text-medium, #64748b);"></ion-icon>
+            </a>
+          </div>
         </div>
 
         <!-- General Info Section -->
@@ -270,6 +272,9 @@
                   <span class="doc-idx">{{ 'REQUESTS.DOCUMENT_ITEM' | translate }} #{{ idx + 1 }}</span>
                 </div>
                 <div style="display: flex; gap: 0.5rem; align-items: center;">
+                  <span class="paid-badge" *ngIf="doc.payoutPaidOn || request.status === 'PAID'" style="background-color: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 0.8rem; padding: 2px 8px; border-radius: 4px; font-weight: 600;">
+                    ✓ {{ 'REQUESTS.STATUSES.DOCUMENT_PAID' | translate }}
+                  </span>
                   <span class="doc-gross-badge" *ngIf="doc.originalCurrency && doc.exchangeRate" style="background-color: transparent; color: var(--text-medium); border: 1px solid var(--border-color); font-size: 0.8rem; padding: 2px 8px; box-shadow: none;">
                     1 {{ doc.originalCurrency }} = <a [href]="'https://api.nbp.pl/api/exchangerates/rates/A/' + doc.originalCurrency + '/' + doc.exchangeDate + '/'" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: none;">{{ doc.exchangeRate }}</a> PLN
                   </span>

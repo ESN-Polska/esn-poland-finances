@@ -843,8 +843,24 @@
 
     <!-- SUBTAB: EXPORTS -->
     <div *ngIf="pageSection === 'EXPORTS'">
-      <!-- Format and Locale Options -->
-      <ion-list class="aList">
+      <!-- Exports Subnav Tabs -->
+      <div class="exportsSubnavWrap">
+        <ion-segment [(ngModel)]="exportSubtab" class="exportsSubnavSegment">
+          <ion-segment-button value="REQUESTS">
+            <ion-icon name="document-text-outline"></ion-icon>
+            <ion-label>{{ 'CONFIGURATIONS.EXPORTS_SUBTAB_REQUESTS' | translate }}</ion-label>
+          </ion-segment-button>
+          <ion-segment-button value="BANK">
+            <ion-icon name="card-outline"></ion-icon>
+            <ion-label>{{ 'CONFIGURATIONS.EXPORTS_SUBTAB_BANK' | translate }}</ion-label>
+          </ion-segment-button>
+        </ion-segment>
+      </div>
+
+      <!-- SUBTAB 1: REQUESTS EXPORTS (CSV / EXCEL) -->
+      <div *ngIf="exportSubtab === 'REQUESTS'">
+        <!-- Format and Locale Options -->
+        <ion-list class="aList">
         <ion-list-header>
           <ion-label>
             <h2>{{ 'CONFIGURATIONS.EXPORTS_FORMAT_TITLE' | translate }}</h2>
@@ -1056,9 +1072,12 @@
           <pre class="exportPreviewCode"><code>{{ exportCsvPreview }}</code></pre>
         </div>
       </ion-list>
+      </div>
 
-      <!-- Bank Transfer Export Settings (.txt / Erste Bank Polska) -->
-      <ion-list class="aList ion-margin-top" *ngIf="configurations.bankExportSettings">
+      <!-- SUBTAB 2: BANK TRANSFERS EXPORT (.TXT / ERSTE BANK) -->
+      <div *ngIf="exportSubtab === 'BANK'">
+        <!-- Bank Transfer Export Settings (.txt / Erste Bank Polska) -->
+        <ion-list class="aList" *ngIf="configurations.bankExportSettings">
         <ion-list-header>
           <ion-label>
             <h2>{{ 'CONFIGURATIONS.BANK_EXPORT_TITLE' | translate }}</h2>
@@ -1121,7 +1140,6 @@
             (ionChange)="updateConfigurations()"
           >
             <ion-select-option value="1">{{ 'CONFIGURATIONS.BANK_EXPORT_TYPE_STANDARD' | translate }} (1 - Standard Elixir)</ion-select-option>
-            <ion-select-option value="0">{{ 'CONFIGURATIONS.BANK_EXPORT_TYPE_TAX' | translate }} (0 - Tax / ZUS / Other)</ion-select-option>
             <ion-select-option value="6">{{ 'CONFIGURATIONS.BANK_EXPORT_TYPE_EXPRESS' | translate }} (6 - Express Elixir)</ion-select-option>
             <ion-select-option value="8">{{ 'CONFIGURATIONS.BANK_EXPORT_TYPE_SORBNET' | translate }} (8 - Sorbnet)</ion-select-option>
           </ion-select>
@@ -1168,6 +1186,35 @@
             (ionChange)="updateConfigurations()"
           ></ion-toggle>
         </ion-item>
+
+        <!-- Warn on Unresolved Placeholders Toggle -->
+        <ion-item>
+          <ion-label class="ion-text-wrap">
+            {{ 'CONFIGURATIONS.BANK_EXPORT_DETECT_PLACEHOLDERS' | translate }}
+            <p>{{ 'CONFIGURATIONS.BANK_EXPORT_DETECT_PLACEHOLDERS_I' | translate }}</p>
+          </ion-label>
+          <ion-toggle
+            slot="end"
+            [disabled]="!canModifyExports()"
+            [(ngModel)]="configurations.bankExportSettings.detectUnresolvedPlaceholders"
+            (ionChange)="updateConfigurations()"
+          ></ion-toggle>
+        </ion-item>
+
+        <!-- Placeholder Tag Input -->
+        <ion-item *ngIf="configurations.bankExportSettings.detectUnresolvedPlaceholders !== false">
+          <ion-label position="stacked">{{ 'CONFIGURATIONS.BANK_EXPORT_PLACEHOLDER_TAG' | translate }}</ion-label>
+          <ion-input
+            type="text"
+            class="font-mono"
+            maxlength="20"
+            [disabled]="!canModifyExports()"
+            [(ngModel)]="configurations.bankExportSettings.unresolvedPlaceholderTag"
+            (ionBlur)="updateConfigurations()"
+            placeholder="XX"
+          ></ion-input>
+          <ion-note slot="helper">{{ 'CONFIGURATIONS.BANK_EXPORT_PLACEHOLDER_TAG_I' | translate }}</ion-note>
+        </ion-item>
       </ion-list>
 
       <!-- Bank Transfer Title Templates -->
@@ -1178,6 +1225,40 @@
             <p>{{ 'CONFIGURATIONS.BANK_EXPORT_TITLES_I' | translate }}</p>
           </ion-label>
         </ion-list-header>
+
+        <!-- Variable Explanation Card -->
+        <div class="templateVariablesCard">
+          <div class="cardHeader">
+            <ion-icon name="information-circle-outline"></ion-icon>
+            <span class="cardTitle">{{ 'CONFIGURATIONS.BANK_EXPORT_VARIABLES_TITLE' | translate }}</span>
+          </div>
+          <div class="variablesGrid">
+            <div class="varItem">
+              <span class="varToken font-mono">&#123;displayId&#125;</span>
+              <span class="varDesc">{{ 'CONFIGURATIONS.BANK_VAR_DISPLAY_ID' | translate }}</span>
+            </div>
+            <div class="varItem">
+              <span class="varToken font-mono">&#123;year&#125;</span>
+              <span class="varDesc">{{ 'CONFIGURATIONS.BANK_VAR_YEAR' | translate }}</span>
+            </div>
+            <div class="varItem">
+              <span class="varToken font-mono">&#123;applicantName&#125;</span>
+              <span class="varDesc">{{ 'CONFIGURATIONS.BANK_VAR_APPLICANT_NAME' | translate }}</span>
+            </div>
+            <div class="varItem">
+              <span class="varToken font-mono">&#123;invoiceNumber&#125;</span>
+              <span class="varDesc">{{ 'CONFIGURATIONS.BANK_VAR_INVOICE_NUMBER' | translate }}</span>
+            </div>
+            <div class="varItem">
+              <span class="varToken font-mono">&#123;invoiceNumbers&#125;</span>
+              <span class="varDesc">{{ 'CONFIGURATIONS.BANK_VAR_INVOICE_NUMBERS' | translate }}</span>
+            </div>
+            <div class="varItem">
+              <span class="varToken font-mono">&#123;ksefNumber&#125;</span>
+              <span class="varDesc">{{ 'CONFIGURATIONS.BANK_VAR_KSEF_NUMBER' | translate }}</span>
+            </div>
+          </div>
+        </div>
 
         <!-- Invoice Reimbursement (Single Invoice) -->
         <ion-item class="templateEditorItem">
@@ -1194,14 +1275,15 @@
           <div class="templateChipBar" *ngIf="canModifyExports()">
             <span class="chipLabel">{{ 'CONFIGURATIONS.INSERT_PLACEHOLDER' | translate }}:</span>
             <ion-chip outline size="small" (click)="insertBankTitlePlaceholder('reimbursementTitleTemplate', '{invoiceNumber}')" [innerText]="'{invoiceNumber}'"></ion-chip>
+            <ion-chip outline size="small" (click)="insertBankTitlePlaceholder('reimbursementTitleTemplate', '{ksefNumber}')" [innerText]="'{ksefNumber}'"></ion-chip>
+            <ion-chip outline size="small" (click)="insertBankTitlePlaceholder('reimbursementTitleTemplate', '{year}')" [innerText]="'{year}'"></ion-chip>
             <ion-chip outline size="small" (click)="insertBankTitlePlaceholder('reimbursementTitleTemplate', '{displayId}')" [innerText]="'{displayId}'"></ion-chip>
             <ion-chip outline size="small" (click)="insertBankTitlePlaceholder('reimbursementTitleTemplate', '{applicantName}')" [innerText]="'{applicantName}'"></ion-chip>
-            <ion-chip outline size="small" (click)="insertBankTitlePlaceholder('reimbursementTitleTemplate', '{year}')" [innerText]="'{year}'"></ion-chip>
           </div>
         </ion-item>
 
         <!-- Invoice Reimbursement (Multiple Invoices Aggregated) -->
-        <ion-item class="templateEditorItem" *ngIf="configurations.bankExportSettings.grouping === 'PER_REQUEST'">
+        <ion-item class="templateEditorItem">
           <ion-label position="stacked">
             {{ 'CONFIGURATIONS.BANK_TITLE_REIMBURSEMENT_MULTIPLE' | translate }}
           </ion-label>
@@ -1215,8 +1297,9 @@
           <div class="templateChipBar" *ngIf="canModifyExports()">
             <span class="chipLabel">{{ 'CONFIGURATIONS.INSERT_PLACEHOLDER' | translate }}:</span>
             <ion-chip outline size="small" (click)="insertBankTitlePlaceholder('reimbursementMultipleTitleTemplate', '{invoiceNumbers}')" [innerText]="'{invoiceNumbers}'"></ion-chip>
-            <ion-chip outline size="small" (click)="insertBankTitlePlaceholder('reimbursementMultipleTitleTemplate', '{displayId}')" [innerText]="'{displayId}'"></ion-chip>
             <ion-chip outline size="small" (click)="insertBankTitlePlaceholder('reimbursementMultipleTitleTemplate', '{year}')" [innerText]="'{year}'"></ion-chip>
+            <ion-chip outline size="small" (click)="insertBankTitlePlaceholder('reimbursementMultipleTitleTemplate', '{displayId}')" [innerText]="'{displayId}'"></ion-chip>
+            <ion-chip outline size="small" (click)="insertBankTitlePlaceholder('reimbursementMultipleTitleTemplate', '{applicantName}')" [innerText]="'{applicantName}'"></ion-chip>
           </div>
         </ion-item>
 
@@ -1236,8 +1319,6 @@
             <span class="chipLabel">{{ 'CONFIGURATIONS.INSERT_PLACEHOLDER' | translate }}:</span>
             <ion-chip outline size="small" (click)="insertBankTitlePlaceholder('invoiceToPayTitleTemplate', '{invoiceNumber}')" [innerText]="'{invoiceNumber}'"></ion-chip>
             <ion-chip outline size="small" (click)="insertBankTitlePlaceholder('invoiceToPayTitleTemplate', '{ksefNumber}')" [innerText]="'{ksefNumber}'"></ion-chip>
-            <ion-chip outline size="small" (click)="insertBankTitlePlaceholder('invoiceToPayTitleTemplate', '{displayId}')" [innerText]="'{displayId}'"></ion-chip>
-            <ion-chip outline size="small" (click)="insertBankTitlePlaceholder('invoiceToPayTitleTemplate', '{year}')" [innerText]="'{year}'"></ion-chip>
           </div>
         </ion-item>
 
@@ -1295,6 +1376,7 @@
           <pre class="exportPreviewCode"><code>{{ exportBankPreview }}</code></pre>
         </div>
       </ion-list>
+      </div>
     </div>
 
     <!-- SUBTAB: OPTIONS -->

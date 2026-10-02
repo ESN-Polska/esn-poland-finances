@@ -43,16 +43,16 @@
         <span class="mValue font-bold">{{ totalApprovedCount }}</span>
       </div>
       <div class="metricCard">
+        <span class="mLabel">{{ 'REQUESTS.PAYOUTS.METRIC_DOMESTIC_EXPORTABLE' | translate }}</span>
+        <span class="mValue font-bold text-success">{{ domesticPlnCount }}</span>
+      </div>
+      <div class="metricCard">
         <span class="mLabel">{{ 'REQUESTS.PAYOUTS.METRIC_TOTAL_PLN' | translate }}</span>
         <span class="mValue font-bold text-pln">{{ totalPlnAmount | number:'1.2-2' }} PLN</span>
       </div>
-      <div class="metricCard" *ngIf="totalEurAmount > 0">
+      <div class="metricCard">
         <span class="mLabel">{{ 'REQUESTS.PAYOUTS.METRIC_TOTAL_EUR' | translate }}</span>
         <span class="mValue font-bold text-eur">{{ totalEurAmount | number:'1.2-2' }} EUR</span>
-      </div>
-      <div class="metricCard">
-        <span class="mLabel">{{ 'REQUESTS.PAYOUTS.METRIC_DOMESTIC_EXPORTABLE' | translate }}</span>
-        <span class="mValue font-bold text-success">{{ domesticPlnCount }}</span>
       </div>
     </div>
 
@@ -158,12 +158,14 @@
       <div class="payoutCard" *ngFor="let t of filteredTransactions">
         <!-- Card Header -->
         <div class="cardHeaderRow">
-          <div class="badgeGroup">
+          <div class="idAndBadgesWrap">
             <span class="displayIdBadge font-mono" (click)="viewRequest(t.requestId)">{{ t.displayId }}</span>
-            <span class="typeBadge">{{ 'REQUESTS.TYPES_SHORT.' + t.requestType | translate }}</span>
-            <span class="scopeBadge" [class.isDomestic]="t.isDomesticPln" [class.isInternational]="!t.isDomesticPln">
-              {{ (t.isDomesticPln ? 'REQUESTS.PAYOUTS.DOMESTIC' : 'REQUESTS.PAYOUTS.INTERNATIONAL') | translate }}
-            </span>
+            <div class="badgeGroup">
+              <span class="typeBadge">{{ 'REQUESTS.TYPES_SHORT.' + t.requestType | translate }}</span>
+              <span class="scopeBadge" [class.isDomestic]="t.isDomestic" [class.isInternational]="!t.isDomestic">
+                {{ (t.isDomestic ? 'REQUESTS.PAYOUTS.DOMESTIC' : 'REQUESTS.PAYOUTS.INTERNATIONAL') | translate }}
+              </span>
+            </div>
           </div>
           <div class="amountBadge font-mono">
             {{ t.amount | number:'1.2-2' }} {{ t.currency }}
@@ -201,6 +203,23 @@
             </ion-button>
           </div>
 
+          <!-- Recipient Address (if present) -->
+          <div class="dataItem" *ngIf="t.recipientAddress">
+            <div class="dataItemLeft">
+              <span class="itemLabel">{{ 'REQUESTS.PAYOUTS.ADDRESS' | translate }}</span>
+              <span class="itemVal">{{ t.recipientAddress }}</span>
+            </div>
+            <ion-button
+              fill="clear"
+              size="small"
+              class="copyBtn"
+              [color]="isFieldCopied(t.id + '_addr') ? 'success' : 'medium'"
+              (click)="copyToClipboard(t.recipientAddress, t.id + '_addr', 'REQUESTS.PAYOUTS.ADDRESS')"
+            >
+              <ion-icon [name]="isFieldCopied(t.id + '_addr') ? 'checkmark-outline' : 'copy-outline'" slot="icon-only"></ion-icon>
+            </ion-button>
+          </div>
+
           <!-- Bank Account -->
           <div class="dataItem">
             <div class="dataItemLeft">
@@ -215,6 +234,23 @@
               (click)="copyToClipboard(t.cleanRecipientAccount || t.recipientAccount, t.id + '_acc', 'REQUESTS.PAYOUTS.ACCOUNT_NUMBER')"
             >
               <ion-icon [name]="isFieldCopied(t.id + '_acc') ? 'checkmark-outline' : 'copy-outline'" slot="icon-only"></ion-icon>
+            </ion-button>
+          </div>
+
+          <!-- SWIFT/BIC (if present / international) -->
+          <div class="dataItem" *ngIf="t.recipientSwift || (!t.isDomestic && (t.currency === 'EUR' ? t.originalRequest.swiftBicEUR : t.originalRequest.swiftBic))">
+            <div class="dataItemLeft">
+              <span class="itemLabel">{{ 'REQUESTS.FIELDS.SWIFT_BIC' | translate }}</span>
+              <span class="itemVal font-mono">{{ t.recipientSwift || (t.currency === 'EUR' ? t.originalRequest.swiftBicEUR : t.originalRequest.swiftBic) }}</span>
+            </div>
+            <ion-button
+              fill="clear"
+              size="small"
+              class="copyBtn"
+              [color]="isFieldCopied(t.id + '_swift') ? 'success' : 'medium'"
+              (click)="copyToClipboard(t.recipientSwift || (t.currency === 'EUR' ? t.originalRequest.swiftBicEUR : t.originalRequest.swiftBic), t.id + '_swift', 'REQUESTS.FIELDS.SWIFT_BIC')"
+            >
+              <ion-icon [name]="isFieldCopied(t.id + '_swift') ? 'checkmark-outline' : 'copy-outline'" slot="icon-only"></ion-icon>
             </ion-button>
           </div>
 
@@ -243,8 +279,8 @@
                 <span class="charCounter" [class.isWarn]="t.title.length > 120">{{ t.title.length }} / 140</span>
               </div>
               <span class="itemVal titleVal">{{ t.title }}</span>
-              <span class="xxWarningNote" *ngIf="t.title.includes('XX')">
-                <ion-icon name="alert-circle-outline"></ion-icon> {{ 'REQUESTS.PAYOUTS.XX_WARNING_HINT' | translate }}
+              <span class="xxWarningNote" *ngIf="isItemPlaceholderUnresolved(t.title)">
+                <ion-icon name="alert-circle-outline"></ion-icon> {{ 'REQUESTS.PAYOUTS.XX_WARNING_HINT' | translate:{ placeholder: placeholderTag } }}
               </span>
             </div>
             <ion-button
@@ -255,40 +291,6 @@
               (click)="copyToClipboard(t.title, t.id + '_title', 'REQUESTS.PAYOUTS.TRANSFER_TITLE')"
             >
               <ion-icon [name]="isFieldCopied(t.id + '_title') ? 'checkmark-outline' : 'copy-outline'" slot="icon-only"></ion-icon>
-            </ion-button>
-          </div>
-
-          <!-- Recipient Address (if present) -->
-          <div class="dataItem" *ngIf="t.recipientAddress">
-            <div class="dataItemLeft">
-              <span class="itemLabel">{{ 'REQUESTS.FIELDS.ACCOUNT_HOLDER_ADDRESS' | translate }}</span>
-              <span class="itemVal">{{ t.recipientAddress }}</span>
-            </div>
-            <ion-button
-              fill="clear"
-              size="small"
-              class="copyBtn"
-              [color]="isFieldCopied(t.id + '_addr') ? 'success' : 'medium'"
-              (click)="copyToClipboard(t.recipientAddress, t.id + '_addr', 'REQUESTS.FIELDS.ACCOUNT_HOLDER_ADDRESS')"
-            >
-              <ion-icon [name]="isFieldCopied(t.id + '_addr') ? 'checkmark-outline' : 'copy-outline'" slot="icon-only"></ion-icon>
-            </ion-button>
-          </div>
-
-          <!-- SWIFT/BIC (if present / international) -->
-          <div class="dataItem" *ngIf="t.originalRequest.swiftBic || t.originalRequest.swiftBicEUR">
-            <div class="dataItemLeft">
-              <span class="itemLabel">{{ 'REQUESTS.FIELDS.SWIFT_BIC' | translate }}</span>
-              <span class="itemVal font-mono">{{ t.originalRequest.swiftBicEUR || t.originalRequest.swiftBic }}</span>
-            </div>
-            <ion-button
-              fill="clear"
-              size="small"
-              class="copyBtn"
-              [color]="isFieldCopied(t.id + '_swift') ? 'success' : 'medium'"
-              (click)="copyToClipboard(t.originalRequest.swiftBicEUR || t.originalRequest.swiftBic, t.id + '_swift', 'REQUESTS.FIELDS.SWIFT_BIC')"
-            >
-              <ion-icon [name]="isFieldCopied(t.id + '_swift') ? 'checkmark-outline' : 'copy-outline'" slot="icon-only"></ion-icon>
             </ion-button>
           </div>
         </div>
@@ -349,7 +351,7 @@
             size="small"
             color="success"
             *ngIf="canManage"
-            (click)="promptMarkPaid(t.originalRequest, $event)"
+            (click)="promptMarkPaid(t, $event)"
           >
             <ion-icon name="checkmark-done-circle-outline" slot="start"></ion-icon>
             {{ 'REQUESTS.STATUSES.PAID' | translate }}

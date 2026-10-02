@@ -38,7 +38,9 @@ export interface BankTransactionItem {
   amount: number;
   currency: string;
   title: string;
+  isDomestic: boolean;
   isDomesticPln: boolean;
+  recipientSwift?: string;
   status: RequestStatus;
   originalRequest: FinancialRequest;
 }
@@ -70,10 +72,66 @@ export function cleanPolishBankAccount(account: string | null | undefined): stri
   return acc;
 }
 
-export function isDomesticPlnAccount(account: string | null | undefined, currency?: string): boolean {
-  if (currency && currency !== 'PLN') return false;
-  const clean = cleanPolishBankAccount(account);
+export function isDomesticAccount(account: string | null | undefined, swiftBic?: string | null): boolean {
+  if (swiftBic && swiftBic.trim().length > 0) return false;
+  if (!account) return false;
+  const raw = account.trim().replace(/\s+/g, '').replace(/-/g, '');
+  if (/^[A-Za-z]{2}/.test(raw) && !raw.toUpperCase().startsWith('PL')) {
+    return false;
+  }
+  const clean = cleanPolishBankAccount(raw);
   return /^[0-9]{26}$/.test(clean);
+}
+
+export function isDomesticPlnAccount(account: string | null | undefined, currency?: string, swiftBic?: string | null): boolean {
+  if (currency && currency !== 'PLN') return false;
+  return isDomesticAccount(account, swiftBic);
+}
+
+/**
+ * Sorts bank transaction items oldest first (lowest request number on top)
+ */
+export function compareTransactionsOldestFirst(a: BankTransactionItem, b: BankTransactionItem): number {
+  const reqA = a.originalRequest;
+  const reqB = b.originalRequest;
+
+  // 1. Year ascending (older year on top, e.g. 2025 before 2026)
+  const yearA = reqA?.year || (reqA?.createdAt ? new Date(reqA.createdAt).getFullYear() : 0);
+  const yearB = reqB?.year || (reqB?.createdAt ? new Date(reqB.createdAt).getFullYear() : 0);
+  if (yearA !== yearB && yearA > 0 && yearB > 0) {
+    return yearA - yearB;
+  }
+
+  // Helper to extract sequence number from "25/2026"
+  const parseSeq = (id?: string): number | null => {
+    if (!id) return null;
+    const parts = id.split('/');
+    const n = parseInt(parts[0], 10);
+    return isNaN(n) ? null : n;
+  };
+
+  // 2. Sequence number ascending (lowest request number on top, e.g. 1/2026 before 25/2026)
+  const seqA = typeof reqA?.sequenceNumber === 'number' ? reqA.sequenceNumber : parseSeq(a.displayId || a.requestId);
+  const seqB = typeof reqB?.sequenceNumber === 'number' ? reqB.sequenceNumber : parseSeq(b.displayId || b.requestId);
+  if (seqA !== null && seqB !== null && seqA !== seqB) {
+    return seqA - seqB;
+  }
+
+  // 3. Creation timestamp ascending (oldest date on top)
+  const timeA = reqA?.createdAt ? new Date(reqA.createdAt).getTime() : 0;
+  const timeB = reqB?.createdAt ? new Date(reqB.createdAt).getTime() : 0;
+  if (timeA !== timeB && timeA > 0 && timeB > 0) {
+    return timeA - timeB;
+  }
+
+  // 4. If same request, sort by invoiceIndex ascending
+  const idxA = a.invoiceIndex ?? 0;
+  const idxB = b.invoiceIndex ?? 0;
+  if (idxA !== idxB) {
+    return idxA - idxB;
+  }
+
+  return (a.id || '').localeCompare(b.id || '');
 }
 
 export function formatBankTransferTitle(
@@ -247,15 +305,41 @@ export class RequestsService {
     status: RequestStatus,
     comment?: string,
     adminRemarks?: string,
-    paymentConfirmationAttachment?: AttachmentFile
+    paymentConfirmationAttachment?: AttachmentFile,
+    paymentConfirmationAttachments?: AttachmentFile[]
+  ): Promise<FinancialRequest> {
+    return this.updateRequestStatusWithUpdates(requestId, {
+      status,
+      comment,
+      adminRemarks,
+      paymentConfirmationAttachment,
+      paymentConfirmationAttachments
+    });
+  }
+
+  /**
+   * Update request with arbitrary updates (e.g. partial document payouts, status changes)
+   */
+  public async updateRequestStatusWithUpdates(
+    requestId: string,
+    updates: Partial<FinancialRequest> & {
+      status?: RequestStatus;
+      historyNote?: string;
+      comment?: string;
+      adminRemarks?: string;
+      paymentConfirmationAttachment?: AttachmentFile;
+      paymentConfirmationAttachments?: AttachmentFile[];
+      skipStatusHistory?: boolean;
+    }
   ): Promise<FinancialRequest> {
     const user = this.appService.currentUser;
     const now = new Date().toISOString();
 
-    const body: any = { status, requestId };
-    if (comment) body.historyNote = comment;
-    if (typeof adminRemarks !== 'undefined') body.adminRemarks = adminRemarks;
-    if (paymentConfirmationAttachment) body.paymentConfirmationAttachment = paymentConfirmationAttachment;
+    const body: any = { requestId, ...updates };
+    if (updates.comment && !body.historyNote) {
+      body.historyNote = updates.comment;
+    }
+    delete body.comment;
 
     try {
       let updatedRaw: any = null;
@@ -294,19 +378,56 @@ export class RequestsService {
     if (idx < 0) throw new Error('Request not found');
 
     const existing = new FinancialRequest(rawList[idx]);
-    const newHistory = {
-      status,
-      timestamp: now,
-      updatedBy: user?.getDisplayName() || user?.userId || 'Manager',
-      comment: comment || `Status changed to ${status}`
-    };
+    const targetStatus = updates.status || existing.status;
+    const nowTs = new Date();
+
+    const isDocPayoutSettlingRequest =
+      existing.status === 'APPROVED' &&
+      targetStatus === 'PAID' &&
+      Array.isArray(updates.documents) &&
+      updates.documents.length > 0 &&
+      Boolean(updates.historyNote);
+
+    const confirmations = updates.paymentConfirmationAttachments?.length
+      ? updates.paymentConfirmationAttachments
+      : (updates.paymentConfirmationAttachment ? [updates.paymentConfirmationAttachment] : undefined);
+    const primaryConfirmation = confirmations?.[0] || updates.paymentConfirmationAttachment;
+
+    const shouldAddHistory = !updates.skipStatusHistory && (existing.status !== targetStatus || Boolean(updates.historyNote));
+    const historyEntries: any[] = [];
+
+    if (shouldAddHistory) {
+      if (isDocPayoutSettlingRequest) {
+        historyEntries.push({
+          status: 'APPROVED',
+          timestamp: nowTs.toISOString(),
+          updatedBy: user?.getDisplayName() || user?.userId || 'Manager',
+          comment: updates.historyNote
+        });
+        historyEntries.push({
+          status: 'PAID',
+          timestamp: new Date(nowTs.getTime() + 100).toISOString(),
+          updatedBy: user?.getDisplayName() || user?.userId || 'Manager',
+          comment: 'REQUESTS.HISTORY_COMMENTS.PAYOUT_COMPLETED'
+        });
+      } else {
+        historyEntries.push({
+          status: targetStatus,
+          timestamp: now,
+          updatedBy: user?.getDisplayName() || user?.userId || 'Manager',
+          comment: updates.historyNote || updates.comment || `Updated`
+        });
+      }
+    }
 
     const updatedData = {
       ...rawList[idx],
-      status,
-      adminRemarks: typeof adminRemarks !== 'undefined' ? adminRemarks : existing.adminRemarks,
-      paymentConfirmationAttachment: paymentConfirmationAttachment || existing.paymentConfirmationAttachment,
-      statusHistory: [...(existing.statusHistory || []), newHistory],
+      ...updates,
+      status: targetStatus,
+      adminRemarks: typeof updates.adminRemarks !== 'undefined' ? updates.adminRemarks : existing.adminRemarks,
+      paymentConfirmationAttachment: primaryConfirmation || existing.paymentConfirmationAttachment,
+      paymentConfirmationAttachments: confirmations || existing.paymentConfirmationAttachments || (existing.paymentConfirmationAttachment ? [existing.paymentConfirmationAttachment] : []),
+      statusHistory: [...(existing.statusHistory || []), ...historyEntries],
       updatedAt: now
     };
 
@@ -314,6 +435,126 @@ export class RequestsService {
     await storage.set(REQUESTS_STORAGE_KEY, rawList);
     await this.loadMyRequests();
     return new FinancialRequest(updatedData);
+  }
+
+  /**
+   * Mark a payout transaction or the entire request as paid.
+   */
+  public async markPayoutItemPaid(
+    request: FinancialRequest,
+    transaction?: BankTransactionItem,
+    mode: 'SINGLE' | 'ALL' = 'SINGLE',
+    comment?: string,
+    paymentConfirmationAttachment?: AttachmentFile,
+    paymentConfirmationAttachments?: AttachmentFile[]
+  ): Promise<FinancialRequest> {
+    const now = new Date().toISOString();
+    const allDocs = request.documents ? JSON.parse(JSON.stringify(request.documents)) : [];
+
+    const confirmations: AttachmentFile[] = paymentConfirmationAttachments?.length
+      ? paymentConfirmationAttachments
+      : (paymentConfirmationAttachment ? [paymentConfirmationAttachment] : []);
+    const primaryConfirmation = confirmations[0] || paymentConfirmationAttachment;
+
+    const paidDocs: any[] = [];
+
+    if (mode === 'ALL' || !transaction || allDocs.length === 0) {
+      for (const d of allDocs) {
+        if (!d.payoutPaidOn) {
+          paidDocs.push(d);
+        }
+        d.payoutPaidOn = d.payoutPaidOn || now;
+      }
+    } else if (transaction.invoiceIndex !== undefined && transaction.invoiceIndex >= 0 && transaction.invoiceIndex < allDocs.length) {
+      if (!allDocs[transaction.invoiceIndex].payoutPaidOn) {
+        paidDocs.push(allDocs[transaction.invoiceIndex]);
+      }
+      allDocs[transaction.invoiceIndex] = {
+        ...allDocs[transaction.invoiceIndex],
+        payoutPaidOn: now
+      };
+    } else {
+      // Find matching unpaid documents by currency or invoiceNumber
+      let matched = false;
+      if (transaction.currency) {
+        for (let i = 0; i < allDocs.length; i++) {
+          const docCur = (allDocs[i].currency || request.currency || 'PLN').toUpperCase();
+          if (!allDocs[i].payoutPaidOn && docCur === transaction.currency.toUpperCase()) {
+            paidDocs.push(allDocs[i]);
+            allDocs[i] = {
+              ...allDocs[i],
+              payoutPaidOn: now
+            };
+            matched = true;
+          }
+        }
+      }
+      if (!matched && transaction.invoiceNumber) {
+        for (let i = 0; i < allDocs.length; i++) {
+          if (!allDocs[i].payoutPaidOn && allDocs[i].invoiceNumber === transaction.invoiceNumber) {
+            paidDocs.push(allDocs[i]);
+            allDocs[i] = {
+              ...allDocs[i],
+              payoutPaidOn: now
+            };
+            matched = true;
+            break;
+          }
+        }
+      }
+      if (!matched) {
+        // Fallback: mark first unpaid document
+        const firstUnpaid = allDocs.findIndex((d: any) => !d.payoutPaidOn);
+        if (firstUnpaid >= 0) {
+          paidDocs.push(allDocs[firstUnpaid]);
+          allDocs[firstUnpaid] = {
+            ...allDocs[firstUnpaid],
+            payoutPaidOn: now
+          };
+        }
+      }
+    }
+
+    const allPaid = allDocs.length > 0 && allDocs.every((d: any) => Boolean(d.payoutPaidOn));
+    const targetStatus: RequestStatus = allPaid ? 'PAID' : 'APPROVED';
+
+    // Accumulate payment confirmations from all payouts for the payment confirmation section
+    const existingReqConfirmations: AttachmentFile[] = Array.isArray(request.paymentConfirmationAttachments)
+      ? [...request.paymentConfirmationAttachments]
+      : (request.paymentConfirmationAttachment ? [request.paymentConfirmationAttachment] : []);
+    for (const c of confirmations) {
+      if (!existingReqConfirmations.some(x => x.fileId === c.fileId || (x.s3Key && x.s3Key === c.s3Key))) {
+        existingReqConfirmations.push(c);
+      }
+    }
+
+    // Determine status history comment: "{invoice(s) number(s)} marked as paid"
+    const invoiceNums = paidDocs
+      .map((d: any) => d.invoiceNumber?.trim())
+      .filter((n: string | undefined): n is string => Boolean(n));
+
+    let invoicesStr = '';
+    if (invoiceNums.length > 0) {
+      invoicesStr = invoiceNums.join(', ');
+    } else if (transaction?.invoiceNumber) {
+      invoicesStr = transaction.invoiceNumber;
+    } else if (paidDocs.length > 0) {
+      invoicesStr = paidDocs.length === 1 ? 'Document' : 'Documents';
+    } else {
+      invoicesStr = 'Document';
+    }
+
+    const defaultComment = `${invoicesStr} marked as paid`;
+    const finalComment = comment ? `${defaultComment} (${comment})` : defaultComment;
+
+    return this.updateRequestStatusWithUpdates(request.requestId, {
+      status: targetStatus,
+      documents: allDocs.length > 0 ? allDocs : undefined,
+      comment: finalComment,
+      skipStatusHistory: false,
+      paymentConfirmationAttachment: existingReqConfirmations[0] || primaryConfirmation,
+      paymentConfirmationAttachments: existingReqConfirmations.length > 0 ? existingReqConfirmations : (confirmations.length > 0 ? confirmations : undefined)
+    });
   }
 
   /**
@@ -521,14 +762,29 @@ export class RequestsService {
       const year = req.year || new Date(req.createdAt).getFullYear();
       const applicantName = req.accountHolderName || req.userDisplayName || '';
       const applicantAddress = req.accountHolderAddress || '';
-      const applicantAccount = req.currency === 'EUR' && req.ibanEUR ? req.ibanEUR : (req.iban || '');
+      const isEur = (req.currency === 'EUR');
+      const applicantAccount = isEur && req.ibanEUR ? req.ibanEUR : (req.iban || req.ibanEUR || '');
+      const applicantSwift = isEur ? (req.ibanEUR ? (req.swiftBicEUR || '') : (req.swiftBic || '')) : (req.swiftBic || '');
       const cleanAppAccount = cleanPolishBankAccount(applicantAccount);
 
       if (req.requestType === 'INVOICE_REIMBURSEMENT') {
-        const docs = req.documents || [];
+        const allDocs = req.documents || [];
+        const docs = allDocs.filter(d => !d.payoutPaidOn);
+        if (allDocs.length > 0 && docs.length === 0) {
+          // All documents for this reimbursement are already paid out
+          continue;
+        }
+
         if (s.grouping === 'PER_DOCUMENT' && docs.length > 0) {
           docs.forEach((doc, idx) => {
+            const originalIdx = allDocs.indexOf(doc);
+            const docIdx = originalIdx >= 0 ? originalIdx : idx;
             const docAmount = Number(doc.grossAmount) || 0;
+            const docCurrency = doc.currency || req.currency || 'PLN';
+            const isDocEur = (docCurrency === 'EUR');
+            const docAccount = isDocEur && req.ibanEUR ? req.ibanEUR : (req.iban || req.ibanEUR || '');
+            const docSwift = isDocEur ? (req.ibanEUR ? (req.swiftBicEUR || '') : (req.swiftBic || '')) : (req.swiftBic || '');
+            const cleanDocAccount = cleanPolishBankAccount(docAccount);
             const title = formatBankTransferTitle(s.reimbursementTitleTemplate, {
               invoiceNumber: doc.invoiceNumber,
               ksefNumber: doc.ksefNumber,
@@ -538,32 +794,93 @@ export class RequestsService {
               year
             });
             transactions.push({
-              id: `${req.requestId}_doc_${idx}`,
+              id: `${req.requestId}_doc_${docIdx}`,
               requestId: req.requestId,
               displayId: req.displayId,
               requestType: req.requestType,
-              invoiceIndex: idx,
+              invoiceIndex: docIdx,
               invoiceNumber: doc.invoiceNumber || '',
               ksefNumber: doc.ksefNumber || '',
               recipientName: applicantName,
-              recipientAccount: applicantAccount,
-              cleanRecipientAccount: cleanAppAccount,
+              recipientAccount: docAccount,
+              cleanRecipientAccount: cleanDocAccount,
               recipientAddress: applicantAddress,
+              recipientSwift: docSwift,
               amount: docAmount,
-              currency: doc.currency || req.currency || 'PLN',
+              currency: docCurrency,
               title,
-              isDomesticPln: isDomesticPlnAccount(applicantAccount, doc.currency || req.currency),
+              isDomestic: isDomesticAccount(docAccount, docSwift),
+              isDomesticPln: isDomesticPlnAccount(docAccount, docCurrency, docSwift),
+              status: req.status,
+              originalRequest: req
+            });
+          });
+        } else if (docs.length > 0) {
+          // Group documents by currency so that EUR and PLN documents are never aggregated together
+          const docsByCurrency = new Map<string, typeof docs>();
+          for (const doc of docs) {
+            const docCur = (doc.currency || req.currency || 'PLN').toUpperCase();
+            if (!docsByCurrency.has(docCur)) {
+              docsByCurrency.set(docCur, []);
+            }
+            docsByCurrency.get(docCur)!.push(doc);
+          }
+
+          const hasMultipleCurrencies = docsByCurrency.size > 1;
+
+          docsByCurrency.forEach((curDocs, curCurrency) => {
+            const isCurEur = (curCurrency === 'EUR');
+            const curAccount = isCurEur && req.ibanEUR ? req.ibanEUR : (req.iban || req.ibanEUR || '');
+            const curSwift = isCurEur ? (req.ibanEUR ? (req.swiftBicEUR || '') : (req.swiftBic || '')) : (req.swiftBic || '');
+            const cleanCurAccount = cleanPolishBankAccount(curAccount);
+            const curAmount = curDocs.reduce((acc, d) => acc + (Number(d.grossAmount) || 0), 0);
+            const invNumbers = curDocs.map(d => d.invoiceNumber).filter(Boolean);
+            const ksefNumbers = curDocs.map(d => d.ksefNumber).filter(Boolean);
+
+            const tmpl = curDocs.length > 1 ? s.reimbursementMultipleTitleTemplate : s.reimbursementTitleTemplate;
+            const title = formatBankTransferTitle(tmpl, {
+              invoiceNumber: invNumbers[0] || '',
+              invoiceNumbers: invNumbers,
+              ksefNumber: ksefNumbers[0] || '',
+              displayId: req.displayId,
+              requestId: req.requestId,
+              applicantName,
+              year
+            });
+
+            const txId = hasMultipleCurrencies ? `${req.requestId}_${curCurrency.toLowerCase()}` : req.requestId;
+
+            transactions.push({
+              id: txId,
+              requestId: req.requestId,
+              displayId: req.displayId,
+              requestType: req.requestType,
+              invoiceNumber: invNumbers.join(', '),
+              ksefNumber: ksefNumbers.join(', '),
+              recipientName: applicantName,
+              recipientAccount: curAccount,
+              cleanRecipientAccount: cleanCurAccount,
+              recipientAddress: applicantAddress,
+              recipientSwift: curSwift,
+              amount: curAmount,
+              currency: curCurrency,
+              title,
+              isDomestic: isDomesticAccount(curAccount, curSwift),
+              isDomesticPln: isDomesticPlnAccount(curAccount, curCurrency, curSwift),
               status: req.status,
               originalRequest: req
             });
           });
         } else {
-          const invNumbers = docs.map(d => d.invoiceNumber).filter(Boolean);
-          const tmpl = docs.length > 1 ? s.reimbursementMultipleTitleTemplate : s.reimbursementTitleTemplate;
-          const title = formatBankTransferTitle(tmpl, {
-            invoiceNumber: invNumbers[0] || '',
-            invoiceNumbers: invNumbers,
-            ksefNumber: docs[0]?.ksefNumber,
+          const fallbackCurrency = req.currency || 'PLN';
+          const isFallbackEur = (fallbackCurrency === 'EUR');
+          const fallbackAccount = isFallbackEur && req.ibanEUR ? req.ibanEUR : (req.iban || req.ibanEUR || '');
+          const fallbackSwift = isFallbackEur ? (req.ibanEUR ? (req.swiftBicEUR || '') : (req.swiftBic || '')) : (req.swiftBic || '');
+          const cleanFallbackAccount = cleanPolishBankAccount(fallbackAccount);
+          const title = formatBankTransferTitle(s.reimbursementTitleTemplate, {
+            invoiceNumber: '',
+            invoiceNumbers: [],
+            ksefNumber: '',
             displayId: req.displayId,
             requestId: req.requestId,
             applicantName,
@@ -574,27 +891,38 @@ export class RequestsService {
             requestId: req.requestId,
             displayId: req.displayId,
             requestType: req.requestType,
-            invoiceNumber: invNumbers.join(', '),
-            ksefNumber: docs.map(d => d.ksefNumber).filter(Boolean).join(', '),
+            invoiceNumber: '',
+            ksefNumber: '',
             recipientName: applicantName,
-            recipientAccount: applicantAccount,
-            cleanRecipientAccount: cleanAppAccount,
+            recipientAccount: fallbackAccount,
+            cleanRecipientAccount: cleanFallbackAccount,
             recipientAddress: applicantAddress,
+            recipientSwift: fallbackSwift,
             amount: Number(req.totalGrossAmount) || 0,
-            currency: req.currency || 'PLN',
+            currency: fallbackCurrency,
             title,
-            isDomesticPln: isDomesticPlnAccount(applicantAccount, req.currency),
+            isDomestic: isDomesticAccount(fallbackAccount, fallbackSwift),
+            isDomesticPln: isDomesticPlnAccount(fallbackAccount, fallbackCurrency, fallbackSwift),
             status: req.status,
             originalRequest: req
           });
         }
       } else if (req.requestType === 'INVOICE_TO_PAY') {
-        const docs = req.documents || [];
+        const allDocs = req.documents || [];
+        const docs = allDocs.filter(d => !d.payoutPaidOn);
+        if (allDocs.length > 0 && docs.length === 0) {
+          // All invoices for this request are already paid out
+          continue;
+        }
+
         if (s.grouping === 'PER_DOCUMENT' && docs.length > 0) {
           docs.forEach((doc, idx) => {
+            const originalIdx = allDocs.indexOf(doc);
+            const docIdx = originalIdx >= 0 ? originalIdx : idx;
             const docAmount = Number(doc.grossAmount) || 0;
             const contractorAccount = doc.bankAccountDetails || '';
             const cleanContractorAcc = cleanPolishBankAccount(contractorAccount);
+            const docCurrency = doc.currency || req.currency || 'PLN';
             const title = formatBankTransferTitle(s.invoiceToPayTitleTemplate, {
               invoiceNumber: doc.invoiceNumber,
               ksefNumber: doc.ksefNumber,
@@ -604,21 +932,23 @@ export class RequestsService {
               year
             });
             transactions.push({
-              id: `${req.requestId}_doc_${idx}`,
+              id: `${req.requestId}_doc_${docIdx}`,
               requestId: req.requestId,
               displayId: req.displayId,
               requestType: req.requestType,
-              invoiceIndex: idx,
+              invoiceIndex: docIdx,
               invoiceNumber: doc.invoiceNumber || '',
               ksefNumber: doc.ksefNumber || '',
               recipientName: doc.issuedBy || applicantName,
               recipientAccount: contractorAccount,
               cleanRecipientAccount: cleanContractorAcc,
               recipientAddress: applicantAddress,
+              recipientSwift: '',
               amount: docAmount,
-              currency: doc.currency || req.currency || 'PLN',
+              currency: docCurrency,
               title,
-              isDomesticPln: isDomesticPlnAccount(contractorAccount, doc.currency || req.currency),
+              isDomestic: isDomesticAccount(contractorAccount),
+              isDomesticPln: isDomesticPlnAccount(contractorAccount, docCurrency),
               status: req.status,
               originalRequest: req
             });
@@ -628,15 +958,19 @@ export class RequestsService {
           const firstDoc = docs[0];
           const contractorAccount = firstDoc?.bankAccountDetails || '';
           const cleanContractorAcc = cleanPolishBankAccount(contractorAccount);
+          const reqCurrency = firstDoc?.currency || req.currency || 'PLN';
           const title = formatBankTransferTitle(s.invoiceToPayTitleTemplate, {
             invoiceNumber: invNumbers.join(', '),
             invoiceNumbers: invNumbers,
-            ksefNumber: firstDoc?.ksefNumber,
+            ksefNumber: docs.map(d => d.ksefNumber).filter(Boolean).join(', '),
             displayId: req.displayId,
             requestId: req.requestId,
             applicantName: firstDoc?.issuedBy || applicantName,
             year
           });
+          const curAmount = docs.length > 0
+            ? docs.reduce((acc, d) => acc + (Number(d.grossAmount) || 0), 0)
+            : (Number(req.totalGrossAmount) || 0);
           transactions.push({
             id: req.requestId,
             requestId: req.requestId,
@@ -648,15 +982,22 @@ export class RequestsService {
             recipientAccount: contractorAccount,
             cleanRecipientAccount: cleanContractorAcc,
             recipientAddress: applicantAddress,
-            amount: Number(req.totalGrossAmount) || 0,
-            currency: req.currency || 'PLN',
+            recipientSwift: '',
+            amount: curAmount,
+            currency: reqCurrency,
             title,
-            isDomesticPln: isDomesticPlnAccount(contractorAccount, req.currency),
+            isDomestic: isDomesticAccount(contractorAccount),
+            isDomesticPln: isDomesticPlnAccount(contractorAccount, reqCurrency),
             status: req.status,
             originalRequest: req
           });
         }
       } else if (req.requestType === 'ADVANCE_PAYMENT') {
+        const isAdvEur = (req.currency === 'EUR');
+        const advAccount = isAdvEur && req.ibanEUR ? req.ibanEUR : (req.iban || req.ibanEUR || '');
+        const advSwift = isAdvEur ? (req.ibanEUR ? (req.swiftBicEUR || '') : (req.swiftBic || '')) : (req.swiftBic || '');
+        const cleanAdvAccount = cleanPolishBankAccount(advAccount);
+        const reqCurrency = req.currency || 'PLN';
         const title = formatBankTransferTitle(s.advanceTitleTemplate, {
           displayId: req.displayId,
           requestId: req.requestId,
@@ -669,17 +1010,24 @@ export class RequestsService {
           displayId: req.displayId,
           requestType: req.requestType,
           recipientName: applicantName,
-          recipientAccount: applicantAccount,
-          cleanRecipientAccount: cleanAppAccount,
+          recipientAccount: advAccount,
+          cleanRecipientAccount: cleanAdvAccount,
           recipientAddress: applicantAddress,
+          recipientSwift: advSwift,
           amount: Number(req.totalGrossAmount) || 0,
-          currency: req.currency || 'PLN',
+          currency: reqCurrency,
           title,
-          isDomesticPln: isDomesticPlnAccount(applicantAccount, req.currency),
+          isDomestic: isDomesticAccount(advAccount, advSwift),
+          isDomesticPln: isDomesticPlnAccount(advAccount, reqCurrency, advSwift),
           status: req.status,
           originalRequest: req
         });
       } else if (req.requestType === 'DELEGATION_SETTLEMENT') {
+        const isDelEur = (req.currency === 'EUR');
+        const delAccount = isDelEur && req.ibanEUR ? req.ibanEUR : (req.iban || req.ibanEUR || '');
+        const delSwift = isDelEur ? (req.ibanEUR ? (req.swiftBicEUR || '') : (req.swiftBic || '')) : (req.swiftBic || '');
+        const cleanDelAccount = cleanPolishBankAccount(delAccount);
+        const reqCurrency = req.currency || 'PLN';
         const title = formatBankTransferTitle(s.delegationTitleTemplate, {
           displayId: req.displayId,
           requestId: req.requestId,
@@ -692,20 +1040,22 @@ export class RequestsService {
           displayId: req.displayId,
           requestType: req.requestType,
           recipientName: applicantName,
-          recipientAccount: applicantAccount,
-          cleanRecipientAccount: cleanAppAccount,
+          recipientAccount: delAccount,
+          cleanRecipientAccount: cleanDelAccount,
           recipientAddress: applicantAddress,
+          recipientSwift: delSwift,
           amount: Number(req.totalGrossAmount) || 0,
-          currency: req.currency || 'PLN',
+          currency: reqCurrency,
           title,
-          isDomesticPln: isDomesticPlnAccount(applicantAccount, req.currency),
+          isDomestic: isDomesticAccount(delAccount, delSwift),
+          isDomesticPln: isDomesticPlnAccount(delAccount, reqCurrency, delSwift),
           status: req.status,
           originalRequest: req
         });
       }
     }
 
-    return transactions;
+    return transactions.sort(compareTransactionsOldestFirst);
   }
 
   /**

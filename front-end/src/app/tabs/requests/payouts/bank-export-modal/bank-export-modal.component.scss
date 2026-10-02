@@ -183,6 +183,28 @@
     }
   }
 
+  .emptyDomesticState {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 16px;
+    gap: 10px;
+    color: var(--text-medium, #64748b);
+    text-align: center;
+
+    ion-icon {
+      font-size: 2.2rem;
+      opacity: 0.6;
+    }
+
+    p {
+      margin: 0;
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+  }
+
   .transactionCard {
     padding: 14px 16px;
     border-bottom: 1px solid var(--border-color, #f1f5f9);
@@ -195,10 +217,6 @@
     &.is-deselected {
       opacity: 0.55;
       background: var(--ion-color-step-50, #fafafa);
-    }
-
-    &.is-invalid-scope {
-      background: #fef2f2;
     }
 
     .cardTopRow {
@@ -223,8 +241,8 @@
           .reqBadge {
             font-size: 0.75rem;
             font-weight: 700;
-            background: #e2e8f0;
-            color: #334155;
+            background: var(--chip-id-bg, #e2e8f0);
+            color: var(--chip-id-text, #334155);
             padding: 2px 6px;
             border-radius: 4px;
           }
@@ -233,15 +251,6 @@
             font-size: 0.75rem;
             font-weight: 600;
             color: var(--ion-color-primary, #00aeef);
-          }
-
-          .nonDomesticBadge {
-            font-size: 0.72rem;
-            font-weight: 600;
-            background: #fee2e2;
-            color: #ef4444;
-            padding: 2px 6px;
-            border-radius: 4px;
           }
         }
 

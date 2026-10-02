@@ -618,6 +618,33 @@ body.dark {
         outline: none !important;
       }
     }
+
+    .badgeGroup {
+      .displayIdBadge {
+        background: rgba(255, 255, 255, 0.12) !important;
+        color: var(--text-dark, #f8fafc) !important;
+
+        &:hover {
+          background: rgba(255, 255, 255, 0.2) !important;
+        }
+      }
+
+      .typeBadge {
+        background: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.18) !important;
+        color: var(--ion-color-primary, #00aeef) !important;
+      }
+
+      .scopeBadge {
+        &.isDomestic {
+          background: rgba(16, 185, 129, 0.15) !important;
+          color: #34d399 !important;
+        }
+        &.isInternational {
+          background: rgba(139, 92, 246, 0.15) !important;
+          color: #c4b5fd !important;
+        }
+      }
+    }
   }
 }
 

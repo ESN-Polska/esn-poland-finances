@@ -40,7 +40,7 @@
           [class.has-error]="!isSenderAccountValid"
         ></ion-input>
         <span class="validBadge" *ngIf="isSenderAccountValid && senderAccount">
-          <ion-icon name="checkmark-circle"></ion-icon> 26 cyfr (NRB)
+          <ion-icon name="checkmark-circle"></ion-icon> {{ 'REQUESTS.PAYOUTS.SENDER_ACCOUNT_VALID' | translate }}
         </span>
         <span class="errorBadge" *ngIf="!isSenderAccountValid">
           <ion-icon name="alert-circle"></ion-icon> {{ 'REQUESTS.PAYOUTS.SENDER_ACCOUNT_REQUIRED' | translate }}
@@ -64,12 +64,12 @@
       </div>
     </div>
 
-    <!-- Warning banner for unresolved XX placeholders -->
+    <!-- Warning banner for unresolved placeholders -->
     <div class="warningBanner" *ngIf="hasUnresolvedPlaceholders">
       <ion-icon name="warning-outline"></ion-icon>
       <div>
-        <strong>{{ 'REQUESTS.PAYOUTS.UNRESOLVED_XX_TITLE' | translate }}</strong>
-        <p>{{ 'REQUESTS.PAYOUTS.UNRESOLVED_XX_DESC' | translate }}</p>
+        <strong>{{ 'REQUESTS.PAYOUTS.UNRESOLVED_XX_TITLE' | translate:{ placeholder: placeholderTag } }}</strong>
+        <p>{{ 'REQUESTS.PAYOUTS.UNRESOLVED_XX_DESC' | translate:{ placeholder: placeholderTag } }}</p>
       </div>
     </div>
 
@@ -87,26 +87,26 @@
         <span class="countNote">{{ 'REQUESTS.PAYOUTS.PLN_ONLY_NOTE' | translate }}</span>
       </div>
 
+      <div class="emptyDomesticState" *ngIf="items.length === 0">
+        <ion-icon name="information-circle-outline"></ion-icon>
+        <p>{{ 'REQUESTS.PAYOUTS.NO_DOMESTIC_TRANSACTIONS' | translate }}</p>
+      </div>
+
       <div
         class="transactionCard"
         *ngFor="let item of items; let idx = index"
         [class.is-deselected]="!item.selected"
-        [class.is-invalid-scope]="!item.isDomesticPln"
       >
         <div class="cardTopRow">
           <div class="checkboxCol">
             <ion-checkbox
               [(ngModel)]="item.selected"
-              [disabled]="!item.isDomesticPln"
             ></ion-checkbox>
           </div>
           <div class="infoCol">
             <div class="typeAndIdRow">
               <span class="reqBadge font-mono">{{ item.displayId }}</span>
               <span class="typeBadge">{{ 'REQUESTS.TYPES_SHORT.' + item.requestType | translate }}</span>
-              <span class="nonDomesticBadge" *ngIf="!item.isDomesticPln">
-                {{ 'REQUESTS.PAYOUTS.NON_DOMESTIC' | translate }}
-              </span>
             </div>
             <div class="recipientRow">
               <span class="recipientName font-bold">{{ item.recipientName }}</span>
@@ -146,13 +146,13 @@
               class="titleInput"
               [(ngModel)]="item.title"
               maxlength="140"
-              [class.has-placeholder-warning]="item.title.includes('XX')"
+              [class.has-placeholder-warning]="isItemPlaceholderUnresolved(item.title)"
               [class.has-length-error]="item.title.length > 140"
             />
           </div>
-          <div class="placeholderAlert" *ngIf="item.title.includes('XX')">
+          <div class="placeholderAlert" *ngIf="isItemPlaceholderUnresolved(item.title)">
             <ion-icon name="alert-circle-outline"></ion-icon>
-            {{ 'REQUESTS.PAYOUTS.XX_WARNING_HINT' | translate }}
+            {{ 'REQUESTS.PAYOUTS.XX_WARNING_HINT' | translate:{ placeholder: placeholderTag } }}
           </div>
         </div>
       </div>

@@ -122,6 +122,11 @@ export class ManageRequestsPage implements OnInit {
     return this.baseFilteredRequests.filter((r) => r.status === 'APPROVED').length;
   }
 
+  public get approvedTransactionsCount(): number {
+    const approved = this.allRequests.filter((r) => r.status === 'APPROVED');
+    return this.requestsService.buildBankTransactions(approved).length;
+  }
+
   public get paidCount(): number {
     return this.baseFilteredRequests.filter((r) => r.status === 'PAID').length;
   }
@@ -473,7 +478,8 @@ export class ManageRequestsPage implements OnInit {
         'PAID',
         data.comment || 'REQUESTS.HISTORY_COMMENTS.PAYOUT_COMPLETED',
         undefined,
-        data.paymentConfirmationAttachment
+        data.paymentConfirmationAttachment,
+        data.paymentConfirmationAttachments
       );
     }
   }
@@ -520,7 +526,8 @@ export class ManageRequestsPage implements OnInit {
     newStatus: RequestStatus,
     comment?: string,
     adminRemarks?: string,
-    paymentConfirmationAttachment?: AttachmentFile
+    paymentConfirmationAttachment?: AttachmentFile,
+    paymentConfirmationAttachments?: AttachmentFile[]
   ): Promise<void> {
     try {
       await this.requestsService.updateRequestStatus(
@@ -528,7 +535,8 @@ export class ManageRequestsPage implements OnInit {
         newStatus,
         comment,
         adminRemarks,
-        paymentConfirmationAttachment
+        paymentConfirmationAttachment,
+        paymentConfirmationAttachments
       );
       await this.loadRequests();
       await this.showToast('REQUESTS.MANAGE_PANEL.STATUS_UPDATED', 'success');

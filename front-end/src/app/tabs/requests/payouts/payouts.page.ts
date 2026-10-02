@@ -9,6 +9,7 @@ import {
   BankTransactionItem,
   RequestsService,
   cleanPolishBankAccount,
+  isDomesticAccount,
   isDomesticPlnAccount
 } from '@app/services/requests.service';
 import {
@@ -101,6 +102,19 @@ export class PayoutsPage implements OnInit, OnDestroy {
     );
   }
 
+  get placeholderTag(): string {
+    return this.appService.configurations?.bankExportSettings?.unresolvedPlaceholderTag?.trim() || 'XX';
+  }
+
+  get isPlaceholderDetectionEnabled(): boolean {
+    const settings = this.appService.configurations?.bankExportSettings;
+    return (settings?.detectUnresolvedPlaceholders !== false) && !!this.placeholderTag;
+  }
+
+  public isItemPlaceholderUnresolved(title: string | null | undefined): boolean {
+    return this.isPlaceholderDetectionEnabled && !!title && title.includes(this.placeholderTag);
+  }
+
   private async ensureAppReady(): Promise<void> {
     if (this.appService.isReady && this.appService.currentUser) return;
     return new Promise((resolve) => {
@@ -156,19 +170,23 @@ export class PayoutsPage implements OnInit, OnDestroy {
   // --- Metrics ---
 
   get totalApprovedCount(): number {
-    return this.allApprovedRequests.length;
+    return this.transactions.length;
   }
 
   get totalPlnAmount(): number {
-    return this.allApprovedRequests
-      .filter(r => r.currency === 'PLN')
-      .reduce((acc, curr) => acc + (curr.totalGrossAmount || 0), 0);
+    return this.transactions
+      .filter(t => t.currency === 'PLN')
+      .reduce((acc, curr) => acc + (curr.amount || 0), 0);
   }
 
   get totalEurAmount(): number {
-    return this.allApprovedRequests
-      .filter(r => r.currency === 'EUR')
-      .reduce((acc, curr) => acc + (curr.totalGrossAmount || 0), 0);
+    return this.transactions
+      .filter(t => t.currency === 'EUR')
+      .reduce((acc, curr) => acc + (curr.amount || 0), 0);
+  }
+
+  get domesticCount(): number {
+    return this.transactions.filter(t => t.isDomestic).length;
   }
 
   get domesticPlnCount(): number {
@@ -176,7 +194,7 @@ export class PayoutsPage implements OnInit, OnDestroy {
   }
 
   get internationalCount(): number {
-    return this.transactions.filter(t => !t.isDomesticPln).length;
+    return this.transactions.filter(t => !t.isDomestic).length;
   }
 
   // --- Filtered Items ---
@@ -191,10 +209,10 @@ export class PayoutsPage implements OnInit, OnDestroy {
       }
 
       // Scope filter
-      if (this.selectedScope === 'DOMESTIC' && !t.isDomesticPln) {
+      if (this.selectedScope === 'DOMESTIC' && !t.isDomestic) {
         return false;
       }
-      if (this.selectedScope === 'INTERNATIONAL' && t.isDomesticPln) {
+      if (this.selectedScope === 'INTERNATIONAL' && t.isDomestic) {
         return false;
       }
 
@@ -277,8 +295,8 @@ export class PayoutsPage implements OnInit, OnDestroy {
   // --- Actions ---
 
   public async openBankExportModal(): Promise<void> {
-    // Only pass domestic PLN transactions (or let user view all eligible)
-    const exportableItems = this.filteredTransactions.length > 0 ? this.filteredTransactions : this.transactions;
+    const sourceList = this.isFiltered ? this.filteredTransactions : this.transactions;
+    const exportableItems = sourceList.filter(t => t.isDomesticPln);
 
     const modal = await this.modalCtrl.create({
       component: BankExportModalComponent,
@@ -296,25 +314,33 @@ export class PayoutsPage implements OnInit, OnDestroy {
     }
   }
 
-  public async promptMarkPaid(req: FinancialRequest, event?: Event): Promise<void> {
+  public async promptMarkPaid(txOrReq: BankTransactionItem | FinancialRequest, event?: Event): Promise<void> {
     if (event) event.stopPropagation();
     if (!this.canManage) return;
 
+    const isTx = 'originalRequest' in txOrReq;
+    const req = isTx ? (txOrReq as BankTransactionItem).originalRequest : (txOrReq as FinancialRequest);
+    const tx = isTx ? (txOrReq as BankTransactionItem) : undefined;
+
     const modal = await this.modalCtrl.create({
       component: MarkPaidModalComponent,
-      componentProps: { request: req }
+      componentProps: {
+        request: req,
+        transaction: tx
+      }
     });
     await modal.present();
 
     const { data, role } = await modal.onWillDismiss();
     if (role === 'confirm' && data) {
       try {
-        await this.requestsService.updateRequestStatus(
-          req.requestId,
-          'PAID',
-          data.comment || 'REQUESTS.HISTORY_COMMENTS.PAYOUT_COMPLETED',
-          undefined,
-          data.paymentConfirmationAttachment
+        await this.requestsService.markPayoutItemPaid(
+          req,
+          data.transaction || tx,
+          data.mode || 'SINGLE',
+          data.comment,
+          data.paymentConfirmationAttachment,
+          data.paymentConfirmationAttachments
         );
         await this.loadData();
         this.showToast('REQUESTS.MANAGE_PANEL.STATUS_UPDATED', 'success');
@@ -338,7 +364,7 @@ export class PayoutsPage implements OnInit, OnDestroy {
   }
 
   public goToConfigurations(): void {
-    this.router.navigate(['/t/configurations'], { queryParams: { section: 'EXPORTS' } });
+    this.router.navigate(['/t/configurations'], { queryParams: { section: 'EXPORTS', subtab: 'BANK' } });
   }
 
   private async showToast(messageKey: string, color: string, duration = 3000): Promise<void> {

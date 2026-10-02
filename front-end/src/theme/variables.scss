@@ -193,6 +193,15 @@ $text-white: #ffffff;
   --input-error-border: #ef4444;
   --input-error-text: #991b1b;
   --input-error-focus-border: #dc2626;
+
+  --chip-id-bg: #e2e8f0;
+  --chip-id-text: #1e293b;
+  --chip-id-hover-bg: #cbd5e1;
+  --chip-type-opacity: 0.12;
+  --chip-domestic-bg: #ecfdf5;
+  --chip-domestic-text: #059669;
+  --chip-international-bg: #f5f3ff;
+  --chip-international-text: #7c3aed;
 }
 
 .ion-color-ideaToolbar {
@@ -345,6 +354,15 @@ body.dark {
   --input-error-border: #ef4444;
   --input-error-text: #fca5a5;
   --input-error-focus-border: #f87171;
+
+  --chip-id-bg: rgba(255, 255, 255, 0.12);
+  --chip-id-text: #f8fafc;
+  --chip-id-hover-bg: rgba(255, 255, 255, 0.2);
+  --chip-type-opacity: 0.18;
+  --chip-domestic-bg: rgba(16, 185, 129, 0.15);
+  --chip-domestic-text: #34d399;
+  --chip-international-bg: rgba(139, 92, 246, 0.15);
+  --chip-international-text: #c4b5fd;
 }
 
 /*

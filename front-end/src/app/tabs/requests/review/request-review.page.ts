@@ -321,7 +321,8 @@ export class RequestReviewPage implements OnInit {
         'PAID',
         data.comment || 'REQUESTS.HISTORY_COMMENTS.PAYOUT_COMPLETED',
         undefined,
-        data.paymentConfirmationAttachment
+        data.paymentConfirmationAttachment,
+        data.paymentConfirmationAttachments
       );
     }
   }
@@ -362,11 +363,23 @@ export class RequestReviewPage implements OnInit {
     await alert.present();
   }
 
+  public getPaymentConfirmations(): AttachmentFile[] {
+    if (!this.request) return [];
+    if (this.request.paymentConfirmationAttachments && this.request.paymentConfirmationAttachments.length > 0) {
+      return this.request.paymentConfirmationAttachments;
+    }
+    if (this.request.paymentConfirmationAttachment) {
+      return [this.request.paymentConfirmationAttachment];
+    }
+    return [];
+  }
+
   private async executeStatusChange(
     newStatus: RequestStatus,
     comment?: string,
     adminRemarks?: string,
-    paymentConfirmationAttachment?: AttachmentFile
+    paymentConfirmationAttachment?: AttachmentFile,
+    paymentConfirmationAttachments?: AttachmentFile[]
   ): Promise<void> {
     if (!this.request) return;
     this.isUpdatingStatus = true;
@@ -376,7 +389,8 @@ export class RequestReviewPage implements OnInit {
         newStatus,
         comment,
         adminRemarks,
-        paymentConfirmationAttachment
+        paymentConfirmationAttachment,
+        paymentConfirmationAttachments
       );
       this.request = updated;
       await this.showToast('REQUESTS.MANAGE_PANEL.STATUS_UPDATED', 'success');

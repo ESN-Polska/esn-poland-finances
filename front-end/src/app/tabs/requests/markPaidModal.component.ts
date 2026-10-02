@@ -2,6 +2,7 @@ import { Component, Input, OnInit } from '@angular/core';
 import { ModalController, ToastController } from '@ionic/angular';
 import { TranslateService } from '@ngx-translate/core';
 import { AttachmentFile, FinancialRequest } from '@models/financial-request.model';
+import { BankTransactionItem } from '@app/services/requests.service';
 import { MediaService } from '../../common/media.service';
 
 @Component({
@@ -34,8 +35,39 @@ import { MediaService } from '../../common/media.service';
 
     <ion-content class="ion-padding modal-content-wrap">
       <div class="maxWidthContainer">
-        <!-- Request Summary Card -->
-        <div class="summary-box">
+        <!-- Payout Transaction Summary Card (when paying specific transaction) -->
+        <div class="summary-box" *ngIf="transaction">
+          <div class="summary-row header-row">
+            <span class="req-id">{{ transaction.displayId || request.displayId }}</span>
+            <span class="req-amount">{{ transaction.amount | number:'1.2-2' }} {{ transaction.currency }}</span>
+          </div>
+          <div class="summary-divider"></div>
+          <div class="summary-grid">
+            <div class="grid-item" *ngIf="transaction.invoiceNumber">
+              <span class="grid-label">{{ 'REQUESTS.FIELDS.INVOICE_NUMBER' | translate }}</span>
+              <span class="grid-value font-medium">{{ transaction.invoiceNumber }}</span>
+            </div>
+            <div class="grid-item" *ngIf="transaction.ksefNumber">
+              <span class="grid-label">KSeF</span>
+              <span class="grid-value font-mono">{{ transaction.ksefNumber }}</span>
+            </div>
+            <div class="grid-item">
+              <span class="grid-label">{{ 'REQUESTS.ACCOUNT_HOLDER_NAME' | translate }}</span>
+              <span class="grid-value font-medium">{{ transaction.recipientName }}</span>
+            </div>
+            <div class="grid-item full-width" *ngIf="transaction.recipientAccount">
+              <span class="grid-label">{{ 'REQUESTS.BANK_ACCOUNT_NUMBER' | translate }}</span>
+              <span class="grid-value font-mono">{{ transaction.recipientAccount }}</span>
+            </div>
+            <div class="grid-item full-width" *ngIf="transaction.title">
+              <span class="grid-label">{{ 'REQUESTS.PAYOUTS.TRANSFER_TITLE' | translate }}</span>
+              <span class="grid-value font-mono">{{ transaction.title }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Request Summary Card (when no specific transaction or general mark paid) -->
+        <div class="summary-box" *ngIf="!transaction">
           <div class="summary-row header-row">
             <span class="req-id">{{ request.displayId }}</span>
             <span class="req-amount">{{ amountDisplay }}</span>
@@ -57,6 +89,37 @@ import { MediaService } from '../../common/media.service';
             <div class="grid-item full-width" *ngIf="request.swiftBic">
               <span class="grid-label">{{ 'REQUESTS.SWIFT_BIC' | translate }}</span>
               <span class="grid-value font-mono">{{ request.swiftBic }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Scope selection when multiple payouts exist for this request -->
+        <div class="scope-selection-card" *ngIf="transaction && hasMultipleUnpaidPayouts">
+          <div
+            class="scope-option"
+            [class.selected]="payoutMode === 'SINGLE'"
+            (click)="payoutMode = 'SINGLE'"
+          >
+            <div class="scope-radio">
+              <div class="radio-dot" *ngIf="payoutMode === 'SINGLE'"></div>
+            </div>
+            <div class="scope-info">
+              <span class="scope-title">{{ 'REQUESTS.MANAGE_PANEL.MARK_SINGLE_TITLE' | translate }} ({{ transaction.amount | number:'1.2-2' }} {{ transaction.currency }})</span>
+              <span class="scope-desc">{{ 'REQUESTS.MANAGE_PANEL.MARK_SINGLE_DESC' | translate }}</span>
+            </div>
+          </div>
+
+          <div
+            class="scope-option"
+            [class.selected]="payoutMode === 'ALL'"
+            (click)="payoutMode = 'ALL'"
+          >
+            <div class="scope-radio">
+              <div class="radio-dot" *ngIf="payoutMode === 'ALL'"></div>
+            </div>
+            <div class="scope-info">
+              <span class="scope-title">{{ 'REQUESTS.MANAGE_PANEL.MARK_ALL_TITLE' | translate }}</span>
+              <span class="scope-desc">{{ 'REQUESTS.MANAGE_PANEL.MARK_ALL_DESC' | translate }}</span>
             </div>
           </div>
         </div>
@@ -90,15 +153,16 @@ import { MediaService } from '../../common/media.service';
 
             <input
               type="file"
+              multiple
               #fileInput
-              (change)="onFileSelected($event)"
+              (change)="onFilesSelected($event)"
               accept="application/pdf,image/png,image/jpeg,.pdf,.png,.jpg,.jpeg"
               style="display: none"
             />
 
             <!-- Empty state: clickable dropzone -->
             <div
-              *ngIf="!selectedFile"
+              *ngIf="selectedFiles.length === 0"
               class="upload-dropzone"
               (click)="!isUploading && fileInput.click()"
               [class.disabled-zone]="isUploading"
@@ -112,33 +176,40 @@ import { MediaService } from '../../common/media.service';
               </div>
             </div>
 
-            <!-- Attached file preview -->
-            <div *ngIf="selectedFile" class="file-attached-card">
-              <div class="file-icon-box">
-                <ion-icon [name]="isPdf(selectedFile.name) ? 'document-text' : 'image'" class="file-type-icon"></ion-icon>
+            <!-- Attached files preview -->
+            <div *ngIf="selectedFiles.length > 0" class="files-list-container">
+              <div *ngFor="let file of selectedFiles; let idx = index" class="file-attached-card">
+                <div class="file-icon-box">
+                  <ion-icon [name]="isPdf(file.name) ? 'document-text' : 'image'" class="file-type-icon"></ion-icon>
+                </div>
+                <div class="file-meta">
+                  <span class="file-name" [title]="file.name">{{ file.name }}</span>
+                  <span class="file-size">{{ formatFileSize(file.size) }}</span>
+                </div>
+                <div class="file-actions">
+                  <ion-button
+                    fill="clear"
+                    size="small"
+                    color="danger"
+                    (click)="removeFile(idx, $event)"
+                    [disabled]="isUploading"
+                    [title]="'COMMON.DELETE' | translate"
+                  >
+                    <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
+                  </ion-button>
+                </div>
               </div>
-              <div class="file-meta">
-                <span class="file-name" [title]="selectedFile.name">{{ selectedFile.name }}</span>
-                <span class="file-size">{{ formatFileSize(selectedFile.size) }}</span>
-              </div>
-              <div class="file-actions">
-                <ion-button
-                  fill="clear"
-                  size="small"
-                  color="danger"
-                  (click)="removeFile($event)"
-                  [disabled]="isUploading"
-                  [title]="'COMMON.DELETE' | translate"
-                >
-                  <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
-                </ion-button>
+
+              <div class="add-more-row" *ngIf="!isUploading">
                 <ion-button
                   fill="outline"
                   size="small"
+                  color="primary"
                   (click)="fileInput.click()"
-                  [disabled]="isUploading"
+                  class="add-more-btn"
                 >
-                  {{ 'COMMON.EDIT' | translate }}
+                  <ion-icon name="add-circle-outline" slot="start"></ion-icon>
+                  {{ 'REQUESTS.MANAGE_PANEL.ADD_MORE_CONFIRMATIONS' | translate }}
                 </ion-button>
               </div>
             </div>
@@ -349,6 +420,81 @@ import { MediaService } from '../../common/media.service';
       gap: 4px;
       flex-shrink: 0;
     }
+    .files-list-container {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .add-more-row {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 4px;
+    }
+    .add-more-btn {
+      --border-radius: 6px;
+      font-size: 0.84rem;
+      font-weight: 500;
+    }
+    .scope-selection-card {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .scope-option {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px 14px;
+      border: 1px solid var(--ion-color-step-200, #cbd5e1);
+      border-radius: 8px;
+      background: var(--ion-color-step-50, #f8fafc);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .scope-option:hover {
+      border-color: var(--ion-color-primary, #00aeef);
+      background: var(--ion-color-step-100, #f1f5f9);
+    }
+    .scope-option.selected {
+      border-color: var(--ion-color-primary, #00aeef);
+      background: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.08);
+    }
+    .scope-radio {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 2px solid var(--ion-color-step-400, #94a3b8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 2px;
+      flex-shrink: 0;
+    }
+    .scope-option.selected .scope-radio {
+      border-color: var(--ion-color-primary, #00aeef);
+    }
+    .radio-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--ion-color-primary, #00aeef);
+    }
+    .scope-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .scope-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--ion-color-step-850, #1e293b);
+    }
+    .scope-desc {
+      font-size: 0.8rem;
+      color: var(--ion-color-step-500, #64748b);
+      line-height: 1.35;
+    }
     .uploading-banner {
       display: flex;
       align-items: center;
@@ -366,10 +512,10 @@ import { MediaService } from '../../common/media.service';
 })
 export class MarkPaidModalComponent implements OnInit {
   @Input() request!: FinancialRequest;
+  @Input() transaction?: BankTransactionItem;
 
+  public payoutMode: 'SINGLE' | 'ALL' = 'SINGLE';
   public comment = '';
-  public selectedFile: File | null = null;
-  public isUploading = false;
 
   constructor(
     private modalCtrl: ModalController,
@@ -379,7 +525,17 @@ export class MarkPaidModalComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    // Intentionally left blank for initialization
+    if (this.transaction) {
+      this.payoutMode = 'SINGLE';
+    } else {
+      this.payoutMode = 'ALL';
+    }
+  }
+
+  public get hasMultipleUnpaidPayouts(): boolean {
+    if (!this.request?.documents || this.request.documents.length <= 1) return false;
+    const unpaid = this.request.documents.filter(d => !d.payoutPaidOn);
+    return unpaid.length > 1;
   }
 
   public get amountDisplay(): string {
@@ -389,23 +545,32 @@ export class MarkPaidModalComponent implements OnInit {
       : `${this.request.totalGrossAmount} ${this.request.currency}`;
   }
 
-  public onFileSelected(event: any): void {
-    const file = event?.target?.files?.[0];
-    if (!file) return;
+  public selectedFiles: File[] = [];
+  public isUploading = false;
 
-    // Check file size (50MB max)
+  public onFilesSelected(event: any): void {
+    const files: FileList = event?.target?.files;
+    if (!files || files.length === 0) return;
+
     const maxSize = 50 * 1024 * 1024;
-    if (file.size > maxSize) {
-      this.showToast('REQUESTS.FILE_TOO_LARGE', 'warning');
-      return;
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      if (file.size > maxSize) {
+        this.showToast('REQUESTS.FILE_TOO_LARGE', 'warning');
+        continue;
+      }
+      if (!this.selectedFiles.some(f => f.name === file.name && f.size === file.size)) {
+        this.selectedFiles.push(file);
+      }
     }
-
-    this.selectedFile = file;
+    if (event.target) event.target.value = '';
   }
 
-  public removeFile(event: Event): void {
+  public removeFile(index: number, event: Event): void {
     event.stopPropagation();
-    this.selectedFile = null;
+    if (index >= 0 && index < this.selectedFiles.length) {
+      this.selectedFiles.splice(index, 1);
+    }
   }
 
   public isPdf(filename: string): boolean {
@@ -427,21 +592,26 @@ export class MarkPaidModalComponent implements OnInit {
   public async confirm(): Promise<void> {
     if (this.isUploading) return;
 
-    let attachment: AttachmentFile | undefined = undefined;
+    const attachments: AttachmentFile[] = [];
 
-    if (this.selectedFile) {
+    if (this.selectedFiles.length > 0) {
       this.isUploading = true;
       try {
-        const uploadRes = await this.mediaService.uploadDocument(this.selectedFile);
-        attachment = {
-          fileId: uploadRes.id,
-          fileName: this.selectedFile.name,
-          fileSize: this.selectedFile.size,
-          contentType: this.selectedFile.type || 'application/pdf',
-          s3Key: uploadRes.s3Key,
-          url: uploadRes.url,
-          uploadedAt: new Date().toISOString()
-        };
+        const uploadPromises = this.selectedFiles.map(async (file) => {
+          const uploadRes = await this.mediaService.uploadDocument(file);
+          return {
+            fileId: uploadRes.id,
+            fileName: file.name,
+            fileSize: file.size,
+            contentType: file.type || 'application/pdf',
+            s3Key: uploadRes.s3Key,
+            url: uploadRes.url,
+            uploadedAt: new Date().toISOString()
+          } as AttachmentFile;
+        });
+
+        const results = await Promise.all(uploadPromises);
+        attachments.push(...results);
       } catch (err: any) {
         this.isUploading = false;
         this.showToast(err.message || 'Upload failed', 'danger');
@@ -452,8 +622,11 @@ export class MarkPaidModalComponent implements OnInit {
 
     await this.modalCtrl.dismiss(
       {
+        mode: this.payoutMode,
         comment: this.comment.trim(),
-        paymentConfirmationAttachment: attachment
+        paymentConfirmationAttachment: attachments[0] || undefined,
+        paymentConfirmationAttachments: attachments,
+        transaction: this.transaction
       },
       'confirm'
     );

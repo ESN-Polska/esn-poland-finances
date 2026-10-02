@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AlertController, ToastController } from '@ionic/angular';
 import { TranslateService } from '@ngx-translate/core';
-import { FinancialRequest, FinancialRequestStatus, RequestStatus } from '@models/financial-request.model';
+import { AttachmentFile, FinancialRequest, FinancialRequestStatus, RequestStatus } from '@models/financial-request.model';
 import { AppPermission, UsersOriginDisplayOptions } from '@models/configurations.model';
 import { RequestsService } from '../../../services/requests.service';
 import { AppService } from '../../../app.service';
@@ -258,6 +258,17 @@ export class RequestViewPage implements OnInit {
     } else {
       this.router.navigate(['/t/requests/review', encodeURIComponent(this.request.requestId)]);
     }
+  }
+
+  public getPaymentConfirmations(): AttachmentFile[] {
+    if (!this.request) return [];
+    if (this.request.paymentConfirmationAttachments && this.request.paymentConfirmationAttachments.length > 0) {
+      return this.request.paymentConfirmationAttachments;
+    }
+    if (this.request.paymentConfirmationAttachment) {
+      return [this.request.paymentConfirmationAttachment];
+    }
+    return [];
   }
 
   public openAttachment(attachment: any): void {

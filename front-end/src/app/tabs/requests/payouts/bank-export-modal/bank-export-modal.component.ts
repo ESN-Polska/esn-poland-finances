@@ -35,11 +35,13 @@ export class BankExportModalComponent implements OnInit {
     this.settings = configSettings ? JSON.parse(JSON.stringify(configSettings)) : { ...DEFAULT_BANK_EXPORT_SETTINGS };
     this.senderAccount = this.settings.senderAccountNumber || '';
 
-    this.items = (this.transactions || []).map(t => ({
-      ...t,
-      selected: t.isDomesticPln,
-      originalTitle: t.title
-    }));
+    this.items = (this.transactions || [])
+      .filter(t => t.isDomesticPln)
+      .map(t => ({
+        ...t,
+        selected: true,
+        originalTitle: t.title
+      }));
   }
 
   get selectedItems(): BankTransactionItem[] {
@@ -55,8 +57,21 @@ export class BankExportModalComponent implements OnInit {
     return clean.length === 26;
   }
 
+  get placeholderTag(): string {
+    return this.settings?.unresolvedPlaceholderTag?.trim() || 'XX';
+  }
+
+  get isPlaceholderDetectionEnabled(): boolean {
+    return this.settings?.detectUnresolvedPlaceholders !== false && !!this.placeholderTag;
+  }
+
   get hasUnresolvedPlaceholders(): boolean {
-    return this.selectedItems.some(i => i.title.includes('XX'));
+    if (!this.isPlaceholderDetectionEnabled) return false;
+    return this.selectedItems.some(i => i.title.includes(this.placeholderTag));
+  }
+
+  public isItemPlaceholderUnresolved(title: string): boolean {
+    return this.isPlaceholderDetectionEnabled && !!title && title.includes(this.placeholderTag);
   }
 
   get hasOverlengthTitles(): boolean {
@@ -66,9 +81,7 @@ export class BankExportModalComponent implements OnInit {
   public onSelectAll(event: any): void {
     const checked = event?.detail?.checked ?? true;
     this.items.forEach(i => {
-      if (i.isDomesticPln) {
-        i.selected = checked;
-      }
+      i.selected = checked;
     });
   }
 

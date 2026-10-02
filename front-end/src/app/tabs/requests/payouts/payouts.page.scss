@@ -309,7 +309,7 @@
       align-items: center;
       margin-bottom: 8px;
 
-      .badgeGroup {
+      .idAndBadgesWrap {
         display: flex;
         align-items: center;
         gap: 8px;
@@ -318,40 +318,48 @@
         .displayIdBadge {
           font-size: 0.85rem;
           font-weight: 700;
-          background: #e2e8f0;
-          color: #1e293b;
+          background: var(--chip-id-bg, #e2e8f0);
+          color: var(--chip-id-text, #1e293b);
           padding: 2px 8px;
           border-radius: 4px;
           cursor: pointer;
+          transition: background 0.15s ease;
 
           &:hover {
-            background: #cbd5e1;
+            background: var(--chip-id-hover-bg, #cbd5e1);
           }
         }
 
-        .typeBadge {
-          font-size: 0.78rem;
-          font-weight: 600;
-          color: var(--ion-color-primary, #00aeef);
-          background: rgba(0, 174, 239, 0.1);
-          padding: 2px 8px;
-          border-radius: 4px;
-        }
+        .badgeGroup {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-wrap: wrap;
 
-        .scopeBadge {
-          font-size: 0.74rem;
-          font-weight: 600;
-          padding: 2px 8px;
-          border-radius: 4px;
-
-          &.isDomestic {
-            background: #ecfdf5;
-            color: #059669;
+          .typeBadge {
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--ion-color-primary, #00aeef);
+            background: rgba(var(--ion-color-primary-rgb, 0, 174, 239), var(--chip-type-opacity, 0.12));
+            padding: 2px 8px;
+            border-radius: 4px;
           }
 
-          &.isInternational {
-            background: #f5f3ff;
-            color: #7c3aed;
+          .scopeBadge {
+            font-size: 0.74rem;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 4px;
+
+            &.isDomestic {
+              background: var(--chip-domestic-bg, #ecfdf5);
+              color: var(--chip-domestic-text, #059669);
+            }
+
+            &.isInternational {
+              background: var(--chip-international-bg, #f5f3ff);
+              color: var(--chip-international-text, #7c3aed);
+            }
           }
         }
       }
@@ -468,8 +476,8 @@
     }
 
     .documentNumbersBox {
-      background: #eff6ff;
-      border: 1px solid #bfdbfe;
+      background: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.06);
+      border: 1px solid rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.22);
       border-radius: 8px;
       padding: 10px 14px;
       margin-bottom: 12px;
@@ -478,7 +486,8 @@
         font-size: 0.72rem;
         font-weight: 700;
         text-transform: uppercase;
-        color: #1e40af;
+        letter-spacing: 0.04em;
+        color: var(--ion-color-primary);
         margin-bottom: 6px;
       }
 
@@ -495,13 +504,14 @@
 
           .docLabel {
             font-size: 0.78rem;
-            color: #3b82f6;
+            color: var(--ion-color-primary);
             font-weight: 600;
           }
 
           .docVal {
             font-size: 0.88rem;
-            color: #1e3a8a;
+            color: var(--text-dark, #222428);
+            word-break: break-all;
           }
         }
 
@@ -509,6 +519,33 @@
           height: 26px;
           --padding-start: 6px;
           --padding-end: 6px;
+
+          &:hover {
+            --color: var(--ion-color-primary);
+          }
+        }
+      }
+
+      :host-context(body.dark) &,
+      :host-context(.dark) &,
+      body.dark & {
+        background: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.08);
+        border-color: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.25);
+
+        .docBoxTitle {
+          color: var(--ion-color-primary);
+        }
+
+        .docItem {
+          .docLeft {
+            .docLabel {
+              color: var(--ion-color-primary);
+            }
+
+            .docVal {
+              color: var(--text-dark, #f8fafc);
+            }
+          }
         }
       }
     }
@@ -560,13 +597,44 @@
     }
   }
 
-  .cardHeaderRow {
-    flex-direction: column;
-    align-items: flex-start !important;
-    gap: 8px;
+  .payoutCard {
+    padding: 14px 14px;
 
-    .amountBadge {
-      align-self: flex-end;
+    .cardHeaderRow {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 6px 10px;
+      align-items: center;
+      margin-bottom: 8px;
+
+      .idAndBadgesWrap {
+        display: contents;
+
+        .displayIdBadge {
+          grid-column: 1;
+          grid-row: 1;
+          justify-self: start;
+        }
+
+        .badgeGroup {
+          grid-column: 1 / -1;
+          grid-row: 2;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          flex-wrap: wrap;
+        }
+      }
+
+      .amountBadge {
+        grid-column: 2;
+        grid-row: 1;
+        justify-self: end;
+        font-size: 1.12rem;
+        font-weight: 800;
+        white-space: nowrap;
+        margin: 0;
+      }
     }
   }
 }
@@ -602,29 +670,38 @@ body.dark {
     }
   }
 
+  .displayIdBadge {
+    background: rgba(255, 255, 255, 0.12) !important;
+    color: var(--text-dark, #f8fafc) !important;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.2) !important;
+    }
+  }
+
   .badgeGroup {
     .displayIdBadge {
-      background: rgba(255, 255, 255, 0.12);
-      color: var(--text-dark, #f8fafc);
+      background: rgba(255, 255, 255, 0.12) !important;
+      color: var(--text-dark, #f8fafc) !important;
 
       &:hover {
-        background: rgba(255, 255, 255, 0.2);
+        background: rgba(255, 255, 255, 0.2) !important;
       }
     }
 
     .typeBadge {
-      background: rgba(0, 174, 239, 0.15);
-      color: var(--ion-color-primary, #00aeef);
+      background: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.18) !important;
+      color: var(--ion-color-primary, #00aeef) !important;
     }
 
     .scopeBadge {
       &.isDomestic {
-        background: rgba(16, 185, 129, 0.15);
-        color: #34d399;
+        background: rgba(16, 185, 129, 0.15) !important;
+        color: #34d399 !important;
       }
       &.isInternational {
-        background: rgba(139, 92, 246, 0.15);
-        color: #c4b5fd;
+        background: rgba(139, 92, 246, 0.15) !important;
+        color: #c4b5fd !important;
       }
     }
   }
@@ -649,20 +726,20 @@ body.dark {
   }
 
   .documentNumbersBox {
-    background: rgba(59, 130, 246, 0.12);
-    border: 1px solid rgba(59, 130, 246, 0.25);
+    background: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.08) !important;
+    border: 1px solid rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.25) !important;
 
     .docBoxTitle {
-      color: #93c5fd;
+      color: var(--ion-color-primary) !important;
     }
 
     .docItem {
       .docLeft {
         .docLabel {
-          color: #94a3b8;
+          color: var(--ion-color-primary) !important;
         }
         .docVal {
-          color: #bfdbfe;
+          color: var(--text-dark, #f8fafc) !important;
         }
       }
     }

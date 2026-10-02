@@ -124,7 +124,17 @@ export class StatusCommentPipe implements PipeTransform, OnDestroy {
       return this.translate.instant('REQUESTS.HISTORY_COMMENTS.STATUS_CHANGED_TO', { status: translatedStatus });
     }
 
-    // 4. Custom user remark (e.g. manager's specific comments) -> return as-is
+    // 4. Invoices marked paid pattern: "<invoices> marked as paid" or "<invoices> - oznaczono jako opłacone"
+    const enPaidMatch = comment.match(/^(.+?)\s+marked as paid(?:\s+\((.+?)\))?$/i);
+    const plPaidMatch = comment.match(/^(.+?)\s+-\s+oznaczono jako op\u0142acone(?:\s+\((.+?)\))?$/i);
+    if (enPaidMatch || plPaidMatch) {
+      const invoices = (enPaidMatch?.[1] || plPaidMatch?.[1])?.trim();
+      const extra = (enPaidMatch?.[2] || plPaidMatch?.[2])?.trim();
+      const translated = this.translate.instant('REQUESTS.HISTORY_COMMENTS.INVOICES_MARKED_PAID', { invoices });
+      return extra ? `${translated} (${extra})` : translated;
+    }
+
+    // 5. Custom user remark (e.g. manager's specific comments) -> return as-is
     return comment;
   }
 

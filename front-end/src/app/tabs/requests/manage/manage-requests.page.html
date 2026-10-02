@@ -19,16 +19,18 @@
       </div>
 
       <div class="headerRight">
-        <ion-button *ngIf="canAccessPayouts" class="payoutsHeaderBtn" fill="solid" color="primary" (click)="goToPayouts()" [title]="'REQUESTS.PAYOUTS.TITLE' | translate">
-          <ion-icon slot="start" name="card-outline"></ion-icon>
-          {{ 'REQUESTS.PAYOUTS.TITLE' | translate }}
-          <ion-badge color="light" *ngIf="approvedCount > 0" class="headerBadge">{{ approvedCount }}</ion-badge>
-        </ion-button>
+        <div class="headerActions">
+          <ion-button *ngIf="canAccessPayouts" class="payoutsHeaderBtn" fill="solid" color="primary" (click)="goToPayouts()" [title]="'REQUESTS.PAYOUTS.TITLE' | translate">
+            <ion-icon slot="start" name="card-outline"></ion-icon>
+            {{ 'REQUESTS.PAYOUTS.TITLE' | translate }}
+            <ion-badge color="light" *ngIf="approvedTransactionsCount > 0" class="headerBadge">{{ approvedTransactionsCount }}</ion-badge>
+          </ion-button>
 
-        <ion-button *ngIf="canExport" class="exportBtn" fill="outline" (click)="exportData()" [disabled]="isLoading" [title]="'REQUESTS.MANAGE_PANEL.EXPORT_CSV' | translate">
-          <ion-icon slot="start" name="download-outline"></ion-icon>
-          {{ 'REQUESTS.MANAGE_PANEL.EXPORT_CSV' | translate }}
-        </ion-button>
+          <ion-button *ngIf="canExport" class="exportBtn" fill="outline" (click)="exportData()" [disabled]="isLoading" [title]="'REQUESTS.MANAGE_PANEL.EXPORT_CSV' | translate">
+            <ion-icon slot="start" name="download-outline"></ion-icon>
+            {{ 'REQUESTS.MANAGE_PANEL.EXPORT_CSV' | translate }}
+          </ion-button>
+        </div>
 
         <ion-button class="refreshBtn" fill="clear" (click)="loadRequests()" [title]="'COMMON.REFRESH' | translate">
           <ion-icon slot="icon-only" name="refresh-outline" [class.spinning]="isLoading"></ion-icon>
