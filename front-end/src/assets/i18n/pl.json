@@ -255,6 +255,7 @@
       "PAYMENT_CONFIRMATION_HINT": "Wgraj potwierdzenie przelewu (PDF, PNG, JPG). Zostanie dołączone do wniosku oraz przesłane w powiadomieniu e-mail.",
       "CHOOSE_CONFIRMATION_FILE": "Wybierz plik potwierdzenia lub przeciągnij tutaj",
       "ADD_MORE_CONFIRMATIONS": "Dodaj kolejny plik",
+      "ATTACHED_CONFIRMATION": "Załączone potwierdzenie",
       "REJECT_HEADER": "Odrzuć wniosek",
       "REJECT_DESC": "Podaj uzasadnienie odrzucenia wniosku dla wnioskodawcy:",
       "REJECTION_REASON_PLACEHOLDER": "Wpisz powód odrzucenia...",

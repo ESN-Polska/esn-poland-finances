@@ -255,6 +255,7 @@
       "PAYMENT_CONFIRMATION_HINT": "Upload transfer confirmation (PDF, PNG, JPG). It will be attached to the request and sent in the notification email.",
       "CHOOSE_CONFIRMATION_FILE": "Choose confirmation file or drag & drop",
       "ADD_MORE_CONFIRMATIONS": "Add another file",
+      "ATTACHED_CONFIRMATION": "Attached confirmation",
       "REJECT_HEADER": "Reject Request",
       "REJECT_DESC": "Provide the rejection reason for the applicant:",
       "REJECTION_REASON_PLACEHOLDER": "Enter rejection reason...",

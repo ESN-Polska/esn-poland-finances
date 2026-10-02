@@ -162,7 +162,7 @@ import { MediaService } from '../../common/media.service';
 
             <!-- Empty state: clickable dropzone -->
             <div
-              *ngIf="selectedFiles.length === 0"
+              *ngIf="existingConfirmations.length === 0 && selectedFiles.length === 0"
               class="upload-dropzone"
               (click)="!isUploading && fileInput.click()"
               [class.disabled-zone]="isUploading"
@@ -176,9 +176,45 @@ import { MediaService } from '../../common/media.service';
               </div>
             </div>
 
-            <!-- Attached files preview -->
-            <div *ngIf="selectedFiles.length > 0" class="files-list-container">
-              <div *ngFor="let file of selectedFiles; let idx = index" class="file-attached-card">
+            <!-- Attached files preview (both existing and newly selected) -->
+            <div *ngIf="existingConfirmations.length > 0 || selectedFiles.length > 0" class="files-list-container">
+              <!-- Previously uploaded confirmations -->
+              <div *ngFor="let att of existingConfirmations; let idx = index" class="file-attached-card existing-confirmation-card">
+                <div class="file-icon-box" (click)="openExistingAttachment(att, $event)" [title]="'COMMON.OPEN' | translate" style="cursor: pointer;">
+                  <ion-icon [name]="isPdf(att.fileName) ? 'document-text' : 'image'" class="file-type-icon"></ion-icon>
+                </div>
+                <div class="file-meta" (click)="openExistingAttachment(att, $event)" style="cursor: pointer;">
+                  <span class="file-name" [title]="att.fileName">{{ att.fileName }}</span>
+                  <div class="file-meta-sub">
+                    <span class="file-size" *ngIf="att.fileSize">{{ formatFileSize(att.fileSize) }}</span>
+                    <span class="file-badge existing-badge">{{ 'REQUESTS.MANAGE_PANEL.ATTACHED_CONFIRMATION' | translate }}</span>
+                  </div>
+                </div>
+                <div class="file-actions">
+                  <ion-button
+                    fill="clear"
+                    size="small"
+                    color="primary"
+                    (click)="openExistingAttachment(att, $event)"
+                    [title]="'COMMON.OPEN' | translate"
+                  >
+                    <ion-icon name="open-outline" slot="icon-only"></ion-icon>
+                  </ion-button>
+                  <ion-button
+                    fill="clear"
+                    size="small"
+                    color="danger"
+                    (click)="removeExistingConfirmation(idx, $event)"
+                    [disabled]="isUploading"
+                    [title]="'COMMON.DELETE' | translate"
+                  >
+                    <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
+                  </ion-button>
+                </div>
+              </div>
+
+              <!-- Newly selected files -->
+              <div *ngFor="let file of selectedFiles; let idx = index" class="file-attached-card new-confirmation-card">
                 <div class="file-icon-box">
                   <ion-icon [name]="isPdf(file.name) ? 'document-text' : 'image'" class="file-type-icon"></ion-icon>
                 </div>
@@ -414,6 +450,25 @@ import { MediaService } from '../../common/media.service';
       color: var(--ion-color-step-500, #64748b);
       margin-top: 1px;
     }
+    .file-meta-sub {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 2px;
+    }
+    .file-badge {
+      display: inline-block;
+      font-size: 0.68rem;
+      font-weight: 600;
+      padding: 1px 6px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    .existing-badge {
+      background: rgba(16, 185, 129, 0.12);
+      color: #059669;
+    }
     .file-actions {
       display: flex;
       align-items: center;
@@ -516,6 +571,9 @@ export class MarkPaidModalComponent implements OnInit {
 
   public payoutMode: 'SINGLE' | 'ALL' = 'SINGLE';
   public comment = '';
+  public existingConfirmations: AttachmentFile[] = [];
+  public selectedFiles: File[] = [];
+  public isUploading = false;
 
   constructor(
     private modalCtrl: ModalController,
@@ -530,6 +588,11 @@ export class MarkPaidModalComponent implements OnInit {
     } else {
       this.payoutMode = 'ALL';
     }
+
+    const confirmations = Array.isArray(this.request?.paymentConfirmationAttachments) && this.request.paymentConfirmationAttachments.length > 0
+      ? [...this.request.paymentConfirmationAttachments]
+      : (this.request?.paymentConfirmationAttachment ? [this.request.paymentConfirmationAttachment] : []);
+    this.existingConfirmations = confirmations;
   }
 
   public get hasMultipleUnpaidPayouts(): boolean {
@@ -545,9 +608,6 @@ export class MarkPaidModalComponent implements OnInit {
       : `${this.request.totalGrossAmount} ${this.request.currency}`;
   }
 
-  public selectedFiles: File[] = [];
-  public isUploading = false;
-
   public onFilesSelected(event: any): void {
     const files: FileList = event?.target?.files;
     if (!files || files.length === 0) return;
@@ -559,7 +619,10 @@ export class MarkPaidModalComponent implements OnInit {
         this.showToast('REQUESTS.FILE_TOO_LARGE', 'warning');
         continue;
       }
-      if (!this.selectedFiles.some(f => f.name === file.name && f.size === file.size)) {
+      if (
+        !this.selectedFiles.some(f => f.name === file.name && f.size === file.size) &&
+        !this.existingConfirmations.some(e => e.fileName === file.name && e.fileSize === file.size)
+      ) {
         this.selectedFiles.push(file);
       }
     }
@@ -570,6 +633,26 @@ export class MarkPaidModalComponent implements OnInit {
     event.stopPropagation();
     if (index >= 0 && index < this.selectedFiles.length) {
       this.selectedFiles.splice(index, 1);
+    }
+  }
+
+  public removeExistingConfirmation(index: number, event: Event): void {
+    event.stopPropagation();
+    if (index >= 0 && index < this.existingConfirmations.length) {
+      this.existingConfirmations.splice(index, 1);
+    }
+  }
+
+  public openExistingAttachment(att: AttachmentFile, event?: Event): void {
+    if (event) event.stopPropagation();
+    if (!att) return;
+    if (att.url) {
+      window.open(att.url, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    if (att.s3Key) {
+      const url = `https://media.finances.esn-poland.link/${att.s3Key.replace(/^\/+/, '')}`;
+      window.open(url, '_blank', 'noopener,noreferrer');
     }
   }
 
@@ -592,7 +675,7 @@ export class MarkPaidModalComponent implements OnInit {
   public async confirm(): Promise<void> {
     if (this.isUploading) return;
 
-    const attachments: AttachmentFile[] = [];
+    const uploadedAttachments: AttachmentFile[] = [];
 
     if (this.selectedFiles.length > 0) {
       this.isUploading = true;
@@ -611,7 +694,7 @@ export class MarkPaidModalComponent implements OnInit {
         });
 
         const results = await Promise.all(uploadPromises);
-        attachments.push(...results);
+        uploadedAttachments.push(...results);
       } catch (err: any) {
         this.isUploading = false;
         this.showToast(err.message || 'Upload failed', 'danger');
@@ -620,12 +703,17 @@ export class MarkPaidModalComponent implements OnInit {
       this.isUploading = false;
     }
 
+    const allAttachments: AttachmentFile[] = [
+      ...this.existingConfirmations,
+      ...uploadedAttachments
+    ];
+
     await this.modalCtrl.dismiss(
       {
         mode: this.payoutMode,
         comment: this.comment.trim(),
-        paymentConfirmationAttachment: attachments[0] || undefined,
-        paymentConfirmationAttachments: attachments,
+        paymentConfirmationAttachment: allAttachments[0] || undefined,
+        paymentConfirmationAttachments: allAttachments,
         transaction: this.transaction
       },
       'confirm'
