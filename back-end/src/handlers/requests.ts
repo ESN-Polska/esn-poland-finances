@@ -358,6 +358,20 @@ class RequestsHandler extends ResourceController {
       finalStatus = 'PAID';
     }
 
+    if (finalStatus === 'PAID') {
+      const docsToUpdate = updates.documents || existing.documents;
+      if (Array.isArray(docsToUpdate)) {
+        updates.documents = docsToUpdate.map((d: any) => ({
+          ...d,
+          payoutPaidOn: d.payoutPaidOn || new Date().toISOString()
+        }));
+      }
+    }
+
+    if (Array.isArray(updates.paymentConfirmationAttachments)) {
+      updates.paymentConfirmationAttachment = updates.paymentConfirmationAttachments[0] || null;
+    }
+
     const skipStatusHistory = Boolean(updates.skipStatusHistory);
     delete updates.skipStatusHistory;
 
@@ -878,8 +892,10 @@ class RequestsHandler extends ResourceController {
           const sesv2Attachments = emailAttachments && emailAttachments.length > 0
             ? emailAttachments.map(att => ({
                 FileName: att.filename,
-                ContentType: att.contentType,
-                RawContent: new Uint8Array(att.content)
+                ContentType: att.contentType || 'application/pdf',
+                ContentDisposition: 'ATTACHMENT' as const,
+                ContentTransferEncoding: 'BASE64' as const,
+                RawContent: att.content instanceof Uint8Array ? att.content : new Uint8Array(att.content)
               }))
             : undefined;
 

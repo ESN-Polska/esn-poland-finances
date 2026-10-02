@@ -191,16 +191,15 @@ export class FinancialRequest extends Resource {
     this.delegationFormAttachment = x.delegationFormAttachment || undefined;
     this.ticketAttachments = Array.isArray(x.ticketAttachments) ? x.ticketAttachments : [];
     this.otherReceipts = Array.isArray(x.otherReceipts) ? x.otherReceipts : [];
-    this.paymentConfirmationAttachment = x.paymentConfirmationAttachment || undefined;
     if (Array.isArray(x.paymentConfirmationAttachments)) {
       this.paymentConfirmationAttachments = x.paymentConfirmationAttachments;
-    } else if (this.paymentConfirmationAttachment) {
+      this.paymentConfirmationAttachment = this.paymentConfirmationAttachments[0] || undefined;
+    } else if (x.paymentConfirmationAttachment) {
+      this.paymentConfirmationAttachment = x.paymentConfirmationAttachment;
       this.paymentConfirmationAttachments = [this.paymentConfirmationAttachment];
     } else {
       this.paymentConfirmationAttachments = [];
-    }
-    if (!this.paymentConfirmationAttachment && this.paymentConfirmationAttachments.length > 0) {
-      this.paymentConfirmationAttachment = this.paymentConfirmationAttachments[0];
+      this.paymentConfirmationAttachment = undefined;
     }
 
     this.generalExplanation = this.clean(x.generalExplanation, String);
