@@ -350,15 +350,23 @@ class RequestsHandler extends ResourceController {
       updates.country = country;
     }
 
+    const isAdvanceOrDelegation =
+      existing.requestType === 'ADVANCE_PAYMENT' ||
+      existing.requestType === 'DELEGATION_SETTLEMENT';
+
     // Auto-transition to PAID if all documents are paid
     let finalStatus = updatedStatus;
-    const isApprovedWithDocs = existing.status === 'APPROVED' && Array.isArray(updates.documents) && updates.documents.length > 0;
+    const isApprovedWithDocs =
+      !isAdvanceOrDelegation &&
+      existing.status === 'APPROVED' &&
+      Array.isArray(updates.documents) &&
+      updates.documents.length > 0;
     const isLastDocumentPaid = isApprovedWithDocs && updates.documents.every((d: any) => Boolean(d.payoutPaidOn));
     if (isLastDocumentPaid) {
       finalStatus = 'PAID';
     }
 
-    if (finalStatus === 'PAID') {
+    if (!isAdvanceOrDelegation && finalStatus === 'PAID') {
       const docsToUpdate = updates.documents || existing.documents;
       if (Array.isArray(docsToUpdate)) {
         updates.documents = docsToUpdate.map((d: any) => ({
@@ -390,7 +398,15 @@ class RequestsHandler extends ResourceController {
     const newHistoryEntries: any[] = [];
 
     if (shouldAddHistory) {
-      if (existing.status === 'APPROVED' && finalStatus === 'PAID' && isApprovedWithDocs && updates.historyNote) {
+      const isDocumentPayoutSplit =
+        !isAdvanceOrDelegation &&
+        existing.status === 'APPROVED' &&
+        finalStatus === 'PAID' &&
+        isApprovedWithDocs &&
+        updates.historyNote &&
+        updates.historyNote !== 'REQUESTS.HISTORY_COMMENTS.PAYOUT_COMPLETED';
+
+      if (isDocumentPayoutSplit) {
         // Record the document(s) marked as paid under APPROVED status
         newHistoryEntries.push({
           status: 'APPROVED',
@@ -406,11 +422,22 @@ class RequestsHandler extends ResourceController {
           comment: 'REQUESTS.HISTORY_COMMENTS.PAYOUT_COMPLETED'
         });
       } else {
+        let finalComment = updates.historyNote || defaultComment;
+        if (isAdvanceOrDelegation && finalStatus === 'PAID') {
+          if (finalComment) {
+            const docPaidMatch = finalComment.match(/^Document(?:s)? marked as paid(?:\s*\((.*)\))?$/i);
+            if (docPaidMatch) {
+              finalComment = docPaidMatch[1]?.trim() || 'REQUESTS.HISTORY_COMMENTS.PAYOUT_COMPLETED';
+            }
+          } else {
+            finalComment = 'REQUESTS.HISTORY_COMMENTS.PAYOUT_COMPLETED';
+          }
+        }
         newHistoryEntries.push({
           status: finalStatus,
           timestamp: now.toISOString(),
           updatedBy: user.getDisplayName() || user.userId,
-          comment: updates.historyNote || defaultComment
+          comment: finalComment
         });
       }
     }
