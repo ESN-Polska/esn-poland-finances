@@ -276,6 +276,13 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy {
           if (this.request.documents) {
              this.request.documents.forEach(d => delete d.attachment);
           }
+          if (this.request.requestType === 'INVOICE_REIMBURSEMENT' && this.request.documents) {
+            const today = new Date().toISOString().split('T')[0];
+            this.request.documents.forEach(d => {
+              if (!d.paidOn) d.paidOn = today;
+              if (!d.saleDate) d.saleDate = today;
+            });
+          }
           this.recalculateTotals();
 
           this.bankAccountType =
@@ -404,17 +411,26 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy {
     ) {
       if (!this.request.documents || this.request.documents.length === 0) {
         this.addDocumentItem();
-      } else if (previousType === 'ADVANCE_PAYMENT' && this.request.currency) {
-        this.request.documents.forEach(d => {
-          d.currency = this.request.currency;
-          if (this.request.currency === 'PLN' || this.request.currency === 'EUR') {
-            d.originalCurrency = undefined;
-            d.originalAmount = undefined;
-            d.originalVatAmount = undefined;
-            d.exchangeRate = undefined;
-            d.exchangeDate = undefined;
-          }
-        });
+      } else {
+        if (type === 'INVOICE_REIMBURSEMENT') {
+          const today = new Date().toISOString().split('T')[0];
+          this.request.documents.forEach(d => {
+            if (!d.paidOn) d.paidOn = today;
+            if (!d.saleDate) d.saleDate = today;
+          });
+        }
+        if (previousType === 'ADVANCE_PAYMENT' && this.request.currency) {
+          this.request.documents.forEach(d => {
+            d.currency = this.request.currency;
+            if (this.request.currency === 'PLN' || this.request.currency === 'EUR') {
+              d.originalCurrency = undefined;
+              d.originalAmount = undefined;
+              d.originalVatAmount = undefined;
+              d.exchangeRate = undefined;
+              d.exchangeDate = undefined;
+            }
+          });
+        }
       }
     }
     this.recalculateTotals();
@@ -426,15 +442,18 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy {
 
     const lastDoc = this.request.documents[this.request.documents.length - 1];
     const defaultCurrency = lastDoc?.currency || this.request.currency || 'PLN';
+    const today = new Date().toISOString().split('T')[0];
+    const isReimbursement = this.request.requestType === 'INVOICE_REIMBURSEMENT';
 
     const newItem: InvoiceDocumentItem = {
       id: 'doc_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
       invoiceNumber: '',
       ksefNumber: '',
       issuedBy: '',
-      issuedOn: new Date().toISOString().split('T')[0],
+      issuedOn: today,
       paymentDeadline: '',
-      paidOn: '',
+      paidOn: isReimbursement ? today : '',
+      saleDate: isReimbursement ? today : '',
       bankAccountDetails: '',
       currency: defaultCurrency,
       grossAmount: undefined as any,
@@ -603,6 +622,9 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   public onForeignDateChange(doc: InvoiceDocumentItem): void {
+    if (this.request.requestType === 'INVOICE_REIMBURSEMENT' && doc.hasDifferentSaleDate && !doc.saleDate) {
+      doc.saleDate = new Date().toISOString().split('T')[0];
+    }
     if (doc.originalCurrency && doc.originalCurrency !== 'PLN' && doc.originalCurrency !== 'EUR') {
       this.onForeignCurrencyAmountOrDateChange(doc);
     }
