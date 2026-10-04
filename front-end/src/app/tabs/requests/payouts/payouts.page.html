@@ -38,21 +38,25 @@
   <div class="maxWidthContainer">
     <!-- Metrics Ribbon -->
     <div class="metricsRibbon">
-      <div class="metricCard">
+      <div class="metricCard" [class.disabledCard]="isLoading">
         <span class="mLabel">{{ 'REQUESTS.PAYOUTS.METRIC_PENDING' | translate }}</span>
-        <span class="mValue font-bold">{{ totalApprovedCount }}</span>
+        <span class="mValue font-bold" *ngIf="!isLoading">{{ totalApprovedCount }}</span>
+        <ion-skeleton-text *ngIf="isLoading" [animated]="true" class="skeletonMetric"></ion-skeleton-text>
       </div>
-      <div class="metricCard">
+      <div class="metricCard" [class.disabledCard]="isLoading">
         <span class="mLabel">{{ 'REQUESTS.PAYOUTS.METRIC_DOMESTIC_EXPORTABLE' | translate }}</span>
-        <span class="mValue font-bold text-success">{{ domesticPlnCount }}</span>
+        <span class="mValue font-bold text-success" *ngIf="!isLoading">{{ domesticPlnCount }}</span>
+        <ion-skeleton-text *ngIf="isLoading" [animated]="true" class="skeletonMetric"></ion-skeleton-text>
       </div>
-      <div class="metricCard">
+      <div class="metricCard" [class.disabledCard]="isLoading">
         <span class="mLabel">{{ 'REQUESTS.PAYOUTS.METRIC_TOTAL_PLN' | translate }}</span>
-        <span class="mValue font-bold text-pln">{{ totalPlnAmount | number:'1.2-2' }} PLN</span>
+        <span class="mValue font-bold text-pln" *ngIf="!isLoading">{{ totalPlnAmount | number:'1.2-2' }} PLN</span>
+        <ion-skeleton-text *ngIf="isLoading" [animated]="true" class="skeletonFinancialAmount"></ion-skeleton-text>
       </div>
-      <div class="metricCard">
+      <div class="metricCard" [class.disabledCard]="isLoading">
         <span class="mLabel">{{ 'REQUESTS.PAYOUTS.METRIC_TOTAL_EUR' | translate }}</span>
-        <span class="mValue font-bold text-eur">{{ totalEurAmount | number:'1.2-2' }} EUR</span>
+        <span class="mValue font-bold text-eur" *ngIf="!isLoading">{{ totalEurAmount | number:'1.2-2' }} EUR</span>
+        <ion-skeleton-text *ngIf="isLoading" [animated]="true" class="skeletonFinancialAmount"></ion-skeleton-text>
       </div>
     </div>
 
@@ -154,8 +158,74 @@
     </div>
 
     <!-- Transactions / Payout Cards -->
-    <div class="payoutCardsGrid" *ngIf="filteredTransactions.length > 0">
-      <div class="payoutCard" *ngFor="let t of filteredTransactions">
+    <div class="payoutCardsGrid" *ngIf="isLoading || filteredTransactions.length > 0">
+      <!-- Skeleton Transaction Cards -->
+      <ng-container *ngIf="isLoading">
+        <div class="payoutCard skeletonPayoutCard" *ngFor="let s of [1, 2, 3]">
+          <!-- Card Header Skeleton -->
+          <div class="cardHeaderRow">
+            <div class="idAndBadgesWrap">
+              <ion-skeleton-text [animated]="true" class="skeletonBadge skeletonDisplayId"></ion-skeleton-text>
+              <div class="badgeGroup">
+                <ion-skeleton-text [animated]="true" class="skeletonBadge skeletonType"></ion-skeleton-text>
+                <ion-skeleton-text [animated]="true" class="skeletonBadge skeletonScope"></ion-skeleton-text>
+              </div>
+            </div>
+            <ion-skeleton-text [animated]="true" class="skeletonAmountBadge"></ion-skeleton-text>
+          </div>
+
+          <!-- Applicant Row Skeleton -->
+          <div class="applicantRow skeletonApplicantRow">
+            <ion-skeleton-text [animated]="true" class="skeletonApplicantLabel"></ion-skeleton-text>
+            <ion-skeleton-text [animated]="true" class="skeletonApplicantVal"></ion-skeleton-text>
+            <ion-skeleton-text [animated]="true" class="skeletonDateVal"></ion-skeleton-text>
+          </div>
+
+          <!-- Transfer Data Box Skeleton -->
+          <div class="transferDataBox">
+            <div class="boxHeader">
+              <ion-skeleton-text [animated]="true" class="skeletonBoxTitle"></ion-skeleton-text>
+            </div>
+
+            <!-- Recipient Name Skeleton -->
+            <div class="dataItem">
+              <div class="dataItemLeft">
+                <ion-skeleton-text [animated]="true" class="skeletonItemLabel"></ion-skeleton-text>
+                <ion-skeleton-text [animated]="true" class="skeletonItemValMedium"></ion-skeleton-text>
+              </div>
+              <ion-skeleton-text [animated]="true" class="skeletonCopyBtn"></ion-skeleton-text>
+            </div>
+
+            <!-- Bank Account Skeleton -->
+            <div class="dataItem">
+              <div class="dataItemLeft">
+                <ion-skeleton-text [animated]="true" class="skeletonItemLabel"></ion-skeleton-text>
+                <ion-skeleton-text [animated]="true" class="skeletonItemValLong"></ion-skeleton-text>
+              </div>
+              <ion-skeleton-text [animated]="true" class="skeletonCopyBtn"></ion-skeleton-text>
+            </div>
+
+            <!-- Transfer Title Skeleton -->
+            <div class="dataItem">
+              <div class="dataItemLeft">
+                <ion-skeleton-text [animated]="true" class="skeletonItemLabel"></ion-skeleton-text>
+                <ion-skeleton-text [animated]="true" class="skeletonItemValFull"></ion-skeleton-text>
+              </div>
+              <ion-skeleton-text [animated]="true" class="skeletonCopyBtn"></ion-skeleton-text>
+            </div>
+          </div>
+
+          <!-- Card Footer Actions Skeleton -->
+          <div class="cardFooterActions">
+            <ion-skeleton-text [animated]="true" class="skeletonActionBtn outline"></ion-skeleton-text>
+            <ion-skeleton-text [animated]="true" class="skeletonActionBtn solid" *ngIf="canManage"></ion-skeleton-text>
+          </div>
+        </div>
+      </ng-container>
+
+      <!-- Loaded Transaction Cards -->
+      <ng-container *ngIf="!isLoading">
+        <div class="payoutCard" *ngFor="let t of filteredTransactions">
         <!-- Card Header -->
         <div class="cardHeaderRow">
           <div class="idAndBadgesWrap">
@@ -358,6 +428,7 @@
           </ion-button>
         </div>
       </div>
-    </div>
+    </ng-container>
   </div>
+</div>
 </ion-content>

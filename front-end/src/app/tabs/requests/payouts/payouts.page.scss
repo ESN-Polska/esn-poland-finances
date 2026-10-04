@@ -255,6 +255,25 @@
         color: #10b981;
       }
     }
+
+    &.disabledCard {
+      cursor: default;
+      pointer-events: none;
+    }
+
+    .skeletonMetric {
+      width: 44px;
+      height: 22px;
+      --border-radius: 4px;
+      margin: 2px 0;
+    }
+
+    .skeletonFinancialAmount {
+      width: 90px;
+      height: 22px;
+      --border-radius: 4px;
+      margin: 2px 0;
+    }
   }
 }
 
@@ -301,6 +320,101 @@
 
     &:hover {
       outline: none !important;
+    }
+
+    &.skeletonPayoutCard {
+      cursor: default !important;
+      pointer-events: none;
+
+      ion-skeleton-text {
+        --border-radius: 4px;
+        margin: 0;
+      }
+
+      .skeletonDisplayId {
+        width: 80px;
+        height: 22px;
+      }
+
+      .skeletonType {
+        width: 70px;
+        height: 22px;
+      }
+
+      .skeletonScope {
+        width: 65px;
+        height: 22px;
+      }
+
+      .skeletonAmountBadge {
+        width: 100px;
+        height: 24px;
+      }
+
+      .skeletonApplicantRow {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 14px;
+
+        .skeletonApplicantLabel {
+          width: 55px;
+          height: 14px;
+        }
+
+        .skeletonApplicantVal {
+          width: 120px;
+          height: 14px;
+        }
+
+        .skeletonDateVal {
+          width: 70px;
+          height: 14px;
+        }
+      }
+
+      .skeletonBoxTitle {
+        width: 110px;
+        height: 15px;
+      }
+
+      .skeletonItemLabel {
+        width: 70px;
+        height: 12px;
+        margin-bottom: 4px;
+      }
+
+      .skeletonItemValMedium {
+        width: 160px;
+        height: 16px;
+      }
+
+      .skeletonItemValLong {
+        width: 240px;
+        height: 16px;
+      }
+
+      .skeletonItemValFull {
+        width: 90%;
+        height: 16px;
+      }
+
+      .skeletonCopyBtn {
+        width: 32px;
+        height: 32px;
+        --border-radius: 6px;
+        flex-shrink: 0;
+      }
+
+      .skeletonActionBtn {
+        width: 110px;
+        height: 34px;
+        --border-radius: 8px;
+
+        &.solid {
+          width: 120px;
+        }
+      }
     }
 
     .cardHeaderRow {
@@ -634,6 +748,22 @@
         font-weight: 800;
         white-space: nowrap;
         margin: 0;
+      }
+    }
+
+    &.skeletonPayoutCard {
+      .cardHeaderRow {
+        .skeletonDisplayId {
+          grid-column: 1;
+          grid-row: 1;
+          justify-self: start;
+        }
+
+        .skeletonAmountBadge {
+          grid-column: 2;
+          grid-row: 1;
+          justify-self: end;
+        }
       }
     }
   }

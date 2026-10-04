@@ -27,7 +27,7 @@ import { BankExportModalComponent } from './bank-export-modal/bank-export-modal.
   styleUrls: ['./payouts.page.scss']
 })
 export class PayoutsPage implements OnInit, OnDestroy {
-  public isLoading = false;
+  public isLoading = true;
   public allApprovedRequests: FinancialRequest[] = [];
   public transactions: BankTransactionItem[] = [];
 
