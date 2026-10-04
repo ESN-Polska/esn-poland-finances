@@ -22,7 +22,7 @@
               {{ user.getDisplayName() }}
             </h1>
             <div class="heroMetaRow">
-              <span class="heroUsername font-mono">@{{ user.userId }}</span>
+              <span class="heroUsername font-mono" *ngIf="user.nickname">{{ user.nickname }}</span>
               <span
                 class="userRoleChip role-{{ app.getUserRoleKey(user).toLowerCase() }}"
                 *ngIf="app.hasElevatedRole(user)"
@@ -35,8 +35,8 @@
           <button
             type="button"
             class="accountsLinkBtn"
-            *ngIf="!user.isGuest"
-            (click)="openAccountsProfile(user.userId)"
+            *ngIf="!user.isGuest && (user.preferredUsername || user.nickname)"
+            (click)="openAccountsProfile(user)"
             [title]="'USER.VIEW_ON_ACCOUNTS' | translate"
           >
             <ion-icon name="open-outline"></ion-icon>

@@ -119,11 +119,8 @@ export class TabsComponent implements OnInit, OnDestroy {
     return this.router.url.startsWith(path);
   }
 
-  public openAccountsProfile(userId?: string): void {
-    if (this.app.currentUser?.isGuest || userId?.startsWith('guest_')) return;
-    if (userId) {
-      window.open(`https://accounts.esn.org/user/${encodeURIComponent(userId)}`, '_blank', 'noopener,noreferrer');
-    }
+  public openAccountsProfile(identifier?: string | User): void {
+    this.app.openAccountsProfile(identifier || this.app.currentUser || undefined);
   }
 
   public canAccessConfigurations(): boolean {

@@ -141,10 +141,8 @@ export class RequestViewPage implements OnInit {
     }
   }
 
-  public openAccountsProfile(userId?: string): void {
-    if (userId) {
-      window.open(`https://accounts.esn.org/user/${encodeURIComponent(userId)}`, '_blank', 'noopener,noreferrer');
-    }
+  public openAccountsProfile(identifier?: string | any): void {
+    this.appService.openAccountsProfile(identifier || this.request);
   }
 
   public getSubmitterSection(): string {

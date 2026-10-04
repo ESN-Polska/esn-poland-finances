@@ -115,7 +115,8 @@ export class ProfilePage implements OnInit {
           icon: 'mail-outline',
           handler: () => {
             const appTitle = this.app.configurations?.getAppTitle(this.app.currentLanguage) || 'ESN Finances';
-            const userIdentifier = this.user ? `${this.user.getDisplayName()} (@${this.user.userId})` : 'User';
+            const handle = this.user?.nickname || this.user?.preferredUsername || this.user?.userId;
+            const userIdentifier = this.user ? `${this.user.getDisplayName()}${handle ? ` (${handle})` : ''}` : 'User';
             const subject = encodeURIComponent(`[${appTitle}] Support Request - ${userIdentifier}`);
             window.location.href = `mailto:${email}?subject=${subject}`;
           }
@@ -151,11 +152,8 @@ export class ProfilePage implements OnInit {
     await modal.present();
   }
 
-  public openAccountsProfile(userId?: string): void {
-    if (this.app.currentUser?.isGuest || userId?.startsWith('guest_')) return;
-    if (userId) {
-      window.open(`https://accounts.esn.org/user/${encodeURIComponent(userId)}`, '_blank', 'noopener,noreferrer');
-    }
+  public openAccountsProfile(identifier?: string | User): void {
+    this.app.openAccountsProfile(identifier || this.user);
   }
 
   public async ngOnInit(): Promise<void> {

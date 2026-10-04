@@ -28,15 +28,29 @@ class UsersRC extends ResourceController {
     if (!this.resourceId) return;
 
     const userId = this.resourceId.toLowerCase();
-    const isSelf = this.callerUser?.userId?.toLowerCase() === userId;
+    const isSelf =
+      this.callerUser?.userId?.toLowerCase() === userId ||
+      this.callerUser?.nickname?.toLowerCase() === userId ||
+      this.callerUser?.preferredUsername?.toLowerCase() === userId;
     try {
       if (DDB_TABLES.users) {
-        this.targetUser = await ddb.get({ TableName: DDB_TABLES.users, Key: { userId } });
+        this.targetUser = await ddb.get({ TableName: DDB_TABLES.users, Key: { userId } }).catch(() => null);
+        if (!this.targetUser) {
+          const nickItems = await ddb.scan({
+            TableName: DDB_TABLES.users,
+            FilterExpression: '#nick = :n OR #pref = :n',
+            ExpressionAttributeNames: { '#nick': 'nickname', '#pref': 'preferredUsername' },
+            ExpressionAttributeValues: { ':n': userId }
+          }).catch(() => null);
+          if (nickItems && nickItems.length > 0) {
+            this.targetUser = nickItems[0];
+          }
+        }
       }
       if (!this.targetUser) {
         if (isSelf) {
           this.targetUser = JSON.parse(JSON.stringify(this.callerUser));
-          this.targetUser.userId = userId;
+          this.targetUser.userId = this.callerUser.userId;
         } else {
           throw new HandledError('User not found');
         }
@@ -44,7 +58,7 @@ class UsersRC extends ResourceController {
     } catch {
       if (isSelf) {
         this.targetUser = JSON.parse(JSON.stringify(this.callerUser));
-        this.targetUser.userId = userId;
+        this.targetUser.userId = this.callerUser.userId;
       } else {
         throw new HandledError('User not found');
       }
@@ -59,7 +73,10 @@ class UsersRC extends ResourceController {
     const userId = this.resourceId?.toLowerCase();
     if (!userId) throw new HandledError('Missing userId parameter');
 
-    const isSelf = this.callerUser.userId?.toLowerCase() === userId;
+    const isSelf =
+      this.callerUser.userId?.toLowerCase() === userId ||
+      this.callerUser.nickname?.toLowerCase() === userId ||
+      this.callerUser.preferredUsername?.toLowerCase() === userId;
     const isAdmin = this.callerUser.isAdministrator;
 
     if (!isSelf && !isAdmin) {
@@ -215,7 +232,14 @@ class UsersRC extends ResourceController {
     }
 
     // Merge any known configured users who might not have logged in yet
-    const existingIds = new Set(rawUsers.map(u => String(u.userId || '').toLowerCase()));
+    const existingIds = new Set(
+      rawUsers.reduce((acc, u) => {
+        if (u.userId) acc.push(String(u.userId).toLowerCase());
+        if (u.nickname) acc.push(String(u.nickname).toLowerCase());
+        if (u.preferredUsername) acc.push(String(u.preferredUsername).toLowerCase());
+        return acc;
+      }, [] as string[])
+    );
     const knownConfigUserIds = Array.from(new Set([
       ...(configurations.administratorsIds || []),
       ...(configurations.managersIds || []),
@@ -228,6 +252,8 @@ class UsersRC extends ResourceController {
       if (!existingIds.has(configUserId) && !configUserId.startsWith('guest_')) {
         rawUsers.push({
           userId: configUserId,
+          nickname: configUserId,
+          preferredUsername: configUserId,
           firstName: '',
           lastName: '',
           name: '',
@@ -247,13 +273,15 @@ class UsersRC extends ResourceController {
       rawUsers = rawUsers.filter(
         u =>
           u.userId?.toLowerCase().includes(search) ||
+          u.nickname?.toLowerCase().includes(search) ||
+          u.preferredUsername?.toLowerCase().includes(search) ||
           u.name?.toLowerCase().includes(search) ||
           u.firstName?.toLowerCase().includes(search) ||
           u.lastName?.toLowerCase().includes(search) ||
           u.section?.toLowerCase().includes(search)
       );
     }
-    rawUsers.sort((a, b): number => (a.name || a.userId || '').localeCompare(b.name || b.userId || ''));
+    rawUsers.sort((a, b): number => (a.name || a.nickname || a.preferredUsername || a.userId || '').localeCompare(b.name || b.nickname || b.preferredUsername || b.userId || ''));
 
     if (!canViewRoleAssignments || !includeRoleAssignments) {
       return rawUsers.slice(0, 50);
@@ -263,14 +291,30 @@ class UsersRC extends ResourceController {
       const user = new User(rawUser);
       User.applyConfigurationPermissions(user, configurations);
 
+      const matchesConfigList = (list?: string[]) => {
+        if (!list || !Array.isArray(list)) return false;
+        const targetUserId = String(user.userId || '').replace(/^@+/, '').toLowerCase().trim();
+        const targetNickname = String(user.nickname || '').replace(/^@+/, '').toLowerCase().trim();
+        const targetPref = String(user.preferredUsername || '').replace(/^@+/, '').toLowerCase().trim();
+        return list.some(id => {
+          const cleanId = String(id || '').replace(/^@+/, '').toLowerCase().trim();
+          if (!cleanId) return false;
+          return (
+            (targetUserId && targetUserId === cleanId) ||
+            (targetNickname && targetNickname === cleanId) ||
+            (targetPref && targetPref === cleanId)
+          );
+        });
+      };
+
       const manualSources = [
-        ...(configurations.administratorsIds.includes(user.userId)
+        ...(matchesConfigList(configurations.administratorsIds)
           ? [{ roleId: 'ADMINISTRATOR', roleName: 'ADMINISTRATOR', matchedExtendedRole: 'manual' }]
           : []),
-        ...((configurations.managersIds || []).includes(user.userId)
+        ...(matchesConfigList(configurations.managersIds)
           ? [{ roleId: 'MANAGER', roleName: 'MANAGER', matchedExtendedRole: 'manual' }]
           : []),
-        ...((configurations.auditorsIds || []).includes(user.userId)
+        ...(matchesConfigList(configurations.auditorsIds)
           ? [{ roleId: 'AUDITOR', roleName: 'AUDITOR', matchedExtendedRole: 'manual' }]
           : [])
       ];
@@ -281,7 +325,7 @@ class UsersRC extends ResourceController {
       for (const role of configurations.customRoles || []) {
         if (!user.customRoleIds.includes(role.id)) continue;
 
-        if (role.userIds.includes(user.userId)) {
+        if (matchesConfigList(role.userIds)) {
           customSources.push({ roleId: role.id, roleName: role.name, matchedExtendedRole: 'manual' });
         }
 

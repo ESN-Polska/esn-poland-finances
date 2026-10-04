@@ -133,7 +133,7 @@
               <div *ngIf="!u.avatarURL || u.isGuest" class="avatarInitials" [class.guestAvatar]="u.isGuest">
                 <ion-icon *ngIf="u.isGuest" name="person-outline"></ion-icon>
                 <span *ngIf="!u.isGuest">
-                  {{ (u.firstName?.[0] || u.userId?.[0] || '').toUpperCase() }}{{ (u.lastName?.[0] || '').toUpperCase() }}
+                  {{ (u.firstName?.[0] || u.nickname?.[0] || u.preferredUsername?.[0] || u.userId?.[0] || '').toUpperCase() }}{{ (u.lastName?.[0] || '').toUpperCase() }}
                 </span>
               </div>
             </ion-avatar>
@@ -143,8 +143,8 @@
                 <ion-button
                   fill="clear"
                   class="openAccountsBtn desktopOpenBtn"
-                  *ngIf="!u.isGuest"
-                  (click)="$event.stopPropagation(); app.openUserProfileById(u.userId)"
+                  *ngIf="!u.isGuest && (u.preferredUsername || u.nickname)"
+                  (click)="$event.stopPropagation(); app.openAccountsProfile(u)"
                   [title]="'COMMON.OPEN' | translate"
                 >
                   <ion-icon name="open-outline" slot="icon-only"></ion-icon>
@@ -172,8 +172,8 @@
               <ion-button
                 fill="clear"
                 class="openAccountsBtn mobileOpenBtn"
-                *ngIf="!u.isGuest"
-                (click)="$event.stopPropagation(); app.openUserProfileById(u.userId)"
+                *ngIf="!u.isGuest && (u.preferredUsername || u.nickname)"
+                (click)="$event.stopPropagation(); app.openAccountsProfile(u)"
                 [title]="'COMMON.OPEN' | translate"
               >
                 <ion-icon name="open-outline" slot="icon-only"></ion-icon>

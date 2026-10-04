@@ -38,9 +38,9 @@
     <div
       class="menuUserCard"
       *ngIf="app.currentUser as user"
-      (click)="!user.isGuest && openAccountsProfile(user.userId)"
-      [title]="!user.isGuest ? ('USER.VIEW_ON_ACCOUNTS' | translate) : ''"
-      [style.cursor]="user.isGuest ? 'default' : 'pointer'"
+      (click)="!user.isGuest && (user.preferredUsername || user.nickname) && openAccountsProfile(user)"
+      [title]="(!user.isGuest && (user.preferredUsername || user.nickname)) ? ('USER.VIEW_ON_ACCOUNTS' | translate) : ''"
+      [style.cursor]="(user.isGuest || (!user.nickname && !user.preferredUsername)) ? 'default' : 'pointer'"
     >
       <div class="menuAvatarWrapper">
         <img
@@ -344,7 +344,7 @@
                 <div class="popoverUserInfo">
                   <div class="popoverUserName">{{ user.getDisplayName() }}</div>
                   <div class="popoverUserMetaRow">
-                    <span class="popoverUserHandle font-mono">@{{ user.userId }}</span>
+                    <span class="popoverUserHandle font-mono" *ngIf="user.nickname">{{ user.nickname }}</span>
                     <span
                       class="userRoleChip role-{{ app.getUserRoleKey(user).toLowerCase() }}"
                       *ngIf="app.hasElevatedRole(user)"
@@ -369,7 +369,7 @@
                   <span>{{ 'TABS.CONFIGURATIONS' | translate }}</span>
                 </div>
 
-                <div class="popoverMenuItem" *ngIf="!user.isGuest" (click)="openAccountsProfile(user.userId)">
+                <div class="popoverMenuItem" *ngIf="!user.isGuest && (user.preferredUsername || user.nickname)" (click)="openAccountsProfile(user)">
                   <ion-icon name="open-outline"></ion-icon>
                   <span>{{ 'USER.VIEW_ON_ACCOUNTS' | translate }}</span>
                 </div>

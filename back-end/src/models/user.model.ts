@@ -19,8 +19,12 @@ export interface UserMembershipGroup {
 }
 
 export class User extends Resource {
-  /** Username in ESN Accounts (lowercase) */
+  /** User identifier in ESN Accounts (UUID in OAuth v2, or legacy username) */
   userId: string;
+  /** Username/nickname in ESN Accounts (lowercase) */
+  nickname: string;
+  /** Drupal account name from OAuth preferred_username (used for https://accounts.esn.org/user/{preferredUsername}) */
+  preferredUsername: string;
   /** Email address */
   email: string;
   /** First name */
@@ -136,26 +140,46 @@ export class User extends Resource {
       .filter(assignment => User.hasAnyRole(user, assignment.extendedRolePatterns))
       .map(assignment => assignment.roleId);
 
+    const matchesUser = (idList?: string[]) => {
+      if (!idList || !Array.isArray(idList)) return false;
+      const targetUserId = String(user.userId || '').replace(/^@+/, '').toLowerCase().trim();
+      const targetNickname = String(user.nickname || '').replace(/^@+/, '').toLowerCase().trim();
+      const targetPref = String(user.preferredUsername || '').replace(/^@+/, '').toLowerCase().trim();
+      return idList.some(id => {
+        const cleanId = String(id || '').replace(/^@+/, '').toLowerCase().trim();
+        if (!cleanId) return false;
+        return (
+          (targetUserId && targetUserId === cleanId) ||
+          (targetNickname && targetNickname === cleanId) ||
+          (targetPref && targetPref === cleanId)
+        );
+      });
+    };
+
     // 1. Evaluate Administrator status
     user.isAdministrator =
-      (configurations.administratorsIds || []).includes(user.userId) ||
+      matchesUser(configurations.administratorsIds) ||
       automaticRoleIds.includes('ADMINISTRATOR');
 
     // 2. Evaluate Manager status
     user.isManager =
       !user.isAdministrator &&
-      ((configurations.managersIds || []).includes(user.userId) ||
+      (matchesUser(configurations.managersIds) ||
         automaticRoleIds.includes('MANAGER'));
     user.canManageFinances = user.isAdministrator || user.isManager;
 
     // 3. Evaluate Auditor status
     user.isAuditor =
-      (configurations.auditorsIds || []).includes(user.userId) ||
+      matchesUser(configurations.auditorsIds) ||
       automaticRoleIds.includes('AUDITOR');
 
     // 4. Evaluate Custom Roles
     user.customRoleIds = (configurations.customRoles || [])
-      .filter(role => role.userIds.includes(user.userId) || User.hasAnyRole(user, role.extendedRolePatterns))
+      .filter(
+        role =>
+          matchesUser(role.userIds) ||
+          User.hasAnyRole(user, role.extendedRolePatterns)
+      )
       .map(role => role.id);
 
     const assignedCustomRoles = (configurations.customRoles || []).filter(r => user.customRoleIds.includes(r.id));
@@ -221,7 +245,11 @@ export class User extends Resource {
 
   load(x: any): void {
     super.load(x);
-    this.userId = this.clean(x.userId, String)?.toLowerCase();
+    this.userId = this.clean(x.userId, String, '')?.toLowerCase();
+    const rawNick = this.clean(x.nickname, String, '')?.toLowerCase();
+    const rawPref = this.clean(x.preferredUsername, String, '')?.toLowerCase();
+    this.nickname = rawNick || rawPref || this.userId || '';
+    this.preferredUsername = rawPref || rawNick || this.userId || '';
     this.email = this.clean(x.email, String);
     this.firstName = this.clean(x.firstName, String);
     this.lastName = this.clean(x.lastName, String);
@@ -293,11 +321,14 @@ export class User extends Resource {
     const parts = [this.firstName, this.lastName].filter(Boolean);
     if (parts.length > 0) return parts.join(' ');
     if ((this as any).name) return (this as any).name;
-    return this.userId || '';
+    return this.nickname || this.preferredUsername || this.userId || '';
   }
 
   getAccountsProfileURL(): string {
-    return this.userId ? `https://accounts.esn.org/user/${encodeURIComponent(this.userId)}` : 'https://accounts.esn.org';
+    const handle = this.preferredUsername || this.nickname || this.userId;
+    return handle
+      ? `https://accounts.esn.org/user/${encodeURIComponent(handle)}`
+      : 'https://accounts.esn.org';
   }
 
   getSectionOrCountry(): string {

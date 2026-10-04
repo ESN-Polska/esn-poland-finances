@@ -413,9 +413,9 @@
           </div>
           <div
             class="user-summary"
-            [class.clickable-user]="!request.isGuest"
-            (click)="!request.isGuest && openAccountsProfile(request.userId)"
-            [title]="!request.isGuest ? ('USER.VIEW_ON_ACCOUNTS' | translate) : ''"
+            [class.clickable-user]="!request.isGuest && (request.userNickname || request.userPreferredUsername)"
+            (click)="!request.isGuest && (request.userNickname || request.userPreferredUsername) && openAccountsProfile(request)"
+            [title]="(!request.isGuest && (request.userNickname || request.userPreferredUsername)) ? ('USER.VIEW_ON_ACCOUNTS' | translate) : ''"
           >
             <div class="user-avatar-circle" [class.guest-avatar]="request.isGuest">
               <img

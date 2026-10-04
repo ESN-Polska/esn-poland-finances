@@ -373,12 +373,92 @@ export class AppService {
   }
 
   /**
-   * Open user profile on accounts.esn.org.
+   * Centralized method to open an ESN Accounts user profile in a new tab.
+   * Ensures that:
+   * - Guests are never opened.
+   * - Leading '@' is stripped.
+   * - If a User or Request object is provided, extracts their nickname.
+   * - If a UUID is provided, resolves it to a nickname via currentUser or API.
+   * - NEVER opens a UUID path (prevents 404s on ESN Accounts).
    */
-  public openUserProfileById(userId: string): void {
-    if (userId) {
-      window.open(`https://accounts.esn.org/user/${encodeURIComponent(userId)}`, '_blank', 'noopener,noreferrer');
+  public async openAccountsProfile(target?: User | { isGuest?: boolean; userNickname?: string; userId?: string; nickname?: string; preferredUsername?: string; userPreferredUsername?: string } | string): Promise<void> {
+    if (!target) return;
+
+    let handle: string | undefined;
+
+    if (typeof target === 'object') {
+      if (target.isGuest) return;
+      handle = (target as any).preferredUsername || (target as any).userPreferredUsername;
+      if (!handle) {
+        const targetUserId = (target as any).userId;
+        const targetNickname = target.nickname || (target as any).userNickname;
+        if (this.currentUser && (
+          (targetUserId && this.currentUser.userId?.toLowerCase() === String(targetUserId).toLowerCase()) ||
+          (targetNickname && (
+            this.currentUser.nickname?.toLowerCase() === String(targetNickname).toLowerCase() ||
+            this.currentUser.userId?.toLowerCase() === String(targetNickname).toLowerCase() ||
+            this.currentUser.preferredUsername?.toLowerCase() === String(targetNickname).toLowerCase()
+          ))
+        )) {
+          handle = this.currentUser.preferredUsername;
+        }
+        if (!handle && (targetUserId || targetNickname)) {
+          const lookupKey = (targetUserId || targetNickname).replace(/^@/, '').trim();
+          try {
+            const raw = await this.api.getResource(['users', encodeURIComponent(lookupKey.toLowerCase())]);
+            if (raw && raw.preferredUsername) {
+              handle = raw.preferredUsername;
+            } else if (raw && raw.nickname) {
+              handle = raw.nickname;
+            }
+          } catch {}
+        }
+        if (!handle) {
+          handle = targetNickname;
+        }
+      }
+      if (!handle && (target as any).userId) {
+        target = (target as any).userId;
+      }
     }
+
+    if (!handle && typeof target === 'string') {
+      const clean = target.replace(/^@/, '').trim();
+      if (!clean || clean.startsWith('guest_')) return;
+
+      if (this.currentUser && (
+        this.currentUser.userId?.toLowerCase() === clean.toLowerCase() ||
+        this.currentUser.nickname?.toLowerCase() === clean.toLowerCase() ||
+        this.currentUser.preferredUsername?.toLowerCase() === clean.toLowerCase()
+      )) {
+        handle = this.currentUser.preferredUsername || this.currentUser.nickname;
+      } else {
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(clean);
+        try {
+          const raw = await this.api.getResource(['users', encodeURIComponent(clean.toLowerCase())]);
+          if (raw && (raw.preferredUsername || raw.nickname)) {
+            handle = raw.preferredUsername || raw.nickname;
+          } else if (!isUuid) {
+            handle = clean;
+          }
+        } catch {
+          if (!isUuid) {
+            handle = clean;
+          }
+        }
+      }
+    }
+
+    if (handle && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(handle)) {
+      window.open(`https://accounts.esn.org/user/${encodeURIComponent(handle)}`, '_blank', 'noopener,noreferrer');
+    }
+  }
+
+  /**
+   * Backwards-compatible alias for openAccountsProfile.
+   */
+  public openUserProfileById(userIdOrNickname: string | User): Promise<void> {
+    return this.openAccountsProfile(userIdOrNickname);
   }
 
   //
@@ -1283,13 +1363,17 @@ export class AppService {
     // Custom roles with specific names
     const seenCustomRoleIds = new Set<string>();
     const customRoles = this.configurations?.customRoles || [];
-    const userIdLower = (targetUser.userId || '').toLowerCase();
+    const userIdLower = (targetUser.userId || '').replace(/^@+/, '').toLowerCase().trim();
+    const userNickLower = (targetUser.nickname || '').replace(/^@+/, '').toLowerCase().trim();
 
     for (const cr of customRoles) {
       if (seenCustomRoleIds.has(cr.id)) continue;
       const isExplicit =
         !isCurrentImpersonated &&
-        (cr.userIds || []).map(id => (id || '').toLowerCase()).includes(userIdLower);
+        (cr.userIds || []).some(id => {
+          const cleanId = (id || '').replace(/^@+/, '').toLowerCase().trim();
+          return (userIdLower && cleanId === userIdLower) || (userNickLower && cleanId === userNickLower);
+        });
       const matchedPattern =
         !isCurrentImpersonated &&
         (cr.extendedRolePatterns || []).find(p => User.matchesRolePattern(targetUser, p));
