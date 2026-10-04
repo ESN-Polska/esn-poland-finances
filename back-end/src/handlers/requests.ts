@@ -124,6 +124,7 @@ class RequestsHandler extends ResourceController {
         },
         ScanIndexForward: false
       });
+
       return items
         .map((x: any) => new FinancialRequest(x))
         .sort((a: FinancialRequest, b: FinancialRequest) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -208,6 +209,8 @@ class RequestsHandler extends ResourceController {
       year,
       sequenceNumber,
       userId: user.userId.toLowerCase(),
+      userNickname: (user.nickname || user.preferredUsername || user.userId).toLowerCase(),
+      userPreferredUsername: (user.preferredUsername || user.nickname || user.userId).toLowerCase(),
       userDisplayName: user.getDisplayName(),
       userEmail: user.email,
       userAvatarURL: user.avatarURL || '',
@@ -449,6 +452,8 @@ class RequestsHandler extends ResourceController {
       year: targetYear,
       sequenceNumber: targetSeqNumber,
       userId: existing.userId,
+      userNickname: existing.userNickname || (isOwner ? (user.nickname || user.preferredUsername || user.userId) : existing.userNickname),
+      userPreferredUsername: existing.userPreferredUsername || (isOwner ? (user.preferredUsername || user.nickname || user.userId) : existing.userPreferredUsername),
       status: finalStatus,
       adminRemarks: typeof updates.adminRemarks !== 'undefined' ? updates.adminRemarks : existing.adminRemarks,
       statusHistory: [...(existing.statusHistory || []), ...newHistoryEntries],

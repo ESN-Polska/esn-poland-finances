@@ -71,6 +71,8 @@ export class FinancialRequest extends Resource {
   sequenceNumber?: number;
 
   userId: string;
+  userNickname: string;
+  userPreferredUsername: string;
   userDisplayName: string;
   userEmail: string;
   userAvatarURL?: string;
@@ -144,7 +146,11 @@ export class FinancialRequest extends Resource {
     this.year = this.clean(x.year, Number, new Date().getFullYear());
     this.sequenceNumber = this.clean(x.sequenceNumber, Number);
 
-    this.userId = this.clean(x.userId, String)?.toLowerCase();
+    this.userId = this.clean(x.userId, String, '')?.toLowerCase();
+    const rawNick = this.clean(x.userNickname, String, '')?.toLowerCase();
+    const rawPref = this.clean(x.userPreferredUsername, String, '')?.toLowerCase();
+    this.userNickname = rawNick || rawPref || this.userId || '';
+    this.userPreferredUsername = rawPref || rawNick || this.userId || '';
     this.userDisplayName = this.clean(x.userDisplayName, String);
     this.userEmail = this.clean(x.userEmail, String);
     this.userAvatarURL = this.clean(x.userAvatarURL, String, '');

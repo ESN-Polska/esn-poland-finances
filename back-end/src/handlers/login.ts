@@ -7,7 +7,7 @@ import { Configurations } from '../models/configurations.model';
 import { findCountryMatch, resolveCountriesForSections } from '../services/esnCountries';
 
 const OAUTH_TOKEN_URL = 'https://accounts.esn.org/oauth/token';
-const OAUTH_USERINFO_URL = 'https://accounts.esn.org/oauth/v1/userinfo';
+const OAUTH_USERINFO_URL = 'https://accounts.esn.org/oauth/v2/userinfo';
 const JWT_EXPIRE_TIME = '7 days';
 
 const PROJECT = process.env.PROJECT || 'esn-poland-finances';
@@ -173,7 +173,11 @@ class Login extends ResourceController {
       throw new HandledError('Failed to fetch user profile from ESN Accounts');
     }
 
-    const userId = String(userInfo.sub).toLowerCase().trim();
+    const userId = userInfo.sub ? String(userInfo.sub).trim().toLowerCase() : '';
+    const rawNickname = userInfo.legacy_sub || userInfo.nickname || userInfo.preferred_username || userInfo.username || userId;
+    const nickname = rawNickname ? String(rawNickname).toLowerCase().trim() : userId;
+    const rawPref = userInfo.preferred_username || userInfo.username || rawNickname || userId;
+    const preferredUsername = rawPref ? String(rawPref).toLowerCase().trim() : nickname;
 
     if (!userId) {
       this.logger.error('Missing user identity from OAuth userinfo', { userInfo });
@@ -290,6 +294,8 @@ class Login extends ResourceController {
 
     const user = new User({
       userId,
+      nickname: nickname || existingUserRecord?.nickname || userId,
+      preferredUsername: preferredUsername || existingUserRecord?.preferredUsername || nickname || userId,
       email,
       sectionCode,
       firstName,
@@ -309,9 +315,14 @@ class Login extends ResourceController {
         : (uniqueSections.length <= 1)
     });
     User.applyConfigurationPermissions(user, configurations);
-    this.logger.info('ESN Accounts OAuth login successful', { userId: user.userId, section: user.sectionCode });
+    this.logger.info('ESN Accounts OAuth login successful', { userId: user.userId, nickname: user.nickname, section: user.sectionCode });
 
-    if ((configurations.blockedUserIds || []).some((b: string) => b.toLowerCase() === user.userId.toLowerCase())) {
+    if ((configurations.blockedUserIds || []).some((b: string) => {
+      const clean = b.toLowerCase();
+      return user.userId.toLowerCase() === clean ||
+        (user.nickname && user.nickname.toLowerCase() === clean) ||
+        (user.preferredUsername && user.preferredUsername.toLowerCase() === clean);
+    })) {
       this.logger.warn('Login rejected: user account is suspended', { userId: user.userId });
       const acceptsJson = (this.event.headers?.accept || '').includes('application/json');
       if (this.httpMethod === 'POST' || (acceptsJson && !this.queryParams?.redirect)) {
@@ -321,7 +332,7 @@ class Login extends ResourceController {
       this.callback(null, {
         statusCode: 302,
         headers: {
-          Location: `${redirectUri || APP_URL}/auth?error=user_suspended`
+          Location: `${APP_URL}/auth?error=user_suspended`
         }
       });
       return;
@@ -349,6 +360,8 @@ class Login extends ResourceController {
           TableName: DDB_TABLES.users,
           Item: {
             userId: user.userId,
+            nickname: user.nickname || '',
+            preferredUsername: user.preferredUsername || '',
             email: user.email,
             firstName: user.firstName,
             lastName: user.lastName,
@@ -372,6 +385,7 @@ class Login extends ResourceController {
         this.logger.error('Failed to persist user to DynamoDB', dbErr);
       }
     }
+
 
     const userData = JSON.parse(JSON.stringify(user));
     const secret = await getJwtSecret();
@@ -428,6 +442,8 @@ class Login extends ResourceController {
 
     const guestUser = new User({
       userId: guestUserId,
+      nickname: guestUserId,
+      preferredUsername: guestUserId,
       email: invitation.guestEmail,
       firstName: invitation.guestName,
       lastName: '',
@@ -459,6 +475,8 @@ class Login extends ResourceController {
           TableName: DDB_TABLES.users,
           Item: {
             userId: guestUser.userId,
+            nickname: guestUser.nickname,
+            preferredUsername: guestUser.preferredUsername,
             email: guestUser.email,
             firstName: guestUser.firstName,
             lastName: '',

@@ -249,7 +249,12 @@ export class RequestsService {
     }
 
     const myRequests = rawList
-      .filter((r) => r.userId?.toLowerCase() === user.userId?.toLowerCase())
+      .filter(
+        (r) =>
+          r.userId?.toLowerCase() === user.userId?.toLowerCase() ||
+          (user.nickname && r.userId?.toLowerCase() === user.nickname.toLowerCase()) ||
+          (user.preferredUsername && r.userId?.toLowerCase() === user.preferredUsername.toLowerCase())
+      )
       .map((r) => new FinancialRequest(r))
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
