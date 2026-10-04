@@ -73,6 +73,110 @@
     &.permissionChild {
       --padding-start: 36px;
     }
+
+    &.assignedUserItem {
+      .assignedUserName {
+        font-weight: 600;
+        color: var(--text-dark);
+      }
+
+      .unregisteredBadge {
+        display: inline-block;
+        margin-left: 8px;
+        font-size: 0.72rem;
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 6px;
+        background: rgba(var(--ion-color-warning-rgb, 255, 196, 9), 0.15);
+        color: var(--ion-color-warning-shade, #b38600);
+      }
+    }
+  }
+}
+
+.roleUsersHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+
+  .modeToggleBtn {
+    font-size: 0.8rem;
+    font-weight: 600;
+    --padding-start: 8px;
+    --padding-end: 8px;
+    height: 28px;
+    margin: 0;
+  }
+}
+
+.addUserWrapper {
+  position: relative;
+  margin-top: 8px;
+  margin-bottom: 16px;
+
+  .addUserInputRow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 4px 8px 4px 14px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+
+    ion-input {
+      --color: var(--text-dark);
+      font-weight: 500;
+    }
+
+    ion-button {
+      flex-shrink: 0;
+      font-weight: 600;
+    }
+  }
+
+  .suggestionsList {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    max-height: 220px;
+    overflow-y: auto;
+
+    .suggestionItem {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 14px;
+      cursor: pointer;
+      transition: background 0.15s ease;
+      border-bottom: 1px solid var(--border-color);
+
+      &:last-child {
+        border-bottom: none;
+      }
+
+      &:hover {
+        background: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.08);
+      }
+
+      .suggestionName {
+        font-weight: 600;
+        color: var(--text-dark);
+        font-size: 0.9rem;
+      }
+
+      .suggestionSection {
+        font-size: 0.78rem;
+        color: var(--text-medium);
+        margin-left: 8px;
+      }
+    }
   }
 }
 
@@ -84,6 +188,18 @@ body.dark {
       border: none !important;
       outline: none !important;
       box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+    }
+  }
+
+  .addUserWrapper {
+    .addUserInputRow {
+      border: none !important;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+    }
+
+    .suggestionsList {
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
     }
   }
 }

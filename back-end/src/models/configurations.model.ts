@@ -590,13 +590,14 @@ export class Configurations extends Resource {
     super.load(x);
     this.updatedAt = this.clean(x.updatedAt, String);
     const normalizeHandle = (id: string) => String(id || '').replace(/^@+/, '').trim().toLowerCase();
-    this.administratorsIds = this.cleanArray(x.administratorsIds, String).map(normalizeHandle).filter(Boolean);
-    this.managersIds = this.cleanArray(x.managersIds, String).map(normalizeHandle).filter(Boolean);
-    this.auditorsIds = this.cleanArray(x.auditorsIds, String).map(normalizeHandle).filter(Boolean);
+    const dedupeList = (arr: any[]) => Array.from(new Set(this.cleanArray(arr, String).map(normalizeHandle).filter(Boolean)));
+    this.administratorsIds = dedupeList(x.administratorsIds);
+    this.managersIds = dedupeList(x.managersIds);
+    this.auditorsIds = dedupeList(x.auditorsIds);
     this.customRoles = this.cleanArray(x.customRoles, Object).map((role: any) => ({
       id: this.clean(role.id, String),
       name: this.clean(role.name, String),
-      userIds: this.cleanArray(role.userIds, String).map(normalizeHandle).filter(Boolean),
+      userIds: dedupeList(role.userIds),
       permissions: this.cleanArray(role.permissions, String) as AppPermission[],
       extendedRolePatterns: this.cleanArray(role.extendedRolePatterns, String)
     }));
@@ -604,7 +605,7 @@ export class Configurations extends Resource {
       roleId: this.clean(assignment.roleId, String),
       extendedRolePatterns: this.cleanArray(assignment.extendedRolePatterns, String)
     }));
-    this.blockedUserIds = this.cleanArray(x.blockedUserIds, String).map(normalizeHandle).filter(Boolean);
+    this.blockedUserIds = dedupeList(x.blockedUserIds);
 
     const defaultTitle = DEFAULT_CONFIGURATIONS.appTitle;
     if (typeof x.appTitle === 'string') {

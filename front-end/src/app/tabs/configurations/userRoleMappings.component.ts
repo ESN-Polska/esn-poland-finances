@@ -74,7 +74,7 @@ import { User } from '@models/user.model';
             <ion-label class="ion-text-wrap">
               <h2 class="userDisplayName">{{ getUserDisplayName(user) }}</h2>
               <p class="userMeta">
-                <span class="userHandle">@{{ user.userId }}</span>
+                <span class="userHandle" *ngIf="user.nickname">{{ user.nickname }}</span>
                 <span *ngIf="user.country"> · {{ user.country }}</span>
                 <span *ngIf="user.section"> · {{ user.section }}</span>
               </p>
@@ -90,7 +90,7 @@ import { User } from '@models/user.model';
                 </div>
               </div>
             </ion-label>
-            <ion-button fill="clear" color="medium" slot="end" (click)="app.openUserProfileById(user.userId)">
+            <ion-button fill="clear" color="medium" slot="end" *ngIf="user.preferredUsername || user.nickname" (click)="app.openAccountsProfile(user)">
               <ion-icon name="open-outline" slot="icon-only"></ion-icon>
             </ion-button>
           </ion-item>
@@ -172,7 +172,7 @@ export class UserRoleMappingsComponent implements OnInit {
       })
       .filter(user => {
         if (!query) return true;
-        return [user.userId, user.firstName, user.lastName, user.section, user.country]
+        return [user.userId, user.nickname, user.preferredUsername, user.firstName, user.lastName, user.section, user.country]
           .filter(Boolean)
           .some(val => val.toLowerCase().includes(query));
       });
@@ -187,7 +187,7 @@ export class UserRoleMappingsComponent implements OnInit {
     const parts = [user.firstName, user.lastName].filter(Boolean);
     if (parts.length > 0) return parts.join(' ');
     if ((user as any).name) return (user as any).name;
-    return user.userId || '';
+    return user.nickname || user.preferredUsername || user.userId || '';
   }
 
   getRoleClass(roleId: string): string {

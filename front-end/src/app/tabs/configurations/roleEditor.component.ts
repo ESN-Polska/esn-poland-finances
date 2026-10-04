@@ -8,6 +8,8 @@ import {
   CustomRole,
   AutomaticRoleAssignment
 } from '@models/configurations.model';
+import { User } from '@models/user.model';
+import { AppService } from '@app/app.service';
 
 @Component({
   selector: 'app-role-editor',
@@ -39,16 +41,108 @@ import {
             <ion-label position="stacked">{{ 'CONFIGURATIONS.ROLE_NAME' | translate }}</ion-label>
             <ion-input [readonly]="readOnly" [(ngModel)]="name"></ion-input>
           </ion-item>
-          <ion-item *ngIf="mode === 'custom'">
-            <ion-label position="stacked">{{ 'CONFIGURATIONS.ROLE_USERS' | translate }}</ion-label>
-            <ion-textarea
-              [readonly]="readOnly"
-              [(ngModel)]="userIds"
-              [autoGrow]="true"
-              [placeholder]="'CONFIGURATIONS.ROLE_USERS_PLACEHOLDER' | translate"
-            ></ion-textarea>
-          </ion-item>
 
+          <!-- Assigned Users Section -->
+          <ng-container *ngIf="mode === 'custom'">
+            <ion-list-header class="roleUsersHeader">
+              <ion-label>
+                <h2>{{ 'CONFIGURATIONS.ROLE_USERS' | translate }}</h2>
+                <p>{{ 'CONFIGURATIONS.ROLE_USERS_I' | translate }}</p>
+              </ion-label>
+              <ion-button
+                fill="clear"
+                size="small"
+                class="modeToggleBtn"
+                (click)="toggleBulkMode()"
+                *ngIf="!readOnly"
+              >
+                {{ (bulkMode ? 'CONFIGURATIONS.LIST_VIEW' : 'CONFIGURATIONS.PASTE_USERNAMES') | translate }}
+              </ion-button>
+            </ion-list-header>
+
+            <!-- Bulk Mode: Textarea -->
+            <ion-item *ngIf="bulkMode">
+              <ion-label position="stacked">{{ 'CONFIGURATIONS.ROLE_USERS' | translate }}</ion-label>
+              <ion-textarea
+                [readonly]="readOnly"
+                [(ngModel)]="bulkUserIdsText"
+                [autoGrow]="true"
+                [placeholder]="'CONFIGURATIONS.ROLE_USERS_PLACEHOLDER' | translate"
+              ></ion-textarea>
+            </ion-item>
+
+            <!-- Interactive Mode -->
+            <ng-container *ngIf="!bulkMode">
+              <!-- Empty State -->
+              <ion-item class="noElements" *ngIf="!assignedUserIds.length">
+                <ion-label>{{ 'CONFIGURATIONS.NO_USERS_ADDED' | translate }}</ion-label>
+              </ion-item>
+
+              <!-- List of Assigned Users -->
+              <ion-item *ngFor="let uid of assignedUserIds" class="assignedUserItem">
+                <ion-label class="ion-text-wrap">
+                  <span class="assignedUserName">{{ getUserIdentifier(uid) }}</span>
+                  <span class="unregisteredBadge" *ngIf="isUnregistered(uid)">
+                    {{ 'CONFIGURATIONS.USER_NOT_REGISTERED' | translate }}
+                  </span>
+                </ion-label>
+                <ion-button
+                  fill="clear"
+                  color="medium"
+                  slot="end"
+                  *ngIf="getUserNickname(uid)"
+                  (click)="openAccountsProfile(uid)"
+                  [title]="'COMMON.OPEN' | translate"
+                >
+                  <ion-icon name="open-outline" slot="icon-only"></ion-icon>
+                </ion-button>
+                <ion-button
+                  fill="clear"
+                  color="danger"
+                  slot="end"
+                  *ngIf="!readOnly"
+                  (click)="removeUser(uid)"
+                  [title]="'COMMON.DELETE' | translate"
+                >
+                  <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
+                </ion-button>
+              </ion-item>
+
+              <!-- Add User Input & Autocomplete Suggestions -->
+              <div class="addUserWrapper" *ngIf="!readOnly">
+                <div class="addUserInputRow">
+                  <ion-input
+                    [(ngModel)]="userSearchInput"
+                    [placeholder]="'CONFIGURATIONS.USERNAME_PLACEHOLDER' | translate"
+                    (keyup.enter)="addUser(userSearchInput)"
+                    (ionFocus)="showSuggestions = true"
+                    (ionBlur)="onSearchBlur()"
+                  ></ion-input>
+                  <ion-button
+                    size="small"
+                    [disabled]="!userSearchInput?.trim()"
+                    (click)="addUser(userSearchInput)"
+                  >
+                    {{ 'COMMON.ADD' | translate }}
+                  </ion-button>
+                </div>
+
+                <!-- Autocomplete Suggestions List -->
+                <div class="suggestionsList" *ngIf="showSuggestions && userSuggestions.length > 0">
+                  <div
+                    class="suggestionItem"
+                    *ngFor="let suggestion of userSuggestions"
+                    (mousedown)="addUser(suggestion)"
+                  >
+                    <span class="suggestionName">{{ getUserIdentifier(suggestion.userId) }}</span>
+                    <span class="suggestionSection" *ngIf="suggestion.section">{{ suggestion.section }}</span>
+                  </div>
+                </div>
+              </div>
+            </ng-container>
+          </ng-container>
+
+          <!-- Automatic Role Patterns -->
           <ion-list-header>
             <ion-label>
               <h2>{{ 'CONFIGURATIONS.OAUTH_ROLES' | translate }}</h2>
@@ -69,6 +163,7 @@ import {
             ></ion-textarea>
           </ion-item>
 
+          <!-- Application Permissions -->
           <ion-list-header *ngIf="mode === 'custom'">
             <ion-label>
               <h2>{{ 'CONFIGURATIONS.APP_PERMISSIONS' | translate }}</h2>
@@ -111,8 +206,8 @@ export class RoleEditorComponent implements OnInit {
   @Input() roleId = '';
   @Input() requirePatterns = false;
   @Input() readOnly = false;
-
   @Input() casPermissionOptions?: string[];
+  @Input() allUsers: User[] = [];
 
   readonly permissionTree = APP_PERMISSION_TREE;
   get availableRoleOptions(): string[] {
@@ -120,10 +215,15 @@ export class RoleEditorComponent implements OnInit {
       ? this.casPermissionOptions
       : OAUTH_ROLE_OPTIONS;
   }
+
   selectedCASPermissions: Record<string, boolean> = {};
   selectedAppPermissions: Record<string, boolean> = {};
   name = '';
-  userIds = '';
+  assignedUserIds: string[] = [];
+  bulkMode = false;
+  bulkUserIdsText = '';
+  userSearchInput = '';
+  showSuggestions = false;
   customExtendedRolePatterns = '';
 
   get title(): string {
@@ -137,12 +237,17 @@ export class RoleEditorComponent implements OnInit {
   constructor(
     private modalCtrl: ModalController,
     private alertCtrl: AlertController,
-    private translate: TranslateService
+    private translate: TranslateService,
+    public app: AppService
   ) {}
 
   ngOnInit(): void {
     this.name = this.role?.name || '';
-    this.userIds = this.role?.userIds?.join('\n') || '';
+    this.assignedUserIds = (this.role?.userIds || [])
+      .map(id => String(id || '').replace(/^@+/, '').trim())
+      .filter(Boolean);
+    this.syncBulkTextFromAssigned();
+
     const selectedCAS = this.role?.extendedRolePatterns || this.assignment?.extendedRolePatterns || [];
     selectedCAS.forEach(permission => (this.selectedCASPermissions[permission] = true));
     (this.role?.permissions || []).forEach(permission => (this.selectedAppPermissions[permission] = true));
@@ -150,6 +255,179 @@ export class RoleEditorComponent implements OnInit {
     this.customExtendedRolePatterns = selectedCAS
       .filter(permission => !this.availableRoleOptions.includes(permission))
       .join('\n');
+  }
+
+  getUserIdentifier(userOrId: string): string {
+    const raw = (userOrId || '').replace(/^@+/, '').trim().toLowerCase();
+    const user = (this.allUsers || []).find(
+      u => (u.userId || '').toLowerCase() === raw || (u.nickname || '').toLowerCase() === raw
+    );
+    if (user) {
+      const parts = [user.firstName, user.lastName].filter(Boolean);
+      if (parts.length > 0) {
+        return user.nickname ? `${parts.join(' ')} (${user.nickname})` : parts.join(' ');
+      }
+      if (typeof user.getDisplayName === 'function') {
+        const name = user.getDisplayName();
+        if (name && name !== user.userId) {
+          return user.nickname && !name.includes(user.nickname) ? `${name} (${user.nickname})` : name;
+        }
+      }
+      return user.nickname || user.userId || '';
+    }
+    return (userOrId || '').replace(/^@+/, '').trim();
+  }
+
+  getUserNickname(userOrId: string): string | undefined {
+    const raw = (userOrId || '').replace(/^@+/, '').trim().toLowerCase();
+    const user = (this.allUsers || []).find(
+      u => (u.userId || '').toLowerCase() === raw || (u.nickname || '').toLowerCase() === raw || (u.preferredUsername || '').toLowerCase() === raw
+    );
+    if (user?.nickname) return user.nickname;
+    if (user?.preferredUsername) return user.preferredUsername;
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(raw);
+    return isUuid ? undefined : (raw || undefined);
+  }
+
+  getUserNicknameOrId(userOrId: string): string {
+    return this.getUserNickname(userOrId) || (userOrId || '').replace(/^@+/, '').trim();
+  }
+
+  isUnregistered(userOrId: string): boolean {
+    const raw = (userOrId || '').replace(/^@+/, '').trim().toLowerCase();
+    return !(this.allUsers || []).some(
+      u => (u.userId || '').toLowerCase() === raw || (u.nickname || '').toLowerCase() === raw || (u.preferredUsername || '').toLowerCase() === raw
+    );
+  }
+
+  openAccountsProfile(id: string): void {
+    const raw = (id || '').replace(/^@+/, '').trim().toLowerCase();
+    const user = (this.allUsers || []).find(
+      u => (u.userId || '').toLowerCase() === raw || (u.nickname || '').toLowerCase() === raw || (u.preferredUsername || '').toLowerCase() === raw
+    );
+    this.app.openAccountsProfile(user || id);
+  }
+
+  removeUser(id: string): void {
+    const cleanId = (id || '').replace(/^@+/, '').trim().toLowerCase();
+    const found = (this.allUsers || []).find(
+      u => (u.userId || '').toLowerCase() === cleanId ||
+           (u.nickname || '').toLowerCase() === cleanId ||
+           (u.preferredUsername || '').toLowerCase() === cleanId
+    );
+    const idsToRemove = new Set([cleanId]);
+    if (found) {
+      if (found.userId) idsToRemove.add(found.userId.toLowerCase());
+      if (found.nickname) idsToRemove.add(found.nickname.toLowerCase());
+      if (found.preferredUsername) idsToRemove.add(found.preferredUsername.toLowerCase());
+    }
+    this.assignedUserIds = this.assignedUserIds.filter(
+      existing => !idsToRemove.has(existing.replace(/^@+/, '').trim().toLowerCase())
+    );
+    this.syncBulkTextFromAssigned();
+  }
+
+  addUser(userOrString: User | string): void {
+    let idToAdd: string;
+    let foundUser: User | undefined;
+    if (typeof userOrString === 'object') {
+      idToAdd = userOrString.userId || userOrString.nickname || '';
+      foundUser = userOrString;
+    } else {
+      const raw = (userOrString || '').replace(/^@+/, '').trim();
+      if (!raw) return;
+      foundUser = (this.allUsers || []).find(
+        u => (u.userId || '').toLowerCase() === raw.toLowerCase() ||
+             (u.nickname || '').toLowerCase() === raw.toLowerCase() ||
+             (u.preferredUsername || '').toLowerCase() === raw.toLowerCase()
+      );
+      idToAdd = foundUser ? (foundUser.userId || foundUser.nickname || raw) : raw;
+    }
+
+    if (!idToAdd) return;
+    const cleanId = idToAdd.replace(/^@+/, '').trim().toLowerCase();
+    const exists = this.assignedUserIds.some(existing => {
+      const c = existing.replace(/^@+/, '').trim().toLowerCase();
+      return (
+        c === cleanId ||
+        (foundUser?.userId && c === foundUser.userId.toLowerCase()) ||
+        (foundUser?.nickname && c === foundUser.nickname.toLowerCase()) ||
+        (foundUser?.preferredUsername && c === foundUser.preferredUsername.toLowerCase())
+      );
+    });
+    if (!exists) {
+      this.assignedUserIds.push(idToAdd);
+    }
+    this.userSearchInput = '';
+    this.showSuggestions = false;
+    this.syncBulkTextFromAssigned();
+  }
+
+  get userSuggestions(): User[] {
+    const query = (this.userSearchInput || '').trim().toLowerCase();
+    if (!query) return [];
+    const assignedSet = new Set(
+      this.assignedUserIds.map(id => id.replace(/^@+/, '').trim().toLowerCase())
+    );
+    return (this.allUsers || [])
+      .filter(u => {
+        const uid = (u.userId || '').toLowerCase();
+        const unick = (u.nickname || '').toLowerCase();
+        const upref = (u.preferredUsername || '').toLowerCase();
+        if (assignedSet.has(uid) || assignedSet.has(unick) || (upref && assignedSet.has(upref))) return false;
+        return (
+          uid.includes(query) ||
+          unick.includes(query) ||
+          (upref && upref.includes(query)) ||
+          (u.firstName || '').toLowerCase().includes(query) ||
+          (u.lastName || '').toLowerCase().includes(query) ||
+          (typeof u.getDisplayName === 'function' && u.getDisplayName().toLowerCase().includes(query))
+        );
+      })
+      .slice(0, 5);
+  }
+
+  onSearchBlur(): void {
+    setTimeout(() => {
+      this.showSuggestions = false;
+    }, 200);
+  }
+
+  toggleBulkMode(): void {
+    if (this.bulkMode) {
+      this.syncAssignedFromBulkText();
+    } else {
+      this.syncBulkTextFromAssigned();
+    }
+    this.bulkMode = !this.bulkMode;
+  }
+
+  private syncBulkTextFromAssigned(): void {
+    this.bulkUserIdsText = this.assignedUserIds
+      .map(id => this.getUserNicknameOrId(id))
+      .join('\n');
+  }
+
+  private syncAssignedFromBulkText(): void {
+    const lines = (this.bulkUserIdsText || '')
+      .split(/[\n,]/)
+      .map(line => line.replace(/^@+/, '').trim())
+      .filter(Boolean);
+
+    const deduped: string[] = [];
+    for (const raw of lines) {
+      const found = (this.allUsers || []).find(
+        u => (u.userId || '').toLowerCase() === raw.toLowerCase() ||
+             (u.nickname || '').toLowerCase() === raw.toLowerCase() ||
+             (u.preferredUsername || '').toLowerCase() === raw.toLowerCase()
+      );
+      const targetId = found ? (found.userId || found.nickname || raw) : raw;
+      const cleanTarget = targetId.toLowerCase();
+      if (!deduped.some(d => d.toLowerCase() === cleanTarget)) {
+        deduped.push(targetId);
+      }
+    }
+    this.assignedUserIds = deduped;
   }
 
   isPermissionChecked(permission: AppPermission): boolean {
@@ -218,6 +496,10 @@ export class RoleEditorComponent implements OnInit {
       return;
     }
 
+    if (this.bulkMode) {
+      this.syncAssignedFromBulkText();
+    }
+
     const permissions = this.permissionTree.reduce(
       (selected, group) => [
         ...selected,
@@ -231,8 +513,7 @@ export class RoleEditorComponent implements OnInit {
       role: {
         id: this.role?.id || `${Date.now()}`,
         name: this.name.trim(),
-        userIds: this.userIds
-          .split(/[\n,]/)
+        userIds: this.assignedUserIds
           .map(userId => userId.trim().replace(/^@+/, '').toLowerCase())
           .filter(Boolean),
         permissions,
@@ -245,3 +526,4 @@ export class RoleEditorComponent implements OnInit {
     this.modalCtrl.dismiss();
   }
 }
+

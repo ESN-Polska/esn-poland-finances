@@ -1,6 +1,6 @@
 import { Component, OnInit, ViewChild } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-import { AlertController, IonSelect, LoadingController, ModalController, ToastController } from '@ionic/angular';
+import { AlertController, IonInput, IonSelect, LoadingController, ModalController, ToastController } from '@ionic/angular';
 import { TranslateService } from '@ngx-translate/core';
 
 import { AppService } from '@app/app.service';
@@ -61,6 +61,19 @@ export class ConfigurationsPage implements OnInit {
     this.app?.configurations || new Configurations({ PK: Configurations.PK });
 
   @ViewChild('customRoleSelect') customRoleSelect?: IonSelect;
+  @ViewChild('adminInput') adminInput?: IonInput;
+  @ViewChild('managerInput') managerInput?: IonInput;
+  @ViewChild('auditorInput') auditorInput?: IonInput;
+
+  adminSearchInput: string = '';
+  showAdminSuggestions: boolean = false;
+
+  managerSearchInput: string = '';
+  showManagerSuggestions: boolean = false;
+
+  auditorSearchInput: string = '';
+  showAuditorSuggestions: boolean = false;
+
   selectedCustomRoleId: string | null = null;
 
   private handledImpersonationSessionId = -1;
@@ -119,7 +132,7 @@ export class ConfigurationsPage implements OnInit {
         const firstAccessible = this.pageSections.find(s => this.canAccessPageSection(s));
         if (firstAccessible) {
           this.pageSection = firstAccessible;
-          if (this.pageSection === 'USERS') {
+          if (this.pageSection === 'USERS' || this.pageSection === 'ROLES') {
             this.loadUsers();
           }
         }
@@ -138,7 +151,7 @@ export class ConfigurationsPage implements OnInit {
       this.canAccessPageSection(targetSection)
     ) {
       this.pageSection = targetSection;
-      if (this.pageSection === 'USERS') {
+      if (this.pageSection === 'USERS' || this.pageSection === 'ROLES') {
         this.loadUsers();
       }
       this.app.goTo(['/t/configurations'], { replaceUrl: true, queryParams: {} });
@@ -149,7 +162,7 @@ export class ConfigurationsPage implements OnInit {
       const accessible = this.pageSections.find(s => this.canAccessPageSection(s));
       if (accessible) {
         this.pageSection = accessible;
-        if (this.pageSection === 'USERS') {
+        if (this.pageSection === 'USERS' || this.pageSection === 'ROLES') {
           this.loadUsers();
         }
       }
@@ -170,7 +183,7 @@ export class ConfigurationsPage implements OnInit {
         this.canAccessPageSection(targetSection)
       ) {
         this.pageSection = targetSection;
-        if (this.pageSection === 'USERS') {
+        if (this.pageSection === 'USERS' || this.pageSection === 'ROLES') {
           this.loadUsers();
         }
         this.app.goTo(['/t/configurations'], { replaceUrl: true, queryParams: {} });
@@ -190,7 +203,7 @@ export class ConfigurationsPage implements OnInit {
       const firstAccessible = this.pageSections.find(s => this.canAccessPageSection(s));
       if (firstAccessible) {
         this.pageSection = firstAccessible;
-        if (this.pageSection === 'USERS') {
+        if (this.pageSection === 'USERS' || this.pageSection === 'ROLES') {
           this.loadUsers();
         }
       } else {
@@ -212,7 +225,7 @@ export class ConfigurationsPage implements OnInit {
         requestedSection || this.pageSections.find(s => this.canAccessPageSection(s));
       if (firstAccessible) {
         this.pageSection = firstAccessible;
-        if (this.pageSection === 'USERS') {
+        if (this.pageSection === 'USERS' || this.pageSection === 'ROLES') {
           this.loadUsers();
         }
       } else {
@@ -250,7 +263,7 @@ export class ConfigurationsPage implements OnInit {
         }
       }
 
-      if (this.pageSection === 'USERS') {
+      if (this.pageSection === 'USERS' || this.pageSection === 'ROLES') {
         this.loadUsers();
       }
     } catch (e) {
@@ -369,7 +382,7 @@ export class ConfigurationsPage implements OnInit {
   }
 
   onPageSectionChange(section: ConfigurationPageSection): void {
-    if (section === 'USERS') {
+    if (section === 'USERS' || section === 'ROLES') {
       this.loadUsers();
     }
   }
@@ -383,8 +396,73 @@ export class ConfigurationsPage implements OnInit {
     );
   }
 
-  isUnregisteredUser(u: User | any): boolean {
-    return Boolean((u as any)?.isUnregistered);
+  isUnregisteredUser(u: User | string | any): boolean {
+    if (!u) return false;
+    if (typeof u === 'string') {
+      const clean = u.replace(/^@+/, '').trim().toLowerCase();
+      const found = (this.allDirectoryUsers || []).find(
+        user => (user.userId || '').toLowerCase() === clean ||
+                (user.nickname || '').toLowerCase() === clean ||
+                (user.preferredUsername || '').toLowerCase() === clean
+      );
+      if (!found) return true;
+      return Boolean((found as any)?.isUnregistered || !found.lastLoginAt);
+    }
+    return Boolean((u as any)?.isUnregistered || !u.lastLoginAt);
+  }
+
+  getRoleUserSuggestions(query: string, existingIds: string[] = []): User[] {
+    const q = (query || '').trim().toLowerCase().replace(/^@+/, '');
+    if (!q) return [];
+    const existingSet = new Set(
+      (existingIds || []).map(id => (id || '').replace(/^@+/, '').trim().toLowerCase())
+    );
+    return (this.allDirectoryUsers || [])
+      .filter(u => {
+        const uid = (u.userId || '').toLowerCase();
+        const unick = (u.nickname || '').toLowerCase();
+        const upref = (u.preferredUsername || '').toLowerCase();
+        if ((uid && existingSet.has(uid)) || (unick && existingSet.has(unick)) || (upref && existingSet.has(upref))) return false;
+        return (
+          (uid && uid.includes(q)) ||
+          (unick && unick.includes(q)) ||
+          (upref && upref.includes(q)) ||
+          (u.firstName || '').toLowerCase().includes(q) ||
+          (u.lastName || '').toLowerCase().includes(q) ||
+          (typeof u.getDisplayName === 'function' && u.getDisplayName().toLowerCase().includes(q))
+        );
+      })
+      .slice(0, 5);
+  }
+
+  get adminSuggestions(): User[] {
+    return this.getRoleUserSuggestions(this.adminSearchInput, this.configurations?.administratorsIds);
+  }
+
+  get managerSuggestions(): User[] {
+    return this.getRoleUserSuggestions(this.managerSearchInput, this.configurations?.managersIds);
+  }
+
+  get auditorSuggestions(): User[] {
+    return this.getRoleUserSuggestions(this.auditorSearchInput, this.configurations?.auditorsIds);
+  }
+
+  onAdminSearchBlur(): void {
+    setTimeout(() => {
+      this.showAdminSuggestions = false;
+    }, 200);
+  }
+
+  onManagerSearchBlur(): void {
+    setTimeout(() => {
+      this.showManagerSuggestions = false;
+    }, 200);
+  }
+
+  onAuditorSearchBlur(): void {
+    setTimeout(() => {
+      this.showAuditorSuggestions = false;
+    }, 200);
   }
 
   get nonGuestUsers(): User[] {
@@ -432,8 +510,10 @@ export class ConfigurationsPage implements OnInit {
           (user.firstName || '').toLowerCase().includes(cleanQuery) ||
           (user.lastName || '').toLowerCase().includes(rawQuery) ||
           (user.lastName || '').toLowerCase().includes(cleanQuery);
-        const matchesId = (user.userId || '').toLowerCase().includes(cleanQuery) ||
-          `@${user.userId || ''}`.toLowerCase().includes(rawQuery);
+        const matchesId =
+          (user.nickname || '').toLowerCase().includes(cleanQuery) ||
+          `@${user.nickname || ''}`.toLowerCase().includes(rawQuery) ||
+          (user.userId || '').toLowerCase().includes(cleanQuery);
         const matchesCountry = (user.country || '').toLowerCase().includes(cleanQuery);
         const matchesSection = (user.section || '').toLowerCase().includes(cleanQuery) ||
           (user.sectionCode || '').toLowerCase().includes(cleanQuery);
@@ -463,29 +543,65 @@ export class ConfigurationsPage implements OnInit {
     const parts = [user.firstName, user.lastName].filter(Boolean);
     if (parts.length > 0) return parts.join(' ');
     if ((user as any).name) return (user as any).name;
-    return user.userId ? `@${user.userId}` : '';
+    return user.nickname ? user.nickname : '';
   }
 
   getUserIdentifier(userOrId: User | string): string {
+    const raw = typeof userOrId === 'string' ? userOrId.replace(/^@/, '').trim().toLowerCase() : '';
     const user = typeof userOrId === 'string'
-      ? this.allDirectoryUsers.find(u => (u.userId || '').toLowerCase() === userOrId.replace(/^@/, '').trim().toLowerCase())
+      ? this.allDirectoryUsers.find(
+          u => (u.userId || '').toLowerCase() === raw ||
+               (u.nickname || '').toLowerCase() === raw ||
+               (u.preferredUsername || '').toLowerCase() === raw
+        )
       : userOrId;
     if (user) {
       const parts = [user.firstName, user.lastName].filter(Boolean);
-      if (parts.length > 0) return parts.join(' ');
+      if (parts.length > 0) {
+        return user.nickname ? `${parts.join(' ')} (${user.nickname})` : parts.join(' ');
+      }
       if (typeof user.getDisplayName === 'function') {
         const name = user.getDisplayName();
-        if (name && name !== user.userId) return name;
+        if (name && name !== user.userId) {
+          return user.nickname && !name.includes(user.nickname) ? `${name} (${user.nickname})` : name;
+        }
       }
-      return `@${user.userId}`;
+      return user.nickname ? user.nickname : '';
     }
     const cleanId = String(userOrId || '').replace(/^@/, '').trim();
-    return cleanId ? `@${cleanId}` : '';
+    return cleanId ? (cleanId.length > 20 ? cleanId.slice(0, 8) + '...' : cleanId) : '';
+  }
+
+  getUserNickname(userOrId: User | string): string | undefined {
+    if (!userOrId) return undefined;
+    if (typeof userOrId === 'object') {
+      return userOrId.nickname || userOrId.preferredUsername || undefined;
+    }
+    const raw = typeof userOrId === 'string' ? userOrId.replace(/^@/, '').trim().toLowerCase() : '';
+    const user = this.allDirectoryUsers.find(
+      u => (u.userId || '').toLowerCase() === raw || (u.nickname || '').toLowerCase() === raw || (u.preferredUsername || '').toLowerCase() === raw
+    );
+    if (user?.nickname) return user.nickname;
+    if (user?.preferredUsername) return user.preferredUsername;
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(raw);
+    return isUuid ? undefined : (raw || undefined);
+  }
+
+  openAccountsProfile(userOrId: User | string): void {
+    if (typeof userOrId === 'object' && userOrId !== null) {
+      this.app.openAccountsProfile(userOrId);
+      return;
+    }
+    const raw = typeof userOrId === 'string' ? userOrId.replace(/^@/, '').trim().toLowerCase() : '';
+    const user = this.allDirectoryUsers.find(
+      u => (u.userId || '').toLowerCase() === raw || (u.nickname || '').toLowerCase() === raw || (u.preferredUsername || '').toLowerCase() === raw
+    );
+    this.app.openAccountsProfile(user || userOrId);
   }
 
   getUserInitials(user: User): string {
     if (!user) return '?';
-    const first = (user.firstName?.[0] || user.userId?.[0] || (user as any).name?.[0] || '').toUpperCase();
+    const first = (user.firstName?.[0] || user.nickname?.[0] || user.preferredUsername?.[0] || (user as any).name?.[0] || '').toUpperCase();
     const last = (user.lastName?.[0] || '').toUpperCase();
     return `${first}${last}`.trim() || first || '?';
   }
@@ -502,7 +618,14 @@ export class ConfigurationsPage implements OnInit {
       let list = (allUsers || []).filter(u => !this.isGuestUser(u));
 
       // Ensure any configured users (administrators, managers, auditors, suspended users, custom role users) appear
-      const existingUserIds = new Set(list.map(u => (u.userId || '').toLowerCase()));
+      const existingUserIds = new Set(
+        list.reduce((acc, u) => {
+          if (u.userId) acc.push(u.userId.toLowerCase());
+          if (u.nickname) acc.push(u.nickname.toLowerCase());
+          if (u.preferredUsername) acc.push(u.preferredUsername.toLowerCase());
+          return acc;
+        }, [] as string[])
+      );
       const knownConfigUserIds = Array.from(new Set([
         ...(this.configurations?.administratorsIds || []),
         ...(this.configurations?.managersIds || []),
@@ -515,6 +638,8 @@ export class ConfigurationsPage implements OnInit {
         if (!existingUserIds.has(id) && !id.startsWith('guest_')) {
           const syntheticUser = new User({
             userId: id,
+            nickname: id,
+            preferredUsername: id,
             firstName: '',
             lastName: '',
             email: '',
@@ -525,6 +650,7 @@ export class ConfigurationsPage implements OnInit {
             extendedRoles: [],
             lastLoginAt: ''
           });
+          (syntheticUser as any).isUnregistered = true;
           if (this.configurations) {
             User.applyConfigurationPermissions(syntheticUser, this.configurations);
           }
@@ -541,9 +667,38 @@ export class ConfigurationsPage implements OnInit {
     }
   }
 
-  isUserSuspended(userId: string): boolean {
-    if (!userId || !this.configurations?.blockedUserIds) return false;
-    return this.configurations.blockedUserIds.some(id => id.toLowerCase() === userId.toLowerCase());
+  isUserSuspended(userIdOrUser: string | User): boolean {
+    if (!userIdOrUser || !this.configurations?.blockedUserIds) return false;
+    let userId: string;
+    let nickname: string | undefined;
+    let preferredUsername: string | undefined;
+
+    if (typeof userIdOrUser === 'string') {
+      const clean = userIdOrUser.replace(/^@+/, '').trim().toLowerCase();
+      const found = (this.allDirectoryUsers || []).find(
+        u => (u.userId || '').toLowerCase() === clean ||
+             (u.nickname || '').toLowerCase() === clean ||
+             (u.preferredUsername || '').toLowerCase() === clean
+      );
+      if (found) {
+        userId = found.userId.toLowerCase();
+        nickname = found.nickname?.toLowerCase();
+        preferredUsername = found.preferredUsername?.toLowerCase();
+      } else {
+        userId = clean;
+      }
+    } else {
+      userId = (userIdOrUser.userId || '').toLowerCase();
+      nickname = (userIdOrUser.nickname || '').toLowerCase();
+      preferredUsername = (userIdOrUser.preferredUsername || '').toLowerCase();
+    }
+
+    return this.configurations.blockedUserIds.some(id => {
+      const clean = id.replace(/^@+/, '').trim().toLowerCase();
+      return clean === userId ||
+        (!!nickname && clean === nickname) ||
+        (!!preferredUsername && clean === preferredUsername);
+    });
   }
 
   isUserBlocked(userId: string): boolean {
@@ -574,10 +729,19 @@ export class ConfigurationsPage implements OnInit {
     );
     if (adminIds.has(cleanId)) return true;
 
-    const user = (this.usersList || []).find(
-      u => (u.userId || '').replace(/^@+/, '').trim().toLowerCase() === cleanId
+    const user = (this.allDirectoryUsers || []).find(
+      u => (u.userId || '').replace(/^@+/, '').trim().toLowerCase() === cleanId ||
+           (u.nickname || '').replace(/^@+/, '').trim().toLowerCase() === cleanId ||
+           (u.preferredUsername || '').replace(/^@+/, '').trim().toLowerCase() === cleanId
     );
     if (user) {
+      if (
+        adminIds.has((user.userId || '').toLowerCase()) ||
+        (user.nickname && adminIds.has(user.nickname.toLowerCase())) ||
+        (user.preferredUsername && adminIds.has(user.preferredUsername.toLowerCase()))
+      ) {
+        return true;
+      }
       User.applyConfigurationPermissions(user, this.configurations);
       if (user.isAdministrator) return true;
     }
@@ -601,7 +765,7 @@ export class ConfigurationsPage implements OnInit {
       header: this.translate.instant('CONFIGURATIONS.SUSPEND_USER_CONFIRM_TITLE'),
       message: this.translate.instant('CONFIGURATIONS.SUSPEND_USER_CONFIRM_MSG', {
         name: identifier,
-        userId: user.userId
+        userId: user.nickname ? user.nickname : user.userId
       }),
       buttons: [
         { text: this.translate.instant('COMMON.CANCEL'), role: 'cancel' },
@@ -629,6 +793,17 @@ export class ConfigurationsPage implements OnInit {
   async restoreUser(userId: string): Promise<void> {
     if (!this.canModifyUsers()) return;
     const targetId = userId.replace(/^@+/, '').trim().toLowerCase();
+    const found = (this.allDirectoryUsers || []).find(
+      u => (u.userId || '').toLowerCase() === targetId ||
+           (u.nickname || '').toLowerCase() === targetId ||
+           (u.preferredUsername || '').toLowerCase() === targetId
+    );
+    const idsToRemove = new Set([targetId]);
+    if (found) {
+      if (found.userId) idsToRemove.add(found.userId.toLowerCase());
+      if (found.nickname) idsToRemove.add(found.nickname.toLowerCase());
+      if (found.preferredUsername) idsToRemove.add(found.preferredUsername.toLowerCase());
+    }
     const identifier = this.getUserIdentifier(targetId);
     const alert = await this.alertCtrl.create({
       header: this.translate.instant('CONFIGURATIONS.RESTORE_USER_CONFIRM_TITLE'),
@@ -642,8 +817,7 @@ export class ConfigurationsPage implements OnInit {
           text: this.translate.instant('CONFIGURATIONS.RESTORE_BUTTON'),
           handler: async () => {
             this.configurations.blockedUserIds = (this.configurations.blockedUserIds || [])
-              .map(id => id.replace(/^@+/, '').trim().toLowerCase())
-              .filter(id => id !== targetId);
+              .filter(id => !idsToRemove.has(id.replace(/^@+/, '').trim().toLowerCase()));
             await this.updateConfigurations();
           }
         }
@@ -674,10 +848,10 @@ export class ConfigurationsPage implements OnInit {
           text: this.translate.instant('CONFIGURATIONS.SUSPEND_BUTTON'),
           role: 'destructive',
           handler: async (data: any) => {
-            const targetId = (data.userId || '').trim().replace(/^@+/, '').toLowerCase();
-            if (!targetId) return false;
+            const rawId = (data.userId || '').trim().replace(/^@+/, '').toLowerCase();
+            if (!rawId) return false;
 
-            if (this.isAdministratorId(targetId)) {
+            if (this.isAdministratorId(rawId)) {
               const warning = await this.alertCtrl.create({
                 header: this.translate.instant('COMMON.WARNING'),
                 message: this.translate.instant('CONFIGURATIONS.CANNOT_SUSPEND_ADMIN'),
@@ -687,6 +861,12 @@ export class ConfigurationsPage implements OnInit {
               return false;
             }
 
+            const found = (this.allDirectoryUsers || []).find(
+              u => (u.nickname || '').toLowerCase() === rawId ||
+                   (u.preferredUsername || '').toLowerCase() === rawId ||
+                   (u.userId || '').toLowerCase() === rawId
+            );
+            const targetId = found ? found.userId : rawId;
             const current = (this.configurations.blockedUserIds || []).map(id => id.replace(/^@+/, '').trim().toLowerCase());
             if (!current.includes(targetId)) {
               this.configurations.blockedUserIds = [...current, targetId];
@@ -1439,36 +1619,63 @@ export class ConfigurationsPage implements OnInit {
   // USERS SUBTAB
   //
 
-  async addAdministrator(): Promise<void> {
-    const alert = await this.alertCtrl.create({
-      header: this.translate.instant('CONFIGURATIONS.ADD_ADMINISTRATOR'),
-      inputs: [
-        {
-          name: 'userId',
-          type: 'text',
-          placeholder: this.translate.instant('CONFIGURATIONS.USERNAME_PLACEHOLDER')
-        }
-      ],
-      buttons: [
-        { text: this.translate.instant('COMMON.CANCEL'), role: 'cancel' },
-        {
-          text: this.translate.instant('COMMON.ADD'),
-          handler: async data => {
-            const userId = data.userId?.trim().replace(/^@+/, '').toLowerCase();
-            if (!userId) return;
-            const updated = new Configurations(this.configurations);
-            updated.blockedUserIds = (updated.blockedUserIds || []).filter(
-              id => id.replace(/^@+/, '').trim().toLowerCase() !== userId
-            );
-            if (!updated.administratorsIds.includes(userId)) {
-              updated.administratorsIds.push(userId);
-              await this.updateConfigurations(updated);
-            }
-          }
-        }
-      ]
+  async addAdministrator(userOrString?: User | string): Promise<void> {
+    if (!userOrString) {
+      if (this.adminInput) {
+        this.adminInput.setFocus();
+      }
+      this.showAdminSuggestions = true;
+      return;
+    }
+
+    let targetId = '';
+    let rawId = '';
+    if (typeof userOrString === 'object') {
+      targetId = userOrString.userId || userOrString.nickname || '';
+      rawId = (userOrString.nickname || userOrString.userId || '').toLowerCase();
+    } else {
+      rawId = userOrString.trim().replace(/^@+/, '').toLowerCase();
+      if (!rawId) return;
+      const found = (this.allDirectoryUsers || []).find(
+        u => (u.nickname || '').toLowerCase() === rawId ||
+             (u.preferredUsername || '').toLowerCase() === rawId ||
+             (u.userId || '').toLowerCase() === rawId
+      );
+      targetId = found ? (found.userId || found.nickname || rawId) : rawId;
+    }
+    if (!targetId) return;
+
+    const cleanTarget = targetId.trim().replace(/^@+/, '');
+    const cleanRaw = rawId.trim().replace(/^@+/, '');
+    const updated = new Configurations(this.configurations);
+    const idsToUnblock = new Set([cleanRaw.toLowerCase(), cleanTarget.toLowerCase()]);
+    const foundUser = (this.allDirectoryUsers || []).find(
+      u => (u.userId || '').toLowerCase() === cleanTarget.toLowerCase() ||
+           (u.nickname || '').toLowerCase() === cleanRaw.toLowerCase() ||
+           (u.preferredUsername || '').toLowerCase() === cleanRaw.toLowerCase()
+    );
+    if (foundUser?.nickname) idsToUnblock.add(foundUser.nickname.toLowerCase());
+    if (foundUser?.userId) idsToUnblock.add(foundUser.userId.toLowerCase());
+    if (foundUser?.preferredUsername) idsToUnblock.add(foundUser.preferredUsername.toLowerCase());
+
+    updated.blockedUserIds = (updated.blockedUserIds || []).filter(
+      id => !idsToUnblock.has(id.replace(/^@+/, '').trim().toLowerCase())
+    );
+
+    const alreadyAdmin = (updated.administratorsIds || []).some(id => {
+      const c = id.replace(/^@+/, '').trim().toLowerCase();
+      return c === cleanTarget.toLowerCase() || c === cleanRaw.toLowerCase() ||
+        (foundUser?.nickname && c === foundUser.nickname.toLowerCase()) ||
+        (foundUser?.userId && c === foundUser.userId.toLowerCase()) ||
+        (foundUser?.preferredUsername && c === foundUser.preferredUsername.toLowerCase());
     });
-    await alert.present();
+
+    if (!alreadyAdmin) {
+      updated.administratorsIds = [...(updated.administratorsIds || []), cleanTarget];
+      await this.updateConfigurations(updated);
+    }
+    this.adminSearchInput = '';
+    this.showAdminSuggestions = false;
   }
 
   hasAdminGroup(): boolean {
@@ -1487,9 +1694,24 @@ export class ConfigurationsPage implements OnInit {
   async removeAdministratorById(userId: string): Promise<void> {
     if (!this.canRemoveAdministrator()) return;
     const cleanId = (userId || '').replace(/^@+/, '').trim().toLowerCase();
+    const found = (this.allDirectoryUsers || []).find(
+      u => (u.userId || '').toLowerCase() === cleanId ||
+           (u.nickname || '').toLowerCase() === cleanId ||
+           (u.preferredUsername || '').toLowerCase() === cleanId
+    );
+    const idsToRemove = new Set([cleanId]);
+    if (found) {
+      if (found.userId) idsToRemove.add(found.userId.toLowerCase());
+      if (found.nickname) idsToRemove.add(found.nickname.toLowerCase());
+      if (found.preferredUsername) idsToRemove.add(found.preferredUsername.toLowerCase());
+    }
+    const identifier = this.getUserIdentifier(cleanId);
     const alert = await this.alertCtrl.create({
       header: this.translate.instant('COMMON.CONFIRM'),
-      message: this.translate.instant('CONFIGURATIONS.REMOVE_ADMINISTRATOR_CONFIRM', { userId: cleanId }),
+      message: this.translate.instant('CONFIGURATIONS.REMOVE_ADMINISTRATOR_CONFIRM', {
+        userId: identifier,
+        name: identifier
+      }),
       buttons: [
         { text: this.translate.instant('COMMON.CANCEL'), role: 'cancel' },
         {
@@ -1497,7 +1719,9 @@ export class ConfigurationsPage implements OnInit {
           role: 'destructive',
           handler: async () => {
             const updated = new Configurations(this.configurations);
-            updated.administratorsIds = updated.administratorsIds.filter(id => id.replace(/^@+/, '').trim().toLowerCase() !== cleanId);
+            updated.administratorsIds = updated.administratorsIds.filter(
+              id => !idsToRemove.has(id.replace(/^@+/, '').trim().toLowerCase())
+            );
             await this.updateConfigurations(updated);
           }
         }
@@ -1506,40 +1730,77 @@ export class ConfigurationsPage implements OnInit {
     await alert.present();
   }
 
-  async addManager(): Promise<void> {
-    const alert = await this.alertCtrl.create({
-      header: this.translate.instant('CONFIGURATIONS.ADD_MANAGER'),
-      inputs: [
-        {
-          name: 'userId',
-          type: 'text',
-          placeholder: this.translate.instant('CONFIGURATIONS.USERNAME_PLACEHOLDER')
-        }
-      ],
-      buttons: [
-        { text: this.translate.instant('COMMON.CANCEL'), role: 'cancel' },
-        {
-          text: this.translate.instant('COMMON.ADD'),
-          handler: async data => {
-            const userId = data.userId?.trim().replace(/^@+/, '').toLowerCase();
-            if (!userId) return;
-            const updated = new Configurations(this.configurations);
-            if (!updated.managersIds.includes(userId)) {
-              updated.managersIds.push(userId);
-              await this.updateConfigurations(updated);
-            }
-          }
-        }
-      ]
+  async addManager(userOrString?: User | string): Promise<void> {
+    if (!userOrString) {
+      if (this.managerInput) {
+        this.managerInput.setFocus();
+      }
+      this.showManagerSuggestions = true;
+      return;
+    }
+
+    let targetId = '';
+    let rawId = '';
+    if (typeof userOrString === 'object') {
+      targetId = userOrString.userId || userOrString.nickname || '';
+      rawId = (userOrString.nickname || userOrString.userId || '').toLowerCase();
+    } else {
+      rawId = userOrString.trim().replace(/^@+/, '').toLowerCase();
+      if (!rawId) return;
+      const found = (this.allDirectoryUsers || []).find(
+        u => (u.nickname || '').toLowerCase() === rawId ||
+             (u.preferredUsername || '').toLowerCase() === rawId ||
+             (u.userId || '').toLowerCase() === rawId
+      );
+      targetId = found ? (found.userId || found.nickname || rawId) : rawId;
+    }
+    if (!targetId) return;
+
+    const cleanTarget = targetId.trim().replace(/^@+/, '');
+    const cleanRaw = rawId.trim().replace(/^@+/, '');
+    const updated = new Configurations(this.configurations);
+    const foundUser = (this.allDirectoryUsers || []).find(
+      u => (u.userId || '').toLowerCase() === cleanTarget.toLowerCase() ||
+           (u.nickname || '').toLowerCase() === cleanRaw.toLowerCase() ||
+           (u.preferredUsername || '').toLowerCase() === cleanRaw.toLowerCase()
+    );
+
+    const alreadyManager = (updated.managersIds || []).some(id => {
+      const c = id.replace(/^@+/, '').trim().toLowerCase();
+      return c === cleanTarget.toLowerCase() || c === cleanRaw.toLowerCase() ||
+        (foundUser?.nickname && c === foundUser.nickname.toLowerCase()) ||
+        (foundUser?.userId && c === foundUser.userId.toLowerCase()) ||
+        (foundUser?.preferredUsername && c === foundUser.preferredUsername.toLowerCase());
     });
-    await alert.present();
+
+    if (!alreadyManager) {
+      updated.managersIds = [...(updated.managersIds || []), cleanTarget];
+      await this.updateConfigurations(updated);
+    }
+    this.managerSearchInput = '';
+    this.showManagerSuggestions = false;
   }
 
   async removeManagerById(userId: string): Promise<void> {
     const cleanId = (userId || '').replace(/^@+/, '').trim().toLowerCase();
+    const found = (this.allDirectoryUsers || []).find(
+      u => (u.userId || '').toLowerCase() === cleanId ||
+           (u.nickname || '').toLowerCase() === cleanId ||
+           (u.preferredUsername || '').toLowerCase() === cleanId
+    );
+    const idsToRemove = new Set([cleanId]);
+    if (found) {
+      if (found.userId) idsToRemove.add(found.userId.toLowerCase());
+      if (found.nickname) idsToRemove.add(found.nickname.toLowerCase());
+      if (found.preferredUsername) idsToRemove.add(found.preferredUsername.toLowerCase());
+    }
+    const identifier = this.getUserIdentifier(cleanId);
     const alert = await this.alertCtrl.create({
       header: this.translate.instant('COMMON.CONFIRM'),
-      message: this.translate.instant('CONFIGURATIONS.REMOVE_MANAGER_CONFIRM', { userId: cleanId }),
+      message: this.translate.instant('CONFIGURATIONS.REMOVE_MANAGER_CONFIRM', {
+        userId: identifier,
+        name: identifier
+      }),
       buttons: [
         { text: this.translate.instant('COMMON.CANCEL'), role: 'cancel' },
         {
@@ -1547,7 +1808,9 @@ export class ConfigurationsPage implements OnInit {
           role: 'destructive',
           handler: async () => {
             const updated = new Configurations(this.configurations);
-            updated.managersIds = updated.managersIds.filter(id => id.replace(/^@+/, '').trim().toLowerCase() !== cleanId);
+            updated.managersIds = updated.managersIds.filter(
+              id => !idsToRemove.has(id.replace(/^@+/, '').trim().toLowerCase())
+            );
             await this.updateConfigurations(updated);
           }
         }
@@ -1556,40 +1819,77 @@ export class ConfigurationsPage implements OnInit {
     await alert.present();
   }
 
-  async addAuditor(): Promise<void> {
-    const alert = await this.alertCtrl.create({
-      header: this.translate.instant('CONFIGURATIONS.ADD_AUDITOR'),
-      inputs: [
-        {
-          name: 'userId',
-          type: 'text',
-          placeholder: this.translate.instant('CONFIGURATIONS.USERNAME_PLACEHOLDER')
-        }
-      ],
-      buttons: [
-        { text: this.translate.instant('COMMON.CANCEL'), role: 'cancel' },
-        {
-          text: this.translate.instant('COMMON.ADD'),
-          handler: async data => {
-            const userId = data.userId?.trim().replace(/^@+/, '').toLowerCase();
-            if (!userId) return;
-            const updated = new Configurations(this.configurations);
-            if (!updated.auditorsIds.includes(userId)) {
-              updated.auditorsIds.push(userId);
-              await this.updateConfigurations(updated);
-            }
-          }
-        }
-      ]
+  async addAuditor(userOrString?: User | string): Promise<void> {
+    if (!userOrString) {
+      if (this.auditorInput) {
+        this.auditorInput.setFocus();
+      }
+      this.showAuditorSuggestions = true;
+      return;
+    }
+
+    let targetId = '';
+    let rawId = '';
+    if (typeof userOrString === 'object') {
+      targetId = userOrString.userId || userOrString.nickname || '';
+      rawId = (userOrString.nickname || userOrString.userId || '').toLowerCase();
+    } else {
+      rawId = userOrString.trim().replace(/^@+/, '').toLowerCase();
+      if (!rawId) return;
+      const found = (this.allDirectoryUsers || []).find(
+        u => (u.nickname || '').toLowerCase() === rawId ||
+             (u.preferredUsername || '').toLowerCase() === rawId ||
+             (u.userId || '').toLowerCase() === rawId
+      );
+      targetId = found ? (found.userId || found.nickname || rawId) : rawId;
+    }
+    if (!targetId) return;
+
+    const cleanTarget = targetId.trim().replace(/^@+/, '');
+    const cleanRaw = rawId.trim().replace(/^@+/, '');
+    const updated = new Configurations(this.configurations);
+    const foundUser = (this.allDirectoryUsers || []).find(
+      u => (u.userId || '').toLowerCase() === cleanTarget.toLowerCase() ||
+           (u.nickname || '').toLowerCase() === cleanRaw.toLowerCase() ||
+           (u.preferredUsername || '').toLowerCase() === cleanRaw.toLowerCase()
+    );
+
+    const alreadyAuditor = (updated.auditorsIds || []).some(id => {
+      const c = id.replace(/^@+/, '').trim().toLowerCase();
+      return c === cleanTarget.toLowerCase() || c === cleanRaw.toLowerCase() ||
+        (foundUser?.nickname && c === foundUser.nickname.toLowerCase()) ||
+        (foundUser?.userId && c === foundUser.userId.toLowerCase()) ||
+        (foundUser?.preferredUsername && c === foundUser.preferredUsername.toLowerCase());
     });
-    await alert.present();
+
+    if (!alreadyAuditor) {
+      updated.auditorsIds = [...(updated.auditorsIds || []), cleanTarget];
+      await this.updateConfigurations(updated);
+    }
+    this.auditorSearchInput = '';
+    this.showAuditorSuggestions = false;
   }
 
   async removeAuditorById(userId: string): Promise<void> {
     const cleanId = (userId || '').replace(/^@+/, '').trim().toLowerCase();
+    const found = (this.allDirectoryUsers || []).find(
+      u => (u.userId || '').toLowerCase() === cleanId ||
+           (u.nickname || '').toLowerCase() === cleanId ||
+           (u.preferredUsername || '').toLowerCase() === cleanId
+    );
+    const idsToRemove = new Set([cleanId]);
+    if (found) {
+      if (found.userId) idsToRemove.add(found.userId.toLowerCase());
+      if (found.nickname) idsToRemove.add(found.nickname.toLowerCase());
+      if (found.preferredUsername) idsToRemove.add(found.preferredUsername.toLowerCase());
+    }
+    const identifier = this.getUserIdentifier(cleanId);
     const alert = await this.alertCtrl.create({
       header: this.translate.instant('COMMON.CONFIRM'),
-      message: this.translate.instant('CONFIGURATIONS.REMOVE_AUDITOR_CONFIRM', { userId: cleanId }),
+      message: this.translate.instant('CONFIGURATIONS.REMOVE_AUDITOR_CONFIRM', {
+        userId: identifier,
+        name: identifier
+      }),
       buttons: [
         { text: this.translate.instant('COMMON.CANCEL'), role: 'cancel' },
         {
@@ -1597,7 +1897,9 @@ export class ConfigurationsPage implements OnInit {
           role: 'destructive',
           handler: async () => {
             const updated = new Configurations(this.configurations);
-            updated.auditorsIds = updated.auditorsIds.filter(id => id.replace(/^@+/, '').trim().toLowerCase() !== cleanId);
+            updated.auditorsIds = updated.auditorsIds.filter(
+              id => !idsToRemove.has(id.replace(/^@+/, '').trim().toLowerCase())
+            );
             await this.updateConfigurations(updated);
           }
         }
@@ -1661,6 +1963,7 @@ export class ConfigurationsPage implements OnInit {
       component: RoleEditorComponent,
       componentProps: {
         mode: 'custom',
+        allUsers: this.allDirectoryUsers,
         casPermissionOptions: this.configurations?.getOAuthRoleOptions()
       }
     });
@@ -1681,6 +1984,7 @@ export class ConfigurationsPage implements OnInit {
         mode: 'custom',
         role,
         readOnly,
+        allUsers: this.allDirectoryUsers,
         casPermissionOptions: this.configurations?.getOAuthRoleOptions()
       }
     });

@@ -333,7 +333,7 @@
           <ion-label class="ion-text-wrap">
             <div class="userItemHeader">
               <span class="userDisplayName" *ngIf="u.firstName || u.lastName">{{ getUserDisplayName(u) }}</span>
-              <span class="userHandle">@{{ u.userId }}</span>
+              <span class="userHandle" *ngIf="u.nickname">{{ u.nickname }}</span>
               <span
                 class="status-chip"
                 [ngClass]="isUserSuspended(u.userId) ? 'status-suspended' : 'status-active'"
@@ -378,9 +378,9 @@
             <ion-button
               fill="clear"
               color="medium"
-              *ngIf="!isUnregisteredUser(u)"
+              *ngIf="!isUnregisteredUser(u) && getUserNickname(u)"
               [title]="'CONFIGURATIONS.VIEW_PROFILE' | translate"
-              (click)="app.openUserProfileById(u.userId)"
+              (click)="openAccountsProfile(u)"
             >
               <ion-icon name="open-outline" slot="icon-only"></ion-icon>
             </ion-button>
@@ -491,14 +491,18 @@
           <h2>{{ 'CONFIGURATIONS.ADMINISTRATORS' | translate }}</h2>
           <p>{{ 'CONFIGURATIONS.ADMINISTRATORS_I' | translate }}</p>
         </ion-label>
-        <ion-button size="small" *ngIf="canModifyRoles()" (click)="addAdministrator()">{{ 'COMMON.ADD' | translate }}</ion-button>
       </ion-list-header>
       <ion-item class="noElements" *ngIf="configurations?.administratorsIds && !configurations.administratorsIds.length">
         <ion-label>{{ 'CONFIGURATIONS.NO_USERS_ADDED' | translate }}</ion-label>
       </ion-item>
       <ion-item *ngFor="let adminId of configurations?.administratorsIds">
-        <ion-label>{{ adminId }}</ion-label>
-        <ion-button fill="clear" color="medium" slot="end" (click)="app.openUserProfileById(adminId)">
+        <ion-label class="ion-text-wrap">
+          <span>{{ getUserIdentifier(adminId) }}</span>
+          <span class="unregisteredBadge" *ngIf="isUnregisteredUser(adminId)">
+            {{ 'CONFIGURATIONS.USER_NOT_REGISTERED' | translate }}
+          </span>
+        </ion-label>
+        <ion-button fill="clear" color="medium" slot="end" *ngIf="getUserNickname(adminId)" (click)="openAccountsProfile(adminId)">
           <ion-icon name="open-outline" slot="icon-only"></ion-icon>
         </ion-button>
         <ion-button
@@ -512,20 +516,56 @@
         </ion-button>
       </ion-item>
 
+      <!-- Add Administrator Directory Selector -->
+      <div class="addUserWrapper" *ngIf="canModifyRoles()">
+        <div class="addUserInputRow">
+          <ion-input
+            #adminInput
+            [(ngModel)]="adminSearchInput"
+            [placeholder]="'CONFIGURATIONS.USERNAME_PLACEHOLDER' | translate"
+            (keyup.enter)="addAdministrator(adminSearchInput)"
+            (ionFocus)="showAdminSuggestions = true"
+            (ionBlur)="onAdminSearchBlur()"
+          ></ion-input>
+          <ion-button
+            size="small"
+            [disabled]="!adminSearchInput?.trim()"
+            (click)="addAdministrator(adminSearchInput)"
+          >
+            {{ 'COMMON.ADD' | translate }}
+          </ion-button>
+        </div>
+
+        <div class="suggestionsList" *ngIf="showAdminSuggestions && adminSuggestions.length > 0">
+          <div
+            class="suggestionItem"
+            *ngFor="let suggestion of adminSuggestions"
+            (mousedown)="addAdministrator(suggestion)"
+          >
+            <span class="suggestionName">{{ getUserIdentifier(suggestion) }}</span>
+            <span class="suggestionSection" *ngIf="suggestion.section">{{ suggestion.section }}</span>
+          </div>
+        </div>
+      </div>
+
       <!-- Managers List -->
       <ion-list-header class="ion-padding-top">
         <ion-label>
           <h2>{{ 'CONFIGURATIONS.MANAGERS' | translate }}</h2>
           <p>{{ 'CONFIGURATIONS.MANAGERS_I' | translate }}</p>
         </ion-label>
-        <ion-button size="small" *ngIf="canModifyRoles()" (click)="addManager()">{{ 'COMMON.ADD' | translate }}</ion-button>
       </ion-list-header>
       <ion-item class="noElements" *ngIf="configurations?.managersIds && !configurations.managersIds.length">
         <ion-label>{{ 'CONFIGURATIONS.NO_USERS_ADDED' | translate }}</ion-label>
       </ion-item>
       <ion-item *ngFor="let managerId of configurations?.managersIds">
-        <ion-label>{{ managerId }}</ion-label>
-        <ion-button fill="clear" color="medium" slot="end" (click)="app.openUserProfileById(managerId)">
+        <ion-label class="ion-text-wrap">
+          <span>{{ getUserIdentifier(managerId) }}</span>
+          <span class="unregisteredBadge" *ngIf="isUnregisteredUser(managerId)">
+            {{ 'CONFIGURATIONS.USER_NOT_REGISTERED' | translate }}
+          </span>
+        </ion-label>
+        <ion-button fill="clear" color="medium" slot="end" *ngIf="getUserNickname(managerId)" (click)="openAccountsProfile(managerId)">
           <ion-icon name="open-outline" slot="icon-only"></ion-icon>
         </ion-button>
         <ion-button fill="clear" color="danger" slot="end" *ngIf="canModifyRoles()" (click)="removeManagerById(managerId)">
@@ -533,26 +573,94 @@
         </ion-button>
       </ion-item>
 
+      <!-- Add Manager Directory Selector -->
+      <div class="addUserWrapper" *ngIf="canModifyRoles()">
+        <div class="addUserInputRow">
+          <ion-input
+            #managerInput
+            [(ngModel)]="managerSearchInput"
+            [placeholder]="'CONFIGURATIONS.USERNAME_PLACEHOLDER' | translate"
+            (keyup.enter)="addManager(managerSearchInput)"
+            (ionFocus)="showManagerSuggestions = true"
+            (ionBlur)="onManagerSearchBlur()"
+          ></ion-input>
+          <ion-button
+            size="small"
+            [disabled]="!managerSearchInput?.trim()"
+            (click)="addManager(managerSearchInput)"
+          >
+            {{ 'COMMON.ADD' | translate }}
+          </ion-button>
+        </div>
+
+        <div class="suggestionsList" *ngIf="showManagerSuggestions && managerSuggestions.length > 0">
+          <div
+            class="suggestionItem"
+            *ngFor="let suggestion of managerSuggestions"
+            (mousedown)="addManager(suggestion)"
+          >
+            <span class="suggestionName">{{ getUserIdentifier(suggestion) }}</span>
+            <span class="suggestionSection" *ngIf="suggestion.section">{{ suggestion.section }}</span>
+          </div>
+        </div>
+      </div>
+
       <!-- Auditors List -->
       <ion-list-header class="ion-padding-top">
         <ion-label>
           <h2>{{ 'CONFIGURATIONS.AUDITORS' | translate }}</h2>
           <p>{{ 'CONFIGURATIONS.AUDITORS_I' | translate }}</p>
         </ion-label>
-        <ion-button size="small" *ngIf="canModifyRoles()" (click)="addAuditor()">{{ 'COMMON.ADD' | translate }}</ion-button>
       </ion-list-header>
       <ion-item class="noElements" *ngIf="configurations?.auditorsIds && !configurations.auditorsIds.length">
         <ion-label>{{ 'CONFIGURATIONS.NO_USERS_ADDED' | translate }}</ion-label>
       </ion-item>
       <ion-item *ngFor="let auditorId of configurations?.auditorsIds">
-        <ion-label>{{ auditorId }}</ion-label>
-        <ion-button fill="clear" color="medium" slot="end" (click)="app.openUserProfileById(auditorId)">
+        <ion-label class="ion-text-wrap">
+          <span>{{ getUserIdentifier(auditorId) }}</span>
+          <span class="unregisteredBadge" *ngIf="isUnregisteredUser(auditorId)">
+            {{ 'CONFIGURATIONS.USER_NOT_REGISTERED' | translate }}
+          </span>
+        </ion-label>
+        <ion-button fill="clear" color="medium" slot="end" *ngIf="getUserNickname(auditorId)" (click)="openAccountsProfile(auditorId)">
           <ion-icon name="open-outline" slot="icon-only"></ion-icon>
         </ion-button>
         <ion-button fill="clear" color="danger" slot="end" *ngIf="canModifyRoles()" (click)="removeAuditorById(auditorId)">
           <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
         </ion-button>
       </ion-item>
+
+      <!-- Add Auditor Directory Selector -->
+      <div class="addUserWrapper" *ngIf="canModifyRoles()">
+        <div class="addUserInputRow">
+          <ion-input
+            #auditorInput
+            [(ngModel)]="auditorSearchInput"
+            [placeholder]="'CONFIGURATIONS.USERNAME_PLACEHOLDER' | translate"
+            (keyup.enter)="addAuditor(auditorSearchInput)"
+            (ionFocus)="showAuditorSuggestions = true"
+            (ionBlur)="onAuditorSearchBlur()"
+          ></ion-input>
+          <ion-button
+            size="small"
+            [disabled]="!auditorSearchInput?.trim()"
+            (click)="addAuditor(auditorSearchInput)"
+          >
+            {{ 'COMMON.ADD' | translate }}
+          </ion-button>
+        </div>
+
+        <div class="suggestionsList" *ngIf="showAuditorSuggestions && auditorSuggestions.length > 0">
+          <div
+            class="suggestionItem"
+            *ngFor="let suggestion of auditorSuggestions"
+            (mousedown)="addAuditor(suggestion)"
+          >
+            <span class="suggestionName">{{ getUserIdentifier(suggestion) }}</span>
+            <span class="suggestionSection" *ngIf="suggestion.section">{{ suggestion.section }}</span>
+          </div>
+        </div>
+      </div>
 
       <!-- Custom Roles -->
       <ion-list-header class="ion-padding-top">
@@ -565,7 +673,7 @@
       <ion-item class="noElements" *ngIf="configurations?.customRoles && !configurations.customRoles.length">
         <ion-label>{{ 'CONFIGURATIONS.NO_CUSTOM_ROLES' | translate }}</ion-label>
       </ion-item>
-      <ion-item button detail *ngFor="let role of configurations?.customRoles" (click)="manageCustomRole(role)">
+      <ion-item button detail class="customRoleItem" *ngFor="let role of configurations?.customRoles" (click)="manageCustomRole(role)">
         <ion-label class="ion-text-wrap">
           <h2>{{ role.name }}</h2>
           <p class="customRoleSummary">
