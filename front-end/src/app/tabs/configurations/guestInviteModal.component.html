@@ -121,9 +121,8 @@
       </ion-list-header>
       <ion-item>
         <ion-input
-          type="number"
-          min="0"
-          step="0.01"
+          type="text"
+          inputmode="decimal"
           [(ngModel)]="maxAmount"
           placeholder="e.g. 1500"
         ></ion-input>
@@ -220,7 +219,7 @@
             </div>
             <div class="summaryRow">
               <span class="summaryLabel">{{ 'CONFIGURATIONS.GUEST_EXPIRATION' | translate }}:</span>
-              <span class="summaryValue">{{ createdInvitation.expiresAt | date:'dd.MM.yyyy' }}</span>
+              <span class="summaryValue">{{ createdInvitation.expiresAt | appDate }}</span>
             </div>
             <div class="summaryRow" *ngIf="createdInvitation.maxAmount">
               <span class="summaryLabel">{{ 'CONFIGURATIONS.GUEST_MAX_AMOUNT' | translate }}:</span>

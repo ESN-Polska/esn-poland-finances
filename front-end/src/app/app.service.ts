@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { ApplicationRef, Injectable } from '@angular/core';
 import { Title } from '@angular/platform-browser';
 import { Storage } from '@ionic/storage-angular';
 import { BehaviorSubject, Observable } from 'rxjs';
@@ -9,7 +9,8 @@ import { IDEAApiService } from '@idea-ionic/common';
 
 import { environment as env } from '@env';
 import { User } from '@models/user.model';
-import { ALL_APP_PERMISSIONS, Configurations, CustomRole, AppPermission } from '@models/configurations.model';
+import { ALL_APP_PERMISSIONS, Configurations, CustomRole, AppPermission, DateFormatOption } from '@models/configurations.model';
+import { formatDateOption, FormatDateOptions, clearDateFormatCache } from './utils/date-utils';
 import { ConfigurationsService } from './tabs/configurations/configurations.service';
 
 const TOKEN_KEY = 'auth_token';
@@ -64,7 +65,8 @@ export class AppService {
     private router: Router,
     private toastCtrl: ToastController,
     private api: IDEAApiService,
-    private configurationsService: ConfigurationsService
+    private configurationsService: ConfigurationsService,
+    private appRef: ApplicationRef
   ) {
     this.themePreference = this.loadStoredThemePreference();
     this.updateDarkMode();
@@ -75,7 +77,28 @@ export class AppService {
 
     this.translate.onLangChange.subscribe(() => {
       this.updateTitle();
+      setTimeout(() => this.appRef.tick(), 0);
     });
+  }
+
+  public notifyNumberFormatChanged(): void {
+    setTimeout(() => this.appRef.tick(), 0);
+  }
+
+  public notifyDateFormatChanged(): void {
+    clearDateFormatCache();
+    setTimeout(() => this.appRef.tick(), 0);
+  }
+
+  public get dateFormat(): DateFormatOption {
+    return this.configurations?.dateFormat || 'DD.MM.YYYY';
+  }
+
+  public formatDate(
+    date: string | Date | number | null | undefined,
+    options?: FormatDateOptions
+  ): string {
+    return formatDateOption(date, this.dateFormat, options);
   }
 
   public async init(): Promise<void> {
@@ -720,6 +743,11 @@ export class AppService {
     return this.configurations?.getAppOrganisation(this.currentLanguage) || '';
   }
 
+  public getBudgetOrganisation(lang?: string): string {
+    const l = lang || this.currentLanguage;
+    return this.configurations?.getBudgetOrganisation(l) || (l === 'pl' ? 'ESN Polska' : 'ESN Poland');
+  }
+
   public updateTitle(): void {
     const title = this.getAppTitle();
     if (title) {
@@ -732,6 +760,13 @@ export class AppService {
       return this.getForcedLanguage()!;
     }
     return this.translate.currentLang || this.translate.defaultLang || 'en';
+  }
+
+  public get numberFormatLocale(): 'pl' | 'en' {
+    const mode = this.configurations?.numberFormatMode || 'MATCH_LANGUAGE';
+    if (mode === 'pl') return 'pl';
+    if (mode === 'en') return 'en';
+    return this.currentLanguage === 'pl' ? 'pl' : 'en';
   }
 
   private loadStoredThemePreference(): ThemePreference {

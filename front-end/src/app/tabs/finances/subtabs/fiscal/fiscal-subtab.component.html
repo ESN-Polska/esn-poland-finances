@@ -1,0 +1,86 @@
+<div class="fiscalSubtabContainer">
+  <div class="loadingWrapper" *ngIf="loading">
+    <ion-spinner name="crescent" color="primary"></ion-spinner>
+    <p>{{ 'FINANCES.FISCAL.LOADING' | translate }}</p>
+  </div>
+
+  <div *ngIf="!loading" class="fiscalContent">
+    <!-- Top Month Selector -->
+    <div class="monthsScrollWrapper">
+      <div class="monthsRow">
+        <button
+          type="button"
+          class="monthTabBtn"
+          *ngFor="let rep of reports"
+          [class.active]="selectedMonthReport?.id === rep.id"
+          (click)="selectMonth(rep)"
+        >
+          <span class="mName">{{ rep.monthName }}</span>
+          <span class="mTotal">{{ rep.grossTotal | number:'1.0-0' }} PLN</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Month Summary Card -->
+    <div class="monthDetailsCard" *ngIf="selectedMonthReport">
+      <div class="monthCardHeader">
+        <div class="headerLeft">
+          <h3>{{ 'FINANCES.FISCAL.TITLE_MONTH' | translate:{ month: selectedMonthReport.monthName, year: selectedMonthReport.year } }}</h3>
+          <p>{{ 'FINANCES.FISCAL.SUBTITLE' | translate }}</p>
+        </div>
+        <div class="headerRight" *ngIf="canEdit && !isArchived">
+          <ion-button fill="outline" size="small" color="primary" (click)="addDailyReport(selectedMonthReport)">
+            <ion-icon slot="start" name="add-circle-outline"></ion-icon>
+            {{ 'FINANCES.FISCAL.ADD_DAILY_BTN' | translate }}
+          </ion-button>
+        </div>
+      </div>
+
+      <!-- Totals row -->
+      <div class="totalsRow">
+        <div class="totalCol">
+          <span class="lbl">{{ 'FINANCES.FISCAL.GROSS_SALES' | translate }}</span>
+          <span class="val">{{ selectedMonthReport.grossTotal | number:'1.2-2' }} PLN</span>
+        </div>
+        <div class="totalCol">
+          <span class="lbl">{{ 'FINANCES.FISCAL.VAT_TAX' | translate }}</span>
+          <span class="val">{{ selectedMonthReport.vatTotal | number:'1.2-2' }} PLN</span>
+        </div>
+        <div class="totalCol">
+          <span class="lbl">{{ 'FINANCES.FISCAL.NET_SALES' | translate }}</span>
+          <span class="val">{{ selectedMonthReport.netTotal | number:'1.2-2' }} PLN</span>
+        </div>
+      </div>
+
+      <!-- Daily Reports Table -->
+      <div class="dailyTableWrapper" *ngIf="selectedMonthReport.dailyReports?.length">
+        <table class="dailyTable">
+          <thead>
+            <tr>
+              <th>{{ 'FINANCES.FISCAL.COL_REPORT_NO' | translate }}</th>
+              <th>{{ 'FINANCES.FISCAL.COL_SALE_DATE' | translate }}</th>
+              <th>{{ 'FINANCES.FISCAL.COL_PRINT_DATE' | translate }}</th>
+              <th style="text-align: right">{{ 'FINANCES.FISCAL.COL_GROSS' | translate }}</th>
+              <th style="text-align: right">{{ 'FINANCES.FISCAL.COL_VAT' | translate }}</th>
+              <th style="text-align: right">{{ 'FINANCES.FISCAL.COL_NET' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let d of selectedMonthReport.dailyReports">
+              <td style="font-weight: 700">{{ d.reportNumber }}</td>
+              <td>{{ d.saleDate | appDate }}</td>
+              <td>{{ d.printDate | appDate }}</td>
+              <td style="text-align: right; font-weight: 700">{{ d.grossAmount | number:'1.2-2' }}</td>
+              <td style="text-align: right">{{ d.vatAmount | number:'1.2-2' }}</td>
+              <td style="text-align: right">{{ d.netAmount | number:'1.2-2' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="emptyState" *ngIf="!selectedMonthReport.dailyReports?.length">
+        <p>{{ 'FINANCES.FISCAL.EMPTY_DAILY' | translate }}</p>
+      </div>
+    </div>
+  </div>
+</div>

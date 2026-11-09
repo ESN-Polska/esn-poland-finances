@@ -23,7 +23,12 @@ const apiResources: ResourceController[] = [
   { name: 'contributors', paths: ['/contributors'] },
   { name: 'refreshContributors' },
   { name: 'media', paths: ['/media'] },
-  { name: 'sesNotifications' }
+  { name: 'sesNotifications' },
+  { name: 'budgets', paths: ['/budgets', '/budgets/{year}', '/budgets/{year}/amendments', '/budgets/{year}/export'] },
+  { name: 'accountingDocuments', paths: ['/accounting-documents', '/accounting-documents/{id}'] },
+  { name: 'cashflowTransactions', paths: ['/cashflow-transactions', '/cashflow-transactions/import', '/cashflow-transactions/{id}'] },
+  { name: 'fiscalReports', paths: ['/fiscal-reports', '/fiscal-reports/{year}', '/fiscal-reports/{year}/{month}'] },
+  { name: 'financialSubledgers', paths: ['/financial-subledgers', '/financial-subledgers/{type}', '/financial-subledgers/{type}/{id}'] }
 ];
 
 //
@@ -58,6 +63,49 @@ const tables: { [tableName: string]: DDBTable } = {
   idea_emailsBlocklist: {
     PK: { name: 'email', type: DDB.AttributeType.STRING },
     expiresAtField: 'expiresAt'
+  },
+  annual_budgets: {
+    PK: { name: 'year', type: DDB.AttributeType.NUMBER }
+  },
+  accounting_documents: {
+    PK: { name: 'id', type: DDB.AttributeType.STRING },
+    indexes: [
+      {
+        indexName: 'byYear',
+        partitionKey: { name: 'year', type: DDB.AttributeType.NUMBER },
+        sortKey: { name: 'issuedOn', type: DDB.AttributeType.STRING }
+      }
+    ]
+  },
+  cashflow_transactions: {
+    PK: { name: 'id', type: DDB.AttributeType.STRING },
+    indexes: [
+      {
+        indexName: 'byYear',
+        partitionKey: { name: 'year', type: DDB.AttributeType.NUMBER },
+        sortKey: { name: 'bookingDate', type: DDB.AttributeType.STRING }
+      }
+    ]
+  },
+  fiscal_reports: {
+    PK: { name: 'id', type: DDB.AttributeType.STRING },
+    indexes: [
+      {
+        indexName: 'byYear',
+        partitionKey: { name: 'year', type: DDB.AttributeType.NUMBER },
+        sortKey: { name: 'monthKey', type: DDB.AttributeType.STRING }
+      }
+    ]
+  },
+  financial_subledgers: {
+    PK: { name: 'id', type: DDB.AttributeType.STRING },
+    indexes: [
+      {
+        indexName: 'byYearType',
+        partitionKey: { name: 'year', type: DDB.AttributeType.NUMBER },
+        sortKey: { name: 'subledgerType', type: DDB.AttributeType.STRING }
+      }
+    ]
   }
 };
 

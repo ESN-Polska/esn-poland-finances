@@ -1,0 +1,108 @@
+<ion-header>
+  <ion-toolbar color="ideaToolbar">
+    <ion-title>{{ (isNew ? 'FINANCES.MODALS.BUDGET_LINE.TITLE_NEW' : 'FINANCES.MODALS.BUDGET_LINE.TITLE_EDIT') | translate:{ code: code } }}</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="close()">
+        <ion-icon slot="icon-only" name="close-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding lineModalContent">
+  <div class="lineModalWrapper">
+    <div class="fieldRow">
+      <div class="fieldCol codeCol">
+        <label>{{ 'FINANCES.MODALS.BUDGET_LINE.CODE' | translate }}</label>
+        <ion-item lines="none" class="inputItem">
+          <ion-input
+            type="text"
+            [(ngModel)]="code"
+            [disabled]="!isNew"
+            [placeholder]="'FINANCES.MODALS.BUDGET_LINE.CODE_PH' | translate"
+          ></ion-input>
+        </ion-item>
+      </div>
+
+      <div class="fieldCol amountCol">
+        <label>{{ 'FINANCES.MODALS.BUDGET_LINE.AMOUNT' | translate }}</label>
+        <ion-item lines="none" class="inputItem">
+          <ion-input
+            type="text"
+            inputmode="decimal"
+            [(ngModel)]="plannedAmount"
+            placeholder="0,00"
+          ></ion-input>
+        </ion-item>
+      </div>
+    </div>
+
+    <div class="fieldCol">
+      <label>{{ 'FINANCES.MODALS.BUDGET_LINE.NAME_PL' | translate }}</label>
+      <ion-item lines="none" class="inputItem">
+        <ion-input
+          type="text"
+          [(ngModel)]="namePl"
+          [placeholder]="'FINANCES.MODALS.BUDGET_LINE.NAME_PL_PH' | translate"
+        ></ion-input>
+      </ion-item>
+    </div>
+
+    <div class="fieldCol">
+      <label>{{ 'FINANCES.MODALS.BUDGET_LINE.NAME_EN' | translate }}</label>
+      <ion-item lines="none" class="inputItem">
+        <ion-input
+          type="text"
+          [(ngModel)]="nameEn"
+          [placeholder]="'FINANCES.MODALS.BUDGET_LINE.NAME_EN_PH' | translate"
+        ></ion-input>
+      </ion-item>
+    </div>
+
+    <div class="fieldCol">
+      <label>{{ 'FINANCES.MODALS.BUDGET_LINE.DESC_PL' | translate }}</label>
+      <ion-item lines="none" class="inputItem textareaItem">
+        <ion-textarea
+          [(ngModel)]="descriptionPl"
+          [autoGrow]="true"
+          rows="2"
+          [placeholder]="'FINANCES.MODALS.BUDGET_LINE.DESC_PL_PH' | translate"
+        ></ion-textarea>
+      </ion-item>
+    </div>
+
+    <div class="fieldCol">
+      <label>{{ 'FINANCES.MODALS.BUDGET_LINE.DESC_EN' | translate }}</label>
+      <ion-item lines="none" class="inputItem textareaItem">
+        <ion-textarea
+          [(ngModel)]="descriptionEn"
+          [autoGrow]="true"
+          rows="2"
+          [placeholder]="'FINANCES.MODALS.BUDGET_LINE.DESC_EN_PH' | translate"
+        ></ion-textarea>
+      </ion-item>
+    </div>
+
+    <div class="fieldCol">
+      <label>{{ 'FINANCES.MODALS.BUDGET_LINE.NOTES' | translate }}</label>
+      <ion-item lines="none" class="inputItem">
+        <ion-input
+          type="text"
+          [(ngModel)]="notes"
+          [placeholder]="'FINANCES.MODALS.BUDGET_LINE.NOTES_PH' | translate"
+        ></ion-input>
+      </ion-item>
+    </div>
+
+    <div class="modalActions">
+      <ion-button fill="outline" color="medium" (click)="close()">
+        {{ 'COMMON.CANCEL' | translate }}
+      </ion-button>
+      <ion-button fill="solid" color="primary" (click)="save()">
+        <ion-icon slot="start" name="save-outline"></ion-icon>
+        {{ 'FINANCES.MODALS.BUDGET_LINE.SAVE_BTN' | translate }}
+      </ion-button>
+    </div>
+  </div>
+</ion-content>
+

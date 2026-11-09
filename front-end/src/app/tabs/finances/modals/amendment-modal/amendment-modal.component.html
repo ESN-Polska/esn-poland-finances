@@ -1,0 +1,165 @@
+<ion-header>
+  <ion-toolbar color="ideaToolbar">
+    <ion-title>{{ 'FINANCES.MODALS.AMENDMENT.TITLE' | translate }}</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="close()">
+        <ion-icon slot="icon-only" name="close-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding amendmentModalContent">
+  <div class="amendmentWrapper">
+    <!-- Header Form: Resolution and Date -->
+    <div class="formGrid">
+      <div class="formField">
+        <label class="fieldLabel">{{ 'FINANCES.MODALS.AMENDMENT.RESOLUTION_NO' | translate }}</label>
+        <ion-item lines="none" class="inputItem">
+          <ion-input
+            type="text"
+            [(ngModel)]="resolutionNumber"
+            [placeholder]="'FINANCES.MODALS.AMENDMENT.RESOLUTION_NO_PH' | translate"
+          ></ion-input>
+        </ion-item>
+      </div>
+
+      <div class="formField">
+        <label class="fieldLabel">{{ 'FINANCES.MODALS.AMENDMENT.ADOPTED_DATE' | translate }}</label>
+        <ion-item lines="none" class="inputItem">
+          <ion-input type="date" [(ngModel)]="adoptedDate"></ion-input>
+        </ion-item>
+      </div>
+    </div>
+
+    <div class="formField">
+      <label class="fieldLabel">{{ 'FINANCES.MODALS.AMENDMENT.JUSTIFICATION' | translate }}</label>
+      <ion-item lines="none" class="inputItem textareaItem">
+        <ion-textarea
+          [(ngModel)]="description"
+          [autoGrow]="true"
+          rows="2"
+          [placeholder]="'FINANCES.MODALS.AMENDMENT.JUSTIFICATION_PH' | translate"
+        ></ion-textarea>
+      </ion-item>
+    </div>
+
+    <!-- Lines table -->
+    <div class="itemsSection">
+      <div class="itemsSectionHeader">
+        <div class="titleBlock">
+          <h3>{{ 'FINANCES.MODALS.AMENDMENT.MODIFIED_LINES' | translate }}</h3>
+          <p>{{ 'FINANCES.MODALS.AMENDMENT.MODIFIED_LINES_DESC' | translate }}</p>
+        </div>
+        <ion-button size="small" fill="outline" color="primary" (click)="addNewItemRow()">
+          <ion-icon slot="start" name="add-outline"></ion-icon>
+          {{ 'FINANCES.MODALS.AMENDMENT.ADD_LINE' | translate }}
+        </ion-button>
+      </div>
+
+      <div class="itemsList">
+        <div class="itemCard" *ngFor="let it of items; let idx = index">
+          <div class="itemCardTop">
+            <span class="itemBadge">#{{ idx + 1 }}</span>
+            <ion-button
+              fill="clear"
+              color="danger"
+              size="small"
+              class="removeBtn"
+              (click)="removeItemRow(idx)"
+              [disabled]="items.length === 1"
+            >
+              <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
+            </ion-button>
+          </div>
+
+          <div class="itemCardGrid">
+            <!-- Line selector -->
+            <div class="cardField fullWidth">
+              <label>{{ 'FINANCES.MODALS.AMENDMENT.LINE_LABEL' | translate }}</label>
+              <ion-item lines="none" class="inputItem">
+                <ion-select
+                  interface="popover"
+                  [(ngModel)]="it.lineCode"
+                  (ionChange)="onLineSelected(idx, $event.detail.value)"
+                  [placeholder]="'FINANCES.MODALS.AMENDMENT.LINE_PH' | translate"
+                >
+                  <ion-select-option *ngFor="let opt of allLines" [value]="opt.code">
+                    {{ opt.name }} (Plan: {{ opt.currentAmount | number:'1.2-2' }} PLN)
+                  </ion-select-option>
+                </ion-select>
+              </ion-item>
+            </div>
+
+            <!-- Previous amount (read-only) -->
+            <div class="cardField">
+              <label>{{ 'FINANCES.MODALS.AMENDMENT.PREVIOUS_PLAN' | translate }}</label>
+              <div class="readonlyAmount">{{ it.previousAmount | number:'1.2-2' }} PLN</div>
+            </div>
+
+            <!-- New amount -->
+            <div class="cardField">
+              <label>{{ 'FINANCES.MODALS.AMENDMENT.NEW_PLAN' | translate }}</label>
+              <ion-item lines="none" class="inputItem">
+                <ion-input
+                  type="text"
+                  inputmode="decimal"
+                  [value]="it.newAmount"
+                  (ionInput)="onNewAmountChange(idx, $event.detail.value)"
+                ></ion-input>
+              </ion-item>
+            </div>
+
+            <!-- Delta -->
+            <div class="cardField">
+              <label>{{ 'FINANCES.MODALS.AMENDMENT.DELTA' | translate }}</label>
+              <div
+                class="deltaBadge"
+                [class.positive]="it.difference > 0"
+                [class.negative]="it.difference < 0"
+              >
+                {{ it.difference | financeNumber:{ currency: 'PLN', forceSign: true } }}
+              </div>
+            </div>
+
+            <!-- Justification -->
+            <div class="cardField fullWidth">
+              <label>{{ 'FINANCES.MODALS.AMENDMENT.LINE_JUSTIFICATION' | translate }}</label>
+              <ion-item lines="none" class="inputItem">
+                <ion-input
+                  type="text"
+                  [(ngModel)]="it.justification"
+                  [placeholder]="'FINANCES.MODALS.AMENDMENT.LINE_JUSTIFICATION_PH' | translate"
+                ></ion-input>
+              </ion-item>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Total Delta Summary -->
+      <div class="deltaSummaryCard">
+        <span class="summaryLabel">{{ 'FINANCES.MODALS.AMENDMENT.TOTAL_IMPACT' | translate }}</span>
+        <span
+          class="summaryAmount"
+          [class.positive]="totalDelta > 0"
+          [class.negative]="totalDelta < 0"
+        >
+          {{ totalDelta | financeNumber:{ currency: 'PLN', forceSign: true } }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="modalActions">
+      <ion-button fill="outline" color="medium" (click)="close()">
+        {{ 'COMMON.CANCEL' | translate }}
+      </ion-button>
+      <ion-button fill="solid" color="primary" class="saveBtn" (click)="saveAmendment()">
+        <ion-icon slot="start" name="checkmark-outline"></ion-icon>
+        {{ 'FINANCES.MODALS.AMENDMENT.SUBMIT_BTN' | translate }}
+      </ion-button>
+    </div>
+  </div>
+</ion-content>
+

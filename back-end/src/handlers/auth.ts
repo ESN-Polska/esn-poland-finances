@@ -65,7 +65,7 @@ export const handler = async (event: APIGatewayProxyEventV2): Promise<HTTPAuthRe
     result.isAuthorized = true;
     result.context = {
       principalId: user.userId,
-      user: JSON.parse(JSON.stringify(user))
+      user: JSON.stringify(user)
     };
   }
 

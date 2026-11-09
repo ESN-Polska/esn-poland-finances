@@ -1,6 +1,7 @@
 import { DynamoDB, HandledError, ResourceController, S3, SES } from 'idea-aws';
 import { SESv2Client, SendEmailCommand as SESv2SendEmailCommand } from '@aws-sdk/client-sesv2';
 import { randomUUID } from 'crypto';
+import { decode } from 'jsonwebtoken';
 import { FinancialRequest } from '../models/financial-request.model';
 import { AppPermission, Configurations, EmailTemplates, EmailTemplateTypes, formatSenderName } from '../models/configurations.model';
 import { User } from '../models/user.model';
@@ -90,7 +91,7 @@ class RequestsHandler extends ResourceController {
       }
 
       const request = new FinancialRequest(raw);
-      const isOwner = (request.userId || '').toLowerCase() === (user.userId || '').toLowerCase();
+      const isOwner = request.isOwnedBy(user);
       if (!canViewAll && !isOwner) {
         throw new HandledError('Access denied');
       }
@@ -113,33 +114,54 @@ class RequestsHandler extends ResourceController {
         .sort((a: FinancialRequest, b: FinancialRequest) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     }
 
-    // List current user's requests using GSI
-    try {
-      const items: any[] = await ddb.query({
-        TableName: DDB_TABLES.requests,
-        IndexName: 'byUser',
-        KeyConditionExpression: 'userId = :uid',
-        ExpressionAttributeValues: {
-          ':uid': user.userId.toLowerCase()
-        },
-        ScanIndexForward: false
-      });
+    // List current user's requests using GSI across canonical and legacy user IDs
+    const candidateUserIds = Array.from(new Set([
+      user.userId?.toLowerCase(),
+      user.nickname?.toLowerCase(),
+      user.preferredUsername?.toLowerCase(),
+      user.email?.toLowerCase()
+    ].filter(Boolean))) as string[];
 
-      return items
+    try {
+      const queryPromises = candidateUserIds.map(uid =>
+        ddb.query({
+          TableName: DDB_TABLES.requests,
+          IndexName: 'byUser',
+          KeyConditionExpression: 'userId = :uid',
+          ExpressionAttributeValues: {
+            ':uid': uid
+          },
+          ScanIndexForward: false
+        }).catch(err => {
+          this.logger.warn(`Failed to query user requests by index for user ID ${uid}`, err);
+          return [] as any[];
+        })
+      );
+
+      const queryResults = await Promise.all(queryPromises);
+      const itemsMap = new Map<string, any>();
+      for (const res of queryResults) {
+        if (Array.isArray(res)) {
+          for (const item of res) {
+            if (item?.requestId && !itemsMap.has(item.requestId)) {
+              itemsMap.set(item.requestId, item);
+            }
+          }
+        }
+      }
+
+      return Array.from(itemsMap.values())
         .map((x: any) => new FinancialRequest(x))
         .sort((a: FinancialRequest, b: FinancialRequest) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     } catch (err) {
       this.logger.error('Failed to query user requests by index', err);
-      // Fallback scan with filter
+      // Fallback scan with ownership filter
       const items: any[] = await ddb.scan({
-        TableName: DDB_TABLES.requests,
-        FilterExpression: 'userId = :uid',
-        ExpressionAttributeValues: {
-          ':uid': user.userId.toLowerCase()
-        }
+        TableName: DDB_TABLES.requests
       });
       return items
         .map((x: any) => new FinancialRequest(x))
+        .filter((r: FinancialRequest) => r.isOwnedBy(user))
         .sort((a: FinancialRequest, b: FinancialRequest) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     }
   }
@@ -270,7 +292,7 @@ class RequestsHandler extends ResourceController {
     if (!raw) throw new HandledError('Request not found');
     const existing = new FinancialRequest(raw);
 
-    const isOwner = (existing.userId || '').toLowerCase() === (user.userId || '').toLowerCase();
+    const isOwner = existing.isOwnedBy(user);
     const canManage =
       user.isAdministrator ||
       user.isManager ||
@@ -295,7 +317,11 @@ class RequestsHandler extends ResourceController {
 
     // Security check: non-managers cannot mutate administrative fields or perform unauthorized status transitions
     if (!canManage && !isAuthorizedPayout) {
-      if (updatedStatus !== 'DRAFT' && updatedStatus !== 'SUBMITTED') {
+      const isAllowedStatus =
+        updatedStatus === 'DRAFT' ||
+        updatedStatus === 'SUBMITTED' ||
+        (existing.canEdit() && updatedStatus === existing.status);
+      if (!isAllowedStatus) {
         throw new HandledError('Requesters can only transition requests to DRAFT or SUBMITTED');
       }
       delete updates.adminRemarks;
@@ -322,7 +348,7 @@ class RequestsHandler extends ResourceController {
       targetRequestId = `${targetSeqNumber}/${targetYear}`;
     }
 
-    if (isOwner && existing.status === 'DRAFT') {
+    if (isOwner && existing.canEdit()) {
       const freshUser = await this.getFreshAuthenticatedUser();
       const section = updates.section || freshUser.section || freshUser.sectionCode || existing.section;
       let country = updates.country || existing.country;
@@ -451,9 +477,15 @@ class RequestsHandler extends ResourceController {
       requestId: targetRequestId,
       year: targetYear,
       sequenceNumber: targetSeqNumber,
-      userId: existing.userId,
-      userNickname: existing.userNickname || (isOwner ? (user.nickname || user.preferredUsername || user.userId) : existing.userNickname),
-      userPreferredUsername: existing.userPreferredUsername || (isOwner ? (user.preferredUsername || user.nickname || user.userId) : existing.userPreferredUsername),
+      userId: isOwner && user.userId ? user.userId.toLowerCase() : existing.userId,
+      userNickname: isOwner
+        ? (user.nickname?.toLowerCase() || user.preferredUsername?.toLowerCase() || existing.userNickname || user.userId.toLowerCase())
+        : (existing.userNickname || existing.userId),
+      userPreferredUsername: isOwner
+        ? (user.preferredUsername?.toLowerCase() || user.nickname?.toLowerCase() || existing.userPreferredUsername || user.userId.toLowerCase())
+        : (existing.userPreferredUsername || existing.userId),
+      userDisplayName: isOwner ? (user.getDisplayName() || existing.userDisplayName) : existing.userDisplayName,
+      userEmail: isOwner ? (user.email || existing.userEmail) : existing.userEmail,
       status: finalStatus,
       adminRemarks: typeof updates.adminRemarks !== 'undefined' ? updates.adminRemarks : existing.adminRemarks,
       statusHistory: [...(existing.statusHistory || []), ...newHistoryEntries],
@@ -514,7 +546,7 @@ class RequestsHandler extends ResourceController {
     if (!raw) throw new HandledError('Request not found');
     const existing = new FinancialRequest(raw);
 
-    const isOwner = (existing.userId || '').toLowerCase() === (user.userId || '').toLowerCase();
+    const isOwner = existing.isOwnedBy(user);
     if (!user.isAdministrator && !isOwner) {
       throw new HandledError('Access denied');
     }
@@ -532,8 +564,36 @@ class RequestsHandler extends ResourceController {
   }
 
   private getAuthenticatedUser(): User {
-    const userRaw = (this.event as any)?.requestContext?.authorizer?.lambda?.user || (this.event as any)?.user;
-    if (!userRaw) {
+    let userRaw = (this.event as any)?.requestContext?.authorizer?.lambda?.user || (this.event as any)?.user;
+    if (typeof userRaw === 'string') {
+      try {
+        userRaw = JSON.parse(userRaw);
+      } catch (e) {
+        userRaw = null;
+      }
+    }
+    if (!userRaw || typeof userRaw !== 'object' || !userRaw.userId) {
+      const authHeader = (this.event as any)?.headers?.authorization || (this.event as any)?.headers?.Authorization || this.authorization;
+      if (authHeader) {
+        const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;
+        try {
+          const decoded: any = decode(token);
+          if (decoded && typeof decoded === 'object') {
+            userRaw = decoded;
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
+    }
+    if (!userRaw || !userRaw.userId) {
+      const principalId = (this.event as any)?.requestContext?.authorizer?.lambda?.principalId || this.principalId;
+      if (principalId) {
+        if (!userRaw) userRaw = {};
+        userRaw.userId = principalId;
+      }
+    }
+    if (!userRaw || !userRaw.userId) {
       throw new HandledError('Unauthorized');
     }
     return new User(userRaw);

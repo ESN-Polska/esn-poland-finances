@@ -1,0 +1,164 @@
+<div class="transactionsSubtabContainer">
+  <div class="loadingWrapper" *ngIf="loading">
+    <ion-spinner name="crescent" color="primary"></ion-spinner>
+    <p>{{ 'FINANCES.TRANSACTIONS.LOADING' | translate }}</p>
+  </div>
+
+  <div *ngIf="!loading" class="txContent">
+    <!-- Filters & Search Toolbar -->
+    <div class="toolbarCard">
+      <div class="searchWrapper">
+        <ion-icon name="search-outline" class="searchIcon"></ion-icon>
+        <input
+          type="text"
+          class="searchInput"
+          [(ngModel)]="searchQuery"
+          [placeholder]="'FINANCES.TRANSACTIONS.SEARCH_PLACEHOLDER' | translate"
+        />
+        <button *ngIf="searchQuery" class="clearBtn" (click)="clearSearch()">
+          <ion-icon name="close-circle"></ion-icon>
+        </button>
+      </div>
+
+      <div class="filterDropdowns">
+        <!-- Currency Filter -->
+        <div class="dropdownGroup">
+          <span class="dropdownLabel">{{ 'REQUESTS.FIELDS.CURRENCY' | translate }}:</span>
+          <ion-select
+            interface="popover"
+            class="filterSelect currencySelect"
+            [(ngModel)]="currencyFilter"
+          >
+            <ion-select-option value="ALL">{{ 'COMMON.ALL' | translate }}</ion-select-option>
+            <ion-select-option value="PLN">PLN</ion-select-option>
+            <ion-select-option value="EUR">EUR</ion-select-option>
+          </ion-select>
+        </div>
+
+        <!-- Settlement Status Filter -->
+        <div class="dropdownGroup">
+          <span class="dropdownLabel">{{ 'FINANCES.TRANSACTIONS.COL_STATUS' | translate }}:</span>
+          <ion-select
+            interface="popover"
+            class="filterSelect statusSelect"
+            [(ngModel)]="settlementFilter"
+          >
+            <ion-select-option value="ALL">{{ 'COMMON.ALL' | translate }}</ion-select-option>
+            <ion-select-option value="SETTLED">{{ 'FINANCES.TRANSACTIONS.STATUS_SETTLED' | translate }}</ion-select-option>
+            <ion-select-option value="UNSETTLED">{{ 'FINANCES.TRANSACTIONS.STATUS_UNSETTLED' | translate }}</ion-select-option>
+          </ion-select>
+        </div>
+
+        <!-- Import Button -->
+        <ion-button
+          fill="solid"
+          color="primary"
+          class="importBtn"
+          *ngIf="canEdit && !isArchived"
+          (click)="openImportModal()"
+        >
+          <ion-icon slot="start" name="cloud-upload-outline"></ion-icon>
+          {{ 'FINANCES.TRANSACTIONS.IMPORT_CSV_BTN' | translate }}
+        </ion-button>
+      </div>
+    </div>
+
+    <!-- Transactions Table -->
+    <div class="tableCard">
+      <div class="tableWrapper" *ngIf="filteredTransactions.length > 0">
+        <table class="modernTable">
+          <thead>
+            <tr>
+              <th class="colDate">{{ 'FINANCES.TRANSACTIONS.COL_DATE' | translate }}</th>
+              <th class="colParty">{{ 'FINANCES.TRANSACTIONS.COL_PARTY' | translate }}</th>
+              <th class="colTitle">{{ 'FINANCES.TRANSACTIONS.COL_TITLE' | translate }}</th>
+              <th class="colAmount">{{ 'FINANCES.TRANSACTIONS.COL_AMOUNT' | translate }}</th>
+              <th class="colCode">{{ 'FINANCES.TRANSACTIONS.COL_CODE' | translate }}</th>
+              <th class="colStatus">{{ 'FINANCES.TRANSACTIONS.COL_STATUS' | translate }}</th>
+              <th class="colActions" *ngIf="canEdit && !isArchived">{{ 'FINANCES.TRANSACTIONS.COL_ACTIONS' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              *ngFor="let tx of filteredTransactions"
+              [id]="'tx-' + tx.id"
+              [class.highlightedRow]="highlightedTxId === tx.id"
+            >
+              <!-- Date -->
+              <td class="colDate">
+                <span class="mainDate">{{ tx.bookingDate | appDate }}</span>
+                <span class="subDate" *ngIf="tx.valueDate && tx.valueDate !== tx.bookingDate">{{ 'FINANCES.TRANSACTIONS.VALUE_DATE' | translate:{ date: (tx.valueDate | appDate) } }}</span>
+              </td>
+
+              <!-- Counterparty -->
+              <td class="colParty">
+                <span class="partyName">{{ tx.counterparty || '-' }}</span>
+              </td>
+
+              <!-- Title -->
+              <td class="colTitle">
+                <span class="titleText">{{ tx.title }}</span>
+                <span class="txNotes" *ngIf="tx.notes">{{ tx.notes }}</span>
+              </td>
+
+              <!-- Amount -->
+              <td class="colAmount" [class.negative]="tx.amount < 0" [class.positive]="tx.amount > 0">
+                {{ tx.amount | financeNumber:{ currency: tx.currency, forceSign: true } }}
+              </td>
+
+              <!-- Code / Settlement info -->
+              <td class="colCode">
+                <div class="codeWrapper" *ngIf="tx.directBudgetLineCode">
+                  <button
+                    type="button"
+                    class="codeBadgeBtn"
+                    (click)="jumpToBudgetLine(tx.directBudgetLineCode)"
+                    [title]="'FINANCES.BUDGET.LINE_LABEL' | translate"
+                  >
+                    {{ tx.directBudgetLineCode }} ({{ 'FINANCES.TRANSACTIONS.BANK_FEE' | translate }})
+                  </button>
+                </div>
+                <div class="settlementCount" *ngIf="tx.settlements?.length">
+                  {{ 'FINANCES.TRANSACTIONS.SETTLED_COUNT' | translate:{ count: tx.settlements.length } }}
+                </div>
+                <span class="noCodeText" *ngIf="!tx.directBudgetLineCode && !tx.settlements?.length">-</span>
+              </td>
+
+              <!-- Status -->
+              <td class="colStatus">
+                <span
+                  class="txStatusBadge"
+                  [class.settled]="tx.settlementStatus === 'SETTLED'"
+                  [class.unsettled]="tx.settlementStatus !== 'SETTLED'"
+                >
+                  {{ (tx.settlementStatus === 'SETTLED' ? 'FINANCES.TRANSACTIONS.STATUS_SETTLED' : 'FINANCES.TRANSACTIONS.STATUS_UNSETTLED') | translate }}
+                </span>
+              </td>
+
+              <!-- Actions -->
+              <td class="colActions" *ngIf="canEdit && !isArchived">
+                <ion-button
+                  fill="clear"
+                  size="small"
+                  color="primary"
+                  *ngIf="tx.amount < 0 && !tx.directBudgetLineCode"
+                  (click)="directCodeBankFee(tx)"
+                  [title]="'FINANCES.TRANSACTIONS.DIRECT_FEE_TITLE' | translate"
+                >
+                  <ion-icon slot="start" name="pricetag-outline"></ion-icon>
+                  {{ 'FINANCES.TRANSACTIONS.DIRECT_FEE_BTN' | translate }}
+                </ion-button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Empty state -->
+      <div class="emptyState" *ngIf="filteredTransactions.length === 0">
+        <ion-icon name="receipt-outline"></ion-icon>
+        <p>{{ 'FINANCES.TRANSACTIONS.EMPTY_STATE' | translate:{ year: stateService.activeYear } }}</p>
+      </div>
+    </div>
+  </div>
+</div>

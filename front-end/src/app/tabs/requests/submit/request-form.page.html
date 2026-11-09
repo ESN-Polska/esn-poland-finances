@@ -350,33 +350,29 @@
                       <!-- Input for PLN or EUR -->
                       <input
                         *ngIf="doc.currency === 'PLN' || doc.currency === 'EUR'"
-                        type="number"
-                        step="0.01"
-                        min="0"
+                        type="text"
+                        inputmode="decimal"
                         class="formInput font-bold"
                         [class.is-invalid]="isDocFieldInvalid(doc, 'grossAmount')"
                         [(ngModel)]="doc.grossAmount"
                         [name]="'grossAmount_' + i"
                         (input)="recalculateTotals()"
-                        (wheel)="onAmountWheel($event)"
                         required
-                        placeholder="0.00"
+                        placeholder="0,00"
                       />
 
                       <!-- Input for Foreign Currency -->
                       <input
                         *ngIf="doc.currency !== 'PLN' && doc.currency !== 'EUR'"
-                        type="number"
-                        step="0.01"
-                        min="0"
+                        type="text"
+                        inputmode="decimal"
                         class="formInput font-bold"
                         [class.is-invalid]="isDocFieldInvalid(doc, 'grossAmount')"
                         [(ngModel)]="doc.originalAmount"
                         [name]="'originalAmount_' + i"
                         (input)="onForeignAmountChange(doc)"
-                        (wheel)="onAmountWheel($event)"
                         required
-                        placeholder="0.00"
+                        placeholder="0,00"
                       />
                       <span class="currencySuffix">{{ doc.currency !== 'PLN' && doc.currency !== 'EUR' ? doc.originalCurrency : doc.currency }}</span>
                     </div>
@@ -398,33 +394,29 @@
                       <!-- Input for PLN or EUR -->
                       <input
                         *ngIf="doc.currency === 'PLN' || doc.currency === 'EUR'"
-                        type="number"
-                        step="0.01"
-                        min="0"
+                        type="text"
+                        inputmode="decimal"
                         class="formInput"
                         [class.is-invalid]="isDocFieldInvalid(doc, 'vatAmount')"
                         [(ngModel)]="doc.vatAmount"
                         [name]="'vatAmount_' + i"
                         (input)="recalculateTotals()"
-                        (wheel)="onAmountWheel($event)"
                         required
-                        placeholder="0.00"
+                        placeholder="0,00"
                       />
 
                       <!-- Input for Foreign Currency -->
                       <input
                         *ngIf="doc.currency !== 'PLN' && doc.currency !== 'EUR'"
-                        type="number"
-                        step="0.01"
-                        min="0"
+                        type="text"
+                        inputmode="decimal"
                         class="formInput"
                         [class.is-invalid]="isDocFieldInvalid(doc, 'vatAmount')"
                         [(ngModel)]="doc.originalVatAmount"
                         [name]="'originalVatAmount_' + i"
                         (input)="onForeignAmountChange(doc)"
-                        (wheel)="onAmountWheel($event)"
                         required
-                        placeholder="0.00"
+                        placeholder="0,00"
                       />
                       <span class="currencySuffix">{{ doc.currency !== 'PLN' && doc.currency !== 'EUR' ? doc.originalCurrency : doc.currency }}</span>
                     </div>
@@ -641,18 +633,16 @@
             <label class="inputLabel">{{ 'REQUESTS.REQUESTED_AMOUNT' | translate }} *</label>
             <div class="currencyInputWrapper">
               <input
-                type="number"
-                step="0.01"
-                min="0"
+                type="text"
+                inputmode="decimal"
                 class="formInput font-bold"
                 [class.is-invalid]="isFieldInvalid('requestedAmountPLN')"
                 [(ngModel)]="request.requestedAmountPLN"
                 name="requestedAmountPLN"
                 (input)="onAdvanceAmountChange()"
                 (change)="onAdvanceAmountChange()"
-                (wheel)="onAmountWheel($event)"
                 required
-                placeholder="0.00"
+                placeholder="0,00"
               />
               <span class="currencySuffix">{{ request.currency || 'PLN' }}</span>
             </div>
@@ -778,18 +768,16 @@
           <label class="inputLabel">{{ 'REQUESTS.FIELDS.TOTAL_DELEGATION_AMOUNT' | translate }} *</label>
           <div class="currencyInputWrapper">
             <input
-              type="number"
-              step="0.01"
-              min="0"
+              type="text"
+              inputmode="decimal"
               class="formInput font-bold"
               [class.is-invalid]="isFieldInvalid('delegationTotalAmount')"
               [(ngModel)]="request.delegationTotalAmount"
               name="delegationTotalAmount"
               (input)="onDelegationAmountChange()"
               (change)="onDelegationAmountChange()"
-              (wheel)="onAmountWheel($event)"
               required
-              placeholder="0.00"
+              placeholder="0,00"
             />
             <span class="currencySuffix">PLN</span>
           </div>

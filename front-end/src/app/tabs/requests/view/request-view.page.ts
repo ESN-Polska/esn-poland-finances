@@ -68,11 +68,7 @@ export class RequestViewPage implements OnInit {
 
   public get isOwner(): boolean {
     const user = this.appService.currentUser;
-    return (
-      !!user &&
-      !!this.request &&
-      (this.request.userId || '').trim().toLowerCase() === (user.userId || '').trim().toLowerCase()
-    );
+    return !!user && !!this.request && this.request.isOwnedBy(user);
   }
 
   constructor(
@@ -119,8 +115,7 @@ export class RequestViewPage implements OnInit {
       }
 
       const currentUser = this.appService.currentUser;
-      const isOwner =
-        (found.userId || '').trim().toLowerCase() === (currentUser?.userId || '').trim().toLowerCase();
+      const isOwner = found.isOwnedBy(currentUser);
       if (!this.canViewAll && !isOwner) {
         await this.showToast('REQUESTS.ACCESS_DENIED', 'danger');
         this.router.navigate(['/t/requests']);

@@ -1,0 +1,174 @@
+<div class="summarySubtabContainer">
+  <!-- Loading state -->
+  <div class="loadingWrapper" *ngIf="loading">
+    <ion-spinner name="crescent" color="primary"></ion-spinner>
+    <p>{{ 'FINANCES.SUMMARY.LOADING' | translate }}</p>
+  </div>
+
+  <div *ngIf="!loading" class="summaryContent">
+    <!-- Reconciliation Matrix Card -->
+    <div class="matrixCard">
+      <div class="matrixHeader">
+        <div class="titleBlock">
+          <h3>{{ 'FINANCES.SUMMARY.RECONCILIATION_TITLE' | translate }}</h3>
+          <p>{{ 'FINANCES.SUMMARY.RECONCILIATION_SUBTITLE' | translate }}</p>
+        </div>
+        <div class="lastImportBadge">
+          <ion-icon name="sync-circle-outline"></ion-icon>
+          <span class="lastImportLabel">{{ 'FINANCES.SUMMARY.LAST_IMPORT' | translate }}:</span>
+          <span class="lastImportValue">{{ lastImportedBookingDate ? (lastImportedBookingDate | appDate) : ('FINANCES.SUMMARY.NO_TRANSACTIONS' | translate) }}</span>
+        </div>
+      </div>
+
+      <div class="tableWrapper">
+        <table class="reconciliationTable">
+          <thead>
+            <tr>
+              <th rowspan="2" class="colMonth">{{ 'FINANCES.SUMMARY.COL_MONTH' | translate }}</th>
+              <th colspan="5" class="colGroupHeader plnHeader">{{ 'FINANCES.SUMMARY.COL_PLN_ACCOUNT' | translate }}</th>
+              <th colspan="5" class="colGroupHeader eurHeader">{{ 'FINANCES.SUMMARY.COL_EUR_ACCOUNT' | translate }}</th>
+              <th rowspan="2" class="colNotes">{{ 'FINANCES.SUMMARY.COL_NOTES' | translate }}</th>
+              <th rowspan="2" class="colActions" *ngIf="canEdit && !isArchived">{{ 'FINANCES.SUMMARY.COL_ACTIONS' | translate }}</th>
+            </tr>
+            <tr class="subHeaderRow">
+              <!-- PLN Subheaders -->
+              <th class="subCol">{{ 'FINANCES.SUMMARY.SUBCOL_INFLOWS' | translate }}</th>
+              <th class="subCol">{{ 'FINANCES.SUMMARY.SUBCOL_OUTFLOWS' | translate }}</th>
+              <th class="subCol">{{ 'FINANCES.SUMMARY.SUBCOL_BALANCE' | translate }}</th>
+              <th class="subCol">{{ 'FINANCES.SUMMARY.SUBCOL_EXPECTED' | translate }}</th>
+              <th class="subCol">{{ 'FINANCES.SUMMARY.SUBCOL_ACTUAL' | translate }}</th>
+
+              <!-- EUR Subheaders -->
+              <th class="subCol">{{ 'FINANCES.SUMMARY.SUBCOL_INFLOWS' | translate }}</th>
+              <th class="subCol">{{ 'FINANCES.SUMMARY.SUBCOL_OUTFLOWS' | translate }}</th>
+              <th class="subCol">{{ 'FINANCES.SUMMARY.SUBCOL_BALANCE' | translate }}</th>
+              <th class="subCol">{{ 'FINANCES.SUMMARY.SUBCOL_EXPECTED' | translate }}</th>
+              <th class="subCol">{{ 'FINANCES.SUMMARY.SUBCOL_ACTUAL' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let m of months">
+              <!-- Month Name & Statement Downloads -->
+              <td class="colMonth">
+                <div class="monthCell">
+                  <span class="monthName">{{ (app.currentLanguage === 'en' ? m.monthName.en : m.monthName.pl) || m.monthName.pl || m.monthName.en }}</span>
+                  <div class="statementLinks">
+                    <!-- PLN Statement -->
+                    <div class="statementBadgeWrapper" *ngIf="m.plnStatementAttachment?.url">
+                      <a
+                        [href]="m.plnStatementAttachment!.url"
+                        target="_blank"
+                        class="statementBadge plnBadge"
+                        [title]="'FINANCES.SUMMARY.DOWNLOAD_PLN_STMT' | translate"
+                      >
+                        <ion-icon name="document-attach-outline"></ion-icon> PLN
+                      </a>
+                      <button
+                        *ngIf="canEdit && !isArchived"
+                        class="statementDeleteBtn"
+                        (click)="removeStatement(m, 'PLN')"
+                        [title]="'FINANCES.SUMMARY.DELETE_STMT' | translate"
+                      >
+                        <ion-icon name="close-circle-outline"></ion-icon>
+                      </button>
+                    </div>
+                    <button
+                      *ngIf="!m.plnStatementAttachment?.url && canEdit && !isArchived"
+                      class="statementAddBtn"
+                      (click)="attachStatement(m, 'PLN')"
+                      [title]="'FINANCES.SUMMARY.ATTACH_PLN_STMT' | translate"
+                    >
+                      +PLN
+                    </button>
+
+                    <!-- EUR Statement -->
+                    <div class="statementBadgeWrapper" *ngIf="m.eurStatementAttachment?.url">
+                      <a
+                        [href]="m.eurStatementAttachment!.url"
+                        target="_blank"
+                        class="statementBadge eurBadge"
+                        [title]="'FINANCES.SUMMARY.DOWNLOAD_EUR_STMT' | translate"
+                      >
+                        <ion-icon name="document-attach-outline"></ion-icon> EUR
+                      </a>
+                      <button
+                        *ngIf="canEdit && !isArchived"
+                        class="statementDeleteBtn"
+                        (click)="removeStatement(m, 'EUR')"
+                        [title]="'FINANCES.SUMMARY.DELETE_STMT' | translate"
+                      >
+                        <ion-icon name="close-circle-outline"></ion-icon>
+                      </button>
+                    </div>
+                    <button
+                      *ngIf="!m.eurStatementAttachment?.url && canEdit && !isArchived"
+                      class="statementAddBtn"
+                      (click)="attachStatement(m, 'EUR')"
+                      [title]="'FINANCES.SUMMARY.ATTACH_EUR_STMT' | translate"
+                    >
+                      +EUR
+                    </button>
+                  </div>
+                </div>
+              </td>
+
+              <!-- PLN Account Columns: Wpływy, Wydatki, Bilans, Przewidywane, Rzeczywiste -->
+              <td class="colNum">
+                {{ m.plnInflows | number:'1.2-2' }}
+              </td>
+              <td class="colNum">
+                {{ m.plnOutflows | number:'1.2-2' }}
+              </td>
+              <td class="colNum netCell" [class.negative]="m.plnNetBalance < 0" [class.positive]="m.plnNetBalance > 0">
+                {{ m.plnNetBalance | financeNumber:{ forceSign: true } }}
+              </td>
+              <td class="colNum expectedCell">
+                {{ m.plnExpectedClosing | number:'1.2-2' }}
+              </td>
+              <td
+                class="colNum actualCell"
+                [class.hasDiff]="m.plnStatus === 'DISCREPANCY'"
+                [class.isMatched]="m.plnStatus === 'MATCHED'"
+              >
+                {{ m.plnActualClosing !== undefined ? (m.plnActualClosing | number:'1.2-2') : '-' }}
+              </td>
+
+              <!-- EUR Account Columns: Wpływy, Wydatki, Bilans, Przewidywane, Rzeczywiste -->
+              <td class="colNum">
+                {{ m.eurInflows | number:'1.2-2' }}
+              </td>
+              <td class="colNum">
+                {{ m.eurOutflows | number:'1.2-2' }}
+              </td>
+              <td class="colNum netCell" [class.negative]="m.eurNetBalance < 0" [class.positive]="m.eurNetBalance > 0">
+                {{ m.eurNetBalance | financeNumber:{ forceSign: true } }}
+              </td>
+              <td class="colNum expectedCell">
+                {{ m.eurExpectedClosing | number:'1.2-2' }}
+              </td>
+              <td
+                class="colNum actualCell"
+                [class.hasDiff]="m.eurStatus === 'DISCREPANCY'"
+                [class.isMatched]="m.eurStatus === 'MATCHED'"
+              >
+                {{ m.eurActualClosing !== undefined ? (m.eurActualClosing | number:'1.2-2') : '-' }}
+              </td>
+
+              <!-- Notes -->
+              <td class="colNotes">
+                <span class="notesText">{{ m.comment || '-' }}</span>
+              </td>
+
+              <!-- Actions -->
+              <td class="colActions" *ngIf="canEdit && !isArchived">
+                <ion-button fill="clear" size="small" color="primary" (click)="editMonthBalances(m)">
+                  <ion-icon slot="icon-only" name="create-outline"></ion-icon>
+                </ion-button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

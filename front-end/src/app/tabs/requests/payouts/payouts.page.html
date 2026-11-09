@@ -246,7 +246,7 @@
           <span class="applicantLabel">{{ 'REQUESTS.MANAGE_PANEL.APPLICANT' | translate }}:</span>
           <span class="applicantVal">{{ t.originalRequest.userDisplayName || t.originalRequest.userId }}</span>
           <span class="dateVal" *ngIf="t.originalRequest.createdAt">
-            {{ t.originalRequest.createdAt | date:'dd.MM.yyyy' }}
+            {{ t.originalRequest.createdAt | appDate }}
           </span>
         </div>
 

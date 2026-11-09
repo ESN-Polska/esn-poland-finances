@@ -194,6 +194,16 @@ class Login extends ResourceController {
     if (DDB_TABLES.users) {
       try {
         existingUserRecord = await ddb.get({ TableName: DDB_TABLES.users, Key: { userId } });
+        if (!existingUserRecord) {
+          const candidateKeys = [nickname, preferredUsername].filter(k => k && k !== userId);
+          for (const key of candidateKeys) {
+            const legacy = await ddb.get({ TableName: DDB_TABLES.users, Key: { userId: key } }).catch(() => null);
+            if (legacy) {
+              existingUserRecord = legacy;
+              break;
+            }
+          }
+        }
       } catch {}
     }
 

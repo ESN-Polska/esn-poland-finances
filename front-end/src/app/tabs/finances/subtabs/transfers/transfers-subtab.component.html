@@ -1,0 +1,45 @@
+<div class="transfersSubtabContainer">
+  <div class="loadingWrapper" *ngIf="loading">
+    <ion-spinner name="crescent" color="primary"></ion-spinner>
+    <p>{{ 'FINANCES.TRANSFERS.LOADING' | translate }}</p>
+  </div>
+
+  <div *ngIf="!loading" class="transfersContent">
+    <div class="topActions" *ngIf="canEdit && !isArchived">
+      <ion-button fill="outline" color="primary" (click)="addTransfer()">
+        <ion-icon slot="start" name="add-circle-outline"></ion-icon>
+        {{ 'FINANCES.TRANSFERS.ADD_TRANSFER' | translate }}
+      </ion-button>
+    </div>
+
+    <div class="tableCard">
+      <div class="tableWrapper" *ngIf="transfers.length > 0">
+        <table class="modernTable">
+          <thead>
+            <tr>
+              <th>{{ 'FINANCES.TRANSFERS.COL_DATE' | translate }}</th>
+              <th>{{ 'FINANCES.TRANSFERS.COL_FROM' | translate }}</th>
+              <th>{{ 'FINANCES.TRANSFERS.COL_TO' | translate }}</th>
+              <th style="text-align: right">{{ 'FINANCES.TRANSFERS.COL_AMOUNT' | translate }}</th>
+              <th>{{ 'FINANCES.TRANSFERS.COL_JUSTIFICATION' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let t of transfers">
+              <td style="font-weight: 700">{{ t.date | appDate }}</td>
+              <td style="font-weight: 600; font-family: monospace">{{ t.fromBudgetCode }}</td>
+              <td style="font-weight: 600; font-family: monospace">{{ t.toBudgetCode }}</td>
+              <td style="text-align: right; font-weight: 800; font-size: 0.95rem">{{ t.amount | number:'1.2-2' }} PLN</td>
+              <td>{{ t.justification || '-' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="emptyState" *ngIf="transfers.length === 0">
+        <p>{{ 'FINANCES.TRANSFERS.EMPTY_STATE' | translate:{ year: stateService.activeYear } }}</p>
+      </div>
+    </div>
+  </div>
+</div>
+

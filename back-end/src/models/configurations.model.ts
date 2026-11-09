@@ -7,6 +7,13 @@ export const DEFAULT_TIMEZONE = 'Europe/Warsaw';
 export const SUPPORTED_LANGUAGES = ['en', 'pl'] as const;
 export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
 
+export const NUMBER_FORMAT_MODES = ['MATCH_LANGUAGE', 'pl', 'en'] as const;
+export type NumberFormatMode = (typeof NUMBER_FORMAT_MODES)[number];
+
+export const DATE_FORMAT_OPTIONS = ['DD.MM.YYYY', 'YYYY-MM-DD', 'DD/MM/YYYY'] as const;
+export type DateFormatOption = (typeof DATE_FORMAT_OPTIONS)[number];
+export const DEFAULT_DATE_FORMAT: DateFormatOption = 'DD.MM.YYYY';
+
 export const DEFAULT_CONFIGURATION_PAGE_SECTIONS_ORDER = [
   'GUESTS',
   'USERS',
@@ -14,10 +21,67 @@ export const DEFAULT_CONFIGURATION_PAGE_SECTIONS_ORDER = [
   'RESOURCES',
   'TEMPLATES',
   'EXPORTS',
+  'FINANCES',
   'OPTIONS'
 ] as const;
 
 export type ConfigurationPageSection = (typeof DEFAULT_CONFIGURATION_PAGE_SECTIONS_ORDER)[number];
+
+export const DEFAULT_FINANCES_PAGE_SECTIONS_ORDER = [
+  'SUMMARY',
+  'BUDGET',
+  'DOCUMENTS',
+  'FISCAL',
+  'TRANSACTIONS',
+  'SECTIONS',
+  'MEETINGS',
+  'ADVANCES',
+  'DELEGATIONS',
+  'INTERNAL',
+  'DEPOSITS'
+] as const;
+
+export type FinancesPageSection = (typeof DEFAULT_FINANCES_PAGE_SECTIONS_ORDER)[number];
+
+export type CsvImportScheme = 'ERSTE_BANK_POLSKA';
+
+export type NumberDisplayFormat = 'STANDARD' | 'ACCOUNTING';
+
+export interface FinancialModuleConfigurations {
+  budgetExecutionCalculationMode: 'NET' | 'GROSS';
+  numberDisplayFormat?: NumberDisplayFormat;
+  defaultDiemsBudgetLineCode?: string;
+  firstYear?: number;
+  csvImportScheme?: CsvImportScheme | string;
+  bankAccounts?: {
+    primaryPlnIban?: string;
+    primaryEurIban?: string;
+    swiftBic?: string;
+  };
+  autoCreationOnPaid: {
+    documentsEnabled: boolean;
+    advancesEnabled: boolean;
+    delegationsEnabled: boolean;
+  };
+  budgetOrganisationName?: LocalizedText;
+}
+
+export const DEFAULT_FINANCES_CONFIGURATIONS: FinancialModuleConfigurations = {
+  budgetExecutionCalculationMode: 'NET',
+  numberDisplayFormat: 'STANDARD',
+  defaultDiemsBudgetLineCode: undefined,
+  firstYear: new Date().getFullYear(),
+  csvImportScheme: 'ERSTE_BANK_POLSKA',
+  autoCreationOnPaid: {
+    documentsEnabled: true,
+    advancesEnabled: true,
+    delegationsEnabled: true
+  },
+  budgetOrganisationName: {
+    en: 'ESN Poland',
+    pl: 'ESN Polska'
+  }
+};
 
 export type CsvDelimiter = ';' | ',' | '\t';
 export type CsvDateFormat = 'YYYY-MM-DD' | 'DD.MM.YYYY' | 'DD/MM/YYYY';
@@ -112,6 +176,23 @@ export const AppPermission = {
     MANAGE: 'requests.manage',
     PAYOUTS: 'requests.payouts'
   },
+  FINANCES: {
+    PARENT: 'finances',
+    VIEW: 'finances.view',
+    EXPORT: 'finances.export',
+    MANAGE: 'finances.manage',
+    SUMMARY: 'finances.summary',
+    BUDGET: 'finances.budget',
+    DOCUMENTS: 'finances.documents',
+    FISCAL: 'finances.fiscal',
+    TRANSACTIONS: 'finances.transactions',
+    SECTIONS: 'finances.sections',
+    MEETINGS: 'finances.meetings',
+    ADVANCES: 'finances.advances',
+    DELEGATIONS: 'finances.delegations',
+    INTERNAL: 'finances.internal',
+    DEPOSITS: 'finances.deposits'
+  },
   CONFIGURATIONS: {
     PARENT: 'configurations',
     GUESTS: 'configurations.guests',
@@ -120,6 +201,7 @@ export const AppPermission = {
     RESOURCES: 'configurations.resources',
     TEMPLATES: 'configurations.templates',
     EXPORTS: 'configurations.exports',
+    FINANCES: 'configurations.finances',
     OPTIONS: 'configurations.options'
   }
 } as const;
@@ -475,13 +557,17 @@ export const DEFAULT_CONFIGURATIONS = {
   },
   oauthRoleOptions: [...OAUTH_ROLE_OPTIONS] as string[],
   forcedLanguage: 'ALL',
+  numberFormatMode: 'MATCH_LANGUAGE' as NumberFormatMode,
+  dateFormat: DEFAULT_DATE_FORMAT,
   threadRequestEmails: false,
   threadRequestEmailsSubject: {
     en: 'Financial request {{requestId}}',
     pl: 'Wniosek finansowy {{requestId}}'
   },
   csvExportSettings: DEFAULT_CSV_EXPORT_SETTINGS,
-  bankExportSettings: DEFAULT_BANK_EXPORT_SETTINGS
+  bankExportSettings: DEFAULT_BANK_EXPORT_SETTINGS,
+  financesPageSectionsOrder: [...DEFAULT_FINANCES_PAGE_SECTIONS_ORDER],
+  financesConfig: DEFAULT_FINANCES_CONFIGURATIONS
 };
 
 /**
@@ -530,6 +616,10 @@ export class Configurations extends Resource {
   usersOriginDisplay: UsersOriginDisplayOptions;
   /** Order of configuration subtabs. */
   configurationPageSectionsOrder: ConfigurationPageSection[];
+  /** Order of finances subtabs in /t/finances. */
+  financesPageSectionsOrder: FinancesPageSection[];
+  /** Dedicated settings for finances module. */
+  financesConfig: FinancialModuleConfigurations;
   /** Last update timestamp (ISO string), used for optimistic concurrency control. */
   updatedAt?: string;
 
@@ -570,6 +660,10 @@ export class Configurations extends Resource {
   oauthRoleOptions: string[];
   /** When set to a specific language code ('en', 'pl', etc.), forces that language everywhere and disables multi-language switches. 'ALL' enables all supported languages. */
   forcedLanguage: string;
+  /** Whether number formatting corresponds to selected language ('MATCH_LANGUAGE') or is forced to Polish ('pl') or English ('en'). */
+  numberFormatMode: NumberFormatMode;
+  /** Global date display format across the platform ('DD.MM.YYYY', 'YYYY-MM-DD', or 'DD/MM/YYYY'). Default is 'DD.MM.YYYY'. */
+  dateFormat: DateFormatOption;
   /** Whether financial request email notifications are grouped into a single unified thread. */
   threadRequestEmails: boolean;
   /** Configured unified email subject for financial requests in supported languages. */
@@ -713,6 +807,41 @@ export class Configurations extends Resource {
     }
     this.configurationPageSectionsOrder = resolvedSections.length ? resolvedSections : [...DEFAULT_CONFIGURATION_PAGE_SECTIONS_ORDER];
 
+    const configuredFinancesSections = this.cleanArray(x.financesPageSectionsOrder, String) as FinancesPageSection[];
+    let resolvedFinances = [
+      ...configuredFinancesSections.filter((section, index) =>
+        DEFAULT_FINANCES_PAGE_SECTIONS_ORDER.includes(section) && configuredFinancesSections.indexOf(section) === index
+      )
+    ];
+    for (const section of DEFAULT_FINANCES_PAGE_SECTIONS_ORDER) {
+      if (!resolvedFinances.includes(section)) {
+        resolvedFinances.push(section);
+      }
+    }
+    this.financesPageSectionsOrder = resolvedFinances.length ? resolvedFinances : [...DEFAULT_FINANCES_PAGE_SECTIONS_ORDER];
+
+    this.financesConfig = {
+      budgetExecutionCalculationMode: x.financesConfig?.budgetExecutionCalculationMode === 'GROSS' ? 'GROSS' : 'NET',
+      numberDisplayFormat: x.financesConfig?.numberDisplayFormat === 'ACCOUNTING' ? 'ACCOUNTING' : 'STANDARD',
+      defaultDiemsBudgetLineCode: this.clean(x.financesConfig?.defaultDiemsBudgetLineCode, String, ''),
+      firstYear: this.clean(x.financesConfig?.firstYear, Number, DEFAULT_FINANCES_CONFIGURATIONS.firstYear || new Date().getFullYear()),
+      csvImportScheme: this.clean(x.financesConfig?.csvImportScheme, String, DEFAULT_FINANCES_CONFIGURATIONS.csvImportScheme || 'ERSTE_BANK_POLSKA') || 'ERSTE_BANK_POLSKA',
+      bankAccounts: x.financesConfig?.bankAccounts ? {
+        primaryPlnIban: this.clean(x.financesConfig.bankAccounts.primaryPlnIban, String, ''),
+        primaryEurIban: this.clean(x.financesConfig.bankAccounts.primaryEurIban, String, ''),
+        swiftBic: this.clean(x.financesConfig.bankAccounts.swiftBic, String, '')
+      } : undefined,
+      autoCreationOnPaid: {
+        documentsEnabled: x.financesConfig?.autoCreationOnPaid?.documentsEnabled !== false,
+        advancesEnabled: x.financesConfig?.autoCreationOnPaid?.advancesEnabled !== false,
+        delegationsEnabled: x.financesConfig?.autoCreationOnPaid?.delegationsEnabled !== false
+      },
+      budgetOrganisationName: {
+        en: this.clean(x.financesConfig?.budgetOrganisationName?.en, String, 'ESN Poland'),
+        pl: this.clean(x.financesConfig?.budgetOrganisationName?.pl, String, 'ESN Polska')
+      }
+    };
+
     const defaultWarning = DEFAULT_CONFIGURATIONS.rulesWarningText;
     if (typeof x.rulesWarningText === 'string') {
       this.rulesWarningText = { en: x.rulesWarningText, pl: x.rulesWarningText };
@@ -829,6 +958,14 @@ export class Configurations extends Resource {
       DEFAULT_CONFIGURATIONS.oauthRoleOptions
     );
     this.forcedLanguage = this.clean(x.forcedLanguage, String, DEFAULT_CONFIGURATIONS.forcedLanguage);
+    const validNumberFormatModes: NumberFormatMode[] = ['MATCH_LANGUAGE', 'pl', 'en'];
+    this.numberFormatMode = validNumberFormatModes.includes(x.numberFormatMode)
+      ? x.numberFormatMode
+      : DEFAULT_CONFIGURATIONS.numberFormatMode;
+    const validDateFormats: DateFormatOption[] = ['DD.MM.YYYY', 'YYYY-MM-DD', 'DD/MM/YYYY'];
+    this.dateFormat = validDateFormats.includes(x.dateFormat)
+      ? x.dateFormat
+      : DEFAULT_DATE_FORMAT;
     this.threadRequestEmails =
       x.threadRequestEmails !== undefined
         ? Boolean(x.threadRequestEmails)
@@ -865,6 +1002,17 @@ export class Configurations extends Resource {
     const effectiveLang = (this.forcedLanguage && this.forcedLanguage !== 'ALL') ? this.forcedLanguage : lang;
     if (typeof this.appOrganisation === 'string') return this.appOrganisation;
     return (this.appOrganisation as any)?.[effectiveLang] || this.appOrganisation?.en || this.appOrganisation?.pl || '';
+  }
+
+  getBudgetOrganisation(lang: string = 'en'): string {
+    const effectiveLang = (this.forcedLanguage && this.forcedLanguage !== 'ALL') ? this.forcedLanguage : lang;
+    const org = this.financesConfig?.budgetOrganisationName;
+    if (org) {
+      if (typeof org === 'string') return org;
+      const val = (org as any)?.[effectiveLang] || org.en || org.pl;
+      if (val && typeof val === 'string' && val.trim()) return val.trim();
+    }
+    return effectiveLang === 'pl' ? 'ESN Polska' : 'ESN Poland';
   }
 
   getOrganisationLogo(): string {
@@ -1007,6 +1155,15 @@ export class Configurations extends Resource {
       errors.push('configurationPageSectionsOrder');
     }
 
+    if (
+      this.financesPageSectionsOrder.some(
+        section => !DEFAULT_FINANCES_PAGE_SECTIONS_ORDER.includes(section)
+      ) ||
+      new Set(this.financesPageSectionsOrder).size !== this.financesPageSectionsOrder.length
+    ) {
+      errors.push('financesPageSectionsOrder');
+    }
+
     const knownPermissions = new Set(ALL_APP_PERMISSIONS);
     const validExtendedRolePattern = /^[A-Za-z0-9*_-]+(?:\.[A-Za-z0-9*_-]+)*:[A-Za-z0-9*_-]+$/;
     for (const role of this.customRoles || []) {
@@ -1047,6 +1204,20 @@ export class Configurations extends Resource {
       if (!Array.isArray(this.csvExportSettings.columns) || this.csvExportSettings.columns.length === 0) {
         errors.push('csvExportSettings.columns');
       }
+    }
+
+    if (this.financesConfig?.firstYear !== undefined) {
+      if (isNaN(this.financesConfig.firstYear) || this.financesConfig.firstYear < 1900 || this.financesConfig.firstYear > 2100) {
+        errors.push('financesConfig.firstYear');
+      }
+    }
+
+    if (this.numberFormatMode && !['MATCH_LANGUAGE', 'pl', 'en'].includes(this.numberFormatMode)) {
+      errors.push('numberFormatMode');
+    }
+
+    if (this.dateFormat && !['DD.MM.YYYY', 'YYYY-MM-DD', 'DD/MM/YYYY'].includes(this.dateFormat)) {
+      errors.push('dateFormat');
     }
 
     return errors;

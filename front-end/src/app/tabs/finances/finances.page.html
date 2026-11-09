@@ -1,0 +1,62 @@
+<ion-header class="ion-no-border financesHeader">
+  <ion-toolbar class="financesToolbar">
+    <!-- Year Switcher on Left -->
+    <ion-buttons slot="start" class="yearPickerButtons">
+      <div class="yearSwitcherPill">
+        <span class="yearLabel">{{ 'FINANCES.YEAR' | translate }}:</span>
+        <ion-select
+          interface="popover"
+          [value]="activeYear"
+          (ionChange)="onYearChange($event.detail.value)"
+          class="yearSelect"
+        >
+          <ion-select-option *ngFor="let yr of availableYears" [value]="yr">
+            {{ yr }}
+          </ion-select-option>
+        </ion-select>
+        <ion-badge color="warning" class="archiveBadge" *ngIf="stateService.isArchived">
+          {{ 'FINANCES.ARCHIVE' | translate }}
+        </ion-badge>
+      </div>
+    </ion-buttons>
+
+    <!-- Subtabs Horizontal Scrollable Navigation -->
+    <div class="subtabsNavWrapper">
+      <ion-segment
+        [scrollable]="true"
+        [value]="activeSubtab"
+        (ionChange)="onSubtabChange($event.detail.value)"
+        class="financesSegments"
+      >
+        <ion-segment-button *ngFor="let tab of configuredSubtabs" [value]="tab">
+          <ion-label>{{ 'FINANCES.PAGE_SECTIONS.' + tab | translate }}</ion-label>
+        </ion-segment-button>
+      </ion-segment>
+    </div>
+  </ion-toolbar>
+
+  <!-- Archived Notice Banner -->
+  <div class="archiveNoticeBanner" *ngIf="stateService.isArchived">
+    <ion-icon name="lock-closed-outline"></ion-icon>
+    <span>
+      {{ 'FINANCES.ARCHIVED_NOTICE' | translate:{ year: activeYear } }}
+    </span>
+  </div>
+</ion-header>
+
+<ion-content class="financesContent">
+  <div class="maxWidthContainer">
+    <!-- Active Subtab Rendering -->
+    <app-summary-subtab *ngIf="activeSubtab === 'SUMMARY'"></app-summary-subtab>
+    <app-budget-subtab *ngIf="activeSubtab === 'BUDGET'"></app-budget-subtab>
+    <app-documents-subtab *ngIf="activeSubtab === 'DOCUMENTS'"></app-documents-subtab>
+    <app-fiscal-subtab *ngIf="activeSubtab === 'FISCAL'"></app-fiscal-subtab>
+    <app-transactions-subtab *ngIf="activeSubtab === 'TRANSACTIONS'"></app-transactions-subtab>
+    <app-sections-subtab *ngIf="activeSubtab === 'SECTIONS'"></app-sections-subtab>
+    <app-meetings-subtab *ngIf="activeSubtab === 'MEETINGS'"></app-meetings-subtab>
+    <app-advances-subtab *ngIf="activeSubtab === 'ADVANCES'"></app-advances-subtab>
+    <app-delegations-subtab *ngIf="activeSubtab === 'DELEGATIONS'"></app-delegations-subtab>
+    <app-transfers-subtab *ngIf="activeSubtab === 'INTERNAL'"></app-transfers-subtab>
+    <app-deposits-subtab *ngIf="activeSubtab === 'DEPOSITS'"></app-deposits-subtab>
+  </div>
+</ion-content>

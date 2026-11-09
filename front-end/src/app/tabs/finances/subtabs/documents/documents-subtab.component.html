@@ -1,0 +1,171 @@
+<div class="documentsSubtabContainer">
+  <div class="loadingWrapper" *ngIf="loading">
+    <ion-spinner name="crescent" color="primary"></ion-spinner>
+    <p>{{ 'FINANCES.DOCUMENTS.LOADING' | translate }}</p>
+  </div>
+
+  <div *ngIf="!loading" class="docsContent">
+    <!-- Filters & Search Toolbar -->
+    <div class="toolbarCard">
+      <div class="searchWrapper">
+        <ion-icon name="search-outline" class="searchIcon"></ion-icon>
+        <input
+          type="text"
+          class="searchInput"
+          [(ngModel)]="searchQuery"
+          [placeholder]="'FINANCES.DOCUMENTS.SEARCH_PLACEHOLDER' | translate"
+        />
+        <button *ngIf="searchQuery" class="clearBtn" (click)="clearSearch()">
+          <ion-icon name="close-circle"></ion-icon>
+        </button>
+      </div>
+
+      <div class="filterDropdowns">
+        <!-- Status Filter -->
+        <div class="dropdownGroup">
+          <span class="dropdownLabel">{{ 'FINANCES.DOCUMENTS.COL_STATUS' | translate }}:</span>
+          <ion-select
+            interface="popover"
+            class="filterSelect statusSelect"
+            [(ngModel)]="filterStatus"
+          >
+            <ion-select-option value="ALL">{{ 'COMMON.ALL' | translate }}</ion-select-option>
+            <ion-select-option value="SETTLED">{{ 'FINANCES.DOCUMENTS.FILTER_SETTLED' | translate }}</ion-select-option>
+            <ion-select-option value="UNSETTLED">{{ 'FINANCES.DOCUMENTS.FILTER_UNSETTLED' | translate }}</ion-select-option>
+          </ion-select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Active Code Filter Notice if jumped from budget -->
+    <div class="activeFilterBanner" *ngIf="codeFilter">
+      <span>{{ 'FINANCES.DOCUMENTS.FILTER_CODE_NOTICE' | translate:{ code: codeFilter } }}</span>
+      <ion-button fill="clear" size="small" color="primary" (click)="clearFilter()">
+        {{ 'FINANCES.DOCUMENTS.SHOW_ALL' | translate }}
+      </ion-button>
+    </div>
+
+    <!-- Documents Table -->
+    <div class="tableCard">
+      <div class="tableWrapper" *ngIf="filteredDocuments.length > 0">
+        <table class="modernTable">
+          <thead>
+            <tr>
+              <th class="colDate">{{ 'FINANCES.DOCUMENTS.COL_DATE' | translate }}</th>
+              <th class="colDoc">{{ 'FINANCES.DOCUMENTS.COL_DOC' | translate }}</th>
+              <th class="colParty">{{ 'FINANCES.DOCUMENTS.COL_PARTY' | translate }}</th>
+              <th class="colAlloc">{{ 'FINANCES.DOCUMENTS.COL_ALLOC' | translate }}</th>
+              <th class="colAmount">{{ 'FINANCES.DOCUMENTS.COL_NET' | translate }}</th>
+              <th class="colAmount">{{ 'FINANCES.DOCUMENTS.COL_VAT' | translate }}</th>
+              <th class="colAmount">{{ 'FINANCES.DOCUMENTS.COL_GROSS' | translate }}</th>
+              <th class="colOrigin">{{ 'FINANCES.DOCUMENTS.COL_PAYMENT' | translate }}</th>
+              <th class="colStatus">{{ 'FINANCES.DOCUMENTS.COL_STATUS' | translate }}</th>
+              <th class="colActions" *ngIf="canEdit && !isArchived">{{ 'FINANCES.DOCUMENTS.COL_ACTIONS' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              *ngFor="let doc of filteredDocuments"
+              [id]="'doc-' + doc.id"
+              [class.highlightedRow]="highlightedDocId === doc.id"
+            >
+              <!-- Date -->
+              <td class="colDate">
+                <span class="mainDate">{{ doc.issuedOn | appDate }}</span>
+                <span class="subDate" *ngIf="doc.saleDate && doc.saleDate !== doc.issuedOn">{{ 'FINANCES.DOCUMENTS.SALE_DATE' | translate:{ date: (doc.saleDate | appDate) } }}</span>
+              </td>
+
+              <!-- Invoice number / KSeF -->
+              <td class="colDoc">
+                <span class="invNum">{{ doc.invoiceNumber }}</span>
+                <span class="ksefTag" *ngIf="doc.ksefNumber" [title]="doc.ksefNumber">KSeF: {{ doc.ksefNumber | slice:0:15 }}...</span>
+              </td>
+
+              <!-- Issued By -->
+              <td class="colParty">
+                <span class="partyName">{{ doc.issuedBy }}</span>
+                <span class="docNotes" *ngIf="doc.notes">{{ doc.notes }}</span>
+              </td>
+
+              <!-- Multi-code allocations -->
+              <td class="colAlloc">
+                <div class="allocList">
+                  <div class="allocItem" *ngFor="let a of doc.codeAllocations">
+                    <button
+                      type="button"
+                      class="codeBadgeBtn"
+                      (click)="jumpToBudgetLine(a.code)"
+                      [title]="'FINANCES.DOCUMENTS.JUMP_BUDGET_TITLE' | translate:{ code: a.code }"
+                    >
+                      <ion-icon name="trending-up-outline"></ion-icon>
+                      {{ a.code }}
+                    </button>
+                    <span class="allocAmount">{{ (a.allocatedGrossAmount || a.amount || 0) | number:'1.2-2' }} {{ doc.currency }}</span>
+                  </div>
+                </div>
+              </td>
+
+              <!-- Net -->
+              <td class="colAmount netAmount">{{ doc.netAmount | number:'1.2-2' }} {{ doc.currency }}</td>
+
+              <!-- VAT -->
+              <td class="colAmount">{{ doc.vatAmount | number:'1.2-2' }} {{ doc.currency }}</td>
+
+              <!-- Gross -->
+              <td class="colAmount grossAmount">{{ doc.grossAmount | number:'1.2-2' }} {{ doc.currency }}</td>
+
+              <!-- Origin & Advance link -->
+              <td class="colOrigin">
+                <span class="originBadge" [class]="doc.paymentOrigin.toLowerCase()">
+                  {{ doc.paymentOrigin === 'ADVANCE' ? ('FINANCES.DOCUMENTS.PAYMENT_ADVANCE' | translate) : ('FINANCES.DOCUMENTS.PAYMENT_TRANSACTION' | translate) }}
+                </span>
+                <button
+                  *ngIf="doc.advanceId"
+                  type="button"
+                  class="advanceJumpBtn"
+                  (click)="jumpToAdvance(doc.advanceId)"
+                  [title]="'FINANCES.ADVANCES.TITLE' | translate"
+                >
+                  <ion-icon name="wallet-outline"></ion-icon> {{ 'FINANCES.DOCUMENTS.ADVANCE_LINK' | translate }}
+                </button>
+              </td>
+
+              <!-- Status -->
+              <td class="colStatus">
+                <span
+                  class="docStatusBadge"
+                  [class.settled]="doc.status === 'SETTLED'"
+                  [class.pending]="doc.status !== 'SETTLED'"
+                  (click)="toggleDocumentSettled(doc)"
+                >
+                  {{ (doc.status === 'SETTLED' ? 'FINANCES.DOCUMENTS.STATUS_SETTLED' : 'FINANCES.DOCUMENTS.STATUS_PENDING') | translate }}
+                </span>
+              </td>
+
+              <!-- Actions -->
+              <td class="colActions" *ngIf="canEdit && !isArchived">
+                <div class="actionsRow">
+                  <a
+                    *ngIf="doc.attachments?.length"
+                    [href]="doc.attachments[0].url"
+                    target="_blank"
+                    class="fileIconBtn"
+                    [title]="'FINANCES.DOCUMENTS.OPEN_ATTACHMENT' | translate"
+                  >
+                    <ion-icon name="attach-outline"></ion-icon>
+                  </a>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Empty state -->
+      <div class="emptyState" *ngIf="filteredDocuments.length === 0">
+        <ion-icon name="document-text-outline"></ion-icon>
+        <p>{{ 'FINANCES.DOCUMENTS.EMPTY_STATE' | translate:{ year: stateService.activeYear } }}</p>
+      </div>
+    </div>
+  </div>
+</div>

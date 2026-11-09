@@ -184,7 +184,7 @@
             </div>
 
             <div class="guestInviteMeta">
-              <span>{{ 'CONFIGURATIONS.GUEST_EXPIRATION' | translate }}: {{ invite.expiresAt | date:'dd.MM.yyyy' }}</span>
+              <span>{{ 'CONFIGURATIONS.GUEST_EXPIRATION' | translate }}: {{ invite.expiresAt | appDate }}</span>
               <span *ngIf="invite.createdBy"> · {{ invite.createdBy }}</span>
             </div>
 
@@ -1514,6 +1514,54 @@
         <ion-note slot="helper">{{ 'CONFIGURATIONS.LANGUAGE_MODE_I' | translate }}</ion-note>
       </ion-item>
 
+      <!-- Number Format Mode -->
+      <ion-item>
+        <ion-label position="stacked">
+          {{ 'CONFIGURATIONS.NUMBER_FORMAT_MODE' | translate }}
+        </ion-label>
+        <ion-select
+          interface="popover"
+          [disabled]="!canModifyOptions()"
+          [value]="configurations.numberFormatMode || 'MATCH_LANGUAGE'"
+          (ionChange)="onNumberFormatModeChange($event.detail.value)"
+        >
+          <ion-select-option value="MATCH_LANGUAGE">
+            {{ 'CONFIGURATIONS.NUMBER_FORMAT_MODES.MATCH_LANGUAGE' | translate }}
+          </ion-select-option>
+          <ion-select-option value="pl">
+            {{ 'CONFIGURATIONS.NUMBER_FORMAT_MODES.PL' | translate }}
+          </ion-select-option>
+          <ion-select-option value="en">
+            {{ 'CONFIGURATIONS.NUMBER_FORMAT_MODES.EN' | translate }}
+          </ion-select-option>
+        </ion-select>
+        <ion-note slot="helper">{{ 'CONFIGURATIONS.NUMBER_FORMAT_MODE_I' | translate }}</ion-note>
+      </ion-item>
+
+      <!-- Date Format -->
+      <ion-item>
+        <ion-label position="stacked">
+          {{ 'CONFIGURATIONS.DATE_FORMAT' | translate }}
+        </ion-label>
+        <ion-select
+          interface="popover"
+          [disabled]="!canModifyOptions()"
+          [value]="configurations.dateFormat || 'DD.MM.YYYY'"
+          (ionChange)="onDateFormatChange($event.detail.value)"
+        >
+          <ion-select-option value="DD.MM.YYYY">
+            {{ 'CONFIGURATIONS.DATE_FORMATS.DD_MM_YYYY' | translate }}
+          </ion-select-option>
+          <ion-select-option value="YYYY-MM-DD">
+            {{ 'CONFIGURATIONS.DATE_FORMATS.YYYY_MM_DD' | translate }}
+          </ion-select-option>
+          <ion-select-option value="DD/MM/YYYY">
+            {{ 'CONFIGURATIONS.DATE_FORMATS.DD_SLASH_MM_YYYY' | translate }}
+          </ion-select-option>
+        </ion-select>
+        <ion-note slot="helper">{{ 'CONFIGURATIONS.DATE_FORMAT_I' | translate }}</ion-note>
+      </ion-item>
+
       <!-- App Title (English) -->
       <ion-item *ngIf="isLanguageAvailable('en')">
         <ion-label position="stacked">{{ 'CONFIGURATIONS.APP_TITLE_EN' | translate }}</ion-label>
@@ -1770,5 +1818,211 @@
         </ion-item>
       </ion-reorder-group>
     </ion-list>
+
+    <!-- SUBTAB: FINANCES -->
+    <div *ngIf="pageSection === 'FINANCES'">
+      <!-- General Calculation Settings -->
+      <ion-list class="aList">
+        <ion-list-header>
+          <ion-label>
+            <h2>{{ 'CONFIGURATIONS.FINANCES_GENERAL_TITLE' | translate }}</h2>
+            <p>{{ 'CONFIGURATIONS.FINANCES_GENERAL_I' | translate }}</p>
+          </ion-label>
+        </ion-list-header>
+
+        <ion-item>
+          <ion-label position="stacked">{{ 'CONFIGURATIONS.FINANCES_FIRST_YEAR' | translate }}</ion-label>
+          <ion-input
+            readonly
+            [value]="configurations.financesConfig?.firstYear"
+            [placeholder]="'CONFIGURATIONS.FINANCES_FIRST_YEAR_PLACEHOLDER' | translate"
+            (click)="canModifyFinances() && changeFinancesFirstYear()"
+          ></ion-input>
+          <ion-note slot="helper">{{ 'CONFIGURATIONS.FINANCES_FIRST_YEAR_I' | translate }}</ion-note>
+          <ion-button
+            slot="end"
+            fill="clear"
+            color="medium"
+            class="ion-margin-top"
+            *ngIf="canModifyFinances()"
+            (click)="changeFinancesFirstYear()"
+            [title]="'COMMON.EDIT' | translate"
+          >
+            <ion-icon name="pencil" slot="icon-only"></ion-icon>
+          </ion-button>
+        </ion-item>
+
+        <!-- Budget Organisation (English) -->
+        <ion-item *ngIf="isLanguageAvailable('en')">
+          <ion-label position="stacked">{{ 'CONFIGURATIONS.FINANCES_BUDGET_ORGANISATION_EN' | translate }}</ion-label>
+          <ion-input
+            readonly
+            [value]="configurations.financesConfig?.budgetOrganisationName?.en || 'ESN Poland'"
+            [placeholder]="'CONFIGURATIONS.FINANCES_BUDGET_ORGANISATION_EN_PH' | translate"
+            (click)="canModifyFinances() && changeBudgetOrganisationName('en')"
+          ></ion-input>
+          <ion-note slot="helper">{{ 'CONFIGURATIONS.FINANCES_BUDGET_ORGANISATION_EN_I' | translate }}</ion-note>
+          <ion-button
+            slot="end"
+            fill="clear"
+            color="medium"
+            class="ion-margin-top"
+            *ngIf="canModifyFinances()"
+            (click)="changeBudgetOrganisationName('en')"
+            [title]="'COMMON.EDIT' | translate"
+          >
+            <ion-icon name="pencil" slot="icon-only"></ion-icon>
+          </ion-button>
+        </ion-item>
+
+        <!-- Budget Organisation (Polish) -->
+        <ion-item *ngIf="isLanguageAvailable('pl')">
+          <ion-label position="stacked">{{ 'CONFIGURATIONS.FINANCES_BUDGET_ORGANISATION_PL' | translate }}</ion-label>
+          <ion-input
+            readonly
+            [value]="configurations.financesConfig?.budgetOrganisationName?.pl || 'ESN Polska'"
+            [placeholder]="'CONFIGURATIONS.FINANCES_BUDGET_ORGANISATION_PL_PH' | translate"
+            (click)="canModifyFinances() && changeBudgetOrganisationName('pl')"
+          ></ion-input>
+          <ion-note slot="helper">{{ 'CONFIGURATIONS.FINANCES_BUDGET_ORGANISATION_PL_I' | translate }}</ion-note>
+          <ion-button
+            slot="end"
+            fill="clear"
+            color="medium"
+            class="ion-margin-top"
+            *ngIf="canModifyFinances()"
+            (click)="changeBudgetOrganisationName('pl')"
+            [title]="'COMMON.EDIT' | translate"
+          >
+            <ion-icon name="pencil" slot="icon-only"></ion-icon>
+          </ion-button>
+        </ion-item>
+
+        <ion-item>
+          <ion-label position="stacked">{{ 'CONFIGURATIONS.FINANCES_CALCULATION_MODE' | translate }}</ion-label>
+          <ion-select
+            interface="popover"
+            [disabled]="!canModifyFinances()"
+            [(ngModel)]="configurations.financesConfig.budgetExecutionCalculationMode"
+            (ionChange)="updateConfigurations()"
+          >
+            <ion-select-option value="NET">{{ 'CONFIGURATIONS.FINANCES_CALCULATION_MODE_NET' | translate }}</ion-select-option>
+            <ion-select-option value="GROSS">{{ 'CONFIGURATIONS.FINANCES_CALCULATION_MODE_GROSS' | translate }}</ion-select-option>
+          </ion-select>
+        </ion-item>
+
+        <ion-item>
+          <ion-label position="stacked">{{ 'CONFIGURATIONS.FINANCES_NUMBER_FORMAT' | translate }}</ion-label>
+          <ion-select
+            interface="popover"
+            [disabled]="!canModifyFinances()"
+            [(ngModel)]="configurations.financesConfig.numberDisplayFormat"
+            (ionChange)="updateConfigurations()"
+          >
+            <ion-select-option value="STANDARD">{{ 'CONFIGURATIONS.FINANCES_NUMBER_FORMAT_STANDARD' | translate }}</ion-select-option>
+            <ion-select-option value="ACCOUNTING">{{ 'CONFIGURATIONS.FINANCES_NUMBER_FORMAT_ACCOUNTING' | translate }}</ion-select-option>
+          </ion-select>
+        </ion-item>
+
+        <ion-item>
+          <ion-label position="stacked">{{ 'CONFIGURATIONS.FINANCES_DEFAULT_DIEMS_CODE' | translate }}</ion-label>
+          <ion-input
+            type="text"
+            [placeholder]="'CONFIGURATIONS.FINANCES_DEFAULT_DIEMS_CODE_PH' | translate"
+            [disabled]="!canModifyFinances()"
+            [(ngModel)]="configurations.financesConfig.defaultDiemsBudgetLineCode"
+            (ionBlur)="updateConfigurations()"
+          ></ion-input>
+        </ion-item>
+
+        <ion-item>
+          <ion-label position="stacked">{{ 'CONFIGURATIONS.FINANCES_CSV_IMPORT_SCHEME' | translate }}</ion-label>
+          <ion-select
+            interface="popover"
+            [disabled]="!canModifyFinances()"
+            [(ngModel)]="configurations.financesConfig.csvImportScheme"
+            (ionChange)="updateConfigurations()"
+          >
+            <ion-select-option value="ERSTE_BANK_POLSKA">{{ 'CONFIGURATIONS.FINANCES_CSV_SCHEME_ERSTE' | translate }}</ion-select-option>
+          </ion-select>
+        </ion-item>
+      </ion-list>
+
+
+      <!-- Auto Creation On Paid Settings -->
+      <ion-list class="aList">
+        <ion-list-header>
+          <ion-label>
+            <h2>{{ 'CONFIGURATIONS.FINANCES_AUTOCREATION_TITLE' | translate }}</h2>
+            <p>{{ 'CONFIGURATIONS.FINANCES_AUTOCREATION_I' | translate }}</p>
+          </ion-label>
+        </ion-list-header>
+
+        <ion-item>
+          <ion-label class="ion-text-wrap">
+            <h3>{{ 'CONFIGURATIONS.FINANCES_AUTO_DOCS' | translate }}</h3>
+            <p>{{ 'CONFIGURATIONS.FINANCES_AUTO_DOCS_I' | translate }}</p>
+          </ion-label>
+          <ion-toggle
+            slot="end"
+            [disabled]="!canModifyFinances()"
+            [(ngModel)]="configurations.financesConfig.autoCreationOnPaid.documentsEnabled"
+            (ionChange)="updateConfigurations()"
+          ></ion-toggle>
+        </ion-item>
+
+        <ion-item>
+          <ion-label class="ion-text-wrap">
+            <h3>{{ 'CONFIGURATIONS.FINANCES_AUTO_ADVANCES' | translate }}</h3>
+            <p>{{ 'CONFIGURATIONS.FINANCES_AUTO_ADVANCES_I' | translate }}</p>
+          </ion-label>
+          <ion-toggle
+            slot="end"
+            [disabled]="!canModifyFinances()"
+            [(ngModel)]="configurations.financesConfig.autoCreationOnPaid.advancesEnabled"
+            (ionChange)="updateConfigurations()"
+          ></ion-toggle>
+        </ion-item>
+
+        <ion-item>
+          <ion-label class="ion-text-wrap">
+            <h3>{{ 'CONFIGURATIONS.FINANCES_AUTO_DELEGATIONS' | translate }}</h3>
+            <p>{{ 'CONFIGURATIONS.FINANCES_AUTO_DELEGATIONS_I' | translate }}</p>
+          </ion-label>
+          <ion-toggle
+            slot="end"
+            [disabled]="!canModifyFinances()"
+            [(ngModel)]="configurations.financesConfig.autoCreationOnPaid.delegationsEnabled"
+            (ionChange)="updateConfigurations()"
+          ></ion-toggle>
+        </ion-item>
+      </ion-list>
+
+      <!-- Finances Subtabs Reordering -->
+      <ion-list class="aList">
+        <ion-list-header>
+          <ion-label>
+            <h2>{{ 'CONFIGURATIONS.FINANCES_SUBTABS_ORDER_TITLE' | translate }}</h2>
+            <p>{{ 'CONFIGURATIONS.FINANCES_SUBTABS_ORDER_I' | translate }}</p>
+          </ion-label>
+          <ion-button
+            slot="end"
+            fill="clear"
+            color="secondary"
+            *ngIf="canModifyFinances()"
+            (click)="resetFinancesSubtabsOrder()"
+          >
+            {{ 'CONFIGURATIONS.FINANCES_SUBTABS_ORDER_RESET' | translate }}
+          </ion-button>
+        </ion-list-header>
+
+        <ion-reorder-group [disabled]="!canModifyFinances()" (ionItemReorder)="reorderFinancesSubtabs($event)">
+          <ion-item *ngFor="let tab of financesSubtabs; trackBy: trackByFinancesSection">
+            <ion-label>{{ 'CONFIGURATIONS.FINANCES_PAGE_SECTIONS.' + tab | translate }}</ion-label>
+            <ion-reorder slot="end"></ion-reorder>
+          </ion-item>
+        </ion-reorder-group>
+      </ion-list>
+    </div>
   </div>
 </ion-content>

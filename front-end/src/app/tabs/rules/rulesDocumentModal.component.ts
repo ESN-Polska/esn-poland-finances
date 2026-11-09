@@ -349,13 +349,7 @@ export class RulesDocumentModalComponent implements OnInit {
   formatDate(isoDate: string): string {
     if (!isoDate) return '';
     try {
-      const [year, month, day] = isoDate.split('-');
-      if (year && month && day) {
-        return `${day}.${month}.${year}`;
-      }
-      return new Date(isoDate).toLocaleDateString(
-        this.translate.currentLang === 'pl' ? 'pl-PL' : 'en-GB'
-      );
+      return this.app.formatDate(isoDate);
     } catch {
       return isoDate;
     }

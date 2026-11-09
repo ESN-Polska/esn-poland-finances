@@ -14,6 +14,7 @@ import { AppLockMessageModalComponent } from './appLockMessageModal.component';
 import { EmailTemplateComponent } from './emailTemplate/emailTemplate.component';
 import { OAuthRolesModalComponent } from './oauthRolesModal.component';
 import { ThreadSubjectModalComponent } from './threadSubjectModal.component';
+import { AppDatePipe } from '../../pipes/app-date.pipe';
 
 @NgModule({
   imports: [
@@ -21,7 +22,8 @@ import { ThreadSubjectModalComponent } from './threadSubjectModal.component';
     FormsModule,
     IonicModule,
     TranslateModule,
-    ConfigurationsPageRoutingModule
+    ConfigurationsPageRoutingModule,
+    AppDatePipe
   ],
   declarations: [
     ConfigurationsPage,

@@ -1,0 +1,103 @@
+.financesHeader {
+  background: var(--ion-background-color, #ffffff);
+  border-bottom: 1px solid var(--ion-color-step-150, #e2e8f0);
+}
+
+.financesToolbar {
+  --background: var(--ion-background-color, #ffffff);
+  --padding-start: 16px;
+  --padding-end: 16px;
+  --min-height: 58px;
+
+  display: flex;
+  align-items: center;
+}
+
+.yearPickerButtons {
+  margin-right: 16px;
+}
+
+.yearSwitcherPill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--ion-color-step-100, #f1f5f9);
+  border: 1px solid var(--ion-color-step-200, #cbd5e1);
+  border-radius: 20px;
+  padding: 4px 12px;
+  cursor: pointer;
+
+  .yearLabel {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--ion-color-step-600, #64748b);
+    text-transform: uppercase;
+  }
+
+  .yearSelect {
+    --padding-start: 4px;
+    --padding-end: 0;
+    --padding-top: 0;
+    --padding-bottom: 0;
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: var(--ion-color-step-900, #0f172a);
+    font-family: monospace;
+  }
+
+  .archiveBadge {
+    font-size: 0.65rem;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: 10px;
+    letter-spacing: 0.5px;
+  }
+}
+
+.subtabsNavWrapper {
+  flex: 1;
+  overflow-x: auto;
+
+  .financesSegments {
+    --background: transparent;
+
+    ion-segment-button {
+      --indicator-box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+      font-weight: 600;
+      font-size: 0.86rem;
+      min-height: 42px;
+      padding: 0 14px;
+    }
+  }
+}
+
+.archiveNoticeBanner {
+  background: #fffbeb;
+  border-bottom: 1px solid #fef3c7;
+  color: #92400e;
+  padding: 8px 16px;
+  font-size: 0.82rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  ion-icon {
+    font-size: 1.1rem;
+    color: #d97706;
+  }
+}
+
+.financesContent {
+  --background: var(--bg-body, #f4f7f9);
+}
+
+.maxWidthContainer {
+  max-width: 1550px;
+  margin: 0 auto;
+  padding: 16px 20px;
+
+  @media (max-width: 768px) {
+    padding: 12px 10px;
+  }
+}

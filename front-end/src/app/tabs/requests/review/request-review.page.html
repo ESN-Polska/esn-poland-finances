@@ -69,11 +69,11 @@
         
         <div class="decision-dates-meta" style="font-size: 0.8rem; color: var(--text-medium); margin-top: 6px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center;">
           <span *ngIf="request.submittedAt">
-            {{ 'REQUESTS.SUBMITTED_ON' | translate }}: <strong style="color: var(--text-dark); font-weight: 600;">{{ request.submittedAt | date:'dd.MM.yyyy' }}</strong>
+            {{ 'REQUESTS.SUBMITTED_ON' | translate }}: <strong style="color: var(--text-dark); font-weight: 600;">{{ request.submittedAt | appDate }}</strong>
           </span>
           <span class="divider-dot" *ngIf="request.submittedAt && request.updatedAt">•</span>
           <span *ngIf="request.updatedAt">
-            {{ 'REQUESTS.LAST_UPDATED' | translate }}: <strong style="color: var(--text-dark); font-weight: 600;">{{ request.updatedAt | date:'dd.MM.yyyy' }}</strong>
+            {{ 'REQUESTS.LAST_UPDATED' | translate }}: <strong style="color: var(--text-dark); font-weight: 600;">{{ request.updatedAt | appDate }}</strong>
           </span>
         </div>
       </div>
@@ -319,19 +319,19 @@
                 <div class="info-cell-row full-width">
                   <div class="info-cell">
                     <span class="cell-lbl">{{ 'REQUESTS.DOC_ISSUED_ON' | translate }}</span>
-                    <span class="cell-val">{{ doc.issuedOn | date:'dd.MM.yyyy' }}</span>
+                    <span class="cell-val">{{ doc.issuedOn | appDate }}</span>
                   </div>
                   <div class="info-cell" *ngIf="request.requestType === 'INVOICE_REIMBURSEMENT' && doc.hasDifferentSaleDate && doc.saleDate">
                     <span class="cell-lbl">{{ 'REQUESTS.FIELDS.SALE_DATE' | translate }}</span>
-                    <span class="cell-val">{{ doc.saleDate | date:'dd.MM.yyyy' }}</span>
+                    <span class="cell-val">{{ doc.saleDate | appDate }}</span>
                   </div>
                   <div class="info-cell" *ngIf="doc.paymentDeadline">
                     <span class="cell-lbl">{{ 'REQUESTS.DOC_PAYMENT_DEADLINE' | translate }}</span>
-                    <span class="cell-val font-semibold">{{ doc.paymentDeadline | date:'dd.MM.yyyy' }}</span>
+                    <span class="cell-val font-semibold">{{ doc.paymentDeadline | appDate }}</span>
                   </div>
                   <div class="info-cell" *ngIf="doc.paidOn">
                     <span class="cell-lbl">{{ 'REQUESTS.DOC_PAID_ON' | translate }}</span>
-                    <span class="cell-val">{{ doc.paidOn | date:'dd.MM.yyyy' }}</span>
+                    <span class="cell-val">{{ doc.paidOn | appDate }}</span>
                   </div>
                 </div>
 
@@ -717,7 +717,7 @@
                   <span class="history-status status-{{ h.status | lowercase }}">
                     {{ 'REQUESTS.STATUSES.' + h.status | translate }}
                   </span>
-                  <span class="history-date">{{ h.timestamp | date:'dd.MM.yyyy, HH:mm' }}</span>
+                  <span class="history-date">{{ h.timestamp | appDate:'withTime' }}</span>
                 </div>
                 <span class="history-user">{{ h.updatedBy }}</span>
                 <p class="history-note" *ngIf="h.comment">{{ h.comment | statusComment:h.status }}</p>

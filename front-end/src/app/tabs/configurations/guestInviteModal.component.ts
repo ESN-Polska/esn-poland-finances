@@ -4,6 +4,7 @@ import { TranslateService } from '@ngx-translate/core';
 import { Configurations, FinancialRequestType, GuestInvitation } from '@models/configurations.model';
 import { AppService } from '@app/app.service';
 import { ConfigurationsService } from './configurations.service';
+import { parseLocaleNumber } from '@app/utils/number-utils';
 
 @Component({
   selector: 'app-guest-invite-modal',
@@ -20,7 +21,7 @@ export class GuestInviteModalComponent implements OnInit {
   public purpose = '';
   public position = '';
   public defaultSourceOfFunding = '';
-  public maxAmount?: number;
+  public maxAmount?: any;
   public expirationOption: '7' | '14' | '30' | 'custom' = '14';
   public customExpirationDate = '';
   public isMultiUse = false;
@@ -171,7 +172,7 @@ export class GuestInviteModalComponent implements OnInit {
         position: this.position.trim() || undefined,
         allowedRequestTypes: selectedTypes,
         defaultSourceOfFunding: this.defaultSourceOfFunding.trim() || undefined,
-        maxAmount: this.maxAmount && Number(this.maxAmount) > 0 ? Number(this.maxAmount) : undefined,
+        maxAmount: parseLocaleNumber(this.maxAmount) && (parseLocaleNumber(this.maxAmount)! > 0) ? parseLocaleNumber(this.maxAmount) : undefined,
         instructions,
         expiresAt,
         isMultiUse: this.isMultiUse
@@ -195,7 +196,7 @@ export class GuestInviteModalComponent implements OnInit {
       position: this.position.trim() || undefined,
       allowedRequestTypes: selectedTypes,
       defaultSourceOfFunding: this.defaultSourceOfFunding.trim() || undefined,
-      maxAmount: this.maxAmount && Number(this.maxAmount) > 0 ? Number(this.maxAmount) : undefined,
+      maxAmount: parseLocaleNumber(this.maxAmount) && (parseLocaleNumber(this.maxAmount)! > 0) ? parseLocaleNumber(this.maxAmount) : undefined,
       instructions,
       createdAt: new Date().toISOString(),
       expiresAt,
@@ -233,8 +234,7 @@ export class GuestInviteModalComponent implements OnInit {
 
   public async copyEmailTemplate(): Promise<void> {
     if (!this.createdInvitation) return;
-    const d = new Date(this.createdInvitation.expiresAt);
-    const expiresFormatted = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`;
+    const expiresFormatted = this.app.formatDate(this.createdInvitation.expiresAt);
     let template = this.translate.instant('CONFIGURATIONS.GUEST_INVITE_EMAIL_BODY', {
       name: this.createdInvitation.guestName,
       purpose: this.createdInvitation.purpose,
@@ -258,8 +258,7 @@ export class GuestInviteModalComponent implements OnInit {
 
   public initDefaultEmailText(): void {
     if (!this.createdInvitation) return;
-    const d = new Date(this.createdInvitation.expiresAt);
-    const expiresFormatted = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`;
+    const expiresFormatted = this.app.formatDate(this.createdInvitation.expiresAt);
 
     if (this.guestEmailLang === 'pl') {
       this.guestEmailSubject = 'Zaproszenie do złożenia wniosku finansowego (ESN Polska)';

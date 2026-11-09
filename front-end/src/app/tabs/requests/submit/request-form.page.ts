@@ -14,6 +14,7 @@ import {
 import { AppService } from '../../../app.service';
 import { RequestsService } from '../../../services/requests.service';
 import { MediaService } from '../../../common/media.service';
+import { parseLocaleNumber } from '../../../utils/number-utils';
 
 @Component({
   selector: 'app-request-form',
@@ -534,38 +535,38 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy {
       }
     } else if (this.request.requestType === 'ADVANCE_PAYMENT') {
       this.isMixedCurrency = false;
-      this.request.totalGrossAmount = Number(this.request.requestedAmountPLN) || 0;
+      this.request.totalGrossAmount = parseLocaleNumber(this.request.requestedAmountPLN) || 0;
       this.request.totalVatAmount = 0;
       this.request.currency = this.request.currency || 'PLN';
       this.totalNetAmount = this.request.totalGrossAmount;
     } else if (this.request.requestType === 'DELEGATION_SETTLEMENT') {
       this.isMixedCurrency = false;
       this.request.currency = 'PLN';
-      this.request.totalGrossAmount = Number(this.request.delegationTotalAmount) || 0;
+      this.request.totalGrossAmount = parseLocaleNumber(this.request.delegationTotalAmount) || 0;
       this.request.totalVatAmount = 0;
       this.totalNetAmount = this.request.totalGrossAmount;
     } else {
       this.isMixedCurrency = false;
-      const gross = Number(this.request.totalGrossAmount) || 0;
-      const vat = Number(this.request.totalVatAmount) || 0;
+      const gross = parseLocaleNumber(this.request.totalGrossAmount) || 0;
+      const vat = parseLocaleNumber(this.request.totalVatAmount) || 0;
       this.totalNetAmount = Math.max(0, Math.round((gross - vat) * 100) / 100);
     }
   }
 
   public getDocNet(doc: InvoiceDocumentItem): number {
     if (doc.originalCurrency) {
-      const gross = Number(doc.originalAmount) || 0;
-      const vat = Number(doc.originalVatAmount) || 0;
+      const gross = parseLocaleNumber(doc.originalAmount) || 0;
+      const vat = parseLocaleNumber(doc.originalVatAmount) || 0;
       return Math.max(0, Math.round((gross - vat) * 100) / 100);
     }
-    const gross = Number(doc.grossAmount) || 0;
-    const vat = Number(doc.vatAmount) || 0;
+    const gross = parseLocaleNumber(doc.grossAmount) || 0;
+    const vat = parseLocaleNumber(doc.vatAmount) || 0;
     return Math.max(0, Math.round((gross - vat) * 100) / 100);
   }
 
   public getDocNetPLN(doc: InvoiceDocumentItem): number {
-    const gross = Number(doc.grossAmount) || 0;
-    const vat = Number(doc.vatAmount) || 0;
+    const gross = parseLocaleNumber(doc.grossAmount) || 0;
+    const vat = parseLocaleNumber(doc.vatAmount) || 0;
     return Math.max(0, Math.round((gross - vat) * 100) / 100);
   }
 
@@ -615,10 +616,10 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy {
 
   public onForeignAmountChange(doc: InvoiceDocumentItem): void {
     if (doc.exchangeRate) {
-      const originalAmount = Number(doc.originalAmount) || 0;
+      const originalAmount = parseLocaleNumber(doc.originalAmount) || 0;
       doc.grossAmount = Math.round((originalAmount * doc.exchangeRate) * 100) / 100;
 
-      const originalVat = Number(doc.originalVatAmount) || 0;
+      const originalVat = parseLocaleNumber(doc.originalVatAmount) || 0;
       doc.vatAmount = Math.round((originalVat * doc.exchangeRate) * 100) / 100;
     } else {
       this.onForeignCurrencyAmountOrDateChange(doc);
@@ -667,8 +668,8 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy {
           if (data && data.rates && data.rates[0]) {
             doc.exchangeRate = data.rates[0].mid;
             doc.exchangeDate = dateStr;
-            const originalGross = Number(doc.originalAmount) || 0;
-            const originalVat = Number(doc.originalVatAmount) || 0;
+            const originalGross = parseLocaleNumber(doc.originalAmount) || 0;
+            const originalVat = parseLocaleNumber(doc.originalVatAmount) || 0;
             doc.grossAmount = Math.round((originalGross * doc.exchangeRate) * 100) / 100;
             doc.vatAmount = Math.round((originalVat * doc.exchangeRate) * 100) / 100;
             foundRate = true;
@@ -866,14 +867,20 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy {
         return this.request.requestType === 'INVOICE_TO_PAY' && !this.isValidSellerBank(doc.bankAccountDetails);
       case 'grossAmount':
         if (doc.originalCurrency) {
-          return doc.originalAmount === undefined || doc.originalAmount === null || Number(doc.originalAmount) <= 0;
+          const orig = parseLocaleNumber(doc.originalAmount);
+          return orig === undefined || orig <= 0;
         }
-        return doc.grossAmount === undefined || doc.grossAmount === null || Number(doc.grossAmount) <= 0;
+        const g = parseLocaleNumber(doc.grossAmount);
+        return g === undefined || g <= 0;
       case 'vatAmount':
         if (doc.originalCurrency) {
-          return doc.originalVatAmount === undefined || doc.originalVatAmount === null || Number(doc.originalVatAmount) < 0 || Number(doc.originalVatAmount) > Number(doc.originalAmount);
+          const origG = parseLocaleNumber(doc.originalAmount) || 0;
+          const origV = parseLocaleNumber(doc.originalVatAmount);
+          return origV === undefined || origV < 0 || origV > origG;
         }
-        return doc.vatAmount === undefined || doc.vatAmount === null || Number(doc.vatAmount) < 0 || Number(doc.vatAmount) > Number(doc.grossAmount);
+        const docG = parseLocaleNumber(doc.grossAmount) || 0;
+        const docV = parseLocaleNumber(doc.vatAmount);
+        return docV === undefined || docV < 0 || docV > docG;
       case 'attachment':
         return !doc.attachment;
       default:
@@ -882,14 +889,14 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   public onAdvanceAmountChange(): void {
-    this.request.totalGrossAmount = Number(this.request.requestedAmountPLN) || 0;
+    this.request.totalGrossAmount = parseLocaleNumber(this.request.requestedAmountPLN) || 0;
     this.request.totalVatAmount = 0;
     this.request.currency = this.request.currency || 'PLN';
     this.totalNetAmount = this.request.totalGrossAmount;
   }
 
   public onDelegationAmountChange(): void {
-    this.request.totalGrossAmount = Number(this.request.delegationTotalAmount) || 0;
+    this.request.totalGrossAmount = parseLocaleNumber(this.request.delegationTotalAmount) || 0;
     this.request.totalVatAmount = 0;
     this.request.currency = 'PLN';
     this.totalNetAmount = this.request.totalGrossAmount;
@@ -1046,18 +1053,36 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy {
 
       const requestToSave: Partial<FinancialRequest> = {
         ...this.request,
+        requestedAmountPLN: parseLocaleNumber(this.request.requestedAmountPLN),
+        delegationTotalAmount: parseLocaleNumber(this.request.delegationTotalAmount),
         documents: this.request.documents?.map(doc => {
+          const parsedGross = parseLocaleNumber(doc.grossAmount);
+          const parsedVat = parseLocaleNumber(doc.vatAmount);
+          const parsedOrigGross = parseLocaleNumber(doc.originalAmount);
+          const parsedOrigVat = parseLocaleNumber(doc.originalVatAmount);
+          const updatedDoc = {
+            ...doc,
+            grossAmount: parsedGross !== undefined ? parsedGross : doc.grossAmount,
+            vatAmount: parsedVat !== undefined ? parsedVat : doc.vatAmount,
+            originalAmount: parsedOrigGross !== undefined ? parsedOrigGross : doc.originalAmount,
+            originalVatAmount: parsedOrigVat !== undefined ? parsedOrigVat : doc.originalVatAmount
+          };
           if (doc.currency !== 'PLN' && doc.currency !== 'EUR' && doc.originalCurrency && doc.exchangeRate) {
             return {
-              ...doc,
+              ...updatedDoc,
               currency: 'PLN' as any
             };
           }
-          return doc;
+          return updatedDoc;
         })
       };
 
-      const saved = await this.requestsService.saveRequest(requestToSave, targetStatus);
+      const effectiveStatus =
+        targetStatus === 'DRAFT' && this.isChangesRequested
+          ? 'CHANGES_REQUESTED'
+          : targetStatus;
+
+      const saved = await this.requestsService.saveRequest(requestToSave, effectiveStatus);
 
       if (!this.isEditMode) {
         localStorage.removeItem(this.DRAFT_KEY);
@@ -1087,7 +1112,8 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy {
         this.showToast('CONFIGURATIONS.GUEST_TYPE_NOT_ALLOWED', 'danger');
         return false;
       }
-      if (user.guestMaxAmount && Number(this.request.totalGrossAmount) > user.guestMaxAmount) {
+      const totalGross = parseLocaleNumber(this.request.totalGrossAmount) || 0;
+      if (user.guestMaxAmount && totalGross > user.guestMaxAmount) {
         this.showToast('CONFIGURATIONS.GUEST_LIMIT_EXCEEDED', 'danger', { amount: user.guestMaxAmount });
         return false;
       }
@@ -1152,32 +1178,37 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy {
         }
 
         if (doc.originalCurrency) {
-          if (doc.originalAmount === undefined || doc.originalAmount === null || Number(doc.originalAmount) <= 0) {
+          const orig = parseLocaleNumber(doc.originalAmount);
+          if (orig === undefined || orig <= 0) {
             return false;
           }
-          if (doc.originalVatAmount === undefined || doc.originalVatAmount === null || Number(doc.originalVatAmount) < 0 || Number(doc.originalVatAmount) > Number(doc.originalAmount)) {
+          const origVat = parseLocaleNumber(doc.originalVatAmount);
+          if (origVat === undefined || origVat < 0 || origVat > orig) {
             return false;
           }
         } else {
-          if (doc.grossAmount === undefined || doc.grossAmount === null || Number(doc.grossAmount) <= 0) {
+          const gross = parseLocaleNumber(doc.grossAmount);
+          if (gross === undefined || gross <= 0) {
             return false;
           }
-          if (doc.vatAmount === undefined || doc.vatAmount === null || Number(doc.vatAmount) < 0 || Number(doc.vatAmount) > Number(doc.grossAmount)) {
+          const vat = parseLocaleNumber(doc.vatAmount);
+          if (vat === undefined || vat < 0 || vat > gross) {
             return false;
           }
         }
         if (!doc.attachment) return false;
       }
     } else if (this.request.requestType === 'ADVANCE_PAYMENT') {
-      if (!this.request.requestedAmountPLN || Number(this.request.requestedAmountPLN) <= 0) {
+      const advAmt = parseLocaleNumber(this.request.requestedAmountPLN);
+      if (advAmt === undefined || advAmt <= 0) {
         return false;
       }
       if (!this.request.explanationAndBudget?.trim()) {
         return false;
       }
     } else if (this.request.requestType === 'DELEGATION_SETTLEMENT') {
-      const amt = this.request.delegationTotalAmount ?? this.request.totalGrossAmount;
-      if (!amt || Number(amt) <= 0) {
+      const amt = parseLocaleNumber(this.request.delegationTotalAmount ?? this.request.totalGrossAmount);
+      if (amt === undefined || amt <= 0) {
         return false;
       }
       if (!this.request.delegationFormAttachment) {

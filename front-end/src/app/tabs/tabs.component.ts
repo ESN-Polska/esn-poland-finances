@@ -123,6 +123,27 @@ export class TabsComponent implements OnInit, OnDestroy {
     this.app.openAccountsProfile(identifier || this.app.currentUser || undefined);
   }
 
+  public canAccessFinances(): boolean {
+    const user = this.app.currentUser;
+    if (!user) return false;
+    return (
+      user.isAdministrator ||
+      user.isAuditor ||
+      user.hasPermission(AppPermission.FINANCES.PARENT) ||
+      user.hasPermission(AppPermission.FINANCES.SUMMARY) ||
+      user.hasPermission(AppPermission.FINANCES.BUDGET) ||
+      user.hasPermission(AppPermission.FINANCES.DOCUMENTS) ||
+      user.hasPermission(AppPermission.FINANCES.FISCAL) ||
+      user.hasPermission(AppPermission.FINANCES.TRANSACTIONS) ||
+      user.hasPermission(AppPermission.FINANCES.SECTIONS) ||
+      user.hasPermission(AppPermission.FINANCES.MEETINGS) ||
+      user.hasPermission(AppPermission.FINANCES.ADVANCES) ||
+      user.hasPermission(AppPermission.FINANCES.DELEGATIONS) ||
+      user.hasPermission(AppPermission.FINANCES.INTERNAL) ||
+      user.hasPermission(AppPermission.FINANCES.DEPOSITS)
+    );
+  }
+
   public canAccessConfigurations(): boolean {
     const user = this.app.currentUser;
     if (!user) return false;
@@ -136,7 +157,8 @@ export class TabsComponent implements OnInit, OnDestroy {
       user.hasPermission(AppPermission.CONFIGURATIONS.GUESTS) ||
       user.hasPermission(AppPermission.CONFIGURATIONS.RESOURCES) ||
       user.hasPermission(AppPermission.CONFIGURATIONS.TEMPLATES) ||
-      user.hasPermission(AppPermission.CONFIGURATIONS.EXPORTS)
+      user.hasPermission(AppPermission.CONFIGURATIONS.EXPORTS) ||
+      user.hasPermission(AppPermission.CONFIGURATIONS.FINANCES)
     );
   }
 

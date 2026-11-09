@@ -1,0 +1,157 @@
+.fiscalSubtabContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 4px 0 32px 0;
+}
+
+.loadingWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  gap: 12px;
+  color: var(--ion-color-step-600, #64748b);
+}
+
+.fiscalContent {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.monthsScrollWrapper {
+  overflow-x: auto;
+  padding-bottom: 4px;
+
+  .monthsRow {
+    display: flex;
+    gap: 8px;
+
+    .monthTabBtn {
+      background: var(--ion-card-background, #ffffff);
+      border: 1px solid var(--ion-color-step-200, #e2e8f0);
+      border-radius: 10px;
+      padding: 10px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      align-items: flex-start;
+      cursor: pointer;
+      min-width: 100px;
+      transition: all 0.15s ease;
+
+      .mName {
+        font-weight: 700;
+        font-size: 0.85rem;
+        color: var(--ion-color-step-800, #1e293b);
+      }
+
+      .mTotal {
+        font-size: 0.76rem;
+        color: var(--ion-color-step-500, #64748b);
+      }
+
+      &.active {
+        background: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.08);
+        border-color: var(--ion-color-primary, #00aeef);
+
+        .mName {
+          color: var(--ion-color-primary, #00aeef);
+        }
+      }
+    }
+  }
+}
+
+.monthDetailsCard {
+  background: var(--ion-card-background, #ffffff);
+  border: 1px solid var(--ion-color-step-150, #e2e8f0);
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  .monthCardHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+
+    .headerLeft {
+      h3 {
+        margin: 0 0 4px 0;
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: var(--ion-color-step-900, #0f172a);
+      }
+      p {
+        margin: 0;
+        font-size: 0.85rem;
+        color: var(--ion-color-step-500, #64748b);
+      }
+    }
+  }
+}
+
+.totalsRow {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+
+  .totalCol {
+    background: var(--ion-color-step-50, #f8fafc);
+    border: 1px solid var(--ion-color-step-150, #edf2f7);
+    border-radius: 10px;
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    .lbl {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--ion-color-step-500, #64748b);
+      text-transform: uppercase;
+    }
+
+    .val {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: var(--ion-color-step-900, #0f172a);
+    }
+  }
+}
+
+.dailyTableWrapper {
+  overflow-x: auto;
+
+  .dailyTable {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+
+    th {
+      padding: 8px 10px;
+      background: var(--ion-color-step-50, #f8fafc);
+      border-bottom: 2px solid var(--ion-color-step-200, #e2e8f0);
+      font-weight: 700;
+      color: var(--ion-color-step-600, #475569);
+      text-align: left;
+    }
+
+    td {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--ion-color-step-150, #edf2f7);
+    }
+  }
+}
+
+.emptyState {
+  padding: 30px;
+  text-align: center;
+  color: var(--ion-color-step-500, #64748b);
+  font-size: 0.9rem;
+}

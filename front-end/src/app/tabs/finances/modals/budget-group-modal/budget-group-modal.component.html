@@ -1,0 +1,54 @@
+<ion-header>
+  <ion-toolbar color="ideaToolbar">
+    <ion-title>{{ (isNew ? 'FINANCES.MODALS.BUDGET_GROUP.TITLE_NEW' : 'FINANCES.MODALS.BUDGET_GROUP.TITLE_EDIT') | translate:{ name: (namePl || nameEn) } }}</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="close()">
+        <ion-icon slot="icon-only" name="close-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding groupModalContent">
+  <div class="groupModalWrapper">
+    <p class="categoryContext" *ngIf="categoryName">
+      <ion-icon name="folder-outline"></ion-icon>
+      <span>{{ categoryName }}</span>
+    </p>
+
+    <!-- Group Name PL -->
+    <div class="fieldCol">
+      <label>{{ 'FINANCES.MODALS.BUDGET_GROUP.NAME_PL' | translate }} *</label>
+      <ion-item lines="none" class="inputItem">
+        <ion-input
+          type="text"
+          [(ngModel)]="namePl"
+          [placeholder]="'FINANCES.MODALS.BUDGET_GROUP.NAME_PL_PH' | translate"
+        ></ion-input>
+      </ion-item>
+    </div>
+
+    <!-- Group Name EN -->
+    <div class="fieldCol">
+      <label>{{ 'FINANCES.MODALS.BUDGET_GROUP.NAME_EN' | translate }}</label>
+      <ion-item lines="none" class="inputItem">
+        <ion-input
+          type="text"
+          [(ngModel)]="nameEn"
+          [placeholder]="'FINANCES.MODALS.BUDGET_GROUP.NAME_EN_PH' | translate"
+        ></ion-input>
+      </ion-item>
+    </div>
+
+    <!-- Actions -->
+    <div class="modalActions">
+      <ion-button fill="outline" color="medium" (click)="close()">
+        {{ 'COMMON.CANCEL' | translate }}
+      </ion-button>
+      <ion-button fill="solid" color="primary" (click)="save()">
+        <ion-icon slot="start" name="checkmark-outline"></ion-icon>
+        {{ 'COMMON.SAVE' | translate }}
+      </ion-button>
+    </div>
+  </div>
+</ion-content>

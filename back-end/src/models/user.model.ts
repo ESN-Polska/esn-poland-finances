@@ -86,7 +86,14 @@ export class User extends Resource {
 
   constructor(data?: any) {
     super();
-    if (data) {
+    if (typeof data === 'string') {
+      try {
+        data = JSON.parse(data);
+      } catch {
+        data = null;
+      }
+    }
+    if (data && typeof data === 'object') {
       this.load(data);
     }
   }
@@ -200,10 +207,23 @@ export class User extends Resource {
       user.permissions = Array.from(new Set([...baseManagerPerms, ...customPerms]));
     } else if (user.isAuditor) {
       // Auditor has read-only access across requests and home statistics, plus any custom permissions
-      const baseAuditorPerms = [
+      const baseAuditorPerms: AppPermission[] = [
         AppPermission.REQUESTS.VIEW_ALL,
         AppPermission.REQUESTS.EXPORT,
-        AppPermission.HOME.STATISTICS
+        AppPermission.HOME.STATISTICS,
+        AppPermission.FINANCES.VIEW,
+        AppPermission.FINANCES.EXPORT,
+        AppPermission.FINANCES.SUMMARY,
+        AppPermission.FINANCES.BUDGET,
+        AppPermission.FINANCES.DOCUMENTS,
+        AppPermission.FINANCES.FISCAL,
+        AppPermission.FINANCES.TRANSACTIONS,
+        AppPermission.FINANCES.SECTIONS,
+        AppPermission.FINANCES.MEETINGS,
+        AppPermission.FINANCES.ADVANCES,
+        AppPermission.FINANCES.DELEGATIONS,
+        AppPermission.FINANCES.INTERNAL,
+        AppPermission.FINANCES.DEPOSITS
       ];
       user.permissions = Array.from(new Set([...baseAuditorPerms, ...customPerms]));
     } else {
@@ -244,6 +264,13 @@ export class User extends Resource {
   }
 
   load(x: any): void {
+    if (typeof x === 'string') {
+      try {
+        x = JSON.parse(x);
+      } catch {
+        x = {};
+      }
+    }
     super.load(x);
     this.userId = this.clean(x.userId, String, '')?.toLowerCase();
     const rawNick = this.clean(x.nickname, String, '')?.toLowerCase();

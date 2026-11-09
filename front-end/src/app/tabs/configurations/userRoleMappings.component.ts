@@ -263,7 +263,7 @@ export class UserRoleMappingsComponent implements OnInit {
     const hours = Math.floor(minutes / 60);
     if (hours <= 24) return this.translate.instant('CONFIGURATIONS.HOURS_AGO', { count: hours });
     const d = new Date(lastLoginAt);
-    return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`;
+    return this.app.formatDate(d);
   }
 
   close(): void {

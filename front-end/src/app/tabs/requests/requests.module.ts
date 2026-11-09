@@ -14,6 +14,7 @@ import { StatusCommentPipe } from './pipes/status-comment.pipe';
 import { MarkPaidModalComponent } from './markPaidModal.component';
 import { PayoutsPage } from './payouts/payouts.page';
 import { BankExportModalComponent } from './payouts/bank-export-modal/bank-export-modal.component';
+import { AppDatePipe } from '../../pipes/app-date.pipe';
 
 @NgModule({
   declarations: [
@@ -28,14 +29,16 @@ import { BankExportModalComponent } from './payouts/bank-export-modal/bank-expor
     BankExportModalComponent
   ],
   exports: [
-    StatusCommentPipe
+    StatusCommentPipe,
+    AppDatePipe
   ],
   imports: [
     CommonModule,
     FormsModule,
     IonicModule,
     TranslateModule,
-    RequestsRoutingModule
+    RequestsRoutingModule,
+    AppDatePipe
   ]
 })
 export class RequestsModule {}

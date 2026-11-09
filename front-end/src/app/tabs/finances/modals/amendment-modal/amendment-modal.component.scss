@@ -1,0 +1,213 @@
+.amendmentModalContent {
+  --background: var(--ion-background-color, #ffffff);
+}
+
+.amendmentWrapper {
+  max-width: 780px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 14px;
+
+  @media (max-width: 600px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.formField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  .fieldLabel {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--ion-color-step-700, #475569);
+  }
+}
+
+.inputItem {
+  --background: var(--ion-color-step-50, #f8fafc);
+  border: 1px solid var(--ion-color-step-200, #e2e8f0);
+  border-radius: 10px;
+  --padding-start: 12px;
+  --padding-end: 12px;
+
+  &.textareaItem {
+    --padding-top: 0;
+    --padding-bottom: 0;
+    --min-height: unset;
+    align-items: flex-start;
+
+    ion-textarea {
+      --padding-top: 8px;
+      --padding-bottom: 8px;
+      --padding-start: 0;
+      --padding-end: 0;
+      margin: 0;
+      font-size: 0.9rem;
+      line-height: 1.4;
+    }
+  }
+}
+
+.itemsSection {
+  background: var(--ion-color-step-50, #f8fafc);
+  border: 1px solid var(--ion-color-step-150, #edf2f7);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+
+  .itemsSectionHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+
+    .titleBlock {
+      h3 {
+        margin: 0 0 4px 0;
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: var(--ion-color-step-900, #1e293b);
+      }
+      p {
+        margin: 0;
+        font-size: 0.82rem;
+        color: var(--ion-color-step-500, #64748b);
+      }
+    }
+  }
+}
+
+.itemsList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.itemCard {
+  background: var(--ion-card-background, #ffffff);
+  border: 1px solid var(--ion-color-step-200, #e2e8f0);
+  border-radius: 10px;
+  padding: 12px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+
+  .itemCardTop {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+
+    .itemBadge {
+      background: var(--ion-color-step-150, #e2e8f0);
+      color: var(--ion-color-step-700, #334155);
+      font-weight: 700;
+      font-size: 0.75rem;
+      padding: 2px 8px;
+      border-radius: 6px;
+    }
+  }
+
+  .itemCardGrid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+
+    @media (max-width: 650px) {
+      grid-template-columns: 1fr;
+    }
+
+    .cardField {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+
+      label {
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: var(--ion-color-step-600, #64748b);
+      }
+
+      &.fullWidth {
+        grid-column: 1 / -1;
+      }
+
+      .readonlyAmount {
+        font-weight: 600;
+        font-size: 0.95rem;
+        padding: 8px 12px;
+        background: var(--ion-color-step-100, #f1f5f9);
+        border-radius: 8px;
+        color: var(--ion-color-step-800, #1e293b);
+      }
+
+      .deltaBadge {
+        font-weight: 700;
+        font-size: 0.95rem;
+        padding: 8px 12px;
+        border-radius: 8px;
+        background: var(--ion-color-step-100, #f1f5f9);
+        color: var(--ion-color-step-700, #475569);
+
+        &.positive {
+          background: rgba(46, 204, 113, 0.15);
+          color: #27ae60;
+        }
+
+        &.negative {
+          background: rgba(231, 76, 60, 0.15);
+          color: #c0392b;
+        }
+      }
+    }
+  }
+}
+
+.deltaSummaryCard {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--ion-color-step-100, #f1f5f9);
+  padding: 12px 16px;
+  border-radius: 10px;
+
+  .summaryLabel {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--ion-color-step-700, #334155);
+  }
+
+  .summaryAmount {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--ion-color-step-900, #0f172a);
+
+    &.positive {
+      color: #27ae60;
+    }
+
+    &.negative {
+      color: #c0392b;
+    }
+  }
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 8px;
+
+  ion-button {
+    --border-radius: 10px;
+    font-weight: 600;
+  }
+}

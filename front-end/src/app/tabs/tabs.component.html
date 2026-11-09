@@ -103,6 +103,16 @@
 
       <div
         class="menuNavItem"
+        *ngIf="canAccessFinances()"
+        [class.active]="isCurrentRoute('/t/finances')"
+        (click)="navigateAndClose(['/t/finances'])"
+      >
+        <ion-icon name="cash-outline"></ion-icon>
+        <span>{{ 'TABS.FINANCES' | translate }}</span>
+      </div>
+
+      <div
+        class="menuNavItem"
         [class.active]="isCurrentRoute('/t/profile')"
         (click)="navigateAndClose(['/t/profile'])"
       >
@@ -247,6 +257,10 @@
         <ion-label>{{ 'TABS.REQUESTS' | translate }}</ion-label>
       </ion-tab-button>
 
+      <ion-tab-button tab="finances" *ngIf="canAccessFinances()">
+        <ion-label>{{ 'TABS.FINANCES' | translate }}</ion-label>
+      </ion-tab-button>
+
       <ion-tab-button tab="profile">
         <ion-label>{{ 'TABS.PROFILE' | translate }}</ion-label>
       </ion-tab-button>
@@ -362,6 +376,11 @@
                 <div class="popoverMenuItem" (click)="app.goTo(['/t/profile'])">
                   <ion-icon name="person-outline"></ion-icon>
                   <span>{{ 'TABS.PROFILE' | translate }}</span>
+                </div>
+
+                <div class="popoverMenuItem" *ngIf="canAccessFinances()" (click)="app.goTo(['/t/finances'])">
+                  <ion-icon name="cash-outline"></ion-icon>
+                  <span>{{ 'TABS.FINANCES' | translate }}</span>
                 </div>
 
                 <div class="popoverMenuItem" *ngIf="canAccessConfigurations()" (click)="app.goTo(['/t/configurations'])">

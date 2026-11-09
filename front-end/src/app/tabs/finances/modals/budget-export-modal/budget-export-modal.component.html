@@ -1,0 +1,120 @@
+<ion-header>
+  <ion-toolbar color="ideaToolbar">
+    <ion-title>{{ 'FINANCES.MODALS.BUDGET_EXPORT.TITLE' | translate }}</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="close()">
+        <ion-icon slot="icon-only" name="close-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding exportModalContent">
+  <div class="exportModalWrapper">
+    <!-- Export Document Type -->
+    <div class="sectionGroup">
+      <label class="groupLabel">{{ 'FINANCES.MODALS.BUDGET_EXPORT.DOC_TYPE' | translate }}</label>
+      <ion-segment [(ngModel)]="exportType" class="modernSegment">
+        <ion-segment-button value="BUDGET">
+          <ion-icon name="list-outline"></ion-icon>
+          <ion-label>{{ 'FINANCES.MODALS.BUDGET_EXPORT.DOC_BUDGET' | translate }}</ion-label>
+        </ion-segment-button>
+        <ion-segment-button value="EXECUTION">
+          <ion-icon name="analytics-outline"></ion-icon>
+          <ion-label>{{ 'FINANCES.MODALS.BUDGET_EXPORT.DOC_EXECUTION' | translate }}</ion-label>
+        </ion-segment-button>
+      </ion-segment>
+    </div>
+
+    <!-- Format -->
+    <div class="sectionGroup">
+      <label class="groupLabel">{{ 'FINANCES.MODALS.BUDGET_EXPORT.FORMAT' | translate }}</label>
+      <div class="formatToggleRow">
+        <button
+          type="button"
+          class="formatChoiceBtn"
+          [class.active]="exportFormat === 'PDF'"
+          (click)="exportFormat = 'PDF'"
+        >
+          <ion-icon name="document-outline"></ion-icon>
+          <div class="formatText">
+            <span class="formatName">{{ 'FINANCES.MODALS.BUDGET_EXPORT.FORMAT_PDF' | translate }}</span>
+            <span class="formatDesc">{{ 'FINANCES.MODALS.BUDGET_EXPORT.FORMAT_PDF_DESC' | translate }}</span>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          class="formatChoiceBtn"
+          [class.active]="exportFormat === 'EXCEL'"
+          (click)="exportFormat = 'EXCEL'"
+        >
+          <ion-icon name="grid-outline"></ion-icon>
+          <div class="formatText">
+            <span class="formatName">{{ 'FINANCES.MODALS.BUDGET_EXPORT.FORMAT_EXCEL' | translate }}</span>
+            <span class="formatDesc">{{ 'FINANCES.MODALS.BUDGET_EXPORT.FORMAT_EXCEL_DESC' | translate }}</span>
+          </div>
+        </button>
+      </div>
+    </div>
+
+    <!-- Language Selection -->
+    <div class="sectionGroup">
+      <label class="groupLabel">{{ 'FINANCES.MODALS.BUDGET_EXPORT.LANGUAGE' | translate }}</label>
+      <ion-segment [(ngModel)]="exportLanguage" class="modernSegment">
+        <ion-segment-button value="pl">
+          <ion-label>{{ 'FINANCES.MODALS.BUDGET_EXPORT.LANG_PL' | translate }}</ion-label>
+        </ion-segment-button>
+        <ion-segment-button value="en">
+          <ion-label>{{ 'FINANCES.MODALS.BUDGET_EXPORT.LANG_EN' | translate }}</ion-label>
+        </ion-segment-button>
+        <ion-segment-button value="both">
+          <ion-label>{{ 'FINANCES.MODALS.BUDGET_EXPORT.LANG_BOTH' | translate }}</ion-label>
+        </ion-segment-button>
+      </ion-segment>
+    </div>
+
+    <!-- Cut-off Date (Stan na dzień) only when exporting EXECUTION -->
+    <div class="sectionGroup" *ngIf="exportType === 'EXECUTION'">
+      <label class="groupLabel">{{ 'FINANCES.MODALS.BUDGET_EXPORT.CUTOFF_DATE' | translate }}</label>
+      <p class="groupHint">
+        {{ 'FINANCES.MODALS.BUDGET_EXPORT.CUTOFF_HINT' | translate }}
+      </p>
+
+      <div class="presetRow">
+        <ion-button size="small" fill="outline" (click)="setPresetDate('TODAY')">
+          {{ 'FINANCES.MODALS.BUDGET_EXPORT.PRESET_TODAY' | translate }}
+        </ion-button>
+        <ion-button size="small" fill="outline" (click)="setPresetDate('Q1')">
+          {{ 'FINANCES.MODALS.BUDGET_EXPORT.PRESET_Q1' | translate }}
+        </ion-button>
+        <ion-button size="small" fill="outline" (click)="setPresetDate('SEMI')">
+          {{ 'FINANCES.MODALS.BUDGET_EXPORT.PRESET_SEMI' | translate }}
+        </ion-button>
+        <ion-button size="small" fill="outline" (click)="setPresetDate('Q3')">
+          {{ 'FINANCES.MODALS.BUDGET_EXPORT.PRESET_Q3' | translate }}
+        </ion-button>
+        <ion-button size="small" fill="outline" (click)="setPresetDate('YEAR_END')">
+          {{ 'FINANCES.MODALS.BUDGET_EXPORT.PRESET_YEAR_END' | translate }}
+        </ion-button>
+      </div>
+
+      <div class="dateInputWrapper">
+        <ion-item lines="none" class="modernInputItem">
+          <ion-icon name="calendar-outline" slot="start"></ion-icon>
+          <ion-input type="date" [(ngModel)]="asOfDate" placeholder="YYYY-MM-DD"></ion-input>
+        </ion-item>
+      </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="exportActions">
+      <ion-button expand="block" fill="solid" color="primary" class="generateBtn" (click)="triggerExport()" [disabled]="isExporting">
+        <ion-spinner *ngIf="isExporting" name="crescent" slot="start"></ion-spinner>
+        <ion-icon *ngIf="!isExporting" slot="start" name="download-outline"></ion-icon>
+        {{ 'FINANCES.MODALS.BUDGET_EXPORT.GENERATE_BTN' | translate:{ year: year } }}
+      </ion-button>
+    </div>
+  </div>
+</ion-content>
+

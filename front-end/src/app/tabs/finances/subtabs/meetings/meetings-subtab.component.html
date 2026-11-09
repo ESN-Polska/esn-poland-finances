@@ -1,0 +1,60 @@
+<div class="meetingsSubtabContainer">
+  <div class="loadingWrapper" *ngIf="loading">
+    <ion-spinner name="crescent" color="primary"></ion-spinner>
+    <p>{{ 'FINANCES.MEETINGS.LOADING' | translate }}</p>
+  </div>
+
+  <div *ngIf="!loading" class="meetingsContent">
+    <div class="tableCard">
+      <div class="tableWrapper" *ngIf="filteredMeetings.length > 0">
+        <table class="modernTable">
+          <thead>
+            <tr>
+              <th>{{ 'FINANCES.MEETINGS.COL_CODE' | translate }}</th>
+              <th>{{ 'FINANCES.MEETINGS.COL_NAME' | translate }}</th>
+              <th>{{ 'FINANCES.MEETINGS.COL_DATE_PLACE' | translate }}</th>
+              <th>{{ 'FINANCES.MEETINGS.COL_TYPE' | translate }}</th>
+              <th>{{ 'FINANCES.MEETINGS.COL_BUDGET_LINE' | translate }}</th>
+              <th style="text-align: right">{{ 'FINANCES.MEETINGS.COL_REVENUE' | translate }}</th>
+              <th style="text-align: right">{{ 'FINANCES.MEETINGS.COL_COST' | translate }}</th>
+              <th style="text-align: right">{{ 'FINANCES.MEETINGS.COL_RESULT' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let m of filteredMeetings">
+              <td style="font-weight: 700; font-family: monospace">{{ m.meetingCode }}</td>
+              <td style="font-weight: 600">{{ m.meetingName }}</td>
+              <td><span *ngIf="m.startDate || m.endDate">{{ m.startDate | appDate }} - {{ m.endDate | appDate }}, </span>{{ m.city }}</td>
+              <td>
+                <span class="mTypeBadge" [class]="m.meetingType.toLowerCase()">
+                  {{ m.meetingType === 'STATUTORY' ? ('FINANCES.MEETINGS.TYPE_STATUTORY' | translate) : ('FINANCES.MEETINGS.TYPE_FUNCTIONAL' | translate) }}
+                </span>
+              </td>
+              <td>
+                <button
+                  *ngIf="m.linkedBudgetLineCode"
+                  type="button"
+                  class="codeBadgeBtn"
+                  (click)="jumpToBudgetLine(m.linkedBudgetLineCode)"
+                  [title]="'FINANCES.BUDGET.LINE_LABEL' | translate"
+                >
+                  {{ m.linkedBudgetLineCode }}
+                </button>
+                <span *ngIf="!m.linkedBudgetLineCode">-</span>
+              </td>
+              <td style="text-align: right; color: #27ae60">{{ m.totalRevenue | number:'1.2-2' }} PLN</td>
+              <td style="text-align: right; color: #c0392b">{{ m.totalCost | number:'1.2-2' }} PLN</td>
+              <td style="text-align: right; font-weight: 800" [class.negative]="m.actualResult < 0" [class.positive]="m.actualResult >= 0">
+                {{ m.actualResult | financeNumber:{ currency: 'PLN', forceSign: true } }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="emptyState" *ngIf="filteredMeetings.length === 0">
+        <p>{{ 'FINANCES.MEETINGS.EMPTY_STATE' | translate:{ year: stateService.activeYear } }}</p>
+      </div>
+    </div>
+  </div>
+</div>

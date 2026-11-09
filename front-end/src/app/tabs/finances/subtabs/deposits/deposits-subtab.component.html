@@ -1,0 +1,63 @@
+<div class="depositsSubtabContainer">
+  <div class="loadingWrapper" *ngIf="loading">
+    <ion-spinner name="crescent" color="primary"></ion-spinner>
+    <p>{{ 'FINANCES.DEPOSITS.LOADING' | translate }}</p>
+  </div>
+
+  <div *ngIf="!loading" class="depositsContent">
+    <!-- Totals Ribbon -->
+    <div class="depositsRibbon">
+      <div class="ribbonCol">
+        <span class="lbl">{{ 'FINANCES.DEPOSITS.TOTAL_PRINCIPAL' | translate }}</span>
+        <span class="val">{{ totalPrincipal | number:'1.2-2' }} PLN</span>
+      </div>
+      <div class="ribbonCol">
+        <span class="lbl">{{ 'FINANCES.DEPOSITS.ACCRUED_INTEREST' | translate }}</span>
+        <span class="val interestVal">{{ totalInterest | financeNumber:{ currency: 'PLN', forceSign: true } }}</span>
+      </div>
+      <div class="ribbonAction" *ngIf="canEdit && !isArchived">
+        <ion-button fill="outline" color="primary" (click)="addDeposit()">
+          <ion-icon slot="start" name="add-circle-outline"></ion-icon>
+          {{ 'FINANCES.DEPOSITS.ADD_DEPOSIT' | translate }}
+        </ion-button>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="tableCard">
+      <div class="tableWrapper" *ngIf="deposits.length > 0">
+        <table class="modernTable">
+          <thead>
+            <tr>
+              <th>{{ 'FINANCES.DEPOSITS.COL_NAME' | translate }}</th>
+              <th>{{ 'FINANCES.DEPOSITS.COL_PERIOD' | translate }}</th>
+              <th style="text-align: right">{{ 'FINANCES.DEPOSITS.COL_RATE' | translate }}</th>
+              <th style="text-align: right">{{ 'FINANCES.DEPOSITS.COL_PRINCIPAL' | translate }}</th>
+              <th style="text-align: right">{{ 'FINANCES.DEPOSITS.COL_INTEREST' | translate }}</th>
+              <th>{{ 'FINANCES.DEPOSITS.COL_STATUS' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let d of deposits">
+              <td style="font-weight: 700">{{ d.name }}</td>
+              <td>{{ d.startDate | appDate }} - {{ d.maturityDate | appDate }}</td>
+              <td style="text-align: right; font-weight: 600">{{ d.interestRate }}%</td>
+              <td style="text-align: right; font-weight: 800">{{ d.principalAmount | number:'1.2-2' }} PLN</td>
+              <td style="text-align: right; color: #27ae60; font-weight: 700">{{ d.accruedInterest | financeNumber:{ currency: 'PLN', forceSign: true } }}</td>
+              <td>
+                <span class="depBadge" [class]="d.status.toLowerCase()">
+                  {{ (d.status === 'ACTIVE' ? 'FINANCES.DEPOSITS.STATUS_ACTIVE' : 'FINANCES.DEPOSITS.STATUS_COMPLETED') | translate }}
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="emptyState" *ngIf="deposits.length === 0">
+        <p>{{ 'FINANCES.DEPOSITS.EMPTY_STATE' | translate:{ year: stateService.activeYear } }}</p>
+      </div>
+    </div>
+  </div>
+</div>
+

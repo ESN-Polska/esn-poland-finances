@@ -1,0 +1,124 @@
+.depositsSubtabContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 4px 0 32px 0;
+}
+
+.loadingWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  gap: 12px;
+  color: var(--ion-color-step-600, #64748b);
+}
+
+.depositsRibbon {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: var(--ion-card-background, #ffffff);
+  border: 1px solid var(--ion-color-step-150, #e2e8f0);
+  border-radius: 12px;
+  padding: 16px 20px;
+  flex-wrap: wrap;
+
+  .ribbonCol {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-right: 20px;
+
+    .lbl {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.6px;
+      color: var(--ion-color-step-500, #64748b);
+    }
+
+    .val {
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: var(--ion-color-step-900, #0f172a);
+
+      &.interestVal {
+        color: #27ae60;
+      }
+    }
+  }
+
+  .ribbonAction {
+    margin-left: auto;
+  }
+}
+
+.tableCard {
+  background: var(--ion-card-background, #ffffff);
+  border: 1px solid var(--ion-color-step-150, #e2e8f0);
+  border-radius: 14px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+}
+
+.tableWrapper {
+  overflow-x: auto;
+}
+
+.modernTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+
+  thead tr {
+    background: var(--ion-color-step-50, #f8fafc);
+    border-bottom: 2px solid var(--ion-color-step-200, #e2e8f0);
+
+    th {
+      padding: 10px 12px;
+      text-align: left;
+      font-size: 0.74rem;
+      font-weight: 700;
+      color: var(--ion-color-step-500, #64748b);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+  }
+
+  tbody tr {
+    border-bottom: 1px solid var(--ion-color-step-150, #edf2f7);
+    transition: background 0.15s ease;
+
+    &:hover {
+      background: var(--ion-color-step-50, #f8fafc);
+    }
+
+    td {
+      padding: 12px;
+      vertical-align: middle;
+    }
+  }
+}
+
+.depBadge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 12px;
+
+  &.active {
+    background: rgba(46, 204, 113, 0.18);
+    color: #27ae60;
+  }
+  &.completed {
+    background: var(--ion-color-step-150, #e2e8f0);
+    color: var(--ion-color-step-600, #64748b);
+  }
+}
+
+.emptyState {
+  padding: 40px;
+  text-align: center;
+  color: var(--ion-color-step-500, #64748b);
+}

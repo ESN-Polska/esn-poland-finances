@@ -249,8 +249,44 @@ export class FinancialRequest extends Resource {
     return this.status === 'DRAFT' || this.status === 'CHANGES_REQUESTED';
   }
 
-  isEditableBy(user: { userId: string }): boolean {
-    return this.canEdit() && this.userId === user.userId?.toLowerCase();
+  isOwnedBy(user?: { userId?: string; nickname?: string; preferredUsername?: string; email?: string } | null): boolean {
+    if (!user) return false;
+    const clean = (val?: string) => (val || '').trim().toLowerCase();
+    const reqUserId = clean(this.userId);
+    const reqNickname = clean(this.userNickname);
+    const reqPref = clean(this.userPreferredUsername);
+    const reqEmail = clean(this.userEmail);
+
+    const userCandidateIds = [
+      clean(user.userId),
+      clean(user.nickname),
+      clean(user.preferredUsername)
+    ].filter(Boolean);
+
+    if (userCandidateIds.length === 0 && !user.email) return false;
+
+    // Direct match against request's userId
+    if (reqUserId && userCandidateIds.includes(reqUserId)) {
+      return true;
+    }
+    // Match against request's userNickname or userPreferredUsername
+    if (reqNickname && userCandidateIds.includes(reqNickname)) {
+      return true;
+    }
+    if (reqPref && userCandidateIds.includes(reqPref)) {
+      return true;
+    }
+    // Match against request's userEmail if present
+    const userEmail = clean(user.email);
+    if (reqEmail && userEmail && reqEmail === userEmail) {
+      return true;
+    }
+    return false;
+  }
+
+  isEditableBy(user?: { userId?: string; nickname?: string; preferredUsername?: string; email?: string; isAdministrator?: boolean } | null): boolean {
+    if (!user) return false;
+    return this.canEdit() && (this.isOwnedBy(user) || !!user.isAdministrator);
   }
 
   getOrigin(displayOption: UsersOriginDisplayOptions = UsersOriginDisplayOptions.BOTH): string | null {

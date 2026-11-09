@@ -324,12 +324,12 @@
 
             <!-- Created On -->
             <td class="dateCell">
-              {{ (req.submittedAt || req.createdAt) | date:'dd.MM.yyyy' }}
+              {{ (req.submittedAt || req.createdAt) | appDate }}
             </td>
 
             <!-- Last Updated -->
             <td class="dateCell">
-              {{ (req.updatedAt || req.submittedAt || req.createdAt) | date:'dd.MM.yyyy' }}
+              {{ (req.updatedAt || req.submittedAt || req.createdAt) | appDate }}
             </td>
 
             <!-- Applicant -->
@@ -442,7 +442,7 @@
 
           <div class="cardMetaRow">
             <span class="typePill">{{ ('REQUESTS.TYPES_SHORT.' + req.requestType) | translate }}</span>
-            <span class="datePill">{{ (req.submittedAt || req.createdAt) | date:'dd.MM.yyyy' }}</span>
+            <span class="datePill">{{ (req.submittedAt || req.createdAt) | appDate }}</span>
           </div>
 
           <div class="cardBottom">

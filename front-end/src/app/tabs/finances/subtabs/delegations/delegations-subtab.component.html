@@ -1,0 +1,60 @@
+<div class="delegationsSubtabContainer">
+  <div class="loadingWrapper" *ngIf="loading">
+    <ion-spinner name="crescent" color="primary"></ion-spinner>
+    <p>{{ 'FINANCES.DELEGATIONS.LOADING' | translate }}</p>
+  </div>
+
+  <div *ngIf="!loading" class="delegationsContent">
+    <div class="tableCard">
+      <div class="tableWrapper" *ngIf="filteredDelegations.length > 0">
+        <table class="modernTable">
+          <thead>
+            <tr>
+              <th>{{ 'FINANCES.DELEGATIONS.COL_DATE' | translate }}</th>
+              <th>{{ 'FINANCES.DELEGATIONS.COL_ATTENDEE' | translate }}</th>
+              <th>{{ 'FINANCES.DELEGATIONS.COL_DESTINATION' | translate }}</th>
+              <th style="text-align: right">{{ 'FINANCES.DELEGATIONS.COL_TOTAL' | translate }}</th>
+              <th style="text-align: right">{{ 'FINANCES.DELEGATIONS.COL_TRAVEL' | translate }}</th>
+              <th style="text-align: right">{{ 'FINANCES.DELEGATIONS.COL_DIEMS' | translate }}</th>
+              <th>{{ 'FINANCES.DELEGATIONS.COL_SPLIT_STATUS' | translate }}</th>
+              <th *ngIf="canEdit && !isArchived">{{ 'FINANCES.DELEGATIONS.COL_ACTIONS' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let del of filteredDelegations">
+              <td style="font-weight: 700">{{ del.startDate | appDate }}</td>
+              <td style="font-weight: 600">{{ del.attendeeName }}</td>
+              <td>
+                <span class="dest">{{ del.destination }}</span>
+                <span class="purp" *ngIf="del.purpose">({{ del.purpose }})</span>
+              </td>
+              <td style="text-align: right; font-weight: 700">{{ del.totalAmount | number:'1.2-2' }} PLN</td>
+              <td style="text-align: right">
+                {{ del.travelCost | number:'1.2-2' }} PLN
+                <span class="codeSmall" *ngIf="del.travelBudgetCode">[{{ del.travelBudgetCode }}]</span>
+              </td>
+              <td style="text-align: right">
+                {{ del.diemAmount | number:'1.2-2' }} PLN
+                <span class="codeSmall" *ngIf="del.diemBudgetCode">[{{ del.diemBudgetCode }}]</span>
+              </td>
+              <td>
+                <span class="splitBadge" [class.assigned]="del.isSplitAssigned" [class.unassigned]="!del.isSplitAssigned">
+                  {{ del.isSplitAssigned ? ('FINANCES.DELEGATIONS.SPLIT_ASSIGNED' | translate) : ('FINANCES.DELEGATIONS.SPLIT_UNASSIGNED' | translate) }}
+                </span>
+              </td>
+              <td *ngIf="canEdit && !isArchived">
+                <ion-button fill="clear" size="small" color="primary" (click)="editSplit(del)">
+                  <ion-icon slot="icon-only" name="create-outline"></ion-icon>
+                </ion-button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="emptyState" *ngIf="filteredDelegations.length === 0">
+        <p>{{ 'FINANCES.DELEGATIONS.EMPTY_STATE' | translate:{ year: stateService.activeYear } }}</p>
+      </div>
+    </div>
+  </div>
+</div>

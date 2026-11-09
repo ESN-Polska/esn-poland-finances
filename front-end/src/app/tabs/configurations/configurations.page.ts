@@ -15,6 +15,7 @@ import { AppLockMessageModalComponent } from './appLockMessageModal.component';
 import { EmailTemplateComponent } from './emailTemplate/emailTemplate.component';
 import { OAuthRolesModalComponent } from './oauthRolesModal.component';
 import { ThreadSubjectModalComponent } from './threadSubjectModal.component';
+import { FinancesStateService } from '@app/services/finances-state.service';
 
 import {
   AppPermission,
@@ -33,7 +34,13 @@ import {
   CsvExportColumnConfig,
   DEFAULT_CSV_EXPORT_SETTINGS,
   BankExportSettings,
-  DEFAULT_BANK_EXPORT_SETTINGS
+  DEFAULT_BANK_EXPORT_SETTINGS,
+  DEFAULT_FINANCES_PAGE_SECTIONS_ORDER,
+  FinancesPageSection,
+  CsvImportScheme,
+  NumberFormatMode,
+  DateFormatOption,
+  DEFAULT_FINANCES_CONFIGURATIONS
 } from '@models/configurations.model';
 import { User } from '@models/user.model';
 import {
@@ -119,7 +126,8 @@ export class ConfigurationsPage implements OnInit {
     private mediaService: MediaService,
     private usersService: UsersService,
     private route: ActivatedRoute,
-    public app: AppService
+    public app: AppService,
+    private financesStateService: FinancesStateService
   ) {}
 
   ionViewWillEnter(): void {
@@ -311,8 +319,125 @@ export class ConfigurationsPage implements OnInit {
         user.hasPermission(AppPermission.CONFIGURATIONS.OPTIONS)
       );
     }
+    if (section === 'FINANCES') {
+      return (
+        user.hasPermission(AppPermission.CONFIGURATIONS.FINANCES) ||
+        user.hasPermission(AppPermission.CONFIGURATIONS.OPTIONS)
+      );
+    }
     return false;
   }
+
+  canModifyFinances(): boolean {
+    const user = this.app.currentUser;
+    if (!user) return false;
+    if (user.isAdministrator) return true;
+    if (user.isAuditorOnly) return false;
+    return (
+      user.hasPermission(AppPermission.CONFIGURATIONS.FINANCES) ||
+      user.hasPermission(AppPermission.CONFIGURATIONS.OPTIONS)
+    );
+  }
+
+  async changeFinancesFirstYear(): Promise<void> {
+    if (!this.canModifyFinances() || !this.configurations?.financesConfig) return;
+    const currentVal = this.configurations.financesConfig.firstYear || new Date().getFullYear();
+    const alert = await this.alertCtrl.create({
+      header: this.translate.instant('CONFIGURATIONS.FINANCES_FIRST_YEAR'),
+      subHeader: this.translate.instant('CONFIGURATIONS.FINANCES_FIRST_YEAR_I'),
+      inputs: [
+        {
+          name: 'firstYear',
+          type: 'number',
+          min: 2000,
+          max: 2100,
+          value: currentVal,
+          placeholder: this.translate.instant('CONFIGURATIONS.FINANCES_FIRST_YEAR_PLACEHOLDER')
+        }
+      ],
+      buttons: [
+        { text: this.translate.instant('COMMON.CANCEL'), role: 'cancel' },
+        {
+          text: this.translate.instant('COMMON.SAVE'),
+          handler: async data => {
+            const val = Number(data.firstYear);
+            if (!val || isNaN(val) || val < 1900 || val > 2100) {
+              const toast = await this.toastCtrl.create({
+                message: this.translate.instant('COMMON.FORM_HAS_ERROR_TO_CHECK'),
+                duration: 2500,
+                color: 'warning'
+              });
+              await toast.present();
+              return false;
+            }
+            const updated = new Configurations(this.configurations);
+            updated.financesConfig.firstYear = Math.floor(val);
+            this.configurations.financesConfig.firstYear = Math.floor(val);
+            await this.updateConfigurations(updated);
+            this.financesStateService.refreshAvailableYears(updated.financesConfig.firstYear);
+            return true;
+          }
+        }
+      ]
+    });
+    await alert.present();
+  }
+
+  async changeBudgetOrganisationName(lang: 'en' | 'pl' = 'en'): Promise<void> {
+    if (!this.canModifyFinances() || !this.configurations?.financesConfig) return;
+    const isPl = lang === 'pl';
+    const headerKey = isPl
+      ? 'CONFIGURATIONS.FINANCES_BUDGET_ORGANISATION_PL'
+      : 'CONFIGURATIONS.FINANCES_BUDGET_ORGANISATION_EN';
+    const placeholderKey = isPl
+      ? 'CONFIGURATIONS.FINANCES_BUDGET_ORGANISATION_PL_PH'
+      : 'CONFIGURATIONS.FINANCES_BUDGET_ORGANISATION_EN_PH';
+    const hintKey = isPl
+      ? 'CONFIGURATIONS.FINANCES_BUDGET_ORGANISATION_PL_HINT'
+      : 'CONFIGURATIONS.FINANCES_BUDGET_ORGANISATION_EN_I';
+
+    const currentVal =
+      (this.configurations.financesConfig.budgetOrganisationName as any)?.[lang] ||
+      (isPl ? 'ESN Polska' : 'ESN Poland');
+
+    const alert = await this.alertCtrl.create({
+      header: this.translate.instant(headerKey),
+      subHeader: this.translate.instant(hintKey),
+      inputs: [
+        {
+          name: 'budgetOrgName',
+          type: 'text',
+          value: currentVal,
+          placeholder: this.translate.instant(placeholderKey)
+        }
+      ],
+      buttons: [
+        { text: this.translate.instant('COMMON.CANCEL'), role: 'cancel' },
+        {
+          text: this.translate.instant('COMMON.SAVE'),
+          handler: async data => {
+            const updated = new Configurations(this.configurations);
+            if (!updated.financesConfig) {
+              updated.financesConfig = { ...DEFAULT_FINANCES_CONFIGURATIONS };
+            }
+            if (!updated.financesConfig.budgetOrganisationName) {
+              updated.financesConfig.budgetOrganisationName = { en: 'ESN Poland', pl: 'ESN Polska' };
+            }
+            const val = data.budgetOrgName?.trim() || (isPl ? 'ESN Polska' : 'ESN Poland');
+            updated.financesConfig.budgetOrganisationName[lang] = val;
+            if (!this.configurations.financesConfig.budgetOrganisationName) {
+              this.configurations.financesConfig.budgetOrganisationName = { en: 'ESN Poland', pl: 'ESN Polska' };
+            }
+            this.configurations.financesConfig.budgetOrganisationName[lang] = val;
+            await this.updateConfigurations(updated);
+            return true;
+          }
+        }
+      ]
+    });
+    await alert.present();
+  }
+
 
   canModifyExports(): boolean {
     const user = this.app.currentUser;
@@ -718,7 +843,7 @@ export class ConfigurationsPage implements OnInit {
     const hours = Math.floor(minutes / 60);
     if (hours <= 24) return this.translate.instant('CONFIGURATIONS.HOURS_AGO', { count: hours });
     const d = new Date(lastLoginAt);
-    return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`;
+    return this.app.formatDate(d);
   }
 
   isAdministratorId(userId: string): boolean {
@@ -919,6 +1044,7 @@ export class ConfigurationsPage implements OnInit {
         User.applyConfigurationPermissions(this.app.currentUser, this.configurations);
       }
       this.app.updateTitle();
+      this.financesStateService.refreshAvailableYears(this.configurations.financesConfig?.firstYear);
       if (!silent) {
         const toast = await this.toastCtrl.create({
           message: this.translate.instant('COMMON.OPERATION_COMPLETED'),
@@ -1066,6 +1192,22 @@ export class ConfigurationsPage implements OnInit {
     if (success && newLang !== 'ALL') {
       await this.app.setLanguage(newLang);
     }
+  }
+
+  async onNumberFormatModeChange(newMode: NumberFormatMode): Promise<void> {
+    if (this.configurations.numberFormatMode === newMode) return;
+    const updated = new Configurations(this.configurations);
+    updated.numberFormatMode = newMode;
+    await this.updateConfigurations(updated);
+    this.app.notifyNumberFormatChanged();
+  }
+
+  async onDateFormatChange(newFormat: DateFormatOption): Promise<void> {
+    if (this.configurations.dateFormat === newFormat) return;
+    const updated = new Configurations(this.configurations);
+    updated.dateFormat = newFormat;
+    await this.updateConfigurations(updated);
+    this.app.notifyDateFormatChanged();
   }
 
   testDelegationSheetURL(): void {
@@ -1613,6 +1755,32 @@ export class ConfigurationsPage implements OnInit {
     updated.configurationPageSectionsOrder = reordered;
     this.pageSections = reordered;
     await this.updateConfigurations(updated, { silent: true, noLoading: true });
+  }
+
+  trackByFinancesSection(_index: number, section: FinancesPageSection): string {
+    return section;
+  }
+
+  get financesSubtabs(): FinancesPageSection[] {
+    return this.configurations?.financesPageSectionsOrder?.length
+      ? this.configurations.financesPageSectionsOrder
+      : [...DEFAULT_FINANCES_PAGE_SECTIONS_ORDER];
+  }
+
+  async reorderFinancesSubtabs(event: any): Promise<void> {
+    const currentList = [...this.financesSubtabs];
+    const reordered = event.detail.complete(currentList);
+    const updated = new Configurations(this.configurations);
+    updated.financesPageSectionsOrder = reordered;
+    this.configurations.financesPageSectionsOrder = reordered;
+    await this.updateConfigurations(updated, { silent: true, noLoading: true });
+  }
+
+  async resetFinancesSubtabsOrder(): Promise<void> {
+    const updated = new Configurations(this.configurations);
+    updated.financesPageSectionsOrder = [...DEFAULT_FINANCES_PAGE_SECTIONS_ORDER];
+    this.configurations.financesPageSectionsOrder = [...DEFAULT_FINANCES_PAGE_SECTIONS_ORDER];
+    await this.updateConfigurations(updated);
   }
 
   //

@@ -1,0 +1,53 @@
+<div class="sectionsSubtabContainer">
+  <div class="loadingWrapper" *ngIf="loading">
+    <ion-spinner name="crescent" color="primary"></ion-spinner>
+    <p>{{ 'FINANCES.SECTIONS.LOADING' | translate }}</p>
+  </div>
+
+  <div *ngIf="!loading" class="sectionsContent">
+    <!-- Notice Banner -->
+    <div class="trustNoticeBanner">
+      <ion-icon name="shield-checkmark-outline"></ion-icon>
+      <div class="noticeTexts">
+        <strong>{{ 'FINANCES.SECTIONS.NOTICE_TITLE' | translate }}</strong>
+        <span>{{ 'FINANCES.SECTIONS.NOTICE_DESC' | translate }}</span>
+      </div>
+      <div class="totalHeldBadge">
+        <span>{{ 'FINANCES.SECTIONS.TOTAL_HELD' | translate }}</span>
+        <strong>{{ totalTrustHeld | number:'1.2-2' }} PLN</strong>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="tableCard">
+      <div class="tableWrapper" *ngIf="filteredSections.length > 0">
+        <table class="modernTable">
+          <thead>
+            <tr>
+              <th>{{ 'FINANCES.SECTIONS.COL_CODE' | translate }}</th>
+              <th>{{ 'FINANCES.SECTIONS.COL_NAME' | translate }}</th>
+              <th style="text-align: right">{{ 'FINANCES.SECTIONS.COL_STARTING' | translate }}</th>
+              <th style="text-align: right">{{ 'FINANCES.SECTIONS.COL_INFLOWS' | translate }}</th>
+              <th style="text-align: right">{{ 'FINANCES.SECTIONS.COL_OUTFLOWS' | translate }}</th>
+              <th style="text-align: right">{{ 'FINANCES.SECTIONS.COL_BALANCE' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let s of filteredSections">
+              <td style="font-weight: 700; font-family: monospace">{{ s.sectionCode }}</td>
+              <td style="font-weight: 600">{{ s.sectionName }}</td>
+              <td style="text-align: right">{{ s.startingBalance | number:'1.2-2' }} PLN</td>
+              <td style="text-align: right; color: #27ae60">{{ s.inflows | number:'1.2-2' }} PLN</td>
+              <td style="text-align: right; color: #c0392b">{{ s.outflows | number:'1.2-2' }} PLN</td>
+              <td style="text-align: right; font-weight: 800; font-size: 1rem">{{ s.currentBalance | number:'1.2-2' }} PLN</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="emptyState" *ngIf="filteredSections.length === 0">
+        <p>{{ 'FINANCES.SECTIONS.EMPTY_STATE' | translate:{ year: stateService.activeYear } }}</p>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,953 @@
+<div class="budgetSubtabContainer">
+  <!-- Loading State -->
+  <div class="loadingWrapper" *ngIf="loading">
+    <ion-spinner name="crescent" color="primary"></ion-spinner>
+    <p>{{ 'FINANCES.BUDGET.LOADING' | translate }}</p>
+  </div>
+
+  <!-- Empty State when no budget exists for this year -->
+  <div class="emptyStateCard" *ngIf="!loading && !budget">
+    <h3>{{ 'FINANCES.BUDGET.NO_BUDGET_TITLE' | translate:{ year: stateService.activeYear } }}</h3>
+    <p>{{ 'FINANCES.BUDGET.NO_BUDGET_DESC' | translate }}</p>
+    <div class="emptyStateActions" *ngIf="canEdit">
+      <ion-button
+        fill="solid"
+        color="primary"
+        class="createBudgetBtn cloneBtn"
+        (click)="cloneBudgetFromPreviousYear()"
+      >
+        <ion-icon slot="start" name="copy-outline"></ion-icon>
+        {{ 'FINANCES.BUDGET.CLONE_PREVIOUS_YEAR_BTN' | translate:{ prevYear: stateService.activeYear - 1 } }}
+      </ion-button>
+
+      <ion-button
+        fill="outline"
+        color="medium"
+        class="createBudgetBtn blankBtn"
+        (click)="createNewBudget()"
+      >
+        <ion-icon slot="start" name="add-circle-outline"></ion-icon>
+        {{ 'FINANCES.BUDGET.CREATE_BLANK_BUDGET_BTN' | translate:{ year: stateService.activeYear } }}
+      </ion-button>
+    </div>
+  </div>
+
+  <div *ngIf="!loading && budget" class="budgetContent">
+    <!-- Top Action Bar -->
+    <div class="budgetTopBar">
+      <div class="budgetTitleBlock">
+        <div class="titleRow">
+          <h2>{{ budgetTitle }}</h2>
+          <span
+            class="statusBadge"
+            [class]="budget.status.toLowerCase()"
+            [class.clickable]="canEdit && !isArchived"
+            (click)="canEdit && !isArchived && openEditAdoptionAlert()"
+            [title]="canEdit && !isArchived ? ('FINANCES.BUDGET.EDIT_ADOPTION_TITLE' | translate) : ''"
+          >
+            {{ budget.status === 'ADOPTED' ? ('FINANCES.BUDGET.STATUS_ADOPTED' | translate) : (budget.status === 'AMENDED' ? ('FINANCES.BUDGET.STATUS_AMENDED' | translate) : ('FINANCES.BUDGET.STATUS_DRAFT' | translate)) }}
+          </span>
+        </div>
+        <p
+          class="resolutionNote"
+          *ngIf="budget.resolutionNumber"
+          [class.clickable]="canEdit && !isArchived"
+          (click)="canEdit && !isArchived && openEditAdoptionAlert()"
+          [title]="canEdit && !isArchived ? ('FINANCES.BUDGET.EDIT_ADOPTION_TITLE' | translate) : ''"
+        >
+          <ng-container *ngIf="budget.adoptedDate; else noDateResolution">
+            {{ 'FINANCES.BUDGET.RESOLUTION_FULL' | translate:{ number: budget.resolutionNumber, date: formatDate(budget.adoptedDate) } }}
+          </ng-container>
+          <ng-template #noDateResolution>
+            {{ 'FINANCES.BUDGET.RESOLUTION_WITHOUT_DATE' | translate:{ number: budget.resolutionNumber } }}
+          </ng-template>
+          <ion-icon name="create-outline" class="editNoteIcon" *ngIf="canEdit && !isArchived"></ion-icon>
+        </p>
+      </div>
+
+      <div class="topActions">
+        <ion-button
+          fill="solid"
+          color="success"
+          class="actionBtn adoptBtn"
+          *ngIf="canEdit && !isArchived && budget.status === 'DRAFT'"
+          (click)="openAdoptBudgetAlert()"
+        >
+          <ion-icon slot="start" name="checkmark-circle-outline"></ion-icon>
+          {{ 'FINANCES.BUDGET.ADOPT_BUDGET_BTN' | translate }}
+        </ion-button>
+
+        <ion-button
+          fill="solid"
+          color="primary"
+          class="actionBtn addCategoryBtn"
+          *ngIf="canEdit && !isArchived"
+          (click)="openAddCategoryModal()"
+        >
+          <ion-icon slot="start" name="add-circle-outline"></ion-icon>
+          {{ 'FINANCES.BUDGET.ADD_CATEGORY_BTN' | translate }}
+        </ion-button>
+
+        <ion-button
+          fill="outline"
+          color="secondary"
+          class="actionBtn"
+          *ngIf="canEdit && !isArchived"
+          (click)="openAmendmentModal()"
+        >
+          <ion-icon slot="start" name="git-pull-request-outline"></ion-icon>
+          {{ 'FINANCES.BUDGET.AMENDMENT_BTN' | translate }}
+        </ion-button>
+
+        <ion-button
+          fill="solid"
+          color="primary"
+          class="actionBtn exportBtn"
+          (click)="openExportModal()"
+        >
+          <ion-icon slot="start" name="download-outline"></ion-icon>
+          {{ 'FINANCES.BUDGET.EXPORT_BTN' | translate }}
+        </ion-button>
+      </div>
+    </div>
+
+    <!-- KPI Metric Ribbon -->
+    <div class="kpiRibbonGrid">
+      <!-- 1. Revenue -->
+      <div class="kpiCard revenueCard">
+        <div class="kpiHeader">
+          <span class="kpiLabel">{{ 'FINANCES.BUDGET.KPI_REVENUE' | translate }}</span>
+          <ion-icon name="trending-up-outline"></ion-icon>
+        </div>
+        <div class="kpiValue">{{ totalActualRevenue | number:'1.2-2' }} PLN</div>
+        <div class="kpiMeta">
+          <span>{{ 'FINANCES.BUDGET.PLAN_ABBR' | translate }} {{ totalPlannedRevenue | number:'1.2-2' }} PLN</span>
+          <span class="kpiPct" [class.success]="revenueExecutionPct >= 100">{{ revenueExecutionPct | number:'1.1-1' }}%</span>
+        </div>
+      </div>
+
+      <!-- 2. Expenses -->
+      <div class="kpiCard expensesCard">
+        <div class="kpiHeader">
+          <span class="kpiLabel">{{ 'FINANCES.BUDGET.KPI_EXPENSES' | translate }}</span>
+          <ion-icon name="trending-down-outline"></ion-icon>
+        </div>
+        <div class="kpiValue">{{ totalActualExpenses | number:'1.2-2' }} PLN</div>
+        <div class="kpiMeta">
+          <span>{{ 'FINANCES.BUDGET.PLAN_ABBR' | translate }} {{ totalPlannedExpenses | number:'1.2-2' }} PLN</span>
+          <span
+            class="kpiPct"
+            [class.warning]="expensesExecutionPct > 80 && expensesExecutionPct <= 100"
+            [class.danger]="expensesExecutionPct > 100"
+          >
+            {{ expensesExecutionPct | number:'1.1-1' }}%
+          </span>
+        </div>
+      </div>
+
+      <!-- 3. Net Result -->
+      <div class="kpiCard resultCard">
+        <div class="kpiHeader">
+          <span class="kpiLabel">{{ (isGrossCalculationMode ? 'FINANCES.BUDGET.KPI_GROSS_RESULT' : 'FINANCES.BUDGET.KPI_NET_RESULT') | translate }}</span>
+          <ion-icon name="calculator-outline"></ion-icon>
+        </div>
+        <div
+          class="kpiValue"
+          [class.positive]="actualResult >= 0"
+          [class.negative]="actualResult < 0"
+        >
+          {{ actualResult | financeNumber:{ currency: 'PLN', forceSign: true } }}
+        </div>
+        <div class="kpiMeta">
+          <span>{{ 'FINANCES.BUDGET.PLAN_ABBR' | translate }} {{ plannedResult | financeNumber:{ currency: 'PLN', forceSign: true } }}</span>
+          <span class="kpiPct" *ngIf="resultExecutionPct !== null" [class.success]="actualResult >= plannedResult" [class.danger]="actualResult < 0">
+            {{ resultExecutionPct | number:'1.1-1' }}%
+          </span>
+        </div>
+      </div>
+
+      <!-- 4. Cash Position -->
+      <div class="kpiCard cashCard">
+        <div class="kpiHeader">
+          <span class="kpiLabel">{{ 'FINANCES.BUDGET.KPI_CASH_TOTAL' | translate }}</span>
+          <ion-icon name="wallet-outline"></ion-icon>
+        </div>
+        <div class="kpiValue">{{ (currentBalances ? currentBalances.totalFunds : (totalOpeningBalance + actualResult)) | number:'1.2-2' }} PLN</div>
+        <div class="kpiMeta">
+          <span>{{ 'FINANCES.BUDGET.KPI_OPENING_BALANCE' | translate:{ amount: (totalOpeningBalance | number:'1.2-2') } }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Opening Balances Card -->
+    <div class="openingBalancesCard">
+      <div class="obHeader">
+        <div class="obTitle">
+          <ion-icon name="calendar-outline"></ion-icon>
+          <h3>{{ 'FINANCES.BUDGET.OPENING_BALANCE_DATE' | translate }}</h3>
+        </div>
+        <div class="obActions" *ngIf="canEdit && !isArchived">
+          <ion-button
+            *ngIf="!isEditingOpeningBalances"
+            fill="clear"
+            size="small"
+            color="primary"
+            (click)="startEditingOpeningBalances()"
+          >
+            <ion-icon slot="start" name="create-outline"></ion-icon>
+            {{ 'FINANCES.BUDGET.EDIT_OPENING_BALANCES' | translate }}
+          </ion-button>
+          <div *ngIf="isEditingOpeningBalances" class="editBtnsGroup">
+            <ion-button fill="outline" size="small" color="medium" (click)="cancelEditingOpeningBalances()">
+              {{ 'COMMON.CANCEL' | translate }}
+            </ion-button>
+            <ion-button fill="solid" size="small" color="success" (click)="saveOpeningBalances()">
+              {{ 'COMMON.SAVE' | translate }}
+            </ion-button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Read-only View -->
+      <div class="obGrid" *ngIf="!isEditingOpeningBalances">
+        <div class="obCol">
+          <span class="obColLabel">{{ 'FINANCES.BUDGET.BANK_PLN' | translate }}</span>
+          <span class="obColValue">{{ budget.openingBalances.bankPln | number:'1.2-2' }} PLN</span>
+        </div>
+        <div class="obCol">
+          <span class="obColLabel">{{ 'FINANCES.BUDGET.BANK_EUR' | translate }}</span>
+          <span class="obColValue">{{ budget.openingBalances.bankEurInPln | number:'1.2-2' }} PLN</span>
+          <span class="obColSub" *ngIf="budget.openingBalances.bankEurStartingBalance">
+            {{ budget.openingBalances.bankEurStartingBalance | number:'1.2-2' }} EUR
+            <span *ngIf="budget.openingBalances.eurExchangeRate">
+              ({{ 'FINANCES.BUDGET.NBP_RATE_PREFIX' | translate }}: <a [href]="'https://api.nbp.pl/api/exchangerates/rates/A/EUR/' + budget.openingBalances.eurExchangeDate + '/'" target="_blank" rel="noopener noreferrer" class="nbpLink">{{ budget.openingBalances.eurExchangeRate }}</a> {{ 'FINANCES.BUDGET.NBP_DATE_PREFIX' | translate:{ date: formatDate(budget.openingBalances.eurExchangeDate) } }})
+            </span>
+          </span>
+        </div>
+        <div class="obCol">
+          <span class="obColLabel">{{ 'FINANCES.BUDGET.DEPOSITS' | translate }}</span>
+          <span class="obColValue">{{ budget.openingBalances.termDepositsPln | number:'1.2-2' }} PLN</span>
+        </div>
+        <div class="obCol totalCol">
+          <span class="obColLabel">{{ 'FINANCES.BUDGET.OPENING_BALANCE' | translate }}</span>
+          <span class="obColValue">{{ budget.openingBalances.totalOpeningBalance | number:'1.2-2' }} PLN</span>
+        </div>
+      </div>
+
+      <!-- Current Balances Section -->
+      <div class="currentBalancesSection" *ngIf="!isEditingOpeningBalances && currentBalances">
+        <div class="currentBalancesHeader">
+          <div class="cbTitle">
+            <ion-icon name="wallet-outline"></ion-icon>
+            <h4 *ngIf="currentBalances.lastBookingDate; else fallbackCbTitle">
+              {{ 'FINANCES.BUDGET.CURRENT_BALANCES_TITLE' | translate:{ date: formatDate(currentBalances.lastBookingDate) } }}
+            </h4>
+            <ng-template #fallbackCbTitle>
+              <h4>{{ 'FINANCES.BUDGET.CURRENT_BALANCES_TITLE_NO_DATE' | translate }}</h4>
+            </ng-template>
+          </div>
+        </div>
+
+        <div class="obGrid currentGrid">
+          <div class="obCol">
+            <span class="obColLabel">{{ 'FINANCES.BUDGET.CURRENT_BANK_PLN' | translate }}</span>
+            <span class="obColValue">{{ currentBalances.bankPln | number:'1.2-2' }} PLN</span>
+          </div>
+          <div class="obCol">
+            <span class="obColLabel">{{ 'FINANCES.BUDGET.CURRENT_BANK_EUR' | translate }}</span>
+            <span class="obColValue">{{ currentBalances.bankEurInPln | number:'1.2-2' }} PLN</span>
+            <span class="obColSub" *ngIf="currentBalances.bankEur">
+              {{ currentBalances.bankEur | number:'1.2-2' }} EUR
+              <span *ngIf="currentBalances.eurExchangeRate">
+                ({{ 'FINANCES.BUDGET.NBP_RATE_PREFIX' | translate }}: <a [href]="'https://api.nbp.pl/api/exchangerates/rates/A/EUR/' + currentBalances.eurExchangeDate + '/'" target="_blank" rel="noopener noreferrer" class="nbpLink">{{ currentBalances.eurExchangeRate }}</a> {{ 'FINANCES.BUDGET.NBP_DATE_PREFIX' | translate:{ date: formatDate(currentBalances.eurExchangeDate) } }})
+              </span>
+            </span>
+          </div>
+          <div class="obCol">
+            <span class="obColLabel">{{ 'FINANCES.BUDGET.CURRENT_DEPOSITS' | translate }}</span>
+            <span class="obColValue">{{ currentBalances.termDepositsPln | number:'1.2-2' }} PLN</span>
+          </div>
+          <div class="obCol totalCol currentTotalCol">
+            <span class="obColLabel">{{ 'FINANCES.BUDGET.CURRENT_TOTAL_FUNDS' | translate }}</span>
+            <span class="obColValue">{{ currentBalances.totalFunds | number:'1.2-2' }} PLN</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Editable View -->
+      <div class="obEditGrid" *ngIf="isEditingOpeningBalances">
+        <div class="obInputCol">
+          <label>{{ 'FINANCES.BUDGET.BANK_PLN' | translate }}</label>
+          <ion-input type="text" inputmode="decimal" [(ngModel)]="editingOpeningBalances.bankPln"></ion-input>
+        </div>
+        <div class="obInputCol">
+          <label>{{ 'FINANCES.BUDGET.BANK_EUR_LABEL' | translate }}</label>
+          <ion-input
+            type="text"
+            inputmode="decimal"
+            [(ngModel)]="editingOpeningBalances.bankEur"
+            (ionInput)="onEurAmountChange()"
+            placeholder="0.00 EUR"
+          ></ion-input>
+          <span class="ratePreview" *ngIf="editingOpeningBalances.eurExchangeRate">
+            = {{ editingOpeningBalances.bankEurInPln | number:'1.2-2' }} PLN ({{ 'FINANCES.BUDGET.NBP_RATE_PREFIX' | translate }}: <a [href]="'https://api.nbp.pl/api/exchangerates/rates/A/EUR/' + editingOpeningBalances.eurExchangeDate + '/'" target="_blank" rel="noopener noreferrer" class="nbpLink">{{ editingOpeningBalances.eurExchangeRate }}</a> {{ 'FINANCES.BUDGET.NBP_DATE_PREFIX' | translate:{ date: formatDate(editingOpeningBalances.eurExchangeDate) } }})
+          </span>
+          <span class="rateLoading" *ngIf="isLoadingNbpRate">
+            <ion-spinner name="dots"></ion-spinner> {{ 'FINANCES.BUDGET.FETCHING_NBP_RATE' | translate }}
+          </span>
+        </div>
+        <div class="obInputCol">
+          <label>{{ 'FINANCES.BUDGET.DEPOSITS' | translate }}</label>
+          <ion-input type="text" inputmode="decimal" [(ngModel)]="editingOpeningBalances.termDepositsPln"></ion-input>
+        </div>
+      </div>
+    </div>
+
+    <!-- Search & Filter Controls -->
+    <div class="toolbarCard">
+      <div class="searchWrapper">
+        <ion-icon name="search-outline" class="searchIcon"></ion-icon>
+        <input
+          type="text"
+          class="searchInput"
+          [(ngModel)]="searchQuery"
+          [placeholder]="'FINANCES.BUDGET.SEARCH_PLACEHOLDER' | translate"
+        />
+        <button *ngIf="searchQuery" class="clearBtn" (click)="clearSearch()">
+          <ion-icon name="close-circle"></ion-icon>
+        </button>
+      </div>
+
+      <div class="filterDropdowns">
+        <!-- Type Filter: ALL, REVENUE, EXPENSE -->
+        <div class="dropdownGroup">
+          <span class="dropdownLabel">{{ 'COMMON.TYPE' | translate }}:</span>
+          <ion-select
+            interface="popover"
+            class="filterSelect typeSelect"
+            [(ngModel)]="selectedTypeFilter"
+          >
+            <ion-select-option value="ALL">{{ 'FINANCES.BUDGET.FILTER_ALL' | translate }}</ion-select-option>
+            <ion-select-option value="REVENUE">{{ 'FINANCES.BUDGET.FILTER_REVENUE' | translate }}</ion-select-option>
+            <ion-select-option value="EXPENSE">{{ 'FINANCES.BUDGET.FILTER_EXPENSE' | translate }}</ion-select-option>
+          </ion-select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tier 1: Categories Drag-and-Drop List -->
+    <div
+      cdkDropList
+      (cdkDropListDropped)="onDropCategory($event)"
+      class="budgetTreeSection categoryDropList"
+    >
+      <ion-accordion-group [multiple]="true" [value]="openAccordionValues">
+        <div
+          *ngFor="let category of filteredCategories; let cIdx = index"
+          cdkDrag
+          [cdkDragDisabled]="!canEdit || isArchived"
+          class="categoryAccordionWrapper"
+        >
+          <ion-accordion [value]="category.id" class="categoryAccordion">
+            <!-- Category Header -->
+            <ion-item slot="header" class="categoryItemHeader">
+              <div class="categoryHeaderContent">
+                <div class="catTitleRow">
+                  <!-- Drag Handle for Category -->
+                  <span
+                    class="catDragHandle"
+                    *ngIf="canEdit && !isArchived"
+                    cdkDragHandle
+                    (click)="$event.stopPropagation()"
+                    [title]="'FINANCES.BUDGET.DRAG_HANDLE_CATEGORY' | translate"
+                  >
+                    <ion-icon name="reorder-two-outline"></ion-icon>
+                  </span>
+                  <span class="categoryNumberBadge">{{ category.number || (cIdx + 1) }}.</span>
+                  <span class="categoryName">{{ (app.currentLanguage === 'en' ? category.name.en : category.name.pl) || category.name.pl || category.name.en }}</span>
+                </div>
+
+                <div class="catRightCol">
+                  <!-- Individual Category Result (Plan, Exec, %) -->
+                  <div class="catTotalsRow">
+                    <span
+                      class="catResultBadge"
+                      [class.resPositive]="(category.actualNetResult || 0) >= 0"
+                      [class.resNegative]="(category.actualNetResult || 0) < 0"
+                      [title]="'FINANCES.BUDGET.CATEGORY_RESULT' | translate"
+                    >
+                      <span class="resLabel">{{ 'FINANCES.BUDGET.CATEGORY_RESULT' | translate }}:</span>
+                      <span class="resMetricGroup">
+                        <span class="resItem">
+                          <span class="resSubLabel">{{ 'FINANCES.BUDGET.PLAN_ABBR' | translate }}</span>
+                          <strong>{{ category.plannedNetResult | financeNumber:{ currency: 'PLN', forceSign: true } }}</strong>
+                        </span>
+                        <span class="dividerDot">•</span>
+                        <span class="resItem">
+                          <span class="resSubLabel">{{ 'FINANCES.BUDGET.EXEC_ABBR' | translate }}</span>
+                          <strong>{{ category.actualNetResult | financeNumber:{ currency: 'PLN', forceSign: true } }}</strong>
+                        </span>
+                        <span class="dividerDot">•</span>
+                        <span class="resPct" *ngIf="getCategoryResultExecutionPct(category) !== null">
+                          {{ getCategoryResultExecutionPct(category) | number:'1.1-1' }}%
+                        </span>
+                        <span class="resPct" *ngIf="getCategoryResultExecutionPct(category) === null">—</span>
+                      </span>
+                    </span>
+                  </div>
+
+                  <!-- Category Action Buttons -->
+                  <div class="catActionsRow" *ngIf="canEdit && !isArchived">
+                    <ion-button
+                      *ngIf="!category.revenues"
+                      fill="outline"
+                      size="small"
+                      color="success"
+                      class="addSecQuickBtn"
+                      (click)="addRevenueSection(category, $event)"
+                      [title]="'FINANCES.BUDGET.ADD_REVENUE_SECTION' | translate"
+                    >
+                      <ion-icon slot="start" name="add-outline"></ion-icon>
+                      {{ 'FINANCES.BUDGET.ADD_REVENUE_SECTION' | translate }}
+                    </ion-button>
+
+                    <ion-button
+                      *ngIf="!category.expenses"
+                      fill="outline"
+                      size="small"
+                      color="danger"
+                      class="addSecQuickBtn"
+                      (click)="addExpenseSection(category, $event)"
+                      [title]="'FINANCES.BUDGET.ADD_EXPENSE_SECTION' | translate"
+                    >
+                      <ion-icon slot="start" name="add-outline"></ion-icon>
+                      {{ 'FINANCES.BUDGET.ADD_EXPENSE_SECTION' | translate }}
+                    </ion-button>
+
+                    <ion-button
+                      fill="clear"
+                      size="small"
+                      color="medium"
+                      class="catIconBtn"
+                      (click)="openEditCategoryModal(category, $event)"
+                      [title]="'FINANCES.BUDGET.EDIT_CATEGORY_TITLE' | translate"
+                    >
+                      <ion-icon slot="icon-only" name="create-outline"></ion-icon>
+                    </ion-button>
+                    <ion-button
+                      fill="clear"
+                      size="small"
+                      color="danger"
+                      class="catIconBtn"
+                      (click)="confirmDeleteCategory(category, $event)"
+                      [title]="'FINANCES.BUDGET.DELETE_CATEGORY_TITLE' | translate"
+                    >
+                      <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
+                    </ion-button>
+                  </div>
+                </div>
+              </div>
+            </ion-item>
+
+            <!-- Category Body Content -->
+            <div slot="content" class="categoryContentBody">
+              <!-- Empty state if category has no sections -->
+              <div
+                class="emptyCategoryNotice"
+                *ngIf="(!category.revenues || category.revenues.enabled === false) && (!category.expenses || category.expenses.enabled === false)"
+              >
+                <p>{{ 'FINANCES.BUDGET.NO_SECTIONS_IN_CAT' | translate }}</p>
+                <div class="emptyCatActions" *ngIf="canEdit && !isArchived">
+                  <ion-button fill="outline" color="success" size="small" (click)="addRevenueSection(category)">
+                    <ion-icon slot="start" name="add-circle-outline"></ion-icon>
+                    {{ 'FINANCES.BUDGET.ADD_REVENUE_SECTION' | translate }}
+                  </ion-button>
+                  <ion-button fill="outline" color="danger" size="small" (click)="addExpenseSection(category)">
+                    <ion-icon slot="start" name="add-circle-outline"></ion-icon>
+                    {{ 'FINANCES.BUDGET.ADD_EXPENSE_SECTION' | translate }}
+                  </ion-button>
+                </div>
+              </div>
+
+              <!-- ========================================== -->
+              <!-- 1. REVENUES SECTION (ALWAYS ON TOP)        -->
+              <!-- ========================================== -->
+              <div
+                class="sectionContainer revenuesSection"
+                *ngIf="category.revenues && category.revenues.enabled !== false && (selectedTypeFilter === 'ALL' || selectedTypeFilter === 'REVENUE')"
+              >
+                <div class="sectionHeaderBar revHeaderBar">
+                  <div class="secTitleGroup">
+                    <span class="secBadge revBadge">{{ 'FINANCES.BUDGET.REVENUES' | translate }}</span>
+                    <span class="secTotals">
+                      {{ 'FINANCES.BUDGET.PLAN_ABBR' | translate }} <strong>{{ category.revenues.totalPlanned | number:'1.2-2' }} PLN</strong>
+                      <span class="dividerDot">•</span>
+                      {{ 'FINANCES.BUDGET.EXEC_ABBR' | translate }} <strong>{{ category.revenues.totalActual | number:'1.2-2' }} PLN</strong>
+                      <span class="dividerDot">•</span>
+                      <span class="secPct">{{ category.revenues.executionPercentage | number:'1.1-1' }}%</span>
+                    </span>
+                  </div>
+
+                  <div class="secActions" *ngIf="canEdit && !isArchived">
+                    <ion-button
+                      fill="clear"
+                      size="small"
+                      color="primary"
+                      class="secActionBtn"
+                      (click)="openAddLineModal(category.revenues, 'REVENUE')"
+                      [title]="'FINANCES.BUDGET.ADD_LINE' | translate"
+                    >
+                      <ion-icon slot="start" name="add-outline"></ion-icon>
+                      {{ 'FINANCES.BUDGET.ADD_LINE' | translate }}
+                    </ion-button>
+
+                    <ion-button
+                      fill="clear"
+                      size="small"
+                      color="primary"
+                      class="secActionBtn"
+                      (click)="openAddGroupModal(category.revenues, category, $event)"
+                      [title]="'FINANCES.BUDGET.ADD_GROUP' | translate"
+                    >
+                      <ion-icon slot="start" name="folder-open-outline"></ion-icon>
+                      {{ 'FINANCES.BUDGET.ADD_GROUP' | translate }}
+                    </ion-button>
+
+                    <ion-button
+                      fill="clear"
+                      size="small"
+                      color="medium"
+                      class="secIconBtn"
+                      (click)="confirmRemoveSection(category, 'REVENUE', $event)"
+                      [title]="'FINANCES.BUDGET.REMOVE_SECTION_TITLE' | translate"
+                    >
+                      <ion-icon slot="icon-only" name="close-circle-outline"></ion-icon>
+                    </ion-button>
+                  </div>
+                </div>
+
+                <!-- Tier 2: Section Drop List for Revenues -->
+                <div
+                  cdkDropList
+                  (cdkDropListDropped)="onDropSectionItem(category.revenues, $event)"
+                  class="sectionDropList"
+                >
+                  <div class="emptySectionMsg" *ngIf="category.revenues.items?.length === 0">
+                    <p>{{ 'FINANCES.BUDGET.NO_ITEMS_IN_SECTION' | translate }}</p>
+                  </div>
+
+                  <div
+                    *ngFor="let item of category.revenues.items"
+                    cdkDrag
+                    [cdkDragDisabled]="!canEdit || isArchived"
+                    class="draggableItemWrapper"
+                  >
+                    <!-- If item is a direct Line -->
+                    <div *ngIf="isLine(item)" class="standaloneLineRowWrapper">
+                      <ng-container *ngTemplateOutlet="lineRow; context: { line: asLine(item), parentContainer: category.revenues, defaultType: 'REVENUE' }"></ng-container>
+                    </div>
+
+                    <!-- If item is a Group -->
+                    <div *ngIf="isGroup(item)" class="groupItemWrapper">
+                      <ng-container *ngTemplateOutlet="groupNode; context: { group: asGroup(item), parentContainer: category.revenues, category: category, secType: 'REVENUE', level: 0 }"></ng-container>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- ========================================== -->
+              <!-- 2. EXPENSES SECTION (ALWAYS BELOW REVENUES)-->
+              <!-- ========================================== -->
+              <div
+                class="sectionContainer expensesSection"
+                *ngIf="category.expenses && category.expenses.enabled !== false && (selectedTypeFilter === 'ALL' || selectedTypeFilter === 'EXPENSE')"
+              >
+                <div class="sectionHeaderBar expHeaderBar">
+                  <div class="secTitleGroup">
+                    <span class="secBadge expBadge">{{ 'FINANCES.BUDGET.EXPENSES' | translate }}</span>
+                    <span class="secTotals">
+                      {{ 'FINANCES.BUDGET.PLAN_ABBR' | translate }} <strong>{{ category.expenses.totalPlanned | number:'1.2-2' }} PLN</strong>
+                      <span class="dividerDot">•</span>
+                      {{ 'FINANCES.BUDGET.EXEC_ABBR' | translate }} <strong>{{ category.expenses.totalActual | number:'1.2-2' }} PLN</strong>
+                      <span class="dividerDot">•</span>
+                      <span class="secPct">{{ category.expenses.executionPercentage | number:'1.1-1' }}%</span>
+                    </span>
+                  </div>
+
+                  <div class="secActions" *ngIf="canEdit && !isArchived">
+                    <ion-button
+                      fill="clear"
+                      size="small"
+                      color="primary"
+                      class="secActionBtn"
+                      (click)="openAddLineModal(category.expenses, 'EXPENSE')"
+                      [title]="'FINANCES.BUDGET.ADD_LINE' | translate"
+                    >
+                      <ion-icon slot="start" name="add-outline"></ion-icon>
+                      {{ 'FINANCES.BUDGET.ADD_LINE' | translate }}
+                    </ion-button>
+
+                    <ion-button
+                      fill="clear"
+                      size="small"
+                      color="primary"
+                      class="secActionBtn"
+                      (click)="openAddGroupModal(category.expenses, category, $event)"
+                      [title]="'FINANCES.BUDGET.ADD_GROUP' | translate"
+                    >
+                      <ion-icon slot="start" name="folder-open-outline"></ion-icon>
+                      {{ 'FINANCES.BUDGET.ADD_GROUP' | translate }}
+                    </ion-button>
+
+                    <ion-button
+                      fill="clear"
+                      size="small"
+                      color="medium"
+                      class="secIconBtn"
+                      (click)="confirmRemoveSection(category, 'EXPENSE', $event)"
+                      [title]="'FINANCES.BUDGET.REMOVE_SECTION_TITLE' | translate"
+                    >
+                      <ion-icon slot="icon-only" name="close-circle-outline"></ion-icon>
+                    </ion-button>
+                  </div>
+                </div>
+
+                <!-- Tier 2: Section Drop List for Expenses -->
+                <div
+                  cdkDropList
+                  (cdkDropListDropped)="onDropSectionItem(category.expenses, $event)"
+                  class="sectionDropList"
+                >
+                  <div class="emptySectionMsg" *ngIf="category.expenses.items?.length === 0">
+                    <p>{{ 'FINANCES.BUDGET.NO_ITEMS_IN_SECTION' | translate }}</p>
+                  </div>
+
+                  <div
+                    *ngFor="let item of category.expenses.items"
+                    cdkDrag
+                    [cdkDragDisabled]="!canEdit || isArchived"
+                    class="draggableItemWrapper"
+                  >
+                    <!-- If item is a direct Line -->
+                    <div *ngIf="isLine(item)" class="standaloneLineRowWrapper">
+                      <ng-container *ngTemplateOutlet="lineRow; context: { line: asLine(item), parentContainer: category.expenses, defaultType: 'EXPENSE' }"></ng-container>
+                    </div>
+
+                    <!-- If item is a Group -->
+                    <div *ngIf="isGroup(item)" class="groupItemWrapper">
+                      <ng-container *ngTemplateOutlet="groupNode; context: { group: asGroup(item), parentContainer: category.expenses, category: category, secType: 'EXPENSE', level: 0 }"></ng-container>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </ion-accordion>
+        </div>
+      </ion-accordion-group>
+
+      <div class="emptyCategoriesMsg" *ngIf="filteredCategories.length === 0">
+        <p>{{ 'FINANCES.BUDGET.NO_CATEGORIES' | translate }}</p>
+        <ion-button
+          *ngIf="canEdit && !isArchived"
+          fill="solid"
+          color="primary"
+          class="addCatEmptyBtn"
+          (click)="openAddCategoryModal()"
+        >
+          <ion-icon slot="start" name="add-circle-outline"></ion-icon>
+          {{ 'FINANCES.BUDGET.ADD_CATEGORY_BTN' | translate }}
+        </ion-button>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- REUSABLE TEMPLATE: RECURSIVE GROUP NODE    -->
+    <!-- ========================================== -->
+    <ng-template
+      #groupNode
+      let-group="group"
+      let-parentContainer="parentContainer"
+      let-category="category"
+      let-secType="secType"
+      let-level="level"
+    >
+      <div class="groupBlock" [class.nestedGroupBlock]="level > 0">
+        <!-- Group Bar -->
+        <div class="groupBar">
+          <div class="groupInfo">
+            <span
+              class="itemDragHandle"
+              *ngIf="canEdit && !isArchived"
+              cdkDragHandle
+              [title]="'FINANCES.BUDGET.DRAG_HANDLE_ITEM' | translate"
+            >
+              <ion-icon name="reorder-two-outline"></ion-icon>
+            </span>
+            <span class="groupName">{{ (app.currentLanguage === 'en' ? group.name.en : group.name.pl) || group.name.pl || group.name.en }}</span>
+          </div>
+
+          <div class="groupTotals">
+            <span class="grpStat">{{ 'FINANCES.BUDGET.PLAN_ABBR' | translate }} <strong>{{ group.subtotalPlanned | number:'1.2-2' }} PLN</strong></span>
+            <span class="grpStat">{{ 'FINANCES.BUDGET.EXEC_ABBR' | translate }} <strong>{{ group.subtotalActual | number:'1.2-2' }} PLN</strong></span>
+
+            <div class="grpActions" *ngIf="canEdit && !isArchived">
+              <ion-button
+                fill="clear"
+                size="small"
+                color="primary"
+                class="addLineBtn"
+                (click)="openAddLineModal(group, secType)"
+                [title]="'FINANCES.BUDGET.ADD_LINE' | translate"
+              >
+                <ion-icon slot="start" name="add-circle-outline"></ion-icon>
+                {{ 'FINANCES.BUDGET.ADD_LINE' | translate }}
+              </ion-button>
+
+              <ion-button
+                fill="clear"
+                size="small"
+                color="primary"
+                class="addSubgroupBtn"
+                (click)="openAddGroupModal(group, category, $event)"
+                [title]="'FINANCES.BUDGET.ADD_SUBGROUP' | translate"
+              >
+                <ion-icon slot="start" name="folder-open-outline"></ion-icon>
+                {{ 'FINANCES.BUDGET.ADD_SUBGROUP' | translate }}
+              </ion-button>
+
+              <ion-button
+                fill="clear"
+                size="small"
+                color="medium"
+                class="grpIconBtn"
+                (click)="openEditGroupModal(group, category, $event)"
+                [title]="'FINANCES.BUDGET.EDIT_GROUP_TITLE' | translate"
+              >
+                <ion-icon slot="icon-only" name="create-outline"></ion-icon>
+              </ion-button>
+
+              <ion-button
+                fill="clear"
+                size="small"
+                color="danger"
+                class="grpIconBtn"
+                (click)="confirmDeleteGroup(parentContainer, group, $event)"
+                [title]="'FINANCES.BUDGET.DELETE_GROUP_TITLE' | translate"
+              >
+                <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
+              </ion-button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tier 3: Child Items Drop List inside Group -->
+        <div
+          cdkDropList
+          (cdkDropListDropped)="onDropGroupItem(group, $event)"
+          class="groupDropList"
+        >
+          <!-- Empty items in group -->
+          <div class="emptyLinesInGroup" *ngIf="!group.items || group.items.length === 0">
+            <p>{{ 'FINANCES.BUDGET.NO_ITEMS_IN_GROUP' | translate }}</p>
+            <div class="emptyGrpBtnRow" *ngIf="canEdit && !isArchived">
+              <ion-button
+                fill="outline"
+                size="small"
+                color="primary"
+                (click)="openAddLineModal(group, secType)"
+              >
+                <ion-icon slot="start" name="add-circle-outline"></ion-icon>
+                {{ 'FINANCES.BUDGET.ADD_LINE' | translate }}
+              </ion-button>
+              <ion-button
+                fill="outline"
+                size="small"
+                color="primary"
+                (click)="openAddGroupModal(group, category, $event)"
+              >
+                <ion-icon slot="start" name="folder-open-outline"></ion-icon>
+                {{ 'FINANCES.BUDGET.ADD_SUBGROUP' | translate }}
+              </ion-button>
+            </div>
+          </div>
+
+          <!-- Drag and drop children inside group -->
+          <div
+            *ngFor="let child of group.items"
+            cdkDrag
+            [cdkDragDisabled]="!canEdit || isArchived"
+            class="draggableChildWrapper"
+          >
+            <!-- Child Line -->
+            <div *ngIf="isLine(child)" class="groupLineRowWrapper">
+              <ng-container *ngTemplateOutlet="lineRow; context: { line: asLine(child), parentContainer: group, defaultType: secType }"></ng-container>
+            </div>
+
+            <!-- Child Nested Subgroup (group in group!) -->
+            <div *ngIf="isGroup(child)" class="nestedGroupItemWrapper">
+              <ng-container *ngTemplateOutlet="groupNode; context: { group: asGroup(child), parentContainer: group, category: category, secType: secType, level: level + 1 }"></ng-container>
+            </div>
+          </div>
+        </div>
+      </div>
+    </ng-template>
+
+    <!-- ========================================== -->
+    <!-- REUSABLE TEMPLATE: BUDGET LINE ROW         -->
+    <!-- ========================================== -->
+    <ng-template
+      #lineRow
+      let-line="line"
+      let-parentContainer="parentContainer"
+      let-defaultType="defaultType"
+    >
+      <div
+        class="budgetLineRow"
+        [id]="'line-' + line.code"
+        [class.highlightedRow]="highlightedLineCode === line.code"
+      >
+        <!-- Drag Handle for Line -->
+        <div class="cellDragHandle" *ngIf="canEdit && !isArchived">
+          <span
+            class="itemDragHandle"
+            cdkDragHandle
+            [title]="'FINANCES.BUDGET.DRAG_HANDLE_ITEM' | translate"
+          >
+            <ion-icon name="reorder-two-outline"></ion-icon>
+          </span>
+        </div>
+
+        <!-- Code -->
+        <div class="cellCode">
+          <span class="lineCodeTag">{{ line.code || '—' }}</span>
+        </div>
+
+        <!-- Name & notes -->
+        <div class="cellName">
+          <div class="lineName">{{ (app.currentLanguage === 'en' ? line.name.en : line.name.pl) || line.name.pl || line.name.en }}</div>
+          <div class="lineDesc" *ngIf="line.notes">
+            {{ line.notes }}
+          </div>
+        </div>
+
+        <!-- Baseline Plan -->
+        <div class="cellNum cellPlanned">
+          <span class="cellMobileLabel">{{ 'FINANCES.BUDGET.COL_PLANNED' | translate }}:</span>
+          <span>{{ line.plannedAmount | number:'1.2-2' }}</span>
+        </div>
+
+        <!-- Amendments -->
+        <div
+          class="cellNum cellAmendments"
+          [class.positive]="line.amendmentsDelta > 0"
+          [class.negative]="line.amendmentsDelta < 0"
+        >
+          <span class="cellMobileLabel">{{ 'FINANCES.BUDGET.COL_AMENDMENTS' | translate }}:</span>
+          <span>{{ line.amendmentsDelta | financeNumber:{ forceSign: true, emptyPlaceholder: '-' } }}</span>
+        </div>
+
+        <!-- Current Plan -->
+        <div class="cellNum cellCurrentPlan">
+          <span class="cellMobileLabel">{{ 'FINANCES.BUDGET.COL_CURRENT_PLAN' | translate }}:</span>
+          <strong>{{ (line.plannedAmount + (line.amendmentsDelta || 0)) | number:'1.2-2' }}</strong>
+        </div>
+
+        <!-- Actual Execution -->
+        <div class="cellNum cellActual">
+          <span class="cellMobileLabel">{{ 'FINANCES.BUDGET.COL_ACTUAL' | translate }}:</span>
+          <strong>{{ line.actualAmount | number:'1.2-2' }}</strong>
+        </div>
+
+        <!-- Execution % -->
+        <div class="cellPct">
+          <div class="pctMeter">
+            <span
+              class="pctText"
+              [class.danger]="line.executionPercentage > 100"
+              [class.warning]="line.executionPercentage > 85 && line.executionPercentage <= 100"
+            >
+              {{ line.executionPercentage | number:'1.1-1' }}%
+            </span>
+            <div class="microBar">
+              <div
+                class="microBarFill"
+                [style.width.%]="line.executionPercentage > 100 ? 100 : line.executionPercentage"
+                [class.overLimit]="line.executionPercentage > 100"
+              ></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="cellActions">
+          <div class="actionButtonsRow">
+            <ion-button
+              fill="clear"
+              size="small"
+              class="jumpBtn"
+              (click)="jumpToDocuments(line.code)"
+              [title]="'FINANCES.BUDGET.JUMP_DOCS_TITLE' | translate"
+            >
+              <ion-icon slot="icon-only" name="document-text-outline"></ion-icon>
+            </ion-button>
+
+            <ion-button
+              fill="clear"
+              size="small"
+              class="jumpBtn"
+              (click)="jumpToTransactions(line.code)"
+              [title]="'FINANCES.BUDGET.JUMP_TX_TITLE' | translate"
+            >
+              <ion-icon slot="icon-only" name="cash-outline"></ion-icon>
+            </ion-button>
+
+            <ion-button
+              *ngIf="canEdit && !isArchived"
+              fill="clear"
+              size="small"
+              color="medium"
+              (click)="openEditLineModal(parentContainer, line)"
+              [title]="'FINANCES.BUDGET.EDIT_LINE_TITLE' | translate"
+            >
+              <ion-icon slot="icon-only" name="create-outline"></ion-icon>
+            </ion-button>
+
+            <ion-button
+              *ngIf="canEdit && !isArchived"
+              fill="clear"
+              size="small"
+              color="danger"
+              (click)="confirmDeleteLine(parentContainer, line)"
+              [title]="'FINANCES.BUDGET.DELETE_LINE_TITLE' | translate"
+            >
+              <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
+            </ion-button>
+          </div>
+        </div>
+      </div>
+    </ng-template>
+
+    <!-- Amendments History Package Card -->
+    <div class="amendmentsHistoryCard" *ngIf="budget.amendments?.length">
+      <div class="amHeader">
+        <ion-icon name="git-commit-outline"></ion-icon>
+        <h3>{{ 'FINANCES.BUDGET.AMENDMENTS_HISTORY' | translate }}</h3>
+      </div>
+      <div class="amList">
+        <div class="amItem" *ngFor="let am of budget.amendments">
+          <div class="amItemTop">
+            <span class="amResolution">{{ am.resolutionNumber }}</span>
+            <span class="amDate">{{ 'FINANCES.BUDGET.EFFECTIVE_DATE' | translate:{ date: formatDate(am.adoptedDate) } }}</span>
+          </div>
+          <p class="amDesc" *ngIf="am.description">{{ am.description }}</p>
+          <div class="amLinesTags">
+            <span class="amLineTag" *ngFor="let it of am.items">
+              {{ it.lineCode }}: {{ it.difference | financeNumber:{ currency: 'PLN', forceSign: true } }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

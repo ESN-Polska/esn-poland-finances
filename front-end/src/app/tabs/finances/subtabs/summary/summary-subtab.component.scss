@@ -1,0 +1,344 @@
+.summarySubtabContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 4px 0 32px 0;
+}
+
+.loadingWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  gap: 12px;
+  color: var(--ion-color-step-600, #64748b);
+}
+
+.summaryContent {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Matrix Card */
+.matrixCard {
+  background: var(--ion-card-background, #ffffff);
+  border: 1px solid var(--ion-color-step-150, #e2e8f0);
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  .matrixHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+
+    .titleBlock {
+      flex: 1;
+      min-width: 260px;
+
+      h3 {
+        margin: 0 0 4px 0;
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: var(--ion-color-step-900, #0f172a);
+      }
+      p {
+        margin: 0;
+        font-size: 0.85rem;
+        color: var(--ion-color-step-500, #64748b);
+      }
+    }
+
+    .lastImportBadge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      background: var(--ion-color-step-50, #f8fafc);
+      border: 1px solid var(--ion-color-step-150, #e2e8f0);
+      border-radius: 20px;
+      font-size: 0.82rem;
+      white-space: nowrap;
+
+      ion-icon {
+        font-size: 1.15rem;
+        color: var(--ion-color-primary, #0056b3);
+      }
+
+      .lastImportLabel {
+        font-weight: 500;
+        color: var(--ion-color-step-600, #64748b);
+      }
+
+      .lastImportValue {
+        font-weight: 700;
+        color: var(--ion-color-step-850, #1e293b);
+      }
+    }
+  }
+}
+
+.tableWrapper {
+  overflow-x: auto;
+  width: 100%;
+}
+
+.reconciliationTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+
+  thead tr {
+    th {
+      padding: 9px 10px;
+      text-align: center;
+      font-size: 0.76rem;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+      border: 1px solid var(--ion-color-step-200, #e2e8f0);
+
+      &.colMonth {
+        text-align: left;
+        background: var(--ion-color-step-100, #f1f5f9);
+        color: var(--ion-color-step-800, #1e293b);
+        width: 160px;
+        white-space: nowrap;
+      }
+
+      &.colGroupHeader {
+        font-size: 0.82rem;
+        text-transform: uppercase;
+
+        &.plnHeader {
+          background: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.1);
+          color: var(--ion-color-primary, #00aeef);
+        }
+
+        &.eurHeader {
+          background: rgba(46, 204, 113, 0.1);
+          color: #27ae60;
+        }
+      }
+
+      &.subCol {
+        background: var(--ion-color-step-50, #f8fafc);
+        color: var(--ion-color-step-600, #64748b);
+        white-space: nowrap;
+      }
+
+      &.colNotes {
+        text-align: left;
+        background: var(--ion-color-step-100, #f1f5f9);
+        color: var(--ion-color-step-700, #475569);
+        width: 260px;
+        min-width: 180px;
+        max-width: 300px;
+      }
+
+      &.colActions {
+        background: var(--ion-color-step-100, #f1f5f9);
+        width: 50px;
+        min-width: 50px;
+      }
+    }
+  }
+
+  tbody tr {
+    border-bottom: 1px solid var(--ion-color-step-150, #edf2f7);
+    transition: background 0.15s ease;
+
+    &:hover {
+      background: var(--ion-color-step-50, #f8fafc);
+    }
+
+    td {
+      padding: 9px 10px;
+      border: 1px solid var(--ion-color-step-150, #edf2f7);
+      vertical-align: middle;
+
+      &.colMonth {
+        font-weight: 600;
+        color: var(--ion-color-step-900, #0f172a);
+        white-space: nowrap;
+      }
+
+      &.colNum {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+        font-weight: 600;
+        color: var(--ion-color-step-800, #1e293b);
+        white-space: nowrap;
+
+        &.netCell {
+          &.negative {
+            color: #c0392b;
+            font-weight: 700;
+          }
+          &.positive {
+            color: #27ae60;
+          }
+        }
+
+        &.expectedCell {
+          color: var(--ion-color-step-900, #0f172a);
+        }
+
+        &.actualCell {
+          &.hasDiff {
+            color: #c0392b;
+            font-weight: 700;
+            background: rgba(192, 57, 43, 0.08);
+          }
+          &.isMatched {
+            color: #27ae60;
+            font-weight: 700;
+          }
+        }
+
+        &.diffCell {
+          &.hasDiff {
+            color: #c0392b;
+            font-weight: 700;
+            background: rgba(231, 76, 60, 0.08);
+          }
+        }
+      }
+
+      &.colStatus {
+        text-align: center;
+      }
+
+      &.colNotes {
+        font-size: 0.82rem;
+        color: var(--ion-color-step-700, #334155);
+        text-align: left;
+        width: 260px;
+        min-width: 180px;
+        max-width: 300px;
+        line-height: 1.45;
+
+        .notesText {
+          display: block;
+          word-break: break-word;
+        }
+      }
+
+      &.colActions {
+        text-align: center;
+        width: 50px;
+        min-width: 50px;
+      }
+    }
+  }
+}
+
+.monthCell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  .monthName {
+    font-weight: 700;
+    font-size: 0.92rem;
+  }
+
+  .statementLinks {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+
+    .statementBadgeWrapper {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .statementDeleteBtn {
+      background: none;
+      border: none;
+      padding: 0 1px;
+      font-size: 0.85rem;
+      color: var(--ion-color-step-400, #94a3b8);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      line-height: 1;
+
+      &:hover {
+        color: var(--ion-color-danger, #ef4444);
+      }
+    }
+
+    .statementBadge {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 4px;
+      text-decoration: none;
+
+      &.plnBadge {
+        background: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.15);
+        color: var(--ion-color-primary, #00aeef);
+      }
+
+      &.eurBadge {
+        background: rgba(46, 204, 113, 0.15);
+        color: #27ae60;
+      }
+
+      &:hover {
+        opacity: 0.8;
+      }
+    }
+
+    .statementAddBtn {
+      background: none;
+      border: 1px dashed var(--ion-color-step-300, #cbd5e1);
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-size: 0.68rem;
+      font-weight: 600;
+      color: var(--ion-color-step-600, #64748b);
+      cursor: pointer;
+
+      &:hover {
+        border-color: var(--ion-color-primary, #00aeef);
+        color: var(--ion-color-primary, #00aeef);
+      }
+    }
+  }
+}
+
+.statusBadge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 12px;
+  display: inline-block;
+  white-space: nowrap;
+
+  &.statusMatched {
+    background: rgba(46, 204, 113, 0.18);
+    color: #27ae60;
+  }
+
+  &.statusDiscrepancy {
+    background: rgba(231, 76, 60, 0.18);
+    color: #c0392b;
+  }
+
+  &.statusMissing {
+    background: var(--ion-color-step-150, #e2e8f0);
+    color: var(--ion-color-step-600, #64748b);
+  }
+}

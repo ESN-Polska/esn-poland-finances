@@ -8,6 +8,7 @@ import { TranslateModule } from '@ngx-translate/core';
 import { HomePage } from './home.page';
 import { HomeTextModalComponent } from './homeTextModal.component';
 import { HomeNoticeModalComponent } from './homeNoticeModal.component';
+import { AppDatePipe } from '../../pipes/app-date.pipe';
 
 const routes: Routes = [
   {
@@ -22,7 +23,8 @@ const routes: Routes = [
     FormsModule,
     IonicModule,
     TranslateModule,
-    RouterModule.forChild(routes)
+    RouterModule.forChild(routes),
+    AppDatePipe
   ],
   declarations: [HomePage, HomeTextModalComponent, HomeNoticeModalComponent]
 })

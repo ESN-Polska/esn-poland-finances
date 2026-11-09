@@ -1,0 +1,107 @@
+<ion-header>
+  <ion-toolbar color="ideaToolbar">
+    <ion-title>{{ 'FINANCES.MODALS.CSV_IMPORT.TITLE' | translate }}</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="close()">
+        <ion-icon slot="icon-only" name="close-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding importModalContent">
+  <div class="importWrapper">
+    <!-- Active Scheme Selector / Indicator -->
+    <div class="schemeSelectorCard">
+      <div class="schemeHeader">
+        <ion-icon name="wallet-outline" class="schemeIcon"></ion-icon>
+        <div class="schemeInfo">
+          <span class="schemeLabel">{{ 'FINANCES.MODALS.CSV_IMPORT.SCHEME_LABEL' | translate }}</span>
+          <span class="schemeConfigHint">{{ 'FINANCES.MODALS.CSV_IMPORT.SCHEME_CONFIG_HINT' | translate }}</span>
+        </div>
+      </div>
+      <div class="schemeSelector">
+        <ion-select
+          interface="popover"
+          [(ngModel)]="selectedScheme"
+          (ionChange)="onSchemeChanged()"
+          class="schemeSelect"
+        >
+          <ion-select-option value="ERSTE_BANK_POLSKA">{{ 'CONFIGURATIONS.FINANCES_CSV_SCHEME_ERSTE' | translate }}</ion-select-option>
+        </ion-select>
+      </div>
+    </div>
+
+    <!-- Dropzone / File Picker -->
+    <div class="filePickerBox">
+      <ion-icon name="cloud-upload-outline" class="uploadIcon"></ion-icon>
+      <h3>{{ 'FINANCES.MODALS.CSV_IMPORT.DROPZONE_TITLE' | translate }}</h3>
+      <p>{{ 'FINANCES.MODALS.CSV_IMPORT.DROPZONE_DESC' | translate }}</p>
+
+      <input
+        type="file"
+        #fileInput
+        accept=".csv,text/csv"
+        (change)="onFileSelected($event)"
+        style="display: none"
+      />
+
+      <ion-button fill="outline" color="primary" (click)="fileInput.click()">
+        <ion-icon slot="start" name="folder-open-outline"></ion-icon>
+        {{ 'FINANCES.MODALS.CSV_IMPORT.CHOOSE_FILE' | translate }}
+      </ion-button>
+
+      <span class="selectedFileName" *ngIf="fileName">{{ fileName }}</span>
+    </div>
+
+    <!-- Preview of parsed records -->
+    <div class="previewSection" *ngIf="parsedTransactions.length > 0">
+      <div class="previewHeader">
+        <h4>{{ 'FINANCES.MODALS.CSV_IMPORT.PREVIEW_TITLE' | translate:{ count: parsedTransactions.length } }}</h4>
+        <span class="dedupNote">{{ 'FINANCES.MODALS.CSV_IMPORT.DEDUP_NOTE' | translate }}</span>
+      </div>
+
+      <div class="previewTableWrapper">
+        <table class="previewTable">
+          <thead>
+            <tr>
+              <th>{{ 'FINANCES.MODALS.CSV_IMPORT.COL_DATE' | translate }}</th>
+              <th>{{ 'FINANCES.MODALS.CSV_IMPORT.COL_PARTY' | translate }}</th>
+              <th>{{ 'FINANCES.MODALS.CSV_IMPORT.COL_TITLE' | translate }}</th>
+              <th style="text-align: right">{{ 'FINANCES.MODALS.CSV_IMPORT.COL_AMOUNT' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let tx of parsedTransactions | slice:0:15">
+              <td>{{ tx.bookingDate | appDate }}</td>
+              <td>{{ tx.partyName || tx.counterparty || '-' }}</td>
+              <td>{{ tx.transferTitle || tx.title || '-' }}</td>
+              <td style="text-align: right; font-weight: 700" [class.negative]="tx.amount! < 0" [class.positive]="tx.amount! > 0">
+                {{ tx.amount | number:'1.2-2' }} {{ tx.currency }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="moreCount" *ngIf="parsedTransactions.length > 15">
+        {{ 'FINANCES.MODALS.CSV_IMPORT.MORE_COUNT' | translate:{ count: parsedTransactions.length - 15 } }}
+      </p>
+    </div>
+
+    <div class="modalActions">
+      <ion-button fill="outline" color="medium" (click)="close()">
+        {{ 'COMMON.CANCEL' | translate }}
+      </ion-button>
+      <ion-button
+        fill="solid"
+        color="primary"
+        [disabled]="parsedTransactions.length === 0"
+        (click)="importData()"
+      >
+        <ion-icon slot="start" name="checkmark-outline"></ion-icon>
+        {{ 'FINANCES.MODALS.CSV_IMPORT.SUBMIT_BTN' | translate:{ count: parsedTransactions.length } }}
+      </ion-button>
+    </div>
+  </div>
+</ion-content>
+

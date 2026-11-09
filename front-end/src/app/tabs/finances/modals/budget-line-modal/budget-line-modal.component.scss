@@ -1,0 +1,84 @@
+.lineModalContent {
+  --background: var(--ion-background-color, #ffffff);
+}
+
+.lineModalWrapper {
+  max-width: 600px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.fieldRow {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr;
+  gap: 12px;
+
+  @media (max-width: 500px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.fieldCol {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+
+  label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--ion-color-step-700, #475569);
+  }
+}
+
+.inputItem {
+  --background: var(--ion-color-step-50, #f8fafc);
+  border: 1px solid var(--ion-color-step-200, #e2e8f0);
+  border-radius: 10px;
+  --padding-start: 12px;
+  --padding-end: 12px;
+
+  &.textareaItem {
+    --padding-top: 0;
+    --padding-bottom: 0;
+    --min-height: unset;
+    align-items: flex-start;
+
+    ion-textarea {
+      --padding-top: 8px;
+      --padding-bottom: 8px;
+      --padding-start: 0;
+      --padding-end: 0;
+      margin: 0;
+      font-size: 0.9rem;
+      line-height: 1.4;
+    }
+  }
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 10px;
+
+  ion-button {
+    --border-radius: 10px;
+    font-weight: 600;
+  }
+}
+
+:host-context(body.dark),
+:host-context(.dark),
+body.dark {
+  .fieldCol label {
+    color: #cbd5e1;
+  }
+
+  .inputItem {
+    --background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.12);
+    color: #f8fafc;
+  }
+}

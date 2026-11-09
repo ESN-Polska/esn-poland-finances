@@ -21,6 +21,7 @@ import {
   BankExportGrouping
 } from '@models/configurations.model';
 import { AppService } from '../app.service';
+import { parseLocaleNumber } from '../utils/number-utils';
 
 export interface BankTransactionItem {
   id: string;
@@ -221,7 +222,7 @@ export class RequestsService {
         const unsyncedDrafts = rawList.filter(
           (r) =>
             r.status === 'DRAFT' &&
-            r.userId?.toLowerCase() === user.userId?.toLowerCase() &&
+            new FinancialRequest(r).isOwnedBy(user) &&
             !apiRequests.some((ar) => ar.requestId === r.requestId)
         );
 
@@ -249,12 +250,7 @@ export class RequestsService {
     }
 
     const myRequests = rawList
-      .filter(
-        (r) =>
-          r.userId?.toLowerCase() === user.userId?.toLowerCase() ||
-          (user.nickname && r.userId?.toLowerCase() === user.nickname.toLowerCase()) ||
-          (user.preferredUsername && r.userId?.toLowerCase() === user.preferredUsername.toLowerCase())
-      )
+      .filter((r) => new FinancialRequest(r).isOwnedBy(user))
       .map((r) => new FinancialRequest(r))
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
@@ -1256,12 +1252,13 @@ export class RequestsService {
       return null;
     }
 
-    const isOwner = (found.userId || '').toLowerCase() === (user?.userId || '').toLowerCase();
+    const reqInstance = new FinancialRequest(found);
+    const isOwner = reqInstance.isOwnedBy(user);
     if (!canViewAll && !isOwner) {
       return null;
     }
 
-    return new FinancialRequest(found);
+    return reqInstance;
   }
 
   private async updateRequestInCache(req: FinancialRequest): Promise<void> {
@@ -1290,8 +1287,8 @@ export class RequestsService {
     let gross = 0;
     let vat = 0;
     for (const doc of documents) {
-      gross += Number(doc.grossAmount) || 0;
-      vat += Number(doc.vatAmount) || 0;
+      gross += parseLocaleNumber(doc.grossAmount) || 0;
+      vat += parseLocaleNumber(doc.vatAmount) || 0;
     }
     return {
       totalGrossAmount: Math.round(gross * 100) / 100,
@@ -1325,7 +1322,7 @@ export class RequestsService {
    */
   public async saveRequest(
     payload: Partial<FinancialRequest>,
-    targetStatus: 'DRAFT' | 'SUBMITTED'
+    targetStatus: 'DRAFT' | 'SUBMITTED' | 'CHANGES_REQUESTED'
   ): Promise<FinancialRequest> {
     const user = this.appService.currentUser;
     if (!user) throw new Error('User must be authenticated to submit request');
@@ -1336,10 +1333,10 @@ export class RequestsService {
     // Calculate totals
     let totals: { totalGrossAmount: number; totalVatAmount: number; currency?: string };
     if (payload.requestType === 'ADVANCE_PAYMENT') {
-      const advGross = Number(payload.requestedAmountPLN ?? payload.totalGrossAmount) || 0;
+      const advGross = parseLocaleNumber(payload.requestedAmountPLN ?? payload.totalGrossAmount) || 0;
       totals = { totalGrossAmount: advGross, totalVatAmount: 0, currency: payload.currency || 'PLN' };
     } else if (payload.requestType === 'DELEGATION_SETTLEMENT') {
-      const delGross = Number(payload.delegationTotalAmount ?? payload.totalGrossAmount) || 0;
+      const delGross = parseLocaleNumber(payload.delegationTotalAmount ?? payload.totalGrossAmount) || 0;
       totals = { totalGrossAmount: delGross, totalVatAmount: 0, currency: 'PLN' };
     } else if (
       (payload.requestType === 'INVOICE_TO_PAY' || payload.requestType === 'INVOICE_REIMBURSEMENT') &&
@@ -1376,18 +1373,26 @@ export class RequestsService {
       }
     } else {
       totals = {
-        totalGrossAmount: Number(payload.totalGrossAmount) || 0,
-        totalVatAmount: Number(payload.totalVatAmount) || 0,
+        totalGrossAmount: parseLocaleNumber(payload.totalGrossAmount) || 0,
+        totalVatAmount: parseLocaleNumber(payload.totalVatAmount) || 0,
         currency: payload.currency || 'PLN'
       };
     }
 
     const now = new Date().toISOString();
+    const sanitizedDocuments = payload.documents?.map((doc) => ({
+      ...doc,
+      grossAmount: parseLocaleNumber(doc.grossAmount) ?? doc.grossAmount,
+      vatAmount: parseLocaleNumber(doc.vatAmount) ?? doc.vatAmount,
+      originalAmount: parseLocaleNumber(doc.originalAmount) ?? doc.originalAmount,
+      originalVatAmount: parseLocaleNumber(doc.originalVatAmount) ?? doc.originalVatAmount
+    }));
     const requestBody: any = {
       ...payload,
       ...totals,
-      requestedAmountPLN: payload.requestType === 'ADVANCE_PAYMENT' ? totals.totalGrossAmount : payload.requestedAmountPLN,
-      delegationTotalAmount: payload.requestType === 'DELEGATION_SETTLEMENT' ? totals.totalGrossAmount : payload.delegationTotalAmount,
+      documents: sanitizedDocuments || payload.documents,
+      requestedAmountPLN: payload.requestType === 'ADVANCE_PAYMENT' ? totals.totalGrossAmount : parseLocaleNumber(payload.requestedAmountPLN),
+      delegationTotalAmount: payload.requestType === 'DELEGATION_SETTLEMENT' ? totals.totalGrossAmount : parseLocaleNumber(payload.delegationTotalAmount),
       status: targetStatus,
       currency: totals.currency || payload.currency || 'PLN'
     };

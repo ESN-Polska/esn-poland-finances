@@ -1,0 +1,66 @@
+<div class="advancesSubtabContainer">
+  <div class="loadingWrapper" *ngIf="loading">
+    <ion-spinner name="crescent" color="primary"></ion-spinner>
+    <p>{{ 'FINANCES.ADVANCES.LOADING' | translate }}</p>
+  </div>
+
+  <div *ngIf="!loading" class="advancesContent">
+    <div class="tableCard">
+      <div class="tableWrapper" *ngIf="filteredAdvances.length > 0">
+        <table class="modernTable">
+          <thead>
+            <tr>
+              <th>{{ 'FINANCES.ADVANCES.COL_DATE' | translate }}</th>
+              <th>{{ 'FINANCES.ADVANCES.COL_RECIPIENT' | translate }}</th>
+              <th>{{ 'FINANCES.ADVANCES.COL_PURPOSE' | translate }}</th>
+              <th style="text-align: right">{{ 'FINANCES.ADVANCES.COL_AMOUNT' | translate }}</th>
+              <th>{{ 'FINANCES.ADVANCES.COL_DOCUMENTS' | translate }}</th>
+              <th style="text-align: right">{{ 'FINANCES.ADVANCES.COL_SETTLED_AMOUNT' | translate }}</th>
+              <th style="text-align: right">{{ 'FINANCES.ADVANCES.COL_REMAINING' | translate }}</th>
+              <th>{{ 'FINANCES.ADVANCES.COL_STATUS' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              *ngFor="let adv of filteredAdvances"
+              [id]="'adv-' + adv.id"
+              [class.highlightedRow]="highlightedAdvanceId === adv.id"
+            >
+              <td style="font-weight: 700">{{ adv.issuedDate | appDate }}</td>
+              <td style="font-weight: 600">{{ adv.recipientName }}</td>
+              <td>{{ adv.purpose }}</td>
+              <td style="text-align: right; font-weight: 700">{{ adv.amount | number:'1.2-2' }} {{ adv.currency }}</td>
+              <td>
+                <div class="docLinks" *ngIf="adv.settledDocumentIds?.length">
+                  <button
+                    *ngFor="let docId of adv.settledDocumentIds"
+                    type="button"
+                    class="docLinkBtn"
+                    (click)="jumpToDocument(docId)"
+                    [title]="'FINANCES.DOCUMENTS.TITLE' | translate"
+                  >
+                    <ion-icon name="document-text-outline"></ion-icon> {{ 'FINANCES.ADVANCES.DOC_LINK' | translate }}
+                  </button>
+                </div>
+                <span *ngIf="!adv.settledDocumentIds?.length">-</span>
+              </td>
+              <td style="text-align: right">{{ adv.settledAmount | number:'1.2-2' }} {{ adv.currency }}</td>
+              <td style="text-align: right; font-weight: 800" [class.unsettled]="adv.remainingBalance > 0">
+                {{ adv.remainingBalance | number:'1.2-2' }} {{ adv.currency }}
+              </td>
+              <td>
+                <span class="advStatusBadge" [class]="adv.status.toLowerCase()">
+                  {{ adv.status === 'SETTLED' ? ('FINANCES.ADVANCES.STATUS_SETTLED' | translate) : (adv.status === 'PARTIALLY_SETTLED' ? ('FINANCES.ADVANCES.STATUS_PARTIAL' | translate) : ('FINANCES.ADVANCES.STATUS_OPEN' | translate)) }}
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="emptyState" *ngIf="filteredAdvances.length === 0">
+        <p>{{ 'FINANCES.ADVANCES.EMPTY_STATE' | translate:{ year: stateService.activeYear } }}</p>
+      </div>
+    </div>
+  </div>
+</div>
