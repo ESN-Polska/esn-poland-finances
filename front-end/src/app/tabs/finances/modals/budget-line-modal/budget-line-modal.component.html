@@ -14,12 +14,12 @@
     <div class="amendmentContextCard" *ngIf="isAmending">
       <div class="amendContextItem">
         <span class="amendLabel">{{ 'FINANCES.MODALS.AMENDMENT.PREVIOUS_AMOUNT' | translate }}:</span>
-        <strong class="amendVal">{{ currentApprovedAmount | number:'1.2-2' }} PLN</strong>
+        <strong class="amendVal">{{ currentApprovedAmount | financeNumber:{ currency: 'PLN' } }}</strong>
       </div>
       <div class="amendContextItem">
         <span class="amendLabel">{{ 'FINANCES.MODALS.AMENDMENT.DIFFERENCE' | translate }}:</span>
         <strong class="amendVal" [class.posDiff]="proposedDiff > 0" [class.negDiff]="proposedDiff < 0">
-          {{ proposedDiff | number:'1.2-2' }} PLN
+          {{ proposedDiff | financeNumber:{ currency: 'PLN', forceSign: true } }}
         </strong>
       </div>
     </div>

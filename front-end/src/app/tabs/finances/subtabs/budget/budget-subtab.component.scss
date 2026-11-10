@@ -49,34 +49,79 @@
       }
     }
 
-    .resolutionNote {
-      margin: 4px 0 0 0;
-      font-size: 0.85rem;
-      color: var(--ion-color-step-600, #64748b);
+    .resolutionRow {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 4px;
 
-      ion-icon {
-        color: var(--ion-color-primary, #00aeef);
-      }
+      .resolutionNote {
+        margin: 0;
+        font-size: 0.85rem;
+        color: var(--ion-color-step-600, #64748b);
+        display: flex;
+        align-items: center;
+        gap: 6px;
 
-      &.clickable {
-        cursor: pointer;
-        padding: 2px 6px;
-        margin-left: -6px;
-        width: fit-content;
-        border-radius: 6px;
-        transition: background-color 0.2s;
-
-        &:hover {
-          background: var(--ion-color-step-100, #f1f5f9);
+        ion-icon {
+          color: var(--ion-color-primary, #00aeef);
         }
 
-        .editNoteIcon {
-          font-size: 0.85rem;
-          color: var(--ion-color-step-500, #94a3b8);
-          margin-left: 2px;
+        &.clickable {
+          cursor: pointer;
+          padding: 2px 6px;
+          margin-left: -6px;
+          width: fit-content;
+          border-radius: 6px;
+          transition: background-color 0.2s;
+
+          &:hover {
+            background: var(--ion-color-step-100, #f1f5f9);
+          }
+
+          .editNoteIcon {
+            font-size: 0.85rem;
+            color: var(--ion-color-step-500, #94a3b8);
+            margin-left: 2px;
+          }
+        }
+      }
+
+      .historyChip {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        background: var(--ion-color-step-100, #f1f5f9);
+        border: 1px solid var(--ion-color-step-200, #e2e8f0);
+        border-radius: 14px;
+        padding: 2px 9px;
+        font-size: 0.76rem;
+        font-weight: 600;
+        color: var(--ion-color-step-700, #475569);
+        cursor: pointer;
+        transition: all 0.2s ease-in-out;
+        outline: none;
+
+        ion-icon {
+          font-size: 0.88rem;
+          color: var(--ion-color-primary, #00aeef);
+        }
+
+        .historyCount {
+          font-weight: 700;
+          color: var(--ion-color-primary, #00aeef);
+        }
+
+        &:hover {
+          background: rgba(0, 174, 239, 0.12);
+          border-color: rgba(0, 174, 239, 0.35);
+          color: var(--ion-color-primary, #00aeef);
+          transform: translateY(-1px);
+        }
+
+        &:active {
+          transform: translateY(0);
         }
       }
     }
@@ -131,6 +176,21 @@
 
     .adoptBtn {
       --box-shadow: 0 2px 8px rgba(39, 174, 96, 0.25);
+    }
+
+    .amendBtn {
+      --background: #002b49;
+      --color: #ffffff;
+      color: #ffffff;
+      --box-shadow: 0 2px 8px rgba(0, 43, 73, 0.25);
+
+      &:hover {
+        --background: #003a63;
+      }
+    }
+
+    .exportBtn {
+      --box-shadow: 0 2px 8px rgba(0, 174, 239, 0.25);
     }
   }
 }
@@ -272,6 +332,26 @@
         font-size: 1.05rem;
         font-weight: 700;
         color: var(--ion-color-step-800, #1e293b);
+      }
+
+      .obLockBadge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 0.72rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        padding: 3px 8px;
+        border-radius: 6px;
+        background: rgba(245, 158, 11, 0.12);
+        color: #d97706;
+        margin-left: 6px;
+
+        ion-icon {
+          font-size: 0.85rem;
+          color: inherit;
+        }
       }
     }
 
@@ -1275,21 +1355,71 @@
       border-radius: 8px;
       padding: 10px 14px;
 
+      &.initialAdoptionItem {
+        border-left: 3px solid var(--ion-color-primary, #00aeef);
+      }
+
+      &.amendmentItem {
+        border-left: 3px solid #f59e0b;
+      }
+
       .amItemTop {
         display: flex;
         justify-content: space-between;
         align-items: center;
         margin-bottom: 4px;
+        flex-wrap: wrap;
+        gap: 6px;
 
-        .amResolution {
-          font-weight: 700;
-          font-size: 0.9rem;
-          color: var(--ion-color-step-900, #0f172a);
+        .amItemLeft {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-wrap: wrap;
+
+          .amBadge {
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 2px 7px;
+            border-radius: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+
+            &.initialBadge {
+              background: rgba(0, 174, 239, 0.12);
+              color: #0284c7;
+            }
+
+            &.amendBadge {
+              background: rgba(245, 158, 11, 0.12);
+              color: #b45309;
+            }
+          }
+
+          .amResolution {
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: var(--ion-color-step-900, #0f172a);
+          }
         }
 
-        .amDate {
-          font-size: 0.8rem;
-          color: var(--ion-color-step-500, #64748b);
+        .amItemRight {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+
+          .amDate {
+            font-size: 0.8rem;
+            color: var(--ion-color-step-500, #64748b);
+          }
+
+          .viewSnapBtn {
+            --padding-start: 4px;
+            --padding-end: 4px;
+            height: 28px;
+            margin: 0;
+            color: var(--ion-color-primary, #00aeef);
+          }
         }
       }
 
@@ -1299,10 +1429,48 @@
         margin: 4px 0 8px 0;
       }
 
+      .amTotalsStrip {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 4px;
+
+        .totPill {
+          font-size: 0.75rem;
+          font-weight: 600;
+          padding: 2px 8px;
+          border-radius: 6px;
+          background: var(--ion-color-step-100, #e2e8f0);
+          color: var(--ion-color-step-700, #334155);
+
+          &.rev {
+            background: rgba(16, 185, 129, 0.12);
+            color: #047857;
+          }
+
+          &.exp {
+            background: rgba(239, 68, 68, 0.12);
+            color: #dc2626;
+          }
+
+          &.net {
+            &.pos {
+              background: rgba(16, 185, 129, 0.12);
+              color: #047857;
+            }
+            &.neg {
+              background: rgba(239, 68, 68, 0.12);
+              color: #dc2626;
+            }
+          }
+        }
+      }
+
       .amLinesTags {
         display: flex;
         flex-wrap: wrap;
         gap: 6px;
+        margin-top: 4px;
 
         .amLineTag {
           font-size: 0.74rem;
@@ -1312,6 +1480,18 @@
           color: var(--ion-color-step-800, #1e293b);
           padding: 2px 7px;
           border-radius: 5px;
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+
+          &.pos {
+            background: rgba(16, 185, 129, 0.12);
+            color: #059669;
+          }
+          &.neg {
+            background: rgba(239, 68, 68, 0.12);
+            color: #dc2626;
+          }
         }
       }
     }
@@ -1412,8 +1592,42 @@ body.dark {
     .budgetTitleBlock .titleRow h2 {
       color: var(--ion-text-color, #f8fafc);
     }
-    .budgetTitleBlock .resolutionNote.clickable:hover {
-      background: rgba(255, 255, 255, 0.06);
+    .budgetTitleBlock .resolutionRow {
+      .resolutionNote.clickable:hover {
+        background: rgba(255, 255, 255, 0.06);
+      }
+      .historyChip {
+        background: #252525;
+        border-color: rgba(255, 255, 255, 0.14);
+        color: #cbd5e1;
+
+        ion-icon {
+          color: #38bdf8;
+        }
+
+        .historyCount {
+          color: #38bdf8;
+        }
+
+        &:hover {
+          background: rgba(56, 189, 248, 0.18);
+          border-color: rgba(56, 189, 248, 0.4);
+          color: #ffffff;
+        }
+      }
+    }
+
+    .topActions {
+      .amendBtn {
+        --background: #1e40af !important;
+        --color: #ffffff !important;
+        color: #ffffff !important;
+        --box-shadow: 0 2px 8px rgba(30, 64, 175, 0.4) !important;
+
+        &:hover {
+          --background: #2563eb !important;
+        }
+      }
     }
   }
 
@@ -1447,6 +1661,11 @@ body.dark {
     .obHeader .obTitle h3,
     .currentBalancesHeader .cbTitle h4 {
       color: var(--ion-text-color, #f8fafc);
+    }
+
+    .obHeader .obTitle .obLockBadge {
+      background: rgba(245, 158, 11, 0.2);
+      color: #fbbf24;
     }
 
     .obGrid .obCol {
@@ -1723,19 +1942,65 @@ body.dark {
       border-color: rgba(255, 255, 255, 0.08);
 
       .amItemTop {
-        .amResolution {
-          color: var(--ion-text-color, #f8fafc);
+        .amItemLeft {
+          .amBadge {
+            &.initialBadge {
+              background: rgba(0, 174, 239, 0.22);
+              color: #38bdf8;
+            }
+            &.amendBadge {
+              background: rgba(245, 158, 11, 0.22);
+              color: #fbbf24;
+            }
+          }
+          .amResolution {
+            color: var(--ion-text-color, #f8fafc);
+          }
         }
-        .amDate {
-          color: #94a3b8;
+        .amItemRight {
+          .amDate {
+            color: #94a3b8;
+          }
+          .viewSnapBtn {
+            color: #38bdf8;
+          }
         }
       }
       .amDesc {
         color: #cbd5e1;
       }
+      .amTotalsStrip .totPill {
+        &.rev {
+          background: rgba(16, 185, 129, 0.22);
+          color: #34d399;
+        }
+        &.exp {
+          background: rgba(239, 68, 68, 0.22);
+          color: #f87171;
+        }
+        &.net {
+          &.pos {
+            background: rgba(16, 185, 129, 0.22);
+            color: #34d399;
+          }
+          &.neg {
+            background: rgba(239, 68, 68, 0.22);
+            color: #f87171;
+          }
+        }
+      }
       .amLinesTags .amLineTag {
         background: rgba(255, 255, 255, 0.08);
         color: #e2e8f0;
+
+        &.pos {
+          background: rgba(16, 185, 129, 0.2);
+          color: #34d399;
+        }
+        &.neg {
+          background: rgba(239, 68, 68, 0.2);
+          color: #f87171;
+        }
       }
     }
   }
@@ -2036,29 +2301,75 @@ body.dark {
 }
 
 /* Dark mode overrides for new elements */
+:host-context(body.dark),
+:host-context(.dark),
 body.dark {
   .snapshotBanner {
     background: linear-gradient(135deg, #090d16 0%, #030712 100%);
     border-color: rgba(148, 163, 184, 0.15);
     border-left-color: #6366f1;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+
+    .snapshotBannerIcon ion-icon {
+      color: #818cf8;
+    }
+
+    .snapshotBannerText {
+      h4 {
+        color: #e0e7ff;
+      }
+      p {
+        color: #cbd5e1;
+      }
+    }
+
+    .exitSnapBtn {
+      --background: rgba(255, 255, 255, 0.12);
+      --color: #ffffff;
+      &:hover {
+        --background: rgba(255, 255, 255, 0.22);
+      }
+    }
   }
 
   .draftAmendmentBanner {
-    background: linear-gradient(135deg, #2a1f0a 0%, #1f1504 100%);
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(180, 83, 9, 0.18) 100%);
     border-color: rgba(245, 158, 11, 0.35);
-    border-left-color: #f59e0b;
+    border-left: 6px solid #f59e0b;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
 
-    .draftBannerText h4 {
-      color: #fde68a;
-    }
-    .draftBannerText p {
+    .draftBannerIcon ion-icon {
       color: #fbbf24;
+    }
+
+    .draftBannerText {
+      h4 {
+        color: #fde68a;
+      }
+      p {
+        color: #cbd5e1;
+        span {
+          color: #fbbf24;
+        }
+      }
+    }
+
+    .resumeDraftBtn {
+      --background: #f59e0b;
+      --color: #000000;
+      font-weight: 700;
+    }
+
+    .discardDraftBtn {
+      --color: #f87171;
+      --border-color: rgba(248, 113, 113, 0.4);
     }
   }
 
   .amendModeToolbar {
     background: #1e1e1e;
     border-color: rgba(0, 174, 239, 0.4);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
 
     .amendTitleText h3 {
       color: #f8fafc;
@@ -2079,6 +2390,16 @@ body.dark {
         }
         .deltaValue {
           color: #f8fafc;
+
+          &.positive {
+            color: #4ade80;
+          }
+          &.negative {
+            color: #f87171;
+          }
+          &.info {
+            color: #38bdf8;
+          }
         }
       }
     }

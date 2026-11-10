@@ -2,8 +2,28 @@ import { Component, Input, OnInit, inject } from '@angular/core';
 import { ModalController, ToastController, LoadingController } from '@ionic/angular';
 import { TranslateService } from '@ngx-translate/core';
 import { FinancesService } from '../../../../services/finances.service';
-import { AnnualBudget, BudgetAmendment, BudgetAmendmentItem } from '@models/annual-budget.model';
+import {
+  AnnualBudget,
+  BudgetAmendment,
+  BudgetAmendmentItem,
+  DynamicBudgetCategory,
+  BudgetLineType,
+  BudgetAmendmentType
+} from '@models/annual-budget.model';
 import { parseLocaleNumber } from '../../../../utils/number-utils';
+
+export interface AmendmentModalItemViewModel {
+  lineId?: string;
+  lineCode: string;
+  lineName: string;
+  categoryPath?: string;
+  type: BudgetLineType;
+  changeType: BudgetAmendmentType;
+  previousAmount: number;
+  newAmount: number;
+  difference: number;
+  justification: string;
+}
 
 @Component({
   selector: 'app-amendment-modal',
@@ -20,6 +40,7 @@ export class AmendmentModalComponent implements OnInit {
   @Input() budget!: AnnualBudget;
   @Input() year!: number;
   @Input() itemsDiff?: BudgetAmendmentItem[];
+  @Input() draftCategories?: DynamicBudgetCategory[];
   @Input() totalRevenueDelta: number = 0;
   @Input() totalExpenseDelta: number = 0;
   @Input() netBudgetDelta: number = 0;
@@ -28,30 +49,41 @@ export class AmendmentModalComponent implements OnInit {
   adoptedDate: string = '';
   description: string = '';
 
-  items: Array<{
-    lineCode: string;
-    lineName: string;
-    previousAmount: number;
-    newAmount: number;
-    difference: number;
-    justification: string;
+  items: AmendmentModalItemViewModel[] = [];
+
+  allLines: Array<{
+    code: string;
+    name: string;
+    currentAmount: number;
+    type: BudgetLineType;
   }> = [];
 
-  allLines: Array<{ code: string; name: string; currentAmount: number }> = [];
-
   ngOnInit(): void {
-    this.adoptedDate = new Date().toISOString().split('T')[0];
+    if (!this.adoptedDate) {
+      this.adoptedDate = this.budget?.adoptedDate || new Date().toISOString().split('T')[0];
+    }
+    this.populateLinesList();
+
     if (this.itemsDiff && this.itemsDiff.length > 0) {
-      this.items = this.itemsDiff.map((it) => ({
-        lineCode: it.budgetCode || it.lineCode || '',
-        lineName: it.lineName?.pl || it.lineName?.en || it.budgetCode || '',
-        previousAmount: it.previousAmount || it.currentAmount || 0,
-        newAmount: it.proposedAmount ?? ((it.previousAmount || it.currentAmount || 0) + (it.deltaAmount || 0)),
-        difference: it.deltaAmount ?? ((it.proposedAmount || 0) - (it.previousAmount || 0)),
-        justification: it.explanation || it.justification || ''
-      }));
+      this.items = this.itemsDiff.map((it) => {
+        const lineName = it.lineName?.pl || it.lineName?.en || it.budgetCode || it.lineCode || '';
+        const prev = it.previousAmount ?? it.currentAmount ?? 0;
+        const next = it.proposedAmount ?? it.newAmount ?? (prev + (it.deltaAmount || 0));
+        const diff = it.deltaAmount ?? it.difference ?? (next - prev);
+        return {
+          lineId: it.lineId,
+          lineCode: it.budgetCode || it.lineCode || '',
+          lineName: lineName,
+          categoryPath: it.categoryPath || '',
+          type: (it.type === 'REVENUE' ? 'REVENUE' : 'EXPENSE') as BudgetLineType,
+          changeType: it.changeType || 'MODIFY_LINE',
+          previousAmount: prev,
+          newAmount: next,
+          difference: diff,
+          justification: it.explanation || it.justification || ''
+        };
+      });
     } else {
-      this.populateLinesList();
       this.addNewItemRow();
     }
   }
@@ -65,7 +97,8 @@ export class AmendmentModalComponent implements OnInit {
     this.allLines = lines.map(line => ({
       code: line.code,
       name: `${line.code} ${line.name?.pl || line.name?.en || ''}`,
-      currentAmount: (line.plannedAmount ?? line.budgetedAmount ?? 0) + (line.amendmentsDelta || 0)
+      currentAmount: (line.plannedAmount ?? line.budgetedAmount ?? 0) + (line.amendmentsDelta || 0),
+      type: line.type || 'EXPENSE'
     })).sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true }));
   }
 
@@ -73,6 +106,8 @@ export class AmendmentModalComponent implements OnInit {
     this.items.push({
       lineCode: '',
       lineName: '',
+      type: 'EXPENSE',
+      changeType: 'MODIFY_LINE',
       previousAmount: 0,
       newAmount: 0,
       difference: 0,
@@ -87,13 +122,17 @@ export class AmendmentModalComponent implements OnInit {
   }
 
   onLineSelected(index: number, code: string): void {
+    if (!code) return;
     const found = this.allLines.find((l) => l.code === code);
     if (found) {
       this.items[index].lineCode = found.code;
       this.items[index].lineName = found.name;
+      this.items[index].type = found.type;
       this.items[index].previousAmount = found.currentAmount;
-      this.items[index].newAmount = found.currentAmount;
-      this.items[index].difference = 0;
+      if (!this.items[index].newAmount) {
+        this.items[index].newAmount = found.currentAmount;
+      }
+      this.items[index].difference = this.items[index].newAmount - this.items[index].previousAmount;
     }
   }
 
@@ -103,8 +142,40 @@ export class AmendmentModalComponent implements OnInit {
     this.items[index].difference = val - this.items[index].previousAmount;
   }
 
+  get calculatedRevenueDelta(): number {
+    if (this.totalRevenueDelta) return this.totalRevenueDelta;
+    return this.items
+      .filter((i) => i.type === 'REVENUE')
+      .reduce((sum, i) => sum + (i.difference || 0), 0);
+  }
+
+  get calculatedExpenseDelta(): number {
+    if (this.totalExpenseDelta) return this.totalExpenseDelta;
+    return this.items
+      .filter((i) => i.type === 'EXPENSE')
+      .reduce((sum, i) => sum + (i.difference || 0), 0);
+  }
+
   get totalDelta(): number {
-    return this.items.reduce((sum, item) => sum + (item.difference || 0), 0);
+    if (this.netBudgetDelta) return this.netBudgetDelta;
+    return this.calculatedRevenueDelta - this.calculatedExpenseDelta;
+  }
+
+  getChangeTypeLabel(changeType?: string): string {
+    switch (changeType) {
+      case 'ADD_LINE':
+      case 'NEW_LINE':
+        return this.translate.instant('FINANCES.MODALS.AMENDMENT.CHANGE_NEW');
+      case 'REMOVE_LINE':
+        return this.translate.instant('FINANCES.MODALS.AMENDMENT.CHANGE_REMOVE');
+      case 'RENAME_LINE':
+        return this.translate.instant('FINANCES.MODALS.AMENDMENT.CHANGE_RENAME');
+      case 'REORDER':
+        return this.translate.instant('FINANCES.MODALS.AMENDMENT.CHANGE_REORDER');
+      case 'MODIFY_LINE':
+      default:
+        return this.translate.instant('FINANCES.MODALS.AMENDMENT.CHANGE_MODIFY');
+    }
   }
 
   close(): void {
@@ -122,80 +193,97 @@ export class AmendmentModalComponent implements OnInit {
       return;
     }
 
-    if (this.itemsDiff && this.itemsDiff.length > 0) {
-      this.modalCtrl.dismiss({
-        confirmed: true,
-        resolutionNumber: this.resolutionNumber.trim(),
-        adoptedDate: this.adoptedDate || new Date().toISOString().substring(0, 10),
-        description: this.description.trim()
-      });
-      return;
-    }
-
-    const validItems: BudgetAmendmentItem[] = this.items
-      .filter((it) => it.lineCode && it.difference !== 0)
-      .map((it) => {
-        const line = this.budget?.findLineByCode ? this.budget.findLineByCode(it.lineCode) : undefined;
-        return {
-          lineId: line?.id || `line_${it.lineCode}`,
-          budgetCode: it.lineCode,
-          lineCode: it.lineCode,
-          lineName: line?.name || { pl: it.lineName || it.lineCode, en: it.lineName || it.lineCode },
-          type: line?.type || 'EXPENSE',
-          changeType: 'MODIFY_LINE',
-          currentAmount: it.previousAmount || 0,
-          proposedAmount: it.newAmount || 0,
-          deltaAmount: it.difference || 0,
-          explanation: it.justification || '',
-          previousAmount: it.previousAmount,
-          newAmount: it.newAmount,
-          difference: it.difference,
-          justification: it.justification
-        };
-      });
-
-    if (validItems.length === 0) {
-      const toast = await this.toastCtrl.create({
-        message: this.translate.instant('FINANCES.MODALS.AMENDMENT.SELECT_LINE_REQUIRED'),
-        duration: 3000,
-        color: 'warning'
-      });
-      await toast.present();
-      return;
-    }
-
     const loading = await this.loadingCtrl.create({
       message: this.translate.instant('FINANCES.MODALS.AMENDMENT.SAVING')
     });
     await loading.present();
 
     try {
+      let finalItems: BudgetAmendmentItem[] = [];
+
+      if (this.itemsDiff && this.itemsDiff.length > 0) {
+        finalItems = this.itemsDiff.map((diff, idx) => {
+          const itemVm = this.items[idx];
+          const userJustification = itemVm?.justification?.trim() || diff.explanation || diff.justification || '';
+          return {
+            ...diff,
+            explanation: userJustification,
+            justification: userJustification,
+            previousAmount: diff.previousAmount ?? diff.currentAmount ?? 0,
+            newAmount: diff.proposedAmount ?? diff.newAmount ?? 0,
+            deltaAmount: diff.deltaAmount ?? diff.difference ?? 0,
+            difference: diff.deltaAmount ?? diff.difference ?? 0
+          };
+        });
+      } else {
+        const validItems = this.items.filter((it) => it.lineCode && it.difference !== 0);
+        if (validItems.length === 0) {
+          await loading.dismiss();
+          const toast = await this.toastCtrl.create({
+            message: this.translate.instant('FINANCES.MODALS.AMENDMENT.SELECT_LINE_REQUIRED'),
+            duration: 3000,
+            color: 'warning'
+          });
+          await toast.present();
+          return;
+        }
+
+        finalItems = validItems.map((it) => {
+          const line = this.budget?.findLineByCode ? this.budget.findLineByCode(it.lineCode) : undefined;
+          return {
+            lineId: line?.id || `line_${it.lineCode}`,
+            budgetCode: it.lineCode,
+            lineCode: it.lineCode,
+            lineName: line?.name || { pl: it.lineName || it.lineCode, en: it.lineName || it.lineCode },
+            type: it.type || line?.type || 'EXPENSE',
+            changeType: 'MODIFY_LINE',
+            currentAmount: it.previousAmount || 0,
+            proposedAmount: it.newAmount || 0,
+            deltaAmount: it.difference || 0,
+            explanation: it.justification || '',
+            previousAmount: it.previousAmount,
+            newAmount: it.newAmount,
+            difference: it.difference,
+            justification: it.justification
+          };
+        });
+      }
+
+      const revDelta = finalItems
+        .filter((it) => it.type === 'REVENUE')
+        .reduce((sum, it) => sum + (it.deltaAmount || 0), 0);
+      const expDelta = finalItems
+        .filter((it) => it.type === 'EXPENSE')
+        .reduce((sum, it) => sum + (it.deltaAmount || 0), 0);
+      const netDelta = revDelta - expDelta;
+
+      const nextNum = (this.budget?.amendments?.length || 0) + 1;
       const amendment: BudgetAmendment = {
         id: `amend_${Date.now()}`,
-        amendmentNumber: `${this.budget?.amendments?.length ? this.budget.amendments.length + 1 : 1}/${this.year}`,
+        amendmentNumber: `${nextNum}/${this.year}`,
         resolutionNumber: this.resolutionNumber.trim(),
         date: this.adoptedDate || new Date().toISOString().substring(0, 10),
-        adoptedDate: this.adoptedDate,
+        adoptedDate: this.adoptedDate || new Date().toISOString().substring(0, 10),
         description: this.description.trim(),
         status: 'APPROVED',
-        items: validItems,
-        totalRevenueDelta: validItems
-          .filter((it) => it.type === 'REVENUE')
-          .reduce((sum, it) => sum + (it.deltaAmount || 0), 0),
-        totalExpenseDelta: validItems
-          .filter((it) => it.type === 'EXPENSE')
-          .reduce((sum, it) => sum + (it.deltaAmount || 0), 0),
-        netBudgetDelta: 0,
+        items: finalItems,
+        totalRevenueDelta: revDelta,
+        totalExpenseDelta: expDelta,
+        netBudgetDelta: netDelta,
         createdAt: new Date().toISOString()
       };
-      amendment.netBudgetDelta = amendment.totalRevenueDelta - amendment.totalExpenseDelta;
 
-      const updatedBudget = await this.financesService.addAmendment(this.year, amendment);
+      const updatedBudget = await this.financesService.adoptAmendment(
+        this.year,
+        amendment,
+        this.draftCategories
+      );
+
       await loading.dismiss();
       this.modalCtrl.dismiss({ saved: true, budget: updatedBudget });
 
       const toast = await this.toastCtrl.create({
-        message: this.translate.instant('FINANCES.MODALS.AMENDMENT.SAVE_SUCCESS'),
+        message: this.translate.instant('FINANCES.BUDGET.AMENDMENT_ADOPTED_SUCCESS'),
         duration: 3500,
         color: 'success'
       });

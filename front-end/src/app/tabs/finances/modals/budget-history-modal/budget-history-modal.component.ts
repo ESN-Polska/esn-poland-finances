@@ -71,6 +71,8 @@ export class BudgetHistoryModalComponent implements OnInit {
         en: this.app.getBudgetOrganisation('en')
       };
 
+      const numFormat = this.app.configurations?.financesConfig?.numberDisplayFormat || 'STANDARD';
+
       if (format === 'PDF') {
         const html = generateBudgetHtmlReport(
           snapBudget,
@@ -79,7 +81,7 @@ export class BudgetHistoryModalComponent implements OnInit {
           lang,
           undefined,
           'NET',
-          'STANDARD',
+          numFormat,
           undefined,
           this.dateFormat,
           orgName
@@ -92,7 +94,7 @@ export class BudgetHistoryModalComponent implements OnInit {
           snap.adoptedDate,
           lang,
           'NET',
-          'STANDARD',
+          numFormat,
           undefined,
           this.dateFormat,
           orgName

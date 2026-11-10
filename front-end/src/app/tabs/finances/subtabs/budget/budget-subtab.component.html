@@ -158,21 +158,36 @@
             {{ budget.status === 'ADOPTED' ? ('FINANCES.BUDGET.STATUS_ADOPTED' | translate) : (budget.status === 'AMENDED' ? ('FINANCES.BUDGET.STATUS_AMENDED' | translate) : ('FINANCES.BUDGET.STATUS_DRAFT' | translate)) }}
           </span>
         </div>
-        <p
-          class="resolutionNote"
-          *ngIf="budget.resolutionNumber"
-          [class.clickable]="canEdit && !isArchived && !activeSnapshotView"
-          (click)="canEdit && !isArchived && !activeSnapshotView && openEditAdoptionAlert()"
-          [title]="canEdit && !isArchived && !activeSnapshotView ? ('FINANCES.BUDGET.EDIT_ADOPTION_TITLE' | translate) : ''"
-        >
-          <ng-container *ngIf="budget.adoptedDate; else noDateResolution">
-            {{ 'FINANCES.BUDGET.RESOLUTION_FULL' | translate:{ number: budget.resolutionNumber, date: formatDate(budget.adoptedDate) } }}
-          </ng-container>
-          <ng-template #noDateResolution>
-            {{ 'FINANCES.BUDGET.RESOLUTION_WITHOUT_DATE' | translate:{ number: budget.resolutionNumber } }}
-          </ng-template>
-          <ion-icon name="create-outline" class="editNoteIcon" *ngIf="canEdit && !isArchived && !activeSnapshotView"></ion-icon>
-        </p>
+        <div class="resolutionRow" *ngIf="currentResolutionNumber || (budget.versionHistory && budget.versionHistory.length > 0)">
+          <p
+            class="resolutionNote"
+            *ngIf="currentResolutionNumber"
+            [class.clickable]="canEdit && !isArchived && !activeSnapshotView"
+            (click)="canEdit && !isArchived && !activeSnapshotView && openEditAdoptionAlert()"
+            [title]="canEdit && !isArchived && !activeSnapshotView ? ('FINANCES.BUDGET.EDIT_ADOPTION_TITLE' | translate) : ''"
+          >
+            <ng-container *ngIf="currentAdoptedDate; else noDateResolution">
+              {{ 'FINANCES.BUDGET.RESOLUTION_FULL' | translate:{ number: currentResolutionNumber, date: formatDate(currentAdoptedDate) } }}
+            </ng-container>
+            <ng-template #noDateResolution>
+              {{ 'FINANCES.BUDGET.RESOLUTION_WITHOUT_DATE' | translate:{ number: currentResolutionNumber } }}
+            </ng-template>
+            <ion-icon name="create-outline" class="editNoteIcon" *ngIf="canEdit && !isArchived && !activeSnapshotView"></ion-icon>
+          </p>
+
+          <!-- History chip next to resolution -->
+          <button
+            type="button"
+            class="historyChip"
+            *ngIf="budget && !isAmending && (budget.versionHistory?.length || budget.status !== 'DRAFT')"
+            (click)="openVersionHistoryModal()"
+            [title]="'FINANCES.BUDGET.VERSION_HISTORY_BTN' | translate"
+          >
+            <ion-icon name="time-outline"></ion-icon>
+            <span>{{ 'FINANCES.BUDGET.VERSION_HISTORY_BTN' | translate }}</span>
+            <span class="historyCount" *ngIf="budget.versionHistory?.length">({{ budget.versionHistory.length }})</span>
+          </button>
+        </div>
       </div>
 
       <div class="topActions">
@@ -203,25 +218,12 @@
         <!-- Nowelizuj budżet / Kontynuuj nowelizację: only when isAdopted and !activeSnapshotView -->
         <ion-button
           fill="solid"
-          color="secondary"
           class="actionBtn amendBtn"
           *ngIf="canEdit && !isArchived && isAdopted && !activeSnapshotView"
           (click)="startOrContinueAmendment()"
         >
           <ion-icon slot="start" name="git-pull-request-outline"></ion-icon>
           {{ (hasDraftAmendment ? 'FINANCES.BUDGET.CONTINUE_AMENDMENT_BTN' : 'FINANCES.BUDGET.AMENDMENT_BTN') | translate }}
-        </ion-button>
-
-        <!-- Historia uchwał / wersji -->
-        <ion-button
-          fill="outline"
-          color="primary"
-          class="actionBtn historyBtn"
-          *ngIf="budget && !isAmending"
-          (click)="openVersionHistoryModal()"
-        >
-          <ion-icon slot="start" name="time-outline"></ion-icon>
-          {{ 'FINANCES.BUDGET.VERSION_HISTORY_BTN' | translate }}
         </ion-button>
 
         <!-- Eksportuj raport -->
@@ -246,9 +248,9 @@
           <span class="kpiLabel">{{ 'FINANCES.BUDGET.KPI_REVENUE' | translate }}</span>
           <ion-icon name="trending-up-outline"></ion-icon>
         </div>
-        <div class="kpiValue">{{ totalActualRevenue | number:'1.2-2' }} PLN</div>
+        <div class="kpiValue">{{ totalActualRevenue | financeNumber:{ currency: 'PLN' } }}</div>
         <div class="kpiMeta">
-          <span>{{ 'FINANCES.BUDGET.PLAN_ABBR' | translate }} {{ totalPlannedRevenue | number:'1.2-2' }} PLN</span>
+          <span>{{ 'FINANCES.BUDGET.PLAN_ABBR' | translate }} {{ totalPlannedRevenue | financeNumber:{ currency: 'PLN' } }}</span>
           <span class="kpiPct" [class.success]="revenueExecutionPct >= 100">{{ revenueExecutionPct | number:'1.1-1' }}%</span>
         </div>
       </div>
@@ -259,9 +261,9 @@
           <span class="kpiLabel">{{ 'FINANCES.BUDGET.KPI_EXPENSES' | translate }}</span>
           <ion-icon name="trending-down-outline"></ion-icon>
         </div>
-        <div class="kpiValue">{{ totalActualExpenses | number:'1.2-2' }} PLN</div>
+        <div class="kpiValue">{{ totalActualExpenses | financeNumber:{ currency: 'PLN' } }}</div>
         <div class="kpiMeta">
-          <span>{{ 'FINANCES.BUDGET.PLAN_ABBR' | translate }} {{ totalPlannedExpenses | number:'1.2-2' }} PLN</span>
+          <span>{{ 'FINANCES.BUDGET.PLAN_ABBR' | translate }} {{ totalPlannedExpenses | financeNumber:{ currency: 'PLN' } }}</span>
           <span
             class="kpiPct"
             [class.warning]="expensesExecutionPct > 80 && expensesExecutionPct <= 100"
@@ -299,9 +301,9 @@
           <span class="kpiLabel">{{ 'FINANCES.BUDGET.KPI_CASH_TOTAL' | translate }}</span>
           <ion-icon name="wallet-outline"></ion-icon>
         </div>
-        <div class="kpiValue">{{ (currentBalances ? currentBalances.totalFunds : (totalOpeningBalance + actualResult)) | number:'1.2-2' }} PLN</div>
+        <div class="kpiValue">{{ (currentBalances ? currentBalances.totalFunds : (totalOpeningBalance + actualResult)) | financeNumber:{ currency: 'PLN' } }}</div>
         <div class="kpiMeta">
-          <span>{{ 'FINANCES.BUDGET.KPI_OPENING_BALANCE' | translate:{ amount: (totalOpeningBalance | number:'1.2-2') } }}</span>
+          <span>{{ 'FINANCES.BUDGET.KPI_OPENING_BALANCE' | translate:{ amount: (totalOpeningBalance | financeNumber:{ currency: 'PLN' }) } }}</span>
         </div>
       </div>
     </div>
@@ -312,10 +314,18 @@
         <div class="obTitle">
           <ion-icon name="calendar-outline"></ion-icon>
           <h3>{{ 'FINANCES.BUDGET.OPENING_BALANCE_DATE' | translate }}</h3>
+          <span
+            class="obLockBadge"
+            *ngIf="isOpeningBalancesLocked"
+            [title]="'FINANCES.BUDGET.OPENING_BALANCES_LOCKED_TOOLTIP' | translate"
+          >
+            <ion-icon name="lock-closed"></ion-icon>
+            {{ 'FINANCES.BUDGET.OPENING_BALANCES_LOCKED' | translate }}
+          </span>
         </div>
         <div class="obActions" *ngIf="canEdit && !isArchived && !isAmending && !activeSnapshotView">
           <ion-button
-            *ngIf="!isEditingOpeningBalances"
+            *ngIf="!isEditingOpeningBalances && !isOpeningBalancesLocked"
             fill="clear"
             size="small"
             color="primary"
@@ -323,6 +333,17 @@
           >
             <ion-icon slot="start" name="create-outline"></ion-icon>
             {{ 'FINANCES.BUDGET.EDIT_OPENING_BALANCES' | translate }}
+          </ion-button>
+          <ion-button
+            *ngIf="!isEditingOpeningBalances && isOpeningBalancesLocked && canModifyConfigurations"
+            fill="clear"
+            size="small"
+            color="medium"
+            (click)="goToConfigurationsFinances()"
+            [title]="'FINANCES.BUDGET.OPENING_BALANCES_UNLOCK_IN_CONFIG_TOOLTIP' | translate"
+          >
+            <ion-icon slot="start" name="settings-outline"></ion-icon>
+            {{ 'FINANCES.BUDGET.OPENING_BALANCES_UNLOCK_IN_CONFIG' | translate }}
           </ion-button>
           <div *ngIf="isEditingOpeningBalances" class="editBtnsGroup">
             <ion-button fill="outline" size="small" color="medium" (click)="cancelEditingOpeningBalances()">
@@ -339,13 +360,13 @@
       <div class="obGrid" *ngIf="!isEditingOpeningBalances">
         <div class="obCol">
           <span class="obColLabel">{{ 'FINANCES.BUDGET.BANK_PLN' | translate }}</span>
-          <span class="obColValue">{{ budget.openingBalances.bankPln | number:'1.2-2' }} PLN</span>
+          <span class="obColValue">{{ budget.openingBalances.bankPln | financeNumber:{ currency: 'PLN' } }}</span>
         </div>
         <div class="obCol">
           <span class="obColLabel">{{ 'FINANCES.BUDGET.BANK_EUR' | translate }}</span>
-          <span class="obColValue">{{ budget.openingBalances.bankEurInPln | number:'1.2-2' }} PLN</span>
+          <span class="obColValue">{{ budget.openingBalances.bankEurInPln | financeNumber:{ currency: 'PLN' } }}</span>
           <span class="obColSub" *ngIf="budget.openingBalances.bankEurStartingBalance">
-            {{ budget.openingBalances.bankEurStartingBalance | number:'1.2-2' }} EUR
+            {{ budget.openingBalances.bankEurStartingBalance | financeNumber:{ currency: 'EUR' } }}
             <span *ngIf="budget.openingBalances.eurExchangeRate">
               ({{ 'FINANCES.BUDGET.NBP_RATE_PREFIX' | translate }}: <a [href]="'https://api.nbp.pl/api/exchangerates/rates/A/EUR/' + budget.openingBalances.eurExchangeDate + '/'" target="_blank" rel="noopener noreferrer" class="nbpLink">{{ budget.openingBalances.eurExchangeRate }}</a> {{ 'FINANCES.BUDGET.NBP_DATE_PREFIX' | translate:{ date: formatDate(budget.openingBalances.eurExchangeDate) } }})
             </span>
@@ -353,11 +374,11 @@
         </div>
         <div class="obCol">
           <span class="obColLabel">{{ 'FINANCES.BUDGET.DEPOSITS' | translate }}</span>
-          <span class="obColValue">{{ budget.openingBalances.termDepositsPln | number:'1.2-2' }} PLN</span>
+          <span class="obColValue">{{ budget.openingBalances.termDepositsPln | financeNumber:{ currency: 'PLN' } }}</span>
         </div>
         <div class="obCol totalCol">
           <span class="obColLabel">{{ 'FINANCES.BUDGET.OPENING_BALANCE' | translate }}</span>
-          <span class="obColValue">{{ budget.openingBalances.totalOpeningBalance | number:'1.2-2' }} PLN</span>
+          <span class="obColValue">{{ budget.openingBalances.totalOpeningBalance | financeNumber:{ currency: 'PLN' } }}</span>
         </div>
       </div>
 
@@ -378,13 +399,13 @@
         <div class="obGrid currentGrid">
           <div class="obCol">
             <span class="obColLabel">{{ 'FINANCES.BUDGET.CURRENT_BANK_PLN' | translate }}</span>
-            <span class="obColValue">{{ currentBalances.bankPln | number:'1.2-2' }} PLN</span>
+            <span class="obColValue">{{ currentBalances.bankPln | financeNumber:{ currency: 'PLN' } }}</span>
           </div>
           <div class="obCol">
             <span class="obColLabel">{{ 'FINANCES.BUDGET.CURRENT_BANK_EUR' | translate }}</span>
-            <span class="obColValue">{{ currentBalances.bankEurInPln | number:'1.2-2' }} PLN</span>
+            <span class="obColValue">{{ currentBalances.bankEurInPln | financeNumber:{ currency: 'PLN' } }}</span>
             <span class="obColSub" *ngIf="currentBalances.bankEur">
-              {{ currentBalances.bankEur | number:'1.2-2' }} EUR
+              {{ currentBalances.bankEur | financeNumber:{ currency: 'EUR' } }}
               <span *ngIf="currentBalances.eurExchangeRate">
                 ({{ 'FINANCES.BUDGET.NBP_RATE_PREFIX' | translate }}: <a [href]="'https://api.nbp.pl/api/exchangerates/rates/A/EUR/' + currentBalances.eurExchangeDate + '/'" target="_blank" rel="noopener noreferrer" class="nbpLink">{{ currentBalances.eurExchangeRate }}</a> {{ 'FINANCES.BUDGET.NBP_DATE_PREFIX' | translate:{ date: formatDate(currentBalances.eurExchangeDate) } }})
               </span>
@@ -392,11 +413,11 @@
           </div>
           <div class="obCol">
             <span class="obColLabel">{{ 'FINANCES.BUDGET.CURRENT_DEPOSITS' | translate }}</span>
-            <span class="obColValue">{{ currentBalances.termDepositsPln | number:'1.2-2' }} PLN</span>
+            <span class="obColValue">{{ currentBalances.termDepositsPln | financeNumber:{ currency: 'PLN' } }}</span>
           </div>
           <div class="obCol totalCol currentTotalCol">
             <span class="obColLabel">{{ 'FINANCES.BUDGET.CURRENT_TOTAL_FUNDS' | translate }}</span>
-            <span class="obColValue">{{ currentBalances.totalFunds | number:'1.2-2' }} PLN</span>
+            <span class="obColValue">{{ currentBalances.totalFunds | financeNumber:{ currency: 'PLN' } }}</span>
           </div>
         </div>
       </div>
@@ -607,9 +628,9 @@
                   <div class="secTitleGroup">
                     <span class="secBadge revBadge">{{ 'FINANCES.BUDGET.REVENUES' | translate }}</span>
                     <span class="secTotals">
-                      {{ 'FINANCES.BUDGET.PLAN_ABBR' | translate }} <strong>{{ category.revenues.totalPlanned | number:'1.2-2' }} PLN</strong>
+                      {{ 'FINANCES.BUDGET.PLAN_ABBR' | translate }} <strong>{{ category.revenues.totalPlanned | financeNumber:{ currency: 'PLN' } }}</strong>
                       <span class="dividerDot">•</span>
-                      {{ 'FINANCES.BUDGET.EXEC_ABBR' | translate }} <strong>{{ category.revenues.totalActual | number:'1.2-2' }} PLN</strong>
+                      {{ 'FINANCES.BUDGET.EXEC_ABBR' | translate }} <strong>{{ category.revenues.totalActual | financeNumber:{ currency: 'PLN' } }}</strong>
                       <span class="dividerDot">•</span>
                       <span class="secPct">{{ category.revenues.executionPercentage | number:'1.1-1' }}%</span>
                     </span>
@@ -693,9 +714,9 @@
                   <div class="secTitleGroup">
                     <span class="secBadge expBadge">{{ 'FINANCES.BUDGET.EXPENSES' | translate }}</span>
                     <span class="secTotals">
-                      {{ 'FINANCES.BUDGET.PLAN_ABBR' | translate }} <strong>{{ category.expenses.totalPlanned | number:'1.2-2' }} PLN</strong>
+                      {{ 'FINANCES.BUDGET.PLAN_ABBR' | translate }} <strong>{{ category.expenses.totalPlanned | financeNumber:{ currency: 'PLN' } }}</strong>
                       <span class="dividerDot">•</span>
-                      {{ 'FINANCES.BUDGET.EXEC_ABBR' | translate }} <strong>{{ category.expenses.totalActual | number:'1.2-2' }} PLN</strong>
+                      {{ 'FINANCES.BUDGET.EXEC_ABBR' | translate }} <strong>{{ category.expenses.totalActual | financeNumber:{ currency: 'PLN' } }}</strong>
                       <span class="dividerDot">•</span>
                       <span class="secPct">{{ category.expenses.executionPercentage | number:'1.1-1' }}%</span>
                     </span>
@@ -815,8 +836,8 @@
           </div>
 
           <div class="groupTotals">
-            <span class="grpStat">{{ 'FINANCES.BUDGET.PLAN_ABBR' | translate }} <strong>{{ group.subtotalPlanned | number:'1.2-2' }} PLN</strong></span>
-            <span class="grpStat">{{ 'FINANCES.BUDGET.EXEC_ABBR' | translate }} <strong>{{ group.subtotalActual | number:'1.2-2' }} PLN</strong></span>
+            <span class="grpStat">{{ 'FINANCES.BUDGET.PLAN_ABBR' | translate }} <strong>{{ group.subtotalPlanned | financeNumber:{ currency: 'PLN' } }}</strong></span>
+            <span class="grpStat">{{ 'FINANCES.BUDGET.EXEC_ABBR' | translate }} <strong>{{ group.subtotalActual | financeNumber:{ currency: 'PLN' } }}</strong></span>
 
             <div class="grpActions" *ngIf="canModifyStructure">
               <ion-button
@@ -974,7 +995,7 @@
         <!-- Baseline Plan -->
         <div class="cellNum cellPlanned">
           <span class="cellMobileLabel">{{ 'FINANCES.BUDGET.COL_PLANNED' | translate }}:</span>
-          <span>{{ line.plannedAmount | number:'1.2-2' }}</span>
+          <span>{{ line.plannedAmount | financeNumber }}</span>
         </div>
 
         <!-- Amendments -->
@@ -990,13 +1011,13 @@
         <!-- Current Plan -->
         <div class="cellNum cellCurrentPlan">
           <span class="cellMobileLabel">{{ 'FINANCES.BUDGET.COL_CURRENT_PLAN' | translate }}:</span>
-          <strong>{{ (line.plannedAmount + (line.amendmentsDelta || 0)) | number:'1.2-2' }}</strong>
+          <strong>{{ (line.plannedAmount + (line.amendmentsDelta || 0)) | financeNumber }}</strong>
         </div>
 
         <!-- Actual Execution -->
         <div class="cellNum cellActual">
           <span class="cellMobileLabel">{{ 'FINANCES.BUDGET.COL_ACTUAL' | translate }}:</span>
-          <strong>{{ line.actualAmount | number:'1.2-2' }}</strong>
+          <strong>{{ line.actualAmount | financeNumber }}</strong>
         </div>
 
         <!-- Execution % -->
@@ -1069,21 +1090,105 @@
     </ng-template>
 
     <!-- Amendments History Package Card -->
-    <div class="amendmentsHistoryCard" *ngIf="budget.amendments?.length">
+    <div
+      class="amendmentsHistoryCard"
+      *ngIf="budget && !isAmending && (budget.status !== 'DRAFT' || budget.amendments?.length || budget.versionHistory?.length)"
+    >
       <div class="amHeader">
         <ion-icon name="git-commit-outline"></ion-icon>
         <h3>{{ 'FINANCES.BUDGET.AMENDMENTS_HISTORY' | translate }}</h3>
       </div>
       <div class="amList">
-        <div class="amItem" *ngFor="let am of budget.amendments">
+        <!-- 1. Initial Budget Adoption Entry -->
+        <div class="amItem initialAdoptionItem" *ngIf="initialResolutionNumber || initialSnapshot">
           <div class="amItemTop">
-            <span class="amResolution">{{ am.resolutionNumber }}</span>
-            <span class="amDate">{{ 'FINANCES.BUDGET.EFFECTIVE_DATE' | translate:{ date: formatDate(am.adoptedDate) } }}</span>
+            <div class="amItemLeft">
+              <span class="amBadge initialBadge">{{ 'FINANCES.MODALS.BUDGET_HISTORY.TYPE_INITIAL' | translate }}</span>
+              <span class="amResolution">
+                {{ 'FINANCES.BUDGET.RESOLUTION_PREFIX' | translate }} {{ initialResolutionNumber }}
+              </span>
+            </div>
+            <div class="amItemRight">
+              <span class="amDate" *ngIf="initialAdoptedDate">
+                {{ 'FINANCES.BUDGET.ADOPTED_DATE_NOTE' | translate:{ date: formatDate(initialAdoptedDate) } }}
+              </span>
+              <ion-button
+                *ngIf="initialSnapshot"
+                fill="clear"
+                size="small"
+                class="viewSnapBtn"
+                (click)="enterSnapshotView(initialSnapshot)"
+                [title]="'FINANCES.MODALS.BUDGET_HISTORY.VIEW_SNAPSHOT_BTN' | translate"
+              >
+                <ion-icon slot="icon-only" name="eye-outline"></ion-icon>
+              </ion-button>
+            </div>
+          </div>
+          <p class="amDesc">
+            {{ initialAdoptionDescription }}
+          </p>
+          <div class="amTotalsStrip">
+            <span class="totPill rev">
+              {{ 'FINANCES.BUDGET.KPI_REVENUE' | translate }}: {{ initialTotalRevenue | financeNumber:{ currency: 'PLN' } }}
+            </span>
+            <span class="totPill exp">
+              {{ 'FINANCES.BUDGET.KPI_EXPENSES' | translate }}: {{ initialTotalExpense | financeNumber:{ currency: 'PLN' } }}
+            </span>
+            <span class="totPill net" [class.pos]="initialNetResult >= 0" [class.neg]="initialNetResult < 0">
+              {{ 'FINANCES.BUDGET.KPI_NET' | translate }}: {{ initialNetResult | financeNumber:{ currency: 'PLN', forceSign: true } }}
+            </span>
+          </div>
+        </div>
+
+        <!-- 2. Amendment Entries -->
+        <div class="amItem amendmentItem" *ngFor="let am of budget.amendments; let amIdx = index">
+          <div class="amItemTop">
+            <div class="amItemLeft">
+              <span class="amBadge amendBadge">
+                {{ 'FINANCES.MODALS.BUDGET_HISTORY.TYPE_AMENDMENT' | translate }} #{{ amIdx + 1 }}
+              </span>
+              <span class="amResolution">
+                {{ 'FINANCES.BUDGET.RESOLUTION_PREFIX' | translate }} {{ am.resolutionNumber }}
+              </span>
+            </div>
+            <div class="amItemRight">
+              <span class="amDate" *ngIf="am.adoptedDate || am.date">
+                {{ 'FINANCES.BUDGET.ADOPTED_DATE_NOTE' | translate:{ date: formatDate(am.adoptedDate || am.date) } }}
+              </span>
+              <ion-button
+                *ngIf="getSnapshotForAmendment(am)"
+                fill="clear"
+                size="small"
+                class="viewSnapBtn"
+                (click)="enterSnapshotView(getSnapshotForAmendment(am)!)"
+                [title]="'FINANCES.MODALS.BUDGET_HISTORY.VIEW_SNAPSHOT_BTN' | translate"
+              >
+                <ion-icon slot="icon-only" name="eye-outline"></ion-icon>
+              </ion-button>
+            </div>
           </div>
           <p class="amDesc" *ngIf="am.description">{{ am.description }}</p>
-          <div class="amLinesTags">
-            <span class="amLineTag" *ngFor="let it of am.items">
-              {{ it.lineCode }}: {{ it.difference | financeNumber:{ currency: 'PLN', forceSign: true } }}
+          <div class="amTotalsStrip">
+            <span class="totPill rev" [title]="am.totalRevenueDelta ? (('FINANCES.BUDGET.REVENUE_DELTA' | translate) + ': ' + (am.totalRevenueDelta | financeNumber:{ currency: 'PLN', forceSign: true })) : ''">
+              {{ 'FINANCES.BUDGET.KPI_REVENUE' | translate }}: {{ getAmendmentTotalRevenue(am) | financeNumber:{ currency: 'PLN' } }}
+            </span>
+            <span class="totPill exp" [title]="am.totalExpenseDelta ? (('FINANCES.BUDGET.EXPENSE_DELTA' | translate) + ': ' + (am.totalExpenseDelta | financeNumber:{ currency: 'PLN', forceSign: true })) : ''">
+              {{ 'FINANCES.BUDGET.KPI_EXPENSES' | translate }}: {{ getAmendmentTotalExpense(am) | financeNumber:{ currency: 'PLN' } }}
+            </span>
+            <span class="totPill net" [class.pos]="getAmendmentNetResult(am) >= 0" [class.neg]="getAmendmentNetResult(am) < 0" [title]="am.netBudgetDelta ? (('FINANCES.BUDGET.NET_DELTA' | translate) + ': ' + (am.netBudgetDelta | financeNumber:{ currency: 'PLN', forceSign: true })) : ''">
+              {{ 'FINANCES.BUDGET.KPI_NET' | translate }}: {{ getAmendmentNetResult(am) | financeNumber:{ currency: 'PLN', forceSign: true } }}
+            </span>
+          </div>
+          <div class="amLinesTags" *ngIf="am.items?.length">
+            <span
+              class="amLineTag"
+              *ngFor="let it of am.items"
+              [class.pos]="(it.difference !== undefined ? it.difference : it.deltaAmount) > 0"
+              [class.neg]="(it.difference !== undefined ? it.difference : it.deltaAmount) < 0"
+              [title]="(it.lineName?.pl || it.lineName?.en || '') + (it.explanation || it.justification ? ' — ' + (it.explanation || it.justification) : '')"
+            >
+              <strong>{{ it.lineCode || it.budgetCode }}:</strong>
+              {{ (it.difference !== undefined ? it.difference : it.deltaAmount) | financeNumber:{ currency: 'PLN', forceSign: true } }}
             </span>
           </div>
         </div>

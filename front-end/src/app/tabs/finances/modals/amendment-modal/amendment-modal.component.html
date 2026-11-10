@@ -14,7 +14,10 @@
     <!-- Header Form: Resolution and Date -->
     <div class="formGrid">
       <div class="formField">
-        <label class="fieldLabel">{{ 'FINANCES.MODALS.AMENDMENT.RESOLUTION_NO' | translate }}</label>
+        <label class="fieldLabel">
+          {{ 'FINANCES.MODALS.AMENDMENT.RESOLUTION_NO' | translate }}
+          <span class="requiredAsterisk">*</span>
+        </label>
         <ion-item lines="none" class="inputItem">
           <ion-input
             type="text"
@@ -25,7 +28,10 @@
       </div>
 
       <div class="formField">
-        <label class="fieldLabel">{{ 'FINANCES.MODALS.AMENDMENT.ADOPTED_DATE' | translate }}</label>
+        <label class="fieldLabel">
+          {{ 'FINANCES.MODALS.AMENDMENT.ADOPTED_DATE' | translate }}
+          <span class="requiredAsterisk">*</span>
+        </label>
         <ion-item lines="none" class="inputItem">
           <ion-input type="date" [(ngModel)]="adoptedDate"></ion-input>
         </ion-item>
@@ -44,110 +50,224 @@
       </ion-item>
     </div>
 
-    <!-- Lines table -->
+    <!-- Lines table/list -->
     <div class="itemsSection">
       <div class="itemsSectionHeader">
         <div class="titleBlock">
-          <h3>{{ 'FINANCES.MODALS.AMENDMENT.MODIFIED_LINES' | translate }}</h3>
-          <p>{{ 'FINANCES.MODALS.AMENDMENT.MODIFIED_LINES_DESC' | translate }}</p>
+          <h3>
+            {{ 'FINANCES.MODALS.AMENDMENT.MODIFIED_LINES' | translate }}
+            <span class="countPill">({{ items.length }})</span>
+          </h3>
+          <p>
+            {{ (itemsDiff ? 'FINANCES.MODALS.AMENDMENT.REVIEW_LINES_DESC' : 'FINANCES.MODALS.AMENDMENT.MODIFIED_LINES_DESC') | translate }}
+          </p>
         </div>
-        <ion-button *ngIf="!itemsDiff" size="small" fill="outline" color="primary" (click)="addNewItemRow()">
+        <ion-button
+          *ngIf="!itemsDiff"
+          size="small"
+          fill="outline"
+          color="primary"
+          (click)="addNewItemRow()"
+        >
           <ion-icon slot="start" name="add-outline"></ion-icon>
           {{ 'FINANCES.MODALS.AMENDMENT.ADD_LINE' | translate }}
         </ion-button>
       </div>
 
       <div class="itemsList">
-        <div class="itemCard" *ngFor="let it of items; let idx = index">
-          <div class="itemCardTop">
-            <span class="itemBadge">#{{ idx + 1 }}</span>
-            <ion-button
-              *ngIf="!itemsDiff"
-              fill="clear"
-              color="danger"
-              size="small"
-              class="removeBtn"
-              (click)="removeItemRow(idx)"
-              [disabled]="items.length === 1"
-            >
-              <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
-            </ion-button>
-          </div>
-
-          <div class="itemCardGrid">
-            <!-- Line selector -->
-            <div class="cardField fullWidth">
-              <label>{{ 'FINANCES.MODALS.AMENDMENT.LINE_LABEL' | translate }}</label>
-              <ion-item lines="none" class="inputItem">
-                <ion-select
-                  interface="popover"
-                  [(ngModel)]="it.lineCode"
-                  (ionChange)="onLineSelected(idx, $event.detail.value)"
-                  [placeholder]="'FINANCES.MODALS.AMENDMENT.LINE_PH' | translate"
+        <!-- MODE A: Adoption / Review Draft Mode (itemsDiff present) -->
+        <ng-container *ngIf="itemsDiff && itemsDiff.length > 0">
+          <div class="itemCard reviewCard" *ngFor="let it of items; let idx = index">
+            <div class="cardHeaderRow">
+              <div class="headerLeft">
+                <span class="itemBadge">#{{ idx + 1 }}</span>
+                <span class="lineCodeBadge">{{ it.lineCode }}</span>
+                <span
+                  class="typeBadge"
+                  [class.revenue]="it.type === 'REVENUE'"
+                  [class.expense]="it.type === 'EXPENSE'"
                 >
-                  <ion-select-option *ngFor="let opt of allLines" [value]="opt.code">
-                    {{ opt.name }} (Plan: {{ opt.currentAmount | number:'1.2-2' }} PLN)
-                  </ion-select-option>
-                </ion-select>
-              </ion-item>
-            </div>
-
-            <!-- Previous amount (read-only) -->
-            <div class="cardField">
-              <label>{{ 'FINANCES.MODALS.AMENDMENT.PREVIOUS_PLAN' | translate }}</label>
-              <div class="readonlyAmount">{{ it.previousAmount | number:'1.2-2' }} PLN</div>
-            </div>
-
-            <!-- New amount -->
-            <div class="cardField">
-              <label>{{ 'FINANCES.MODALS.AMENDMENT.NEW_PLAN' | translate }}</label>
-              <ion-item lines="none" class="inputItem">
-                <ion-input
-                  type="text"
-                  inputmode="decimal"
-                  [value]="it.newAmount"
-                  (ionInput)="onNewAmountChange(idx, $event.detail.value)"
-                ></ion-input>
-              </ion-item>
-            </div>
-
-            <!-- Delta -->
-            <div class="cardField">
-              <label>{{ 'FINANCES.MODALS.AMENDMENT.DELTA' | translate }}</label>
-              <div
-                class="deltaBadge"
-                [class.positive]="it.difference > 0"
-                [class.negative]="it.difference < 0"
-              >
-                {{ it.difference | financeNumber:{ currency: 'PLN', forceSign: true } }}
+                  {{ (it.type === 'REVENUE' ? 'FINANCES.BUDGET.REVENUES' : 'FINANCES.BUDGET.EXPENSES') | translate }}
+                </span>
+                <span class="changeBadge" [ngClass]="it.changeType">
+                  {{ getChangeTypeLabel(it.changeType) }}
+                </span>
               </div>
             </div>
 
-            <!-- Justification -->
-            <div class="cardField fullWidth">
-              <label>{{ 'FINANCES.MODALS.AMENDMENT.LINE_JUSTIFICATION' | translate }}</label>
-              <ion-item lines="none" class="inputItem">
-                <ion-input
-                  type="text"
+            <div class="lineDetails">
+              <h4 class="lineNameText">{{ it.lineName }}</h4>
+              <span class="categoryPathText" *ngIf="it.categoryPath">{{ it.categoryPath }}</span>
+            </div>
+
+            <div class="comparisonStrip">
+              <div class="comparisonCol">
+                <span class="metricLabel">{{ 'FINANCES.MODALS.AMENDMENT.PREVIOUS_PLAN' | translate }}</span>
+                <span class="metricValue prevVal">
+                  {{ it.previousAmount | financeNumber:{ currency: 'PLN' } }}
+                </span>
+              </div>
+
+              <div class="comparisonArrow">
+                <ion-icon name="arrow-forward-outline"></ion-icon>
+              </div>
+
+              <div class="comparisonCol">
+                <span class="metricLabel">{{ 'FINANCES.MODALS.AMENDMENT.NEW_PLAN' | translate }}</span>
+                <span class="metricValue newVal">
+                  {{ it.newAmount | financeNumber:{ currency: 'PLN' } }}
+                </span>
+              </div>
+
+              <div class="comparisonCol deltaCol">
+                <span class="metricLabel">{{ 'FINANCES.MODALS.AMENDMENT.DELTA' | translate }}</span>
+                <div
+                  class="deltaBadge"
+                  [class.positive]="it.difference > 0"
+                  [class.negative]="it.difference < 0"
+                >
+                  {{ it.difference | financeNumber:{ currency: 'PLN', forceSign: true } }}
+                </div>
+              </div>
+            </div>
+
+            <div class="justificationRow">
+              <label class="fieldLabelSub">
+                {{ 'FINANCES.MODALS.AMENDMENT.LINE_JUSTIFICATION' | translate }}
+              </label>
+              <ion-item lines="none" class="inputItem smallTextarea">
+                <ion-textarea
                   [(ngModel)]="it.justification"
+                  [autoGrow]="true"
+                  rows="1"
                   [placeholder]="'FINANCES.MODALS.AMENDMENT.LINE_JUSTIFICATION_PH' | translate"
-                ></ion-input>
+                ></ion-textarea>
               </ion-item>
             </div>
           </div>
-        </div>
+        </ng-container>
+
+        <!-- MODE B: Manual Entry Mode (!itemsDiff) -->
+        <ng-container *ngIf="!itemsDiff || itemsDiff.length === 0">
+          <div class="itemCard" *ngFor="let it of items; let idx = index">
+            <div class="itemCardTop">
+              <span class="itemBadge">#{{ idx + 1 }}</span>
+              <ion-button
+                fill="clear"
+                color="danger"
+                size="small"
+                class="removeBtn"
+                (click)="removeItemRow(idx)"
+                [disabled]="items.length === 1"
+              >
+                <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
+              </ion-button>
+            </div>
+
+            <div class="itemCardGrid">
+              <!-- Line selector -->
+              <div class="cardField fullWidth">
+                <label>{{ 'FINANCES.MODALS.AMENDMENT.LINE_LABEL' | translate }}</label>
+                <ion-item lines="none" class="inputItem">
+                  <ion-select
+                    interface="popover"
+                    [value]="it.lineCode"
+                    [selectedText]="it.lineName || undefined"
+                    (ionChange)="onLineSelected(idx, $event.detail.value)"
+                    [placeholder]="'FINANCES.MODALS.AMENDMENT.LINE_PH' | translate"
+                  >
+                    <ion-select-option *ngFor="let opt of allLines" [value]="opt.code">
+                      {{ opt.name }} (Plan: {{ opt.currentAmount | number:'1.2-2' }} PLN)
+                    </ion-select-option>
+                  </ion-select>
+                </ion-item>
+              </div>
+
+              <!-- Previous amount (read-only) -->
+              <div class="cardField">
+                <label>{{ 'FINANCES.MODALS.AMENDMENT.PREVIOUS_PLAN' | translate }}</label>
+                <div class="readonlyAmount">
+                  {{ it.previousAmount | financeNumber:{ currency: 'PLN' } }}
+                </div>
+              </div>
+
+              <!-- New amount -->
+              <div class="cardField">
+                <label>{{ 'FINANCES.MODALS.AMENDMENT.NEW_PLAN' | translate }}</label>
+                <ion-item lines="none" class="inputItem">
+                  <ion-input
+                    type="text"
+                    inputmode="decimal"
+                    [value]="it.newAmount"
+                    (ionInput)="onNewAmountChange(idx, $event.detail.value)"
+                  ></ion-input>
+                </ion-item>
+              </div>
+
+              <!-- Delta -->
+              <div class="cardField">
+                <label>{{ 'FINANCES.MODALS.AMENDMENT.DELTA' | translate }}</label>
+                <div
+                  class="deltaBadge"
+                  [class.positive]="it.difference > 0"
+                  [class.negative]="it.difference < 0"
+                >
+                  {{ it.difference | financeNumber:{ currency: 'PLN', forceSign: true } }}
+                </div>
+              </div>
+
+              <!-- Justification -->
+              <div class="cardField fullWidth">
+                <label>{{ 'FINANCES.MODALS.AMENDMENT.LINE_JUSTIFICATION' | translate }}</label>
+                <ion-item lines="none" class="inputItem smallTextarea">
+                  <ion-textarea
+                    [(ngModel)]="it.justification"
+                    [autoGrow]="true"
+                    rows="1"
+                    [placeholder]="'FINANCES.MODALS.AMENDMENT.LINE_JUSTIFICATION_PH' | translate"
+                  ></ion-textarea>
+                </ion-item>
+              </div>
+            </div>
+          </div>
+        </ng-container>
       </div>
 
-      <!-- Total Delta Summary -->
+      <!-- Total Delta Summary Breakdown -->
       <div class="deltaSummaryCard">
-        <span class="summaryLabel">{{ 'FINANCES.MODALS.AMENDMENT.TOTAL_IMPACT' | translate }}</span>
-        <span
-          class="summaryAmount"
-          [class.positive]="totalDelta > 0"
-          [class.negative]="totalDelta < 0"
-        >
-          {{ totalDelta | financeNumber:{ currency: 'PLN', forceSign: true } }}
-        </span>
+        <div class="summaryBreakdown" *ngIf="calculatedRevenueDelta !== 0 || calculatedExpenseDelta !== 0">
+          <div class="breakdownItem" *ngIf="calculatedRevenueDelta !== 0">
+            <span class="breakdownLabel">{{ 'FINANCES.MODALS.AMENDMENT.REVENUE_IMPACT' | translate }}</span>
+            <span
+              class="breakdownVal"
+              [class.positive]="calculatedRevenueDelta > 0"
+              [class.negative]="calculatedRevenueDelta < 0"
+            >
+              {{ calculatedRevenueDelta | financeNumber:{ currency: 'PLN', forceSign: true } }}
+            </span>
+          </div>
+          <div class="breakdownItem" *ngIf="calculatedExpenseDelta !== 0">
+            <span class="breakdownLabel">{{ 'FINANCES.MODALS.AMENDMENT.EXPENSE_IMPACT' | translate }}</span>
+            <span
+              class="breakdownVal"
+              [class.positive]="calculatedExpenseDelta < 0"
+              [class.negative]="calculatedExpenseDelta > 0"
+            >
+              {{ calculatedExpenseDelta | financeNumber:{ currency: 'PLN', forceSign: true } }}
+            </span>
+          </div>
+        </div>
+
+        <div class="summaryMain">
+          <span class="summaryLabel">{{ 'FINANCES.MODALS.AMENDMENT.NET_IMPACT' | translate }}</span>
+          <span
+            class="summaryAmount"
+            [class.positive]="totalDelta > 0"
+            [class.negative]="totalDelta < 0"
+          >
+            {{ totalDelta | financeNumber:{ currency: 'PLN', forceSign: true } }}
+          </span>
+        </div>
       </div>
     </div>
 
@@ -156,11 +276,10 @@
       <ion-button fill="outline" color="medium" (click)="close()">
         {{ 'COMMON.CANCEL' | translate }}
       </ion-button>
-      <ion-button fill="solid" color="primary" class="saveBtn" (click)="saveAmendment()">
-        <ion-icon slot="start" name="checkmark-outline"></ion-icon>
-        {{ 'FINANCES.MODALS.AMENDMENT.SUBMIT_BTN' | translate }}
+      <ion-button fill="solid" color="success" (click)="saveAmendment()">
+        <ion-icon slot="start" name="checkmark-done-circle-outline"></ion-icon>
+        {{ (itemsDiff ? 'FINANCES.BUDGET.ADOPT_AMENDMENT_BTN' : 'FINANCES.MODALS.AMENDMENT.SUBMIT_BTN') | translate }}
       </ion-button>
     </div>
   </div>
 </ion-content>
-

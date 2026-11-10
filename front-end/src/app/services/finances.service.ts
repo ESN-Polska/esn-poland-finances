@@ -44,12 +44,24 @@ export class FinancesService {
     return new AnnualBudget(raw);
   }
 
-  public async saveAmendmentDraft(year: number, draft: BudgetAmendmentDraft): Promise<AnnualBudget> {
+  public async saveAmendmentDraft(
+    year: number,
+    draft: BudgetAmendmentDraft,
+    currentBudget?: AnnualBudget
+  ): Promise<AnnualBudget> {
+    if (currentBudget) {
+      currentBudget.draftAmendment = draft;
+      return this.saveBudget(currentBudget);
+    }
     const raw = await this.api.putResource(['budgets', year.toString(), 'amendment-draft'], { body: draft });
     return new AnnualBudget(raw);
   }
 
-  public async discardAmendmentDraft(year: number): Promise<AnnualBudget> {
+  public async discardAmendmentDraft(year: number, currentBudget?: AnnualBudget): Promise<AnnualBudget> {
+    if (currentBudget) {
+      currentBudget.draftAmendment = null;
+      return this.saveBudget(currentBudget);
+    }
     const res = await this.api.deleteResource(['budgets', year.toString(), 'amendment-draft']);
     return new AnnualBudget(res?.budget || res);
   }

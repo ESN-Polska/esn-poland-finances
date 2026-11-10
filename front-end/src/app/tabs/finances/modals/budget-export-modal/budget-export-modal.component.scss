@@ -135,3 +135,85 @@
     min-height: 48px;
   }
 }
+
+.comparisonSection {
+  background: var(--ion-color-step-50, #f8fafc);
+  border: 1px solid var(--ion-color-step-200, #e2e8f0);
+  border-radius: 12px;
+  padding: 12px 14px;
+
+  .comparisonToggleRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 14px;
+
+    .toggleInfo {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+
+      .toggleTitle {
+        font-size: 0.92rem;
+        font-weight: 600;
+        color: var(--ion-color-step-900, #1e293b);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+
+        .toggleIcon {
+          color: var(--ion-color-primary, #00aeef);
+          font-size: 1.15rem;
+        }
+      }
+
+      .toggleSubtitle {
+        margin: 0;
+        font-size: 0.78rem;
+        color: var(--ion-color-step-500, #64748b);
+        line-height: 1.35;
+      }
+    }
+
+    ion-toggle {
+      --track-background: var(--ion-color-step-250, #cbd5e1);
+      --track-background-checked: var(--ion-color-primary, #00aeef);
+      flex-shrink: 0;
+    }
+  }
+}
+
+:host-context(body.dark),
+:host-context(.dark),
+body.dark {
+  .comparisonSection {
+    background: #1e2430;
+    border-color: #334155;
+
+    .comparisonToggleRow .toggleInfo {
+      .toggleTitle {
+        color: #f8fafc;
+      }
+      .toggleSubtitle {
+        color: #94a3b8;
+      }
+    }
+  }
+
+  .formatChoiceBtn {
+    background: #1e2430 !important;
+    border-color: #334155 !important;
+
+    .formatText .formatName {
+      color: #f8fafc !important;
+    }
+    .formatText .formatDesc {
+      color: #94a3b8 !important;
+    }
+
+    &.active {
+      border-color: #00aeef !important;
+      background: rgba(0, 174, 239, 0.15) !important;
+    }
+  }
+}

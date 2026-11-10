@@ -61,16 +61,16 @@
           <div class="totalsRibbon">
             <div class="totalItem">
               <span class="totLabel">{{ 'FINANCES.BUDGET.KPI_REVENUE' | translate }}</span>
-              <strong class="totVal revVal">{{ snap.totalRevenue | number:'1.2-2' }} PLN</strong>
+              <strong class="totVal revVal">{{ snap.totalRevenue | financeNumber:{ currency: 'PLN' } }}</strong>
             </div>
             <div class="totalItem">
               <span class="totLabel">{{ 'FINANCES.BUDGET.KPI_EXPENSES' | translate }}</span>
-              <strong class="totVal expVal">{{ snap.totalExpense | number:'1.2-2' }} PLN</strong>
+              <strong class="totVal expVal">{{ snap.totalExpense | financeNumber:{ currency: 'PLN' } }}</strong>
             </div>
             <div class="totalItem">
               <span class="totLabel">{{ 'FINANCES.BUDGET.KPI_NET' | translate }}</span>
               <strong class="totVal" [class.revVal]="snap.netResult >= 0" [class.expVal]="snap.netResult < 0">
-                {{ snap.netResult | number:'1.2-2' }} PLN
+                {{ snap.netResult | financeNumber:{ currency: 'PLN', forceSign: true } }}
               </strong>
             </div>
           </div>

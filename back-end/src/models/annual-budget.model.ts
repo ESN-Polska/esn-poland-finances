@@ -121,6 +121,11 @@ export interface OpeningBalances {
   totalOpeningBalance?: number;
   eurExchangeRate?: number;
   eurExchangeDate?: string;
+
+  /** Lock flag to prevent accidental modification after initial entry */
+  isLocked?: boolean;
+  lockedAt?: string;
+  lockedBy?: string;
 }
 
 export type BudgetAmendmentType = 'ADD_LINE' | 'MODIFY_LINE' | 'REMOVE_LINE' | 'RENAME_LINE';
@@ -222,6 +227,8 @@ export class AnnualBudget extends Resource {
   status: AnnualBudgetStatus;
   resolutionNumber?: string;
   adoptedDate?: string;
+  initialResolutionNumber?: string;
+  initialAdoptedDate?: string;
   categories: DynamicBudgetCategory[];
   openingBalances: OpeningBalances;
   amendments: BudgetAmendment[];
@@ -405,7 +412,10 @@ export class AnnualBudget extends Resource {
       cashDeskPln: this.clean(x.openingBalances?.cashDeskPln, Number, 0),
       totalOpeningBalance: this.clean(x.openingBalances?.totalOpeningBalance, Number, 0),
       eurExchangeRate: this.clean(x.openingBalances?.eurExchangeRate, Number, 0),
-      eurExchangeDate: this.clean(x.openingBalances?.eurExchangeDate, String, '')
+      eurExchangeDate: this.clean(x.openingBalances?.eurExchangeDate, String, ''),
+      isLocked: x.openingBalances?.isLocked !== undefined ? Boolean(x.openingBalances.isLocked) : undefined,
+      lockedAt: this.clean(x.openingBalances?.lockedAt, String, ''),
+      lockedBy: this.clean(x.openingBalances?.lockedBy, String, '')
     };
 
     this.amendments = Array.isArray(x.amendments)
@@ -414,22 +424,30 @@ export class AnnualBudget extends Resource {
           amendmentNumber: this.clean(am.amendmentNumber, String),
           resolutionNumber: this.clean(am.resolutionNumber, String, ''),
           assemblyMeetingCode: this.clean(am.assemblyMeetingCode, String, ''),
-          date: this.clean(am.date, String, new Date().toISOString().substring(0, 10)),
+          date: this.clean(am.date || am.adoptedDate, String, new Date().toISOString().substring(0, 10)),
+          adoptedDate: this.clean(am.adoptedDate || am.date, String, ''),
+          description: this.clean(am.description, String, ''),
           status: this.clean(am.status, String, 'DRAFT') as 'DRAFT' | 'APPROVED' | 'REJECTED',
           items: Array.isArray(am.items)
             ? am.items.map((it: any) => ({
                 lineId: this.clean(it.lineId, String),
-                budgetCode: this.clean(it.budgetCode, String),
+                budgetCode: this.clean(it.budgetCode || it.lineCode, String),
+                lineCode: this.clean(it.lineCode || it.budgetCode, String),
                 lineName: {
                   pl: this.clean(it.lineName?.pl, String, ''),
                   en: this.clean(it.lineName?.en, String, '')
                 },
                 type: (it.type === 'REVENUE' ? 'REVENUE' : 'EXPENSE') as BudgetLineType,
                 changeType: this.clean(it.changeType, String, 'MODIFY_LINE') as BudgetAmendmentType,
-                currentAmount: this.clean(it.currentAmount, Number, 0),
-                proposedAmount: this.clean(it.proposedAmount, Number, 0),
-                deltaAmount: this.clean(it.deltaAmount, Number, 0),
-                explanation: this.clean(it.explanation, String, '')
+                currentAmount: this.clean(it.currentAmount ?? it.previousAmount, Number, 0),
+                proposedAmount: this.clean(it.proposedAmount ?? it.newAmount, Number, 0),
+                deltaAmount: this.clean(it.deltaAmount ?? it.difference, Number, 0),
+                previousAmount: this.clean(it.previousAmount ?? it.currentAmount, Number, 0),
+                newAmount: this.clean(it.newAmount ?? it.proposedAmount, Number, 0),
+                difference: this.clean(it.difference ?? it.deltaAmount, Number, 0),
+                explanation: this.clean(it.explanation || it.justification, String, ''),
+                justification: this.clean(it.justification || it.explanation, String, ''),
+                categoryPath: this.clean(it.categoryPath, String, '')
               }))
             : [],
           totalRevenueDelta: this.clean(am.totalRevenueDelta, Number, 0),
@@ -437,7 +455,8 @@ export class AnnualBudget extends Resource {
           netBudgetDelta: this.clean(am.netBudgetDelta, Number, 0),
           summaryNarrative: this.clean(am.summaryNarrative, String, ''),
           approvedAt: this.clean(am.approvedAt, String, ''),
-          approvedBy: this.clean(am.approvedBy, String, '')
+          approvedBy: this.clean(am.approvedBy, String, ''),
+          createdAt: this.clean(am.createdAt, String, '')
         }))
       : [];
 
@@ -479,6 +498,31 @@ export class AnnualBudget extends Resource {
     this.updatedAt = this.clean(x.updatedAt, String, new Date().toISOString());
     this.createdBy = this.clean(x.createdBy, String, '');
     this.updatedBy = this.clean(x.updatedBy, String, '');
+
+    this.initialResolutionNumber = this.clean(x.initialResolutionNumber, String, '');
+    this.initialAdoptedDate = this.clean(x.initialAdoptedDate, String, '');
+
+    // For amended budgets, ensure initial resolution is preserved and current resolution reflects the latest amendment
+    if (this.status === 'AMENDED' && this.amendments?.length > 0) {
+      if (!this.initialResolutionNumber) {
+        const initSnap = this.versionHistory?.find((s) => s.type === 'INITIAL_ADOPTION');
+        if (initSnap?.resolutionNumber) {
+          this.initialResolutionNumber = initSnap.resolutionNumber;
+          this.initialAdoptedDate = initSnap.adoptedDate;
+        } else if (
+          this.resolutionNumber &&
+          this.resolutionNumber !== this.amendments[this.amendments.length - 1].resolutionNumber
+        ) {
+          this.initialResolutionNumber = this.resolutionNumber;
+          this.initialAdoptedDate = this.adoptedDate;
+        }
+      }
+      const latestAm = this.amendments[this.amendments.length - 1];
+      if (latestAm?.resolutionNumber) {
+        this.resolutionNumber = latestAm.resolutionNumber;
+        this.adoptedDate = latestAm.adoptedDate || latestAm.date || this.adoptedDate;
+      }
+    }
 
     this.recalculateTotals();
   }
@@ -708,11 +752,23 @@ export class AnnualBudget extends Resource {
       }
     }
 
+    // Preserve initial resolution if not already stored
+    if (!this.initialResolutionNumber && this.resolutionNumber) {
+      this.initialResolutionNumber = this.resolutionNumber;
+      this.initialAdoptedDate = this.adoptedDate;
+    }
+
     this.status = 'AMENDED';
     this.amendments = this.amendments || [];
     this.amendments.push(amendment);
     this.draftAmendment = null;
     this.recalculateTotals();
+
+    // The active resolution of the amended budget becomes this latest amendment's resolution
+    if (amendment.resolutionNumber) {
+      this.resolutionNumber = amendment.resolutionNumber;
+      this.adoptedDate = amendment.adoptedDate || amendment.date || this.adoptedDate;
+    }
 
     this.createSnapshot(
       'AMENDMENT',

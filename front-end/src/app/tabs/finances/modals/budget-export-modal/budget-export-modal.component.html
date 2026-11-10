@@ -74,6 +74,22 @@
       </ion-segment>
     </div>
 
+    <!-- Compare with previous year (Draft budget planning) -->
+    <div class="sectionGroup comparisonSection" *ngIf="exportType === 'BUDGET' && canComparePreviousYear">
+      <div class="comparisonToggleRow">
+        <div class="toggleInfo">
+          <label class="toggleTitle">
+            <ion-icon name="git-compare-outline" class="toggleIcon"></ion-icon>
+            {{ 'FINANCES.MODALS.BUDGET_EXPORT.COMPARE_PREV_YEAR_TITLE' | translate:{ year: (year || budget.year) - 1 } }}
+          </label>
+          <p class="toggleSubtitle">
+            {{ 'FINANCES.MODALS.BUDGET_EXPORT.COMPARE_PREV_YEAR_DESC' | translate:{ year: (year || budget.year) - 1 } }}
+          </p>
+        </div>
+        <ion-toggle [(ngModel)]="compareWithPreviousYear" color="primary"></ion-toggle>
+      </div>
+    </div>
+
     <!-- Cut-off Date (Stan na dzień) only when exporting EXECUTION -->
     <div class="sectionGroup" *ngIf="exportType === 'EXECUTION'">
       <label class="groupLabel">{{ 'FINANCES.MODALS.BUDGET_EXPORT.CUTOFF_DATE' | translate }}</label>

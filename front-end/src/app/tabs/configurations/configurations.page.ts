@@ -16,6 +16,8 @@ import { EmailTemplateComponent } from './emailTemplate/emailTemplate.component'
 import { OAuthRolesModalComponent } from './oauthRolesModal.component';
 import { ThreadSubjectModalComponent } from './threadSubjectModal.component';
 import { FinancesStateService } from '@app/services/finances-state.service';
+import { FinancesService } from '@app/services/finances.service';
+import { AnnualBudget } from '@models/annual-budget.model';
 
 import {
   AppPermission,
@@ -116,6 +118,11 @@ export class ConfigurationsPage implements OnInit {
   exportHeaderLangTab: 'en' | 'pl' = 'en';
   exportSubtab: 'REQUESTS' | 'BANK' = 'REQUESTS';
 
+  selectedOpeningBalanceYear: number = new Date().getFullYear();
+  openingBalanceBudgetMap: Record<number, AnnualBudget | null> = {};
+  isOpeningBalanceLoading: boolean = false;
+  isUpdatingOpeningBalanceLock: boolean = false;
+
   constructor(
     private modalCtrl: ModalController,
     private alertCtrl: AlertController,
@@ -127,7 +134,8 @@ export class ConfigurationsPage implements OnInit {
     private usersService: UsersService,
     private route: ActivatedRoute,
     public app: AppService,
-    private financesStateService: FinancesStateService
+    private financesStateService: FinancesStateService,
+    private financesService: FinancesService
   ) {}
 
   ionViewWillEnter(): void {
@@ -174,6 +182,10 @@ export class ConfigurationsPage implements OnInit {
           this.loadUsers();
         }
       }
+    }
+
+    if (this.pageSection === 'FINANCES') {
+      this.initFinancesOpeningBalanceSection();
     }
   }
 
@@ -509,6 +521,9 @@ export class ConfigurationsPage implements OnInit {
   onPageSectionChange(section: ConfigurationPageSection): void {
     if (section === 'USERS' || section === 'ROLES') {
       this.loadUsers();
+    }
+    if (section === 'FINANCES') {
+      this.initFinancesOpeningBalanceSection();
     }
   }
 
@@ -1781,6 +1796,123 @@ export class ConfigurationsPage implements OnInit {
     updated.financesPageSectionsOrder = [...DEFAULT_FINANCES_PAGE_SECTIONS_ORDER];
     this.configurations.financesPageSectionsOrder = [...DEFAULT_FINANCES_PAGE_SECTIONS_ORDER];
     await this.updateConfigurations(updated);
+  }
+
+  // ==========================================
+  // FINANCES: BUDGET OPENING BALANCES LOCK
+  // ==========================================
+
+  get availableFinancesYears(): number[] {
+    const firstYear = this.configurations?.financesConfig?.firstYear || 2020;
+    const nextYear = new Date().getFullYear() + 1;
+    const years: number[] = [];
+    for (let y = nextYear; y >= firstYear; y--) {
+      years.push(y);
+    }
+    return years;
+  }
+
+  initFinancesOpeningBalanceSection(): void {
+    if (!this.selectedOpeningBalanceYear) {
+      this.selectedOpeningBalanceYear = this.financesStateService.activeYear || new Date().getFullYear();
+    }
+    this.loadOpeningBalanceForYear(this.selectedOpeningBalanceYear);
+  }
+
+  async loadOpeningBalanceForYear(year: number): Promise<void> {
+    if (!year) return;
+    this.isOpeningBalanceLoading = true;
+    try {
+      const budget = await this.financesService.getBudget(year);
+      this.openingBalanceBudgetMap[year] = budget;
+    } catch {
+      this.openingBalanceBudgetMap[year] = null;
+    } finally {
+      this.isOpeningBalanceLoading = false;
+    }
+  }
+
+  isOpeningBalanceLockedForYear(year: number): boolean {
+    const b = this.openingBalanceBudgetMap[year];
+    if (!b || !b.openingBalances) return false;
+    if (b.openingBalances.isLocked !== undefined) {
+      return Boolean(b.openingBalances.isLocked);
+    }
+    return Boolean(b.openingBalances.totalOpeningBalance && b.openingBalances.totalOpeningBalance > 0);
+  }
+
+  async unlockOpeningBalance(year: number): Promise<void> {
+    if (!this.canModifyFinances()) return;
+    const alert = await this.alertCtrl.create({
+      header: this.translate.instant('CONFIGURATIONS.FINANCES_UNLOCK_OPENING_BALANCE_CONFIRM_TITLE'),
+      message: this.translate.instant('CONFIGURATIONS.FINANCES_UNLOCK_OPENING_BALANCE_CONFIRM_MSG', { year }),
+      buttons: [
+        { text: this.translate.instant('COMMON.CANCEL'), role: 'cancel' },
+        {
+          text: this.translate.instant('CONFIGURATIONS.FINANCES_UNLOCK_OPENING_BALANCE_BTN', { year }),
+          handler: async () => {
+            await this.setOpeningBalanceLock(year, false);
+          }
+        }
+      ]
+    });
+    await alert.present();
+  }
+
+  async lockOpeningBalance(year: number): Promise<void> {
+    if (!this.canModifyFinances()) return;
+    await this.setOpeningBalanceLock(year, true);
+  }
+
+  private async setOpeningBalanceLock(year: number, locked: boolean): Promise<void> {
+    this.isUpdatingOpeningBalanceLock = true;
+    const loading = await this.loadingCtrl.create({
+      message: this.translate.instant('COMMON.SAVING')
+    });
+    await loading.present();
+    try {
+      let budget = this.openingBalanceBudgetMap[year];
+      if (!budget) {
+        budget = await this.financesService.getBudget(year);
+      }
+      if (!budget.openingBalances) {
+        budget.openingBalances = {};
+      }
+      budget.openingBalances.isLocked = locked;
+      if (locked) {
+        budget.openingBalances.lockedAt = new Date().toISOString();
+        budget.openingBalances.lockedBy = this.app.currentUser?.userId || '';
+      }
+      const saved = await this.financesService.saveBudget(budget);
+      this.openingBalanceBudgetMap[year] = saved;
+
+      const toast = await this.toastCtrl.create({
+        message: this.translate.instant(
+          locked
+            ? 'CONFIGURATIONS.FINANCES_LOCK_OPENING_BALANCE_SUCCESS'
+            : 'CONFIGURATIONS.FINANCES_UNLOCK_OPENING_BALANCE_SUCCESS',
+          { year }
+        ),
+        duration: 3000,
+        color: 'success'
+      });
+      await toast.present();
+    } catch (err: any) {
+      const toast = await this.toastCtrl.create({
+        message: err?.message || this.translate.instant('FINANCES.BUDGET.SAVE_ERROR'),
+        duration: 4000,
+        color: 'danger'
+      });
+      await toast.present();
+    } finally {
+      this.isUpdatingOpeningBalanceLock = false;
+      await loading.dismiss();
+    }
+  }
+
+  formatMoney(val?: number): string {
+    const amount = Number(val) || 0;
+    return `${amount.toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} PLN`;
   }
 
   //

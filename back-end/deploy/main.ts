@@ -24,7 +24,7 @@ const apiResources: ResourceController[] = [
   { name: 'refreshContributors' },
   { name: 'media', paths: ['/media'] },
   { name: 'sesNotifications' },
-  { name: 'budgets', paths: ['/budgets', '/budgets/{year}', '/budgets/{year}/amendments', '/budgets/{year}/export'] },
+  { name: 'budgets', paths: ['/budgets', '/budgets/{year}', '/budgets/{year}/amendments', '/budgets/{year}/export', '/budgets/{year}/amendment-draft'] },
   { name: 'accountingDocuments', paths: ['/accounting-documents', '/accounting-documents/{id}'] },
   { name: 'cashflowTransactions', paths: ['/cashflow-transactions', '/cashflow-transactions/import', '/cashflow-transactions/{id}'] },
   { name: 'fiscalReports', paths: ['/fiscal-reports', '/fiscal-reports/{year}', '/fiscal-reports/{year}/{month}'] },

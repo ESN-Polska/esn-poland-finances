@@ -39,12 +39,40 @@ export class BudgetExportModalComponent implements OnInit {
   cachedTxs: any[] = [];
   cachedDeposits: any[] = [];
 
+  previousYearBudget: AnnualBudget | null = null;
+  canComparePreviousYear: boolean = false;
+  compareWithPreviousYear: boolean = false;
+  isLoadingPrevBudget: boolean = false;
+
   async ngOnInit(): Promise<void> {
     const today = new Date();
     this.asOfDate = today.toISOString().split('T')[0];
     const curLang = this.translate.currentLang;
     if (curLang === 'en' || curLang === 'pl') {
       this.exportLanguage = curLang;
+    }
+
+    const prevYr = (this.year || this.budget?.year) - 1;
+    if (prevYr >= 2000) {
+      this.isLoadingPrevBudget = true;
+      this.financesService
+        .getBudget(prevYr)
+        .then((prev) => {
+          if (prev && (prev.categories?.length || (typeof prev.getAllLines === 'function' && prev.getAllLines().length))) {
+            this.previousYearBudget = prev;
+            this.canComparePreviousYear = true;
+            if (this.budget?.status === 'DRAFT') {
+              this.compareWithPreviousYear = true;
+            }
+          }
+        })
+        .catch(() => {
+          this.previousYearBudget = null;
+          this.canComparePreviousYear = false;
+        })
+        .finally(() => {
+          this.isLoadingPrevBudget = false;
+        });
     }
 
     try {
@@ -130,6 +158,9 @@ export class BudgetExportModalComponent implements OnInit {
 
       const dateFormat = this.app.dateFormat;
       const budgetOrgName = this.app.configurations?.financesConfig?.budgetOrganisationName;
+      const prevBudgetToCompare =
+        this.exportType === 'BUDGET' && this.compareWithPreviousYear ? this.previousYearBudget : null;
+
       if (this.exportFormat === 'EXCEL') {
         const { content, filename } = generateBudgetCsvContent(
           this.budget,
@@ -140,7 +171,8 @@ export class BudgetExportModalComponent implements OnInit {
           numFormat,
           exportBalances,
           dateFormat,
-          budgetOrgName
+          budgetOrgName,
+          prevBudgetToCompare
         );
         downloadCsvFile(content, filename);
       } else {
@@ -155,7 +187,8 @@ export class BudgetExportModalComponent implements OnInit {
           numFormat,
           exportBalances,
           dateFormat,
-          budgetOrgName
+          budgetOrgName,
+          prevBudgetToCompare
         );
         const opened = openPrintablePdf(html);
         if (!opened) {

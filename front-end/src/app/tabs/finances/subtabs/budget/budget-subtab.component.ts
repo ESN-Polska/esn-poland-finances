@@ -15,6 +15,7 @@ import {
   BudgetLineItem,
   BudgetLineType,
   BudgetVersionSnapshot,
+  BudgetAmendment,
   BudgetAmendmentDraft,
   BudgetAmendmentItem,
   isBudgetGroup,
@@ -144,6 +145,9 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    if (this.isAmending && this.budget) {
+      this.saveDraftAmendment(true);
+    }
     this.subs.forEach((s) => s.unsubscribe());
   }
 
@@ -400,6 +404,149 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
     await alert.present();
   }
 
+  get currentResolutionNumber(): string {
+    if (this.activeSnapshotView) {
+      return this.activeSnapshotView.resolutionNumber;
+    }
+    if (this.budget?.amendments && this.budget.amendments.length > 0) {
+      const latest = this.budget.amendments[this.budget.amendments.length - 1];
+      if (latest?.resolutionNumber) {
+        return latest.resolutionNumber;
+      }
+    }
+    return this.budget?.resolutionNumber || '';
+  }
+
+  get currentAdoptedDate(): string {
+    if (this.activeSnapshotView) {
+      return this.activeSnapshotView.adoptedDate || '';
+    }
+    if (this.budget?.amendments && this.budget.amendments.length > 0) {
+      const latest = this.budget.amendments[this.budget.amendments.length - 1];
+      if (latest?.adoptedDate || latest?.date) {
+        return latest.adoptedDate || latest.date || '';
+      }
+    }
+    return this.budget?.adoptedDate || '';
+  }
+
+  get initialSnapshot(): BudgetVersionSnapshot | undefined {
+    return this.budget?.versionHistory?.find((s) => s.type === 'INITIAL_ADOPTION');
+  }
+
+  get initialResolutionNumber(): string {
+    if (this.initialSnapshot?.resolutionNumber) {
+      return this.initialSnapshot.resolutionNumber;
+    }
+    if (this.budget?.initialResolutionNumber) {
+      return this.budget.initialResolutionNumber;
+    }
+    return this.budget?.resolutionNumber || '';
+  }
+
+  get initialAdoptedDate(): string {
+    if (this.initialSnapshot?.adoptedDate) {
+      return this.initialSnapshot.adoptedDate;
+    }
+    if (this.budget?.initialAdoptedDate) {
+      return this.budget.initialAdoptedDate;
+    }
+    return this.budget?.adoptedDate || '';
+  }
+
+  get initialAdoptionDescription(): string {
+    const desc = this.initialSnapshot?.description?.trim();
+    if (
+      !desc ||
+      desc.startsWith('Uchwała nr') ||
+      desc.startsWith('Resolution no') ||
+      desc === 'Uchwalenie budżetu pierwotnego' ||
+      desc === 'Initial budget adoption'
+    ) {
+      return this.translate.instant('FINANCES.BUDGET.INITIAL_ADOPTION_DESC');
+    }
+    return desc;
+  }
+
+  get initialTotalRevenue(): number {
+    if (this.initialSnapshot?.totalRevenue !== undefined) {
+      return this.initialSnapshot.totalRevenue;
+    }
+    const lines = typeof this.budget?.getAllLines === 'function' ? this.budget.getAllLines() : [];
+    return lines
+      .filter((l) => l.type === 'REVENUE')
+      .reduce((sum, l) => sum + (l.plannedAmount - (l.amendmentsDelta || 0)), 0);
+  }
+
+  get initialTotalExpense(): number {
+    if (this.initialSnapshot?.totalExpense !== undefined) {
+      return this.initialSnapshot.totalExpense;
+    }
+    const lines = typeof this.budget?.getAllLines === 'function' ? this.budget.getAllLines() : [];
+    return lines
+      .filter((l) => l.type === 'EXPENSE')
+      .reduce((sum, l) => sum + (l.plannedAmount - (l.amendmentsDelta || 0)), 0);
+  }
+
+  get initialNetResult(): number {
+    if (this.initialSnapshot?.netResult !== undefined) {
+      return this.initialSnapshot.netResult;
+    }
+    return this.initialTotalRevenue - this.initialTotalExpense;
+  }
+
+  getSnapshotForAmendment(am: BudgetAmendment): BudgetVersionSnapshot | undefined {
+    return this.budget?.versionHistory?.find(
+      (s) => (s.amendmentId && s.amendmentId === am.id) || s.resolutionNumber === am.resolutionNumber
+    );
+  }
+
+  getAmendmentTotalRevenue(am: BudgetAmendment): number {
+    const snap = this.getSnapshotForAmendment(am);
+    if (snap?.totalRevenue !== undefined) {
+      return snap.totalRevenue;
+    }
+    const idx = this.budget?.amendments?.indexOf(am) ?? -1;
+    let total = this.initialTotalRevenue;
+    if (idx >= 0 && this.budget?.amendments) {
+      for (let i = 0; i <= idx; i++) {
+        total += this.budget.amendments[i].totalRevenueDelta || 0;
+      }
+    } else {
+      total += am.totalRevenueDelta || 0;
+    }
+    return total;
+  }
+
+  getAmendmentTotalExpense(am: BudgetAmendment): number {
+    const snap = this.getSnapshotForAmendment(am);
+    if (snap?.totalExpense !== undefined) {
+      return snap.totalExpense;
+    }
+    const idx = this.budget?.amendments?.indexOf(am) ?? -1;
+    let total = this.initialTotalExpense;
+    if (idx >= 0 && this.budget?.amendments) {
+      for (let i = 0; i <= idx; i++) {
+        total += this.budget.amendments[i].totalExpenseDelta || 0;
+      }
+    } else {
+      total += am.totalExpenseDelta || 0;
+    }
+    return total;
+  }
+
+  getAmendmentNetResult(am: BudgetAmendment): number {
+    const snap = this.getSnapshotForAmendment(am);
+    if (snap?.netResult !== undefined) {
+      return snap.netResult;
+    }
+    return this.getAmendmentTotalRevenue(am) - this.getAmendmentTotalExpense(am);
+  }
+
+  enterSnapshotView(snap: BudgetVersionSnapshot): void {
+    this.activeSnapshotView = snap;
+  }
+
   async openEditAdoptionAlert(): Promise<void> {
     if (!this.budget) return;
     const alert = await this.alertCtrl.create({
@@ -410,12 +557,12 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
           name: 'resolutionNumber',
           type: 'text',
           placeholder: this.translate.instant('FINANCES.BUDGET.RESOLUTION_NO_PH'),
-          value: this.budget.resolutionNumber || ''
+          value: this.currentResolutionNumber || ''
         },
         {
           name: 'adoptedDate',
           type: 'date',
-          value: this.budget.adoptedDate || ''
+          value: this.currentAdoptedDate || ''
         }
       ],
       buttons: [
@@ -433,8 +580,25 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
           text: this.translate.instant('COMMON.SAVE'),
           handler: async (data) => {
             if (!this.budget) return;
-            this.budget.resolutionNumber = data.resolutionNumber?.trim() || '';
-            this.budget.adoptedDate = data.adoptedDate || '';
+            const newRes = data.resolutionNumber?.trim() || '';
+            const newDate = data.adoptedDate || '';
+            if (this.budget.amendments && this.budget.amendments.length > 0) {
+              const latest = this.budget.amendments[this.budget.amendments.length - 1];
+              latest.resolutionNumber = newRes;
+              latest.adoptedDate = newDate;
+              latest.date = newDate;
+            }
+            this.budget.resolutionNumber = newRes;
+            this.budget.adoptedDate = newDate;
+
+            if (this.budget.versionHistory && this.budget.versionHistory.length > 0) {
+              const latestSnap = this.budget.versionHistory[this.budget.versionHistory.length - 1];
+              if (latestSnap) {
+                latestSnap.resolutionNumber = newRes;
+                latestSnap.adoptedDate = newDate;
+              }
+            }
+
             await this.saveBudgetChanges();
           }
         }
@@ -503,6 +667,30 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
       user.hasPermission(AppPermission.FINANCES.MANAGE) ||
       user.hasPermission(AppPermission.FINANCES.PARENT)
     );
+  }
+
+  get isOpeningBalancesLocked(): boolean {
+    if (this.budget?.openingBalances?.isLocked !== undefined) {
+      return Boolean(this.budget.openingBalances.isLocked);
+    }
+    return Boolean(
+      this.budget?.openingBalances?.totalOpeningBalance &&
+      this.budget.openingBalances.totalOpeningBalance > 0
+    );
+  }
+
+  get canModifyConfigurations(): boolean {
+    const user = this.app.currentUser;
+    if (!user) return false;
+    return (
+      user.isAdministrator ||
+      user.hasPermission(AppPermission.CONFIGURATIONS.FINANCES) ||
+      user.hasPermission(AppPermission.CONFIGURATIONS.OPTIONS)
+    );
+  }
+
+  goToConfigurationsFinances(): void {
+    this.app.goTo(['/t/configurations'], { queryParams: { section: 'FINANCES' } });
   }
 
   get isArchived(): boolean {
@@ -1412,6 +1600,9 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
 
   async saveDraftAmendment(silent: boolean = false): Promise<void> {
     if (!this.budget) return;
+    this.recalculateWorkingTotals();
+    this.recomputeAmendmentDiff();
+
     const draft: BudgetAmendmentDraft = {
       id: this.budget.draftAmendment?.id || `draft_amend_${Date.now()}`,
       updatedAt: new Date().toISOString(),
@@ -1423,7 +1614,9 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
     };
 
     try {
-      const updated = await this.financesService.saveAmendmentDraft(this.budget.year, draft);
+      this.budget.draftAmendment = draft;
+      const updated = await this.financesService.saveAmendmentDraft(this.budget.year, draft, this.budget);
+      this.budget = updated;
       this.budget.draftAmendment = updated.draftAmendment || draft;
       if (!silent) {
         const toast = await this.toastCtrl.create({
@@ -1434,6 +1627,7 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
         await toast.present();
       }
     } catch (err: any) {
+      console.error('Failed to save amendment draft:', err);
       if (!silent) {
         const toast = await this.toastCtrl.create({
           message: err?.message || this.translate.instant('COMMON.SAVE_ERROR'),
@@ -1469,7 +1663,8 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
           handler: async () => {
             if (!this.budget) return;
             try {
-              await this.financesService.discardAmendmentDraft(this.budget.year);
+              const updated = await this.financesService.discardAmendmentDraft(this.budget.year, this.budget);
+              this.budget = updated;
               this.budget.draftAmendment = null;
               this.isAmending = false;
               this.amendmentWorkingCategories = [];
@@ -1482,6 +1677,7 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
               });
               await toast.present();
             } catch (err: any) {
+              console.error('Failed to discard amendment draft:', err);
               const toast = await this.toastCtrl.create({
                 message: err?.message || this.translate.instant('COMMON.SAVE_ERROR'),
                 duration: 3500,
@@ -1567,7 +1763,9 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
       organisationNamePl: this.app.getBudgetOrganisation('pl'),
       organisationNameEn: this.app.getBudgetOrganisation('en'),
       logoUrl: this.app.getOrganisationLogo(),
-      description: this.budget.draftAmendment?.description
+      description: this.budget.draftAmendment?.description,
+      dateFormat: this.app.dateFormat,
+      numberFormatMode: this.app.configurations?.financesConfig?.numberDisplayFormat || 'STANDARD'
     };
 
     if (format === 'PDF') {
@@ -1703,6 +1901,15 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
   }
 
   async startEditingOpeningBalances(): Promise<void> {
+    if (this.isOpeningBalancesLocked) {
+      const toast = await this.toastCtrl.create({
+        message: this.translate.instant('FINANCES.BUDGET.OPENING_BALANCES_LOCKED_TOOLTIP'),
+        duration: 3500,
+        color: 'warning'
+      });
+      await toast.present();
+      return;
+    }
     this.isEditingOpeningBalances = true;
     if (this.budget) {
       this.isLoadingNbpRate = true;
@@ -1751,7 +1958,10 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
       eurExchangeDate: date,
       termDepositsPln: dep,
       termDepositsStartingBalance: dep,
-      totalOpeningBalance: bPln + bEurInPln + dep
+      totalOpeningBalance: bPln + bEurInPln + dep,
+      isLocked: true,
+      lockedAt: new Date().toISOString(),
+      lockedBy: this.app.currentUser?.userId || ''
     };
     this.budget.recalculateTotals();
     await this.saveBudgetChanges();

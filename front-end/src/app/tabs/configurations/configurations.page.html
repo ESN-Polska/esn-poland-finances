@@ -1948,6 +1948,95 @@
         </ion-item>
       </ion-list>
 
+      <!-- Budget Opening Balances Lock Management -->
+      <ion-list class="aList">
+        <ion-list-header>
+          <ion-label>
+            <h2>{{ 'CONFIGURATIONS.FINANCES_OPENING_BALANCES_TITLE' | translate }}</h2>
+            <p>{{ 'CONFIGURATIONS.FINANCES_OPENING_BALANCES_I' | translate }}</p>
+          </ion-label>
+        </ion-list-header>
+
+        <!-- Year selection -->
+        <ion-item>
+          <ion-label position="stacked">{{ 'CONFIGURATIONS.FINANCES_OPENING_BALANCE_YEAR' | translate }}</ion-label>
+          <ion-select
+            interface="popover"
+            [disabled]="!canModifyFinances()"
+            [(ngModel)]="selectedOpeningBalanceYear"
+            (ionChange)="loadOpeningBalanceForYear(selectedOpeningBalanceYear)"
+          >
+            <ion-select-option *ngFor="let yr of availableFinancesYears" [value]="yr">
+              {{ yr }}
+            </ion-select-option>
+          </ion-select>
+        </ion-item>
+
+        <!-- Status Item -->
+        <ion-item>
+          <ion-icon
+            slot="start"
+            [name]="isOpeningBalanceLockedForYear(selectedOpeningBalanceYear) ? 'lock-closed' : 'lock-open-outline'"
+            [color]="isOpeningBalanceLockedForYear(selectedOpeningBalanceYear) ? 'warning' : 'success'"
+          ></ion-icon>
+          <ion-label class="ion-text-wrap">
+            <h3>
+              {{ 'CONFIGURATIONS.FINANCES_OPENING_BALANCE_STATUS' | translate }} ({{ selectedOpeningBalanceYear }})
+            </h3>
+            <p>
+              {{ (isOpeningBalanceLockedForYear(selectedOpeningBalanceYear)
+                ? 'CONFIGURATIONS.FINANCES_OPENING_BALANCE_LOCKED_DESC'
+                : 'CONFIGURATIONS.FINANCES_OPENING_BALANCE_UNLOCKED_DESC') | translate }}
+            </p>
+          </ion-label>
+          <ion-badge
+            slot="end"
+            [color]="isOpeningBalanceLockedForYear(selectedOpeningBalanceYear) ? 'warning' : 'success'"
+          >
+            {{ (isOpeningBalanceLockedForYear(selectedOpeningBalanceYear)
+              ? 'FINANCES.BUDGET.OPENING_BALANCES_LOCKED'
+              : 'FINANCES.BUDGET.OPENING_BALANCES_UNLOCKED') | translate }}
+          </ion-badge>
+        </ion-item>
+
+        <!-- Current Balances preview if budget loaded -->
+        <ion-item *ngIf="openingBalanceBudgetMap[selectedOpeningBalanceYear]?.openingBalances as ob">
+          <ion-label class="ion-text-wrap">
+            <p style="font-size: 0.85rem; color: var(--ion-color-step-600);">
+              PLN: {{ formatMoney(ob.bankPln) }} •
+              EUR: {{ formatMoney(ob.bankEurInPln) }} •
+              {{ 'FINANCES.BUDGET.DEPOSITS' | translate }}: {{ formatMoney(ob.termDepositsPln) }} •
+              <strong>{{ 'FINANCES.BUDGET.OPENING_BALANCE' | translate }}: {{ formatMoney(ob.totalOpeningBalance) }}</strong>
+            </p>
+          </ion-label>
+        </ion-item>
+
+        <!-- Lock / Unlock Action Button -->
+        <ion-item *ngIf="canModifyFinances()">
+          <ion-button
+            *ngIf="isOpeningBalanceLockedForYear(selectedOpeningBalanceYear)"
+            fill="solid"
+            color="warning"
+            (click)="unlockOpeningBalance(selectedOpeningBalanceYear)"
+            [disabled]="isUpdatingOpeningBalanceLock || isOpeningBalanceLoading"
+          >
+            <ion-icon slot="start" name="lock-open-outline"></ion-icon>
+            {{ 'CONFIGURATIONS.FINANCES_UNLOCK_OPENING_BALANCE_BTN' | translate:{ year: selectedOpeningBalanceYear } }}
+          </ion-button>
+
+          <ion-button
+            *ngIf="!isOpeningBalanceLockedForYear(selectedOpeningBalanceYear)"
+            fill="outline"
+            color="medium"
+            (click)="lockOpeningBalance(selectedOpeningBalanceYear)"
+            [disabled]="isUpdatingOpeningBalanceLock || isOpeningBalanceLoading"
+          >
+            <ion-icon slot="start" name="lock-closed-outline"></ion-icon>
+            {{ 'CONFIGURATIONS.FINANCES_LOCK_OPENING_BALANCE_BTN' | translate:{ year: selectedOpeningBalanceYear } }}
+          </ion-button>
+        </ion-item>
+      </ion-list>
+
 
       <!-- Auto Creation On Paid Settings -->
       <ion-list class="aList">

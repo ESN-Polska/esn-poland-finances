@@ -311,7 +311,8 @@ export function generateBudgetCsvContent(
   numberDisplayFormat: 'STANDARD' | 'ACCOUNTING' = 'STANDARD',
   currentBalances?: CurrentBankBalances,
   dateFormat: DateFormatOption = DEFAULT_DATE_FORMAT,
-  budgetOrgName?: { en?: string; pl?: string }
+  budgetOrgName?: { en?: string; pl?: string },
+  previousYearBudget?: AnnualBudget | null
 ): { content: string; filename: string } {
   const yr = budget.year || new Date().getFullYear();
   const rawDateStr = asOfDate || new Date().toISOString().split('T')[0];
@@ -548,11 +549,26 @@ export function generateBudgetCsvContent(
 
   } else {
     // 2. PLAN BUDŻETU (BEZ DANYCH WYKONANIA)
+    const hasPrevComp = !!previousYearBudget;
+    const prevYr = previousYearBudget?.year || (yr - 1);
+
+    const prevLinesMap = new Map<string, BudgetLineItem>();
+    if (previousYearBudget) {
+      const pLines = typeof previousYearBudget.getAllLines === 'function'
+        ? previousYearBudget.getAllLines()
+        : new AnnualBudget(previousYearBudget).getAllLines();
+      for (const pl of pLines) {
+        if (pl.code) {
+          prevLinesMap.set(pl.code.toLowerCase().trim(), pl);
+        }
+      }
+    }
+
     const docTitle = isEn
-      ? `${orgEn.toUpperCase()} BUDGET ${yr} ${modeSuffixEn.toUpperCase()}`
+      ? `${orgEn.toUpperCase()} BUDGET ${yr} ${modeSuffixEn.toUpperCase()}${hasPrevComp ? ` (VS ${prevYr})` : ''}`
       : isBoth
-      ? `BUDŻET ${orgPl.toUpperCase()} ${yr} ${modeSuffixPl.toUpperCase()} / ${orgEn.toUpperCase()} BUDGET`
-      : `Budżet ${orgPl} ${yr} ${modeSuffixPl}`;
+      ? `BUDŻET ${orgPl.toUpperCase()} ${yr} ${modeSuffixPl.toUpperCase()}${hasPrevComp ? ` (VS ${prevYr})` : ''} / ${orgEn.toUpperCase()} BUDGET`
+      : `Budżet ${orgPl} ${yr} ${modeSuffixPl}${hasPrevComp ? ` (porównanie z ${prevYr})` : ''}`;
 
     lines.push(escapeCsv(docTitle));
     const statusVal = formatBudgetStatus(budget.status, lang);
@@ -560,53 +576,100 @@ export function generateBudgetCsvContent(
     if (budget.resolutionNumber) {
       lines.push(escapeCsv(formatResolutionString(budget.resolutionNumber, budget.adoptedDate, lang, dateFormat)));
     }
+    if (hasPrevComp) {
+      lines.push(escapeCsv(isEn ? `Comparison baseline: ${prevYr} budget plan` : `Baza porównawcza: plan budżetu ${prevYr}`));
+    }
     lines.push(escapeCsv('Waluta / Currency: PLN'));
     lines.push('');
 
-    if (isEn) {
+    if (hasPrevComp) {
+      const colPrevHeader = isEn ? `Plan ${prevYr} [PLN]` : isBoth ? `Plan ${prevYr} / Plan [PLN]` : `Plan ${prevYr} [PLN]`;
+      const colCurrHeader = isEn ? `Draft ${yr} [PLN]` : isBoth ? `Projekt ${yr} / Draft [PLN]` : `Projekt ${yr} [PLN]`;
+      const colDiffHeader = isEn ? 'Difference (Delta) [PLN]' : isBoth ? 'Różnica / Diff [PLN]' : 'Różnica (Delta) [PLN]';
+      const colPctHeader = isEn ? 'Change %' : isBoth ? 'Zmiana % / Change %' : 'Zmiana %';
+
       lines.push([
-        escapeCsv('Type'),
-        escapeCsv('Category'),
-        escapeCsv('Group'),
-        escapeCsv('Code'),
-        escapeCsv('Line'),
-        escapeCsv('Budgeted amount [PLN]'),
-        escapeCsv('Description')
-      ].join(delim));
-    } else if (isBoth) {
-      lines.push([
-        escapeCsv('Typ / Type'),
-        escapeCsv('Kategoria / Category'),
-        escapeCsv('Grupa / Group'),
-        escapeCsv('Kod / Code'),
-        escapeCsv('Linia / Line'),
-        escapeCsv('Kwota zabudżetowana / Budgeted [PLN]'),
-        escapeCsv('Opis / Description')
+        escapeCsv(isEn ? 'Type' : isBoth ? 'Typ / Type' : 'Typ'),
+        escapeCsv(isEn ? 'Category' : isBoth ? 'Kategoria / Category' : 'Kategoria'),
+        escapeCsv(isEn ? 'Group' : isBoth ? 'Grupa / Group' : 'Grupa'),
+        escapeCsv(isEn ? 'Code' : isBoth ? 'Kod / Code' : 'Kod'),
+        escapeCsv(isEn ? 'Line' : isBoth ? 'Linia / Line' : 'Linia'),
+        escapeCsv(colPrevHeader),
+        escapeCsv(colCurrHeader),
+        escapeCsv(colDiffHeader),
+        escapeCsv(colPctHeader),
+        escapeCsv(isEn ? 'Description' : isBoth ? 'Opis / Description' : 'Opis')
       ].join(delim));
     } else {
-      lines.push([
-        escapeCsv('Typ'),
-        escapeCsv('Kategoria'),
-        escapeCsv('Grupa'),
-        escapeCsv('Kod'),
-        escapeCsv('Linia'),
-        escapeCsv('Kwota zabudżetowana [PLN]'),
-        escapeCsv('Opis')
-      ].join(delim));
+      if (isEn) {
+        lines.push([
+          escapeCsv('Type'),
+          escapeCsv('Category'),
+          escapeCsv('Group'),
+          escapeCsv('Code'),
+          escapeCsv('Line'),
+          escapeCsv('Budgeted amount [PLN]'),
+          escapeCsv('Description')
+        ].join(delim));
+      } else if (isBoth) {
+        lines.push([
+          escapeCsv('Typ / Type'),
+          escapeCsv('Kategoria / Category'),
+          escapeCsv('Grupa / Group'),
+          escapeCsv('Kod / Code'),
+          escapeCsv('Linia / Line'),
+          escapeCsv('Kwota zabudżetowana / Budgeted [PLN]'),
+          escapeCsv('Opis / Description')
+        ].join(delim));
+      } else {
+        lines.push([
+          escapeCsv('Typ'),
+          escapeCsv('Kategoria'),
+          escapeCsv('Grupa'),
+          escapeCsv('Kod'),
+          escapeCsv('Linia'),
+          escapeCsv('Kwota zabudżetowana [PLN]'),
+          escapeCsv('Opis')
+        ].join(delim));
+      }
     }
 
     const processPlanItems = (items: (DynamicBudgetGroup | BudgetLineItem)[], catNum: number, catName: string, secType: string, groupPath: string) => {
       for (const it of items || []) {
         if (isBudgetLine(it)) {
-          lines.push([
-            escapeCsv(secType),
-            escapeCsv(`${catNum}. ${catName}`),
-            escapeCsv(groupPath),
-            escapeCsv(it.code || ''),
-            escapeCsv(getLangText(it.name, lang)),
-            formatNumber(it.budgetedAmount || 0),
-            escapeCsv(getLangText(it.description, lang))
-          ].join(delim));
+          const currAmount = it.budgetedAmount || 0;
+          if (hasPrevComp) {
+            const prevLine = it.code ? prevLinesMap.get(it.code.toLowerCase().trim()) : undefined;
+            const hasPrev = !!prevLine;
+            const prevAmount = hasPrev ? (prevLine.plannedAmount ?? prevLine.budgetedAmount ?? 0) : 0;
+            const diff = hasPrev ? (currAmount - prevAmount) : currAmount;
+            const pctStr = hasPrev
+              ? (prevAmount !== 0 ? (((currAmount - prevAmount) / Math.abs(prevAmount)) * 100).toFixed(1).replace('.', ',') + '%' : (diff === 0 ? '0,0%' : (diff > 0 ? '+100%' : '-100%')))
+              : (isEn ? 'NEW' : 'NOWA');
+
+            lines.push([
+              escapeCsv(secType),
+              escapeCsv(`${catNum}. ${catName}`),
+              escapeCsv(groupPath),
+              escapeCsv(it.code || ''),
+              escapeCsv(getLangText(it.name, lang)),
+              hasPrev ? formatNumber(prevAmount) : '',
+              formatNumber(currAmount),
+              formatVar(diff),
+              escapeCsv(pctStr),
+              escapeCsv(getLangText(it.description, lang))
+            ].join(delim));
+          } else {
+            lines.push([
+              escapeCsv(secType),
+              escapeCsv(`${catNum}. ${catName}`),
+              escapeCsv(groupPath),
+              escapeCsv(it.code || ''),
+              escapeCsv(getLangText(it.name, lang)),
+              formatNumber(currAmount),
+              escapeCsv(getLangText(it.description, lang))
+            ].join(delim));
+          }
         } else if (isBudgetGroup(it)) {
           const grpLabel = getLangText(it.name, lang);
           const currentPath = groupPath ? `${groupPath} > ${grpLabel}` : grpLabel;
@@ -630,15 +693,30 @@ export function generateBudgetCsvContent(
       // Subtotal per category
       const catNetPlan = cat.plannedNetResult ?? ((cat.totalPlannedRevenue || 0) - (cat.totalPlannedExpense || 0));
       const sumLabel = isEn ? `RESULT: ${catNum}. ${catName}` : isBoth ? `WYNIK / RESULT: ${catNum}. ${catName}` : `WYNIK: ${catNum}. ${catName}`;
-      lines.push([
-        escapeCsv(sumLabel),
-        escapeCsv(`${catNum}. ${catName}`),
-        '',
-        '',
-        '',
-        formatNumber(catNetPlan),
-        escapeCsv(getLangText(cat.categoryResultExplanation, lang))
-      ].join(delim));
+      if (hasPrevComp) {
+        lines.push([
+          escapeCsv(sumLabel),
+          escapeCsv(`${catNum}. ${catName}`),
+          '',
+          '',
+          '',
+          '',
+          formatNumber(catNetPlan),
+          '',
+          '',
+          escapeCsv(getLangText(cat.categoryResultExplanation, lang))
+        ].join(delim));
+      } else {
+        lines.push([
+          escapeCsv(sumLabel),
+          escapeCsv(`${catNum}. ${catName}`),
+          '',
+          '',
+          '',
+          formatNumber(catNetPlan),
+          escapeCsv(getLangText(cat.categoryResultExplanation, lang))
+        ].join(delim));
+      }
     }
 
     // Grand totals
@@ -653,26 +731,72 @@ export function generateBudgetCsvContent(
       : 'Planowany wynik netto (Przychody - Koszty)';
 
     lines.push(escapeCsv(summaryTitle));
-    lines.push([
-      escapeCsv(totalRevLabel),
-      '', '', '', '',
-      formatNumber(budget.totalBudgetedRevenue || 0),
-      ''
-    ].join(delim));
+    if (hasPrevComp) {
+      const prevRev = previousYearBudget?.totalBudgetedRevenue || 0;
+      const currRev = budget.totalBudgetedRevenue || 0;
+      const diffRev = currRev - prevRev;
+      const pctRev = prevRev !== 0 ? (((currRev - prevRev) / Math.abs(prevRev)) * 100).toFixed(1).replace('.', ',') + '%' : '—';
 
-    lines.push([
-      escapeCsv(totalExpLabel),
-      '', '', '', '',
-      formatNumber(budget.totalBudgetedExpense || 0),
-      ''
-    ].join(delim));
+      const prevExp = previousYearBudget?.totalBudgetedExpense || 0;
+      const currExp = budget.totalBudgetedExpense || 0;
+      const diffExp = currExp - prevExp;
+      const pctExp = prevExp !== 0 ? (((currExp - prevExp) / Math.abs(prevExp)) * 100).toFixed(1).replace('.', ',') + '%' : '—';
 
-    lines.push([
-      escapeCsv(netResultLabel),
-      '', '', '', '',
-      formatNumber(budget.budgetedNetResult || 0),
-      ''
-    ].join(delim));
+      const prevNet = previousYearBudget?.budgetedNetResult || 0;
+      const currNet = budget.budgetedNetResult || 0;
+      const diffNet = currNet - prevNet;
+
+      lines.push([
+        escapeCsv(totalRevLabel),
+        '', '', '', '',
+        formatNumber(prevRev),
+        formatNumber(currRev),
+        formatVar(diffRev),
+        escapeCsv(pctRev),
+        ''
+      ].join(delim));
+
+      lines.push([
+        escapeCsv(totalExpLabel),
+        '', '', '', '',
+        formatNumber(prevExp),
+        formatNumber(currExp),
+        formatVar(diffExp),
+        escapeCsv(pctExp),
+        ''
+      ].join(delim));
+
+      lines.push([
+        escapeCsv(netResultLabel),
+        '', '', '', '',
+        formatNumber(prevNet),
+        formatNumber(currNet),
+        formatVar(diffNet),
+        '—',
+        ''
+      ].join(delim));
+    } else {
+      lines.push([
+        escapeCsv(totalRevLabel),
+        '', '', '', '',
+        formatNumber(budget.totalBudgetedRevenue || 0),
+        ''
+      ].join(delim));
+
+      lines.push([
+        escapeCsv(totalExpLabel),
+        '', '', '', '',
+        formatNumber(budget.totalBudgetedExpense || 0),
+        ''
+      ].join(delim));
+
+      lines.push([
+        escapeCsv(netResultLabel),
+        '', '', '', '',
+        formatNumber(budget.budgetedNetResult || 0),
+        ''
+      ].join(delim));
+    }
 
     if (budget.openingBalances) {
       lines.push('');
@@ -731,7 +855,8 @@ export function generateBudgetHtmlReport(
   numberDisplayFormat: 'STANDARD' | 'ACCOUNTING' = 'STANDARD',
   currentBalances?: CurrentBankBalances,
   dateFormat: DateFormatOption = DEFAULT_DATE_FORMAT,
-  budgetOrgName?: { en?: string; pl?: string }
+  budgetOrgName?: { en?: string; pl?: string },
+  previousYearBudget?: AnnualBudget | null
 ): string {
   const yr = budget.year || new Date().getFullYear();
   const rawDateStr = asOfDate || new Date().toISOString().split('T')[0];
@@ -763,21 +888,39 @@ export function generateBudgetHtmlReport(
     const resString = budget.resolutionNumber ? ` | ${formatResolutionString(budget.resolutionNumber, budget.adoptedDate, lang, dateFormat)}` : '';
     subtitle = `${dateLabel} | Status: <strong>${statusFormatted}</strong>${resString}`;
   } else {
+    const hasPrevComp = !!previousYearBudget;
+    const prevYr = previousYearBudget?.year || (yr - 1);
+
     title = isEn
-      ? `${orgEn} Budget ${yr} ${modeSuffixEn}`
+      ? `${orgEn} Budget ${yr} ${modeSuffixEn}${hasPrevComp ? ` (vs ${prevYr})` : ''}`
       : isBoth
-      ? `Budżet ${orgPl} ${yr} ${modeSuffixPl} / ${orgEn} Budget ${yr} ${modeSuffixEn}`
-      : `Budżet ${orgPl} ${yr} ${modeSuffixPl}`;
+      ? `Budżet ${orgPl} ${yr} ${modeSuffixPl}${hasPrevComp ? ` (vs ${prevYr})` : ''} / ${orgEn} Budget ${yr} ${modeSuffixEn}`
+      : `Budżet ${orgPl} ${yr} ${modeSuffixPl}${hasPrevComp ? ` (porównanie z ${prevYr})` : ''}`;
 
     const resString = budget.resolutionNumber ? ` | ${formatResolutionString(budget.resolutionNumber, budget.adoptedDate, lang, dateFormat)}` : '';
-    subtitle = `Status: <strong>${statusFormatted}</strong>${resString}`;
+    const compNote = hasPrevComp
+      ? (isEn ? ` | Baseline: ${prevYr} budget plan` : ` | Baza porównawcza: plan ${prevYr}`)
+      : '';
+    subtitle = `Status: <strong>${statusFormatted}</strong>${resString}${compNote}`;
   }
 
   const formatPln = (num: number | undefined | null) => {
+    if (numberDisplayFormat === 'ACCOUNTING' && (num || 0) < 0) {
+      return formatFinanceAmount(num || 0, 'ACCOUNTING', {
+        currency: 'PLN',
+        locale: isEn ? 'en' : 'pl'
+      });
+    }
     return (num || 0).toLocaleString(isEn ? 'en-US' : 'pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' PLN';
   };
 
   const formatEur = (num: number | undefined | null) => {
+    if (numberDisplayFormat === 'ACCOUNTING' && (num || 0) < 0) {
+      return formatFinanceAmount(num || 0, 'ACCOUNTING', {
+        currency: 'EUR',
+        locale: isEn ? 'en' : 'pl'
+      });
+    }
     return (num || 0).toLocaleString(isEn ? 'en-US' : 'pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' EUR';
   };
 
@@ -990,133 +1133,365 @@ export function generateBudgetHtmlReport(
       </tbody>
     `;
   } else {
-    // Budget Plan Table (4 columns: Code, Category/Group/Line, Budgeted amount, Notes)
+    // Budget Plan Table (4 columns without comparison, or 7 columns with previous year comparison)
+    const hasPrevComp = !!previousYearBudget;
+    const prevYr = previousYearBudget?.year || (yr - 1);
+
+    const prevLinesMap = new Map<string, BudgetLineItem>();
+    if (hasPrevComp && previousYearBudget) {
+      const pLines = typeof previousYearBudget.getAllLines === 'function'
+        ? previousYearBudget.getAllLines()
+        : new AnnualBudget(previousYearBudget).getAllLines();
+      for (const pl of pLines) {
+        if (pl.code) {
+          prevLinesMap.set(pl.code.toLowerCase().trim(), pl);
+        }
+      }
+    }
+
+    const calcSectionPrevSum = (items: (DynamicBudgetGroup | BudgetLineItem)[]): number => {
+      let sum = 0;
+      for (const it of items || []) {
+        if (isBudgetLine(it)) {
+          if (it.code) {
+            const pl = prevLinesMap.get(it.code.toLowerCase().trim());
+            if (pl) {
+              sum += (pl.plannedAmount ?? pl.budgetedAmount ?? 0);
+            }
+          }
+        } else if (isBudgetGroup(it)) {
+          sum += calcSectionPrevSum(it.items || []);
+        }
+      }
+      return sum;
+    };
+
     const colCode = isEn ? 'Code' : isBoth ? 'Kod / Code' : 'Kod';
     const colItem = isEn ? 'Category / Group / Line' : isBoth ? 'Kategoria / Grupa / Linia (Category / Group / Line)' : 'Kategoria / Grupa / Linia';
-    const colBud = isEn ? 'Budgeted amount [PLN]' : isBoth ? 'Kwota zabudżetowana / Budgeted [PLN]' : 'Kwota zabudżetowana [PLN]';
+    const colBud = hasPrevComp
+      ? (isEn ? `Draft ${yr}` : isBoth ? `Projekt ${yr} / Draft` : `Projekt ${yr}`)
+      : (isEn ? 'Budgeted amount [PLN]' : isBoth ? 'Kwota zabudżetowana / Budgeted [PLN]' : 'Kwota zabudżetowana [PLN]');
+    const colPrev = isEn ? `Plan ${prevYr}` : isBoth ? `Plan ${prevYr}` : `Plan ${prevYr}`;
+    const colDiff = isEn ? 'Difference (Delta)' : isBoth ? 'Różnica / Diff' : 'Różnica (Delta)';
+    const colChange = isEn ? 'Change %' : isBoth ? 'Zmiana % / Change %' : 'Zmiana %';
     const colNotes = isEn ? 'Description' : isBoth ? 'Opis / Description' : 'Opis';
 
-    const renderPlanItems = (items: (DynamicBudgetGroup | BudgetLineItem)[], depth = 0): string => {
+    const renderPlanItems = (items: (DynamicBudgetGroup | BudgetLineItem)[], depth = 0, isRevSec = false): string => {
       let html = '';
       for (const item of items || []) {
         if (isBudgetGroup(item)) {
           const indent = 20 + depth * 14;
+          const colspan = hasPrevComp ? 6 : 3;
           html += `
             <tr class="grp-header-row">
               <td></td>
-              <td colspan="3" style="padding-left: ${indent}px;">
+              <td colspan="${colspan}" style="padding-left: ${indent}px;">
                 <span style="font-weight: 600; color: #475569;">📁 ${getLangText(item.name, lang)}</span>
               </td>
             </tr>
-            ${renderPlanItems(item.items || [], depth + 1)}
+            ${renderPlanItems(item.items || [], depth + 1, isRevSec)}
           `;
         } else if (isBudgetLine(item)) {
           const indent = 20 + (depth > 0 ? (depth + 1) * 14 : 0);
           const budgeted = item.budgetedAmount || 0;
           const lineDesc = getLangText(item.description, lang);
-          html += `
-            <tr>
-              <td><code>${item.code || '—'}</code></td>
-              <td style="padding-left: ${indent}px;">
-                <div>${getLangText(item.name, lang)}</div>
-              </td>
-              <td style="text-align: right; font-weight: 600;">${formatPln(budgeted)}</td>
-              <td style="font-size: 10px; color: #64748b;">${escapeHtml(lineDesc)}</td>
-            </tr>
-          `;
+
+          if (hasPrevComp) {
+            const prevLine = item.code ? prevLinesMap.get(item.code.toLowerCase().trim()) : undefined;
+            if (prevLine) {
+              const prevAmount = prevLine.plannedAmount ?? prevLine.budgetedAmount ?? 0;
+              const diff = budgeted - prevAmount;
+              // For revenue: positive delta is green (#16a34a), negative is red (#dc2626)
+              // For expense: positive delta is red (#dc2626, cost increased), negative is green (#16a34a, cost reduced)
+              const diffColor = isRevSec
+                ? (diff > 0 ? '#16a34a' : (diff < 0 ? '#dc2626' : '#64748b'))
+                : (diff > 0 ? '#dc2626' : (diff < 0 ? '#16a34a' : '#64748b'));
+              const pct = prevAmount !== 0
+                ? (((budgeted - prevAmount) / Math.abs(prevAmount)) * 100).toFixed(1).replace('.', ',') + '%'
+                : (diff === 0 ? '0,0%' : (diff > 0 ? '+100%' : '-100%'));
+
+              html += `
+                <tr>
+                  <td><code>${item.code || '—'}</code></td>
+                  <td style="padding-left: ${indent}px;">
+                    <div>${getLangText(item.name, lang)}</div>
+                  </td>
+                  <td style="text-align: right; color: #475569;">${formatPln(prevAmount)}</td>
+                  <td style="text-align: right; font-weight: 700; color: #0f172a;">${formatPln(budgeted)}</td>
+                  <td style="text-align: right; font-weight: 700; color: ${diffColor};">${formatPlnWithSign(diff)}</td>
+                  <td style="text-align: center; font-size: 11px;">
+                    <span class="badge" style="background: ${diffColor === '#16a34a' ? 'rgba(22, 163, 74, 0.12)' : (diffColor === '#dc2626' ? 'rgba(220, 38, 38, 0.12)' : '#f1f5f9')}; color: ${diffColor}; font-weight: 700;">
+                      ${diff > 0 ? '+' : ''}${pct}
+                    </span>
+                  </td>
+                  <td style="font-size: 10px; color: #64748b;">${escapeHtml(lineDesc)}</td>
+                </tr>
+              `;
+            } else {
+              // Line did not exist in previous year
+              html += `
+                <tr>
+                  <td><code>${item.code || '—'}</code></td>
+                  <td style="padding-left: ${indent}px;">
+                    <div>${getLangText(item.name, lang)}</div>
+                  </td>
+                  <td style="text-align: right; color: #94a3b8; font-style: italic;">—</td>
+                  <td style="text-align: right; font-weight: 700; color: #0f172a;">${formatPln(budgeted)}</td>
+                  <td style="text-align: right; font-weight: 600; color: #0284c7;">${formatPlnWithSign(budgeted)}</td>
+                  <td style="text-align: center; font-size: 11px;">
+                    <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #047857; font-weight: 700; font-size: 10px;">
+                      ${isEn ? 'NEW' : 'NOWA'}
+                    </span>
+                  </td>
+                  <td style="font-size: 10px; color: #64748b;">${escapeHtml(lineDesc)}</td>
+                </tr>
+              `;
+            }
+          } else {
+            html += `
+              <tr>
+                <td><code>${item.code || '—'}</code></td>
+                <td style="padding-left: ${indent}px;">
+                  <div>${getLangText(item.name, lang)}</div>
+                </td>
+                <td style="text-align: right; font-weight: 600;">${formatPln(budgeted)}</td>
+                <td style="font-size: 10px; color: #64748b;">${escapeHtml(lineDesc)}</td>
+              </tr>
+            `;
+          }
         }
       }
       return html;
     };
 
-    tableRows = `
-      <thead>
-        <tr>
-          <th style="width: 110px;">${colCode}</th>
-          <th>${colItem}</th>
-          <th style="text-align: right; width: 160px;">${colBud}</th>
-          <th>${colNotes}</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${categories.map((cat, cIdx) => {
-          const catNum = cat.number || (cIdx + 1);
-          const catName = getLangText(cat.name, lang);
-          const catNetPlan = cat.plannedNetResult ?? ((cat.totalPlannedRevenue || 0) - (cat.totalPlannedExpense || 0));
-          const resultLabel = isEn ? 'Result' : isBoth ? 'Wynik / Result' : 'Wynik';
+    if (hasPrevComp) {
+      tableRows = `
+        <thead>
+          <tr>
+            <th style="width: 95px;">${colCode}</th>
+            <th>${colItem}</th>
+            <th style="text-align: right; width: 120px;">${colPrev}</th>
+            <th style="text-align: right; width: 120px;">${colBud}</th>
+            <th style="text-align: right; width: 120px;">${colDiff}</th>
+            <th style="text-align: center; width: 80px;">${colChange}</th>
+            <th>${colNotes}</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${categories.map((cat, cIdx) => {
+            const catNum = cat.number || (cIdx + 1);
+            const catName = getLangText(cat.name, lang);
+            const catNetPlan = cat.plannedNetResult ?? ((cat.totalPlannedRevenue || 0) - (cat.totalPlannedExpense || 0));
+            const resultLabel = isEn ? 'Result' : isBoth ? 'Wynik / Result' : 'Wynik';
 
-          let catHtml = `
-            <tr class="cat-header-row">
-              <td colspan="4">
-                <strong>${catNum}. ${catName}</strong>
-              </td>
-            </tr>
-          `;
-
-          // Revenues section
-          if (cat.revenues && cat.revenues.enabled !== false && Array.isArray(cat.revenues.items) && cat.revenues.items.length > 0) {
-            const secPlan = cat.revenues.totalPlanned || 0;
-            catHtml += `
-              <tr class="sec-header-row rev">
-                <td colspan="2" style="padding-left: 14px;">
-                  <span class="badge badge-rev">${typeRev}</span>
+            let catHtml = `
+              <tr class="cat-header-row">
+                <td colspan="7">
+                  <strong>${catNum}. ${catName}</strong>
                 </td>
-                <td style="text-align: right; font-weight: 700;">${formatPln(secPlan)}</td>
+              </tr>
+            `;
+
+            let prevRevSum = 0;
+            let prevExpSum = 0;
+
+            // Revenues section
+            if (cat.revenues && cat.revenues.enabled !== false && Array.isArray(cat.revenues.items) && cat.revenues.items.length > 0) {
+              const secPlan = cat.revenues.totalPlanned || 0;
+              prevRevSum = calcSectionPrevSum(cat.revenues.items);
+              const secDiff = secPlan - prevRevSum;
+              const secPct = prevRevSum !== 0 ? (((secPlan - prevRevSum) / Math.abs(prevRevSum)) * 100).toFixed(1).replace('.', ',') + '%' : '—';
+              catHtml += `
+                <tr class="sec-header-row rev">
+                  <td colspan="2" style="padding-left: 14px;">
+                    <span class="badge badge-rev">${typeRev}</span>
+                  </td>
+                  <td style="text-align: right; font-weight: 600; color: #475569;">${formatPln(prevRevSum)}</td>
+                  <td style="text-align: right; font-weight: 700;">${formatPln(secPlan)}</td>
+                  <td style="text-align: right; font-weight: 700; color: ${secDiff >= 0 ? '#16a34a' : '#dc2626'};">${formatPlnWithSign(secDiff)}</td>
+                  <td style="text-align: center; font-size: 11px;">${secPct}</td>
+                  <td></td>
+                </tr>
+                ${renderPlanItems(cat.revenues.items, 0, true)}
+              `;
+            }
+
+            // Expenses section
+            if (cat.expenses && cat.expenses.enabled !== false && Array.isArray(cat.expenses.items) && cat.expenses.items.length > 0) {
+              const secPlan = cat.expenses.totalPlanned || 0;
+              prevExpSum = calcSectionPrevSum(cat.expenses.items);
+              const secDiff = secPlan - prevExpSum;
+              const secPct = prevExpSum !== 0 ? (((secPlan - prevExpSum) / Math.abs(prevExpSum)) * 100).toFixed(1).replace('.', ',') + '%' : '—';
+              catHtml += `
+                <tr class="sec-header-row exp">
+                  <td colspan="2" style="padding-left: 14px;">
+                    <span class="badge badge-exp">${typeExp}</span>
+                  </td>
+                  <td style="text-align: right; font-weight: 600; color: #475569;">${formatPln(prevExpSum)}</td>
+                  <td style="text-align: right; font-weight: 700;">${formatPln(secPlan)}</td>
+                  <td style="text-align: right; font-weight: 700; color: ${secDiff > 0 ? '#dc2626' : '#16a34a'};">${formatPlnWithSign(secDiff)}</td>
+                  <td style="text-align: center; font-size: 11px;">${secPct}</td>
+                  <td></td>
+                </tr>
+                ${renderPlanItems(cat.expenses.items, 0, false)}
+              `;
+            }
+
+            // Category Net Result row
+            const catPrevNet = prevRevSum - prevExpSum;
+            const catNetDiff = catNetPlan - catPrevNet;
+            const catExplanation = getLangText(cat.categoryResultExplanation, lang);
+            catHtml += `
+              <tr class="cat-result-row">
+                <td colspan="2" style="padding-left: 14px; font-weight: 700; color: #1e293b;">
+                  ${resultLabel}: ${catNum}. ${catName}
+                </td>
+                <td style="text-align: right; font-weight: 600; color: #475569;">${formatPlnWithSign(catPrevNet)}</td>
+                <td style="text-align: right; font-weight: 700;">${formatPlnWithSign(catNetPlan)}</td>
+                <td style="text-align: right; font-weight: 700; color: ${catNetDiff >= 0 ? '#16a34a' : '#dc2626'};">${formatPlnWithSign(catNetDiff)}</td>
+                <td style="text-align: center; font-size: 11px;">${catPrevNet !== 0 ? (((catNetPlan - catPrevNet) / Math.abs(catPrevNet)) * 100).toFixed(1).replace('.', ',') + '%' : '—'}</td>
+                <td style="font-size: 10px; color: #475569; font-style: italic;">${catExplanation || ''}</td>
+              </tr>
+            `;
+
+            return catHtml;
+          }).join('')}
+        </tbody>
+        <tbody class="table-summary-tbody">
+          ${(() => {
+            const prevRev = previousYearBudget?.totalBudgetedRevenue || 0;
+            const currRev = budget.totalBudgetedRevenue || 0;
+            const diffRev = currRev - prevRev;
+            const pctRev = prevRev !== 0 ? (((currRev - prevRev) / Math.abs(prevRev)) * 100).toFixed(1).replace('.', ',') + '%' : '—';
+
+            const prevExp = previousYearBudget?.totalBudgetedExpense || 0;
+            const currExp = budget.totalBudgetedExpense || 0;
+            const diffExp = currExp - prevExp;
+            const pctExp = prevExp !== 0 ? (((currExp - prevExp) / Math.abs(prevExp)) * 100).toFixed(1).replace('.', ',') + '%' : '—';
+
+            const prevNet = previousYearBudget?.budgetedNetResult || 0;
+            const currNet = budget.budgetedNetResult || 0;
+            const diffNet = currNet - prevNet;
+
+            return `
+              <tr style="background: #f8fafc; border-top: 2px solid #cbd5e1; font-weight: 700;">
+                <td colspan="2">${totalRevLabel}</td>
+                <td style="text-align: right; color: #475569;">${formatPln(prevRev)}</td>
+                <td style="text-align: right;">${formatPln(currRev)}</td>
+                <td style="text-align: right; color: ${diffRev >= 0 ? '#16a34a' : '#dc2626'};">${formatPlnWithSign(diffRev)}</td>
+                <td style="text-align: center;">${pctRev}</td>
                 <td></td>
               </tr>
-              ${renderPlanItems(cat.revenues.items, 0)}
-            `;
-          }
-
-          // Expenses section
-          if (cat.expenses && cat.expenses.enabled !== false && Array.isArray(cat.expenses.items) && cat.expenses.items.length > 0) {
-            const secPlan = cat.expenses.totalPlanned || 0;
-            catHtml += `
-              <tr class="sec-header-row exp">
-                <td colspan="2" style="padding-left: 14px;">
-                  <span class="badge badge-exp">${typeExp}</span>
-                </td>
-                <td style="text-align: right; font-weight: 700;">${formatPln(secPlan)}</td>
+              <tr style="background: #f8fafc; font-weight: 700;">
+                <td colspan="2">${totalExpLabel}</td>
+                <td style="text-align: right; color: #475569;">${formatPln(prevExp)}</td>
+                <td style="text-align: right;">${formatPln(currExp)}</td>
+                <td style="text-align: right; color: ${diffExp > 0 ? '#dc2626' : '#16a34a'};">${formatPlnWithSign(diffExp)}</td>
+                <td style="text-align: center;">${pctExp}</td>
                 <td></td>
               </tr>
-              ${renderPlanItems(cat.expenses.items, 0)}
+              <tr style="background: #e2e8f0; font-weight: 700; border-top: 1px solid #cbd5e1; border-bottom: 2px solid #94a3b8;">
+                <td colspan="2">${netResultLabel}</td>
+                <td style="text-align: right; color: #475569;">${formatPlnWithSign(prevNet)}</td>
+                <td style="text-align: right;">${formatPlnWithSign(currNet)}</td>
+                <td style="text-align: right; color: ${diffNet >= 0 ? '#16a34a' : '#dc2626'};">${formatPlnWithSign(diffNet)}</td>
+                <td style="text-align: center;">—</td>
+                <td></td>
+              </tr>
             `;
-          }
+          })()}
+        </tbody>
+      `;
+    } else {
+      tableRows = `
+        <thead>
+          <tr>
+            <th style="width: 110px;">${colCode}</th>
+            <th>${colItem}</th>
+            <th style="text-align: right; width: 160px;">${colBud}</th>
+            <th>${colNotes}</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${categories.map((cat, cIdx) => {
+            const catNum = cat.number || (cIdx + 1);
+            const catName = getLangText(cat.name, lang);
+            const catNetPlan = cat.plannedNetResult ?? ((cat.totalPlannedRevenue || 0) - (cat.totalPlannedExpense || 0));
+            const resultLabel = isEn ? 'Result' : isBoth ? 'Wynik / Result' : 'Wynik';
+
+            let catHtml = `
+              <tr class="cat-header-row">
+                <td colspan="4">
+                  <strong>${catNum}. ${catName}</strong>
+                </td>
+              </tr>
+            `;
+
+            // Revenues section
+            if (cat.revenues && cat.revenues.enabled !== false && Array.isArray(cat.revenues.items) && cat.revenues.items.length > 0) {
+              const secPlan = cat.revenues.totalPlanned || 0;
+              catHtml += `
+                <tr class="sec-header-row rev">
+                  <td colspan="2" style="padding-left: 14px;">
+                    <span class="badge badge-rev">${typeRev}</span>
+                  </td>
+                  <td style="text-align: right; font-weight: 700;">${formatPln(secPlan)}</td>
+                  <td></td>
+                </tr>
+                ${renderPlanItems(cat.revenues.items, 0, true)}
+              `;
+            }
+
+            // Expenses section
+            if (cat.expenses && cat.expenses.enabled !== false && Array.isArray(cat.expenses.items) && cat.expenses.items.length > 0) {
+              const secPlan = cat.expenses.totalPlanned || 0;
+              catHtml += `
+                <tr class="sec-header-row exp">
+                  <td colspan="2" style="padding-left: 14px;">
+                    <span class="badge badge-exp">${typeExp}</span>
+                  </td>
+                  <td style="text-align: right; font-weight: 700;">${formatPln(secPlan)}</td>
+                  <td></td>
+                </tr>
+                ${renderPlanItems(cat.expenses.items, 0, false)}
+              `;
+            }
 
 
-          // Category Net Result row
-          const catExplanation = getLangText(cat.categoryResultExplanation, lang);
-          catHtml += `
-            <tr class="cat-result-row">
-              <td colspan="2" style="padding-left: 14px; font-weight: 700; color: #1e293b;">
-                ${resultLabel}: ${catNum}. ${catName}
-              </td>
-              <td style="text-align: right; font-weight: 700;">${formatPlnWithSign(catNetPlan)}</td>
-              <td style="font-size: 10px; color: #475569; font-style: italic;">${catExplanation || ''}</td>
-            </tr>
-          `;
+            // Category Net Result row
+            const catExplanation = getLangText(cat.categoryResultExplanation, lang);
+            catHtml += `
+              <tr class="cat-result-row">
+                <td colspan="2" style="padding-left: 14px; font-weight: 700; color: #1e293b;">
+                  ${resultLabel}: ${catNum}. ${catName}
+                </td>
+                <td style="text-align: right; font-weight: 700;">${formatPlnWithSign(catNetPlan)}</td>
+                <td style="font-size: 10px; color: #475569; font-style: italic;">${catExplanation || ''}</td>
+              </tr>
+            `;
 
-          return catHtml;
-        }).join('')}
-      </tbody>
-      <tbody class="table-summary-tbody">
-        <tr style="background: #f8fafc; border-top: 2px solid #cbd5e1; font-weight: 700;">
-          <td colspan="2">${totalRevLabel}</td>
-          <td style="text-align: right;">${formatPln(budget.totalBudgetedRevenue)}</td>
-          <td></td>
-        </tr>
-        <tr style="background: #f8fafc; font-weight: 700;">
-          <td colspan="2">${totalExpLabel}</td>
-          <td style="text-align: right;">${formatPln(budget.totalBudgetedExpense)}</td>
-          <td></td>
-        </tr>
-        <tr style="background: #e2e8f0; font-weight: 700; border-top: 1px solid #cbd5e1; border-bottom: 2px solid #94a3b8;">
-          <td colspan="2">${netResultLabel}</td>
-          <td style="text-align: right;">${formatPlnWithSign(budget.budgetedNetResult)}</td>
-          <td></td>
-        </tr>
-      </tbody>
-    `;
+            return catHtml;
+          }).join('')}
+        </tbody>
+        <tbody class="table-summary-tbody">
+          <tr style="background: #f8fafc; border-top: 2px solid #cbd5e1; font-weight: 700;">
+            <td colspan="2">${totalRevLabel}</td>
+            <td style="text-align: right;">${formatPln(budget.totalBudgetedRevenue)}</td>
+            <td></td>
+          </tr>
+          <tr style="background: #f8fafc; font-weight: 700;">
+            <td colspan="2">${totalExpLabel}</td>
+            <td style="text-align: right;">${formatPln(budget.totalBudgetedExpense)}</td>
+            <td></td>
+          </tr>
+          <tr style="background: #e2e8f0; font-weight: 700; border-top: 1px solid #cbd5e1; border-bottom: 2px solid #94a3b8;">
+            <td colspan="2">${netResultLabel}</td>
+            <td style="text-align: right;">${formatPlnWithSign(budget.budgetedNetResult)}</td>
+            <td></td>
+          </tr>
+        </tbody>
+      `;
+    }
   }
 
   // Opening balances table section & Current balances table section (side-by-side)
@@ -1606,7 +1981,7 @@ export interface AmendmentDraftExportOptions {
   resolutionNumber?: string;
   description?: string;
   dateFormat?: DateFormatOption;
-  numberFormatMode?: any;
+  numberFormatMode?: 'STANDARD' | 'ACCOUNTING';
   organisationNamePl?: string;
   organisationNameEn?: string;
   logoUrl?: string;
@@ -1624,6 +1999,7 @@ export function generateAmendmentDraftCsvContent(
   const isEn = lang === 'en';
   const isBoth = lang === 'both';
   const delim = ';';
+  const numberDisplayFormat = options?.numberFormatMode || 'STANDARD';
 
   const escapeCsv = (val: string | number | null | undefined): string => {
     if (val === null || val === undefined) return '""';
@@ -1632,11 +2008,17 @@ export function generateAmendmentDraftCsvContent(
   };
 
   const formatNumber = (num?: number): string => {
+    if (numberDisplayFormat === 'ACCOUNTING' && (num || 0) < 0) {
+      return `"${formatFinanceAmount(num || 0, 'ACCOUNTING', { locale: isEn ? 'en' : 'pl' })}"`;
+    }
     const n = num ?? 0;
     return `"${n.toFixed(2).replace('.', ',')}"`;
   };
 
   const formatVar = (num?: number): string => {
+    if (numberDisplayFormat === 'ACCOUNTING') {
+      return `"${formatFinanceAmount(num || 0, 'ACCOUNTING', { locale: isEn ? 'en' : 'pl' })}"`;
+    }
     const n = num ?? 0;
     const sign = n > 0 ? '+' : '';
     return `"${sign}${n.toFixed(2).replace('.', ',')}"`;
@@ -1791,12 +2173,20 @@ export function generateAmendmentDraftHtmlReport(
 
   const subtitle = `${dateLabel} | ${statusLabel}${resString}`;
 
+  const numberDisplayFormat = options?.numberFormatMode || 'STANDARD';
+
   const formatPln = (num: number | undefined | null) => {
+    if (numberDisplayFormat === 'ACCOUNTING' && (num || 0) < 0) {
+      return formatFinanceAmount(num || 0, 'ACCOUNTING', {
+        currency: 'PLN',
+        locale: isEn ? 'en' : 'pl'
+      });
+    }
     return (num || 0).toLocaleString(isEn ? 'en-US' : 'pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' PLN';
   };
 
   const formatPlnWithSign = (num: number | undefined | null) => {
-    return formatFinanceAmount(num || 0, 'STANDARD', {
+    return formatFinanceAmount(num || 0, numberDisplayFormat, {
       currency: 'PLN',
       forceSign: true,
       locale: isEn ? 'en' : 'pl'

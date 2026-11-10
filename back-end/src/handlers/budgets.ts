@@ -156,8 +156,8 @@ class BudgetsRC extends ResourceController {
           'INITIAL_ADOPTION',
           budget.resolutionNumber,
           budget.adoptedDate || new Date().toISOString().substring(0, 10),
-          'Uchwalenie budżetu pierwotnego',
-          `Uchwała nr ${budget.resolutionNumber}`,
+          'Initial budget adoption',
+          '',
           undefined,
           this.user?.userId || ''
         );
