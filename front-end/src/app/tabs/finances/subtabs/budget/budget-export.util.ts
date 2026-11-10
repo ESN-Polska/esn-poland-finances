@@ -1,4 +1,4 @@
-import { AnnualBudget, DynamicBudgetCategory, DynamicBudgetGroup, BudgetLineItem, isBudgetGroup, isBudgetLine } from '@models/annual-budget.model';
+import { AnnualBudget, DynamicBudgetCategory, DynamicBudgetGroup, BudgetLineItem, BudgetAmendmentItem, isBudgetGroup, isBudgetLine } from '@models/annual-budget.model';
 import { DateFormatOption, DEFAULT_DATE_FORMAT } from '@models/configurations.model';
 import { formatFinanceAmount } from '../../../../utils/number-utils';
 import { formatDateOption } from '../../../../utils/date-utils';
@@ -1598,4 +1598,707 @@ export function openPrintablePdf(htmlContent: string): boolean {
     console.error('Failed to open printable window:', err);
     return false;
   }
+}
+
+export interface AmendmentDraftExportOptions {
+  language?: BudgetExportLanguage;
+  asOfDate?: string;
+  resolutionNumber?: string;
+  description?: string;
+  dateFormat?: DateFormatOption;
+  numberFormatMode?: any;
+  organisationNamePl?: string;
+  organisationNameEn?: string;
+  logoUrl?: string;
+}
+
+/**
+ * Generates CSV content containing ONLY the modified / edited lines of an amendment draft.
+ */
+export function generateAmendmentDraftCsvContent(
+  budget: AnnualBudget,
+  itemsDiff: BudgetAmendmentItem[],
+  options?: AmendmentDraftExportOptions
+): string {
+  const lang = options?.language || 'pl';
+  const isEn = lang === 'en';
+  const isBoth = lang === 'both';
+  const delim = ';';
+
+  const escapeCsv = (val: string | number | null | undefined): string => {
+    if (val === null || val === undefined) return '""';
+    const s = String(val).replace(/"/g, '""');
+    return `"${s}"`;
+  };
+
+  const formatNumber = (num?: number): string => {
+    const n = num ?? 0;
+    return `"${n.toFixed(2).replace('.', ',')}"`;
+  };
+
+  const formatVar = (num?: number): string => {
+    const n = num ?? 0;
+    const sign = n > 0 ? '+' : '';
+    return `"${sign}${n.toFixed(2).replace('.', ',')}"`;
+  };
+
+  const getChangeTypeLabel = (type?: string): string => {
+    switch (type) {
+      case 'ADD_LINE':
+        return isEn ? 'New line' : isBoth ? 'Nowa pozycja / New line' : 'Nowa pozycja';
+      case 'REMOVE_LINE':
+        return isEn ? 'Removed' : isBoth ? 'Wykreślenie / Removed' : 'Wykreślenie';
+      case 'RENAME_LINE':
+        return isEn ? 'Renamed' : isBoth ? 'Zmiana nazwy / Renamed' : 'Zmiana nazwy';
+      case 'MODIFY_LINE':
+      default:
+        return isEn ? 'Amount change' : isBoth ? 'Zmiana kwoty / Amount change' : 'Zmiana kwoty';
+    }
+  };
+
+  const lines: string[] = [];
+
+  // Title info
+  const title = isEn
+    ? `BUDGET AMENDMENT DRAFT ${budget.year}`
+    : isBoth
+    ? `PROJEKT NOWELIZACJI BUDŻETU / BUDGET AMENDMENT DRAFT ${budget.year}`
+    : `PROJEKT NOWELIZACJI BUDŻETU ${budget.year}`;
+
+  lines.push([escapeCsv(title)].join(delim));
+  if (options?.resolutionNumber) {
+    lines.push([escapeCsv(isEn ? `Resolution: ${options.resolutionNumber}` : `Uchwała: ${options.resolutionNumber}`)].join(delim));
+  }
+  lines.push([escapeCsv(isEn ? `Draft as of: ${options?.asOfDate || new Date().toISOString().substring(0, 10)}` : `Stan na dzień: ${options?.asOfDate || new Date().toISOString().substring(0, 10)}`)].join(delim));
+  lines.push('');
+
+  // Headers
+  const colCode = isEn ? 'Code' : isBoth ? 'Kod / Code' : 'Kod';
+  const colPath = isEn ? 'Category / Group' : isBoth ? 'Kategoria / Grupa / Category' : 'Kategoria / Grupa';
+  const colName = isEn ? 'Line Name' : isBoth ? 'Nazwa pozycji / Line Name' : 'Nazwa pozycji';
+  const colType = isEn ? 'Change Type' : isBoth ? 'Typ zmiany / Change Type' : 'Typ zmiany';
+  const colPrev = isEn ? 'Current Plan [PLN]' : isBoth ? 'Dotychczasowy plan [PLN] / Current' : 'Dotychczasowy plan [PLN]';
+  const colProp = isEn ? 'Proposed Plan [PLN]' : isBoth ? 'Proponowany plan [PLN] / Proposed' : 'Proponowany plan [PLN]';
+  const colDelta = isEn ? 'Difference [PLN]' : isBoth ? 'Różnica [PLN] / Difference' : 'Różnica [PLN]';
+  const colAct = isEn ? 'Execution [PLN]' : isBoth ? 'Wykonanie [PLN] / Execution' : 'Wykonanie [PLN]';
+  const colJust = isEn ? 'Justification' : isBoth ? 'Uzasadnienie / Justification' : 'Uzasadnienie';
+
+  lines.push([
+    escapeCsv(colCode),
+    escapeCsv(colPath),
+    escapeCsv(colName),
+    escapeCsv(colType),
+    escapeCsv(colPrev),
+    escapeCsv(colProp),
+    escapeCsv(colDelta),
+    escapeCsv(colAct),
+    escapeCsv(colJust)
+  ].join(delim));
+
+  let totPrev = 0;
+  let totProp = 0;
+  let totDelta = 0;
+  let totAct = 0;
+
+  for (const it of itemsDiff || []) {
+    const code = it.budgetCode || it.lineCode || '—';
+    const path = it.categoryPath || '';
+    const name = (isEn ? it.lineName?.en : it.lineName?.pl) || it.lineName?.pl || it.lineName?.en || '';
+    const changeType = getChangeTypeLabel(it.changeType);
+    const prev = it.previousAmount || it.currentAmount || 0;
+    const prop = it.proposedAmount ?? (prev + (it.deltaAmount || 0));
+    const delta = it.deltaAmount ?? (prop - prev);
+    const act = it.actualAmountAtTime || 0;
+    const just = it.explanation || it.justification || '';
+
+    totPrev += prev;
+    totProp += prop;
+    totDelta += delta;
+    totAct += act;
+
+    lines.push([
+      escapeCsv(code),
+      escapeCsv(path),
+      escapeCsv(name),
+      escapeCsv(changeType),
+      formatNumber(prev),
+      formatNumber(prop),
+      formatVar(delta),
+      formatNumber(act),
+      escapeCsv(just)
+    ].join(delim));
+  }
+
+  // Summary row
+  lines.push('');
+  lines.push([
+    escapeCsv(isEn ? 'TOTAL DELTA' : isBoth ? 'PODSUMOWANIE ZMIAN / TOTAL DELTA' : 'PODSUMOWANIE ZMIAN'),
+    '',
+    '',
+    '',
+    formatNumber(totPrev),
+    formatNumber(totProp),
+    formatVar(totDelta),
+    formatNumber(totAct),
+    ''
+  ].join(delim));
+
+  return lines.join('\r\n');
+}
+
+/**
+ * Generates an official HTML/PDF report containing ONLY the modified lines of an amendment draft,
+ * based strictly on the standard annual budget export formatting and styles.
+ */
+export function generateAmendmentDraftHtmlReport(
+  budget: AnnualBudget,
+  itemsDiff: BudgetAmendmentItem[],
+  options?: AmendmentDraftExportOptions
+): string {
+  const yr = budget.year || new Date().getFullYear();
+  const lang = options?.language || 'pl';
+  const isEn = lang === 'en';
+  const isBoth = lang === 'both';
+  const dateFormat = options?.dateFormat || DEFAULT_DATE_FORMAT;
+  const rawDateStr = options?.asOfDate || new Date().toISOString().substring(0, 10);
+  const dateStr = formatDateOption(rawDateStr, dateFormat);
+  const logoUrl = options?.logoUrl;
+
+  const orgPl = options?.organisationNamePl || 'ESN Polska';
+  const orgEn = options?.organisationNameEn || 'ESN Poland';
+
+  const title = isEn
+    ? `${orgEn} Budget Amendment Proposal ${yr}`
+    : isBoth
+    ? `Projekt Nowelizacji Budżetu ${orgPl} ${yr} / ${orgEn} Budget Amendment Proposal ${yr}`
+    : `Projekt Nowelizacji Budżetu ${orgPl} ${yr}`;
+
+  const dateLabel = isEn
+    ? `As of: <strong>${dateStr}</strong>`
+    : isBoth
+    ? `Dzień wykonania / As of: <strong>${dateStr}</strong>`
+    : `Stan na dzień: <strong>${dateStr}</strong>`;
+
+  const statusLabel = isEn
+    ? 'Status: <strong>AMENDMENT PROPOSAL</strong>'
+    : isBoth
+    ? 'Status: <strong>PROJEKT NOWELIZACJI / AMENDMENT PROPOSAL</strong>'
+    : 'Status: <strong>PROJEKT NOWELIZACJI</strong>';
+
+  const resString = options?.resolutionNumber
+    ? ` | ${formatResolutionString(options.resolutionNumber, rawDateStr, lang, dateFormat)}`
+    : '';
+
+  const subtitle = `${dateLabel} | ${statusLabel}${resString}`;
+
+  const formatPln = (num: number | undefined | null) => {
+    return (num || 0).toLocaleString(isEn ? 'en-US' : 'pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' PLN';
+  };
+
+  const formatPlnWithSign = (num: number | undefined | null) => {
+    return formatFinanceAmount(num || 0, 'STANDARD', {
+      currency: 'PLN',
+      forceSign: true,
+      locale: isEn ? 'en' : 'pl'
+    });
+  };
+
+  const escapeHtml = (str?: string): string => {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  };
+
+  const typeRev = isEn ? 'REVENUE' : isBoth ? 'PRZYCHODY / REVENUE' : 'PRZYCHODY';
+  const typeExp = isEn ? 'EXPENSE' : isBoth ? 'KOSZTY / EXPENSE' : 'KOSZTY';
+
+  const totalRevLabel = isEn ? 'TOTAL REVENUE' : isBoth ? 'PRZYCHODY RAZEM / TOTAL REVENUE' : 'PRZYCHODY RAZEM';
+  const totalExpLabel = isEn ? 'TOTAL EXPENSE' : isBoth ? 'KOSZTY RAZEM / TOTAL EXPENSE' : 'KOSZTY RAZEM';
+  const netResultLabel = isEn
+    ? 'NET RESULT'
+    : isBoth
+    ? 'WYNIK NETTO / NET RESULT'
+    : 'WYNIK NETTO';
+
+  const colCode = isEn ? 'Code' : isBoth ? 'Kod / Code' : 'Kod';
+  const colItem = isEn ? 'Category / Group / Line' : isBoth ? 'Kategoria / Grupa / Linia (Category / Group / Line)' : 'Kategoria / Grupa / Linia';
+  const colCur = isEn ? 'Current Plan [PLN]' : isBoth ? 'Dotychczasowy plan / Current [PLN]' : 'Dotychczasowy plan [PLN]';
+  const colProp = isEn ? 'Proposed Plan [PLN]' : isBoth ? 'Proponowany plan / Proposed [PLN]' : 'Proponowany plan [PLN]';
+  const colDelta = isEn ? 'Difference [PLN]' : isBoth ? 'Różnica / Delta [PLN]' : 'Różnica [PLN]';
+  const colAct = isEn ? 'Execution [PLN]' : isBoth ? 'Wykonanie / Execution [PLN]' : 'Wykonanie [PLN]';
+  const colJust = isEn ? 'Justification' : isBoth ? 'Uzasadnienie / Justification' : 'Uzasadnienie';
+
+  // Deltas
+  const revItems = (itemsDiff || []).filter((it) => it.type === 'REVENUE');
+  const expItems = (itemsDiff || []).filter((it) => it.type === 'EXPENSE');
+
+  const revDelta = revItems.reduce((acc, it) => acc + (it.deltaAmount ?? it.difference ?? 0), 0);
+  const expDelta = expItems.reduce((acc, it) => acc + (it.deltaAmount ?? it.difference ?? 0), 0);
+  const netDelta = revDelta - expDelta;
+
+  const baseBudRev = budget.totalBudgetedRevenue || 0;
+  const propBudRev = baseBudRev + revDelta;
+  const totalActRev = budget.totalActualRevenue || 0;
+
+  const baseBudExp = budget.totalBudgetedExpense || 0;
+  const propBudExp = baseBudExp + expDelta;
+  const totalActExp = budget.totalActualExpense || 0;
+
+  const baseNet = budget.budgetedNetResult || 0;
+  const propNet = baseNet + netDelta;
+  const totalActNet = budget.actualNetResult || 0;
+
+  // Group itemsDiff by Category and Section
+  interface CatGroup {
+    catName: string;
+    revenues: BudgetAmendmentItem[];
+    expenses: BudgetAmendmentItem[];
+  }
+
+  const catMap = new Map<string, CatGroup>();
+
+  for (const it of itemsDiff || []) {
+    let catName = isEn ? 'Other' : 'Inne';
+    if (it.categoryPath) {
+      const parts = it.categoryPath.split(' > ');
+      if (parts.length > 0 && parts[0].trim()) {
+        catName = parts[0].trim();
+      }
+    }
+
+    if (!catMap.has(catName)) {
+      catMap.set(catName, { catName, revenues: [], expenses: [] });
+    }
+
+    const grp = catMap.get(catName)!;
+    if (it.type === 'REVENUE') {
+      grp.revenues.push(it);
+    } else {
+      grp.expenses.push(it);
+    }
+  }
+
+  const renderSectionRows = (items: BudgetAmendmentItem[], secType: 'REVENUE' | 'EXPENSE'): string => {
+    if (!items || items.length === 0) return '';
+    const isRev = secType === 'REVENUE';
+    const secCur = items.reduce((s, it) => s + (it.previousAmount || it.currentAmount || 0), 0);
+    const secProp = items.reduce((s, it) => s + (it.proposedAmount ?? ((it.previousAmount || 0) + (it.deltaAmount || 0))), 0);
+    const secDelta = items.reduce((s, it) => s + (it.deltaAmount ?? it.difference ?? 0), 0);
+    const secAct = items.reduce((s, it) => s + (it.actualAmountAtTime || 0), 0);
+
+    const deltaColor = isRev
+      ? (secDelta < 0 ? '#dc2626' : '#16a34a')
+      : (secDelta > 0 ? '#dc2626' : '#16a34a');
+
+    let html = `
+      <tr class="sec-header-row ${isRev ? 'rev' : 'exp'}">
+        <td colspan="2" style="padding-left: 14px;">
+          <span class="badge ${isRev ? 'badge-rev' : 'badge-exp'}">${isRev ? typeRev : typeExp}</span>
+        </td>
+        <td style="text-align: right; font-weight: 700;">${formatPln(secCur)}</td>
+        <td style="text-align: right; font-weight: 700;">${formatPln(secProp)}</td>
+        <td style="text-align: right; font-weight: 700; color: ${deltaColor};">${formatPlnWithSign(secDelta)}</td>
+        <td style="text-align: right; font-weight: 700;">${formatPln(secAct)}</td>
+        <td></td>
+      </tr>
+    `;
+
+    for (const it of items) {
+      const code = it.budgetCode || it.lineCode || '—';
+      const name = (isEn ? it.lineName?.en : it.lineName?.pl) || it.lineName?.pl || it.lineName?.en || '';
+      const prev = it.previousAmount ?? it.currentAmount ?? 0;
+      const prop = it.proposedAmount ?? (prev + (it.deltaAmount || 0));
+      const delta = it.deltaAmount ?? it.difference ?? (prop - prev);
+      const act = it.actualAmountAtTime || 0;
+      const just = it.explanation || it.justification || '';
+
+      // Extract group subpath from categoryPath
+      let groupSubpath = '';
+      if (it.categoryPath) {
+        const parts = it.categoryPath.split(' > ');
+        if (parts.length > 2) {
+          groupSubpath = parts.slice(2).join(' > ');
+        }
+      }
+
+      let changeBadge = '';
+      if (it.changeType === 'ADD_LINE') {
+        changeBadge = `<span class="badge badge-rev" style="margin-left: 6px; font-size: 8px;">${isEn ? 'NEW' : 'NOWA'}</span>`;
+      } else if (it.changeType === 'REMOVE_LINE') {
+        changeBadge = `<span class="badge badge-exp" style="margin-left: 6px; font-size: 8px;">${isEn ? 'REMOVED' : 'USUNIĘTO'}</span>`;
+      } else if (it.changeType === 'RENAME_LINE') {
+        changeBadge = `<span class="badge" style="background: #e0f2fe; color: #0369a1; margin-left: 6px; font-size: 8px;">${isEn ? 'RENAMED' : 'NAZWA'}</span>`;
+      }
+
+      const lineDeltaColor = isRev
+        ? (delta < 0 ? '#dc2626' : delta > 0 ? '#16a34a' : '#64748b')
+        : (delta > 0 ? '#dc2626' : delta < 0 ? '#16a34a' : '#64748b');
+
+      html += `
+        <tr>
+          <td><code>${escapeHtml(code)}</code></td>
+          <td style="padding-left: 20px;">
+            ${groupSubpath ? `<div style="font-size: 10px; color: #64748b; margin-bottom: 1px;">📁 ${escapeHtml(groupSubpath)}</div>` : ''}
+            <div>
+              ${escapeHtml(name)}
+              ${changeBadge}
+            </div>
+          </td>
+          <td style="text-align: right;">${formatPln(prev)}</td>
+          <td style="text-align: right; font-weight: 600;">${formatPln(prop)}</td>
+          <td style="text-align: right; font-weight: 700; color: ${lineDeltaColor};">${formatPlnWithSign(delta)}</td>
+          <td style="text-align: right; color: #64748b;">${formatPln(act)}</td>
+          <td style="font-size: 10px; color: #475569;">${escapeHtml(just)}</td>
+        </tr>
+      `;
+    }
+
+    return html;
+  };
+
+  let bodyRows = '';
+  if (catMap.size === 0) {
+    bodyRows = `<tr><td colspan="7" style="text-align: center; padding: 24px; color: #94a3b8;">${isEn ? 'No lines modified in this amendment draft.' : 'Brak zmodyfikowanych pozycji w projekcie nowelizacji.'}</td></tr>`;
+  } else {
+    for (const grp of catMap.values()) {
+      bodyRows += `
+        <tr class="cat-header-row">
+          <td colspan="7">
+            <strong>${escapeHtml(grp.catName)}</strong>
+          </td>
+        </tr>
+        ${renderSectionRows(grp.revenues, 'REVENUE')}
+        ${renderSectionRows(grp.expenses, 'EXPENSE')}
+      `;
+    }
+  }
+
+  const tableHtml = `
+    <thead>
+      <tr>
+        <th style="width: 100px;">${colCode}</th>
+        <th>${colItem}</th>
+        <th style="text-align: right; width: 130px;">${colCur}</th>
+        <th style="text-align: right; width: 130px;">${colProp}</th>
+        <th style="text-align: right; width: 120px;">${colDelta}</th>
+        <th style="text-align: right; width: 120px;">${colAct}</th>
+        <th>${colJust}</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${bodyRows}
+    </tbody>
+    <tbody class="table-summary-tbody">
+      <tr style="background: #f8fafc; border-top: 2px solid #cbd5e1; font-weight: 700;">
+        <td colspan="2">${totalRevLabel}</td>
+        <td style="text-align: right;">${formatPln(baseBudRev)}</td>
+        <td style="text-align: right;">${formatPln(propBudRev)}</td>
+        <td style="text-align: right; color: ${revDelta < 0 ? '#dc2626' : '#16a34a'};">${formatPlnWithSign(revDelta)}</td>
+        <td style="text-align: right;">${formatPln(totalActRev)}</td>
+        <td></td>
+      </tr>
+      <tr style="background: #f8fafc; font-weight: 700;">
+        <td colspan="2">${totalExpLabel}</td>
+        <td style="text-align: right;">${formatPln(baseBudExp)}</td>
+        <td style="text-align: right;">${formatPln(propBudExp)}</td>
+        <td style="text-align: right; color: ${expDelta > 0 ? '#dc2626' : '#16a34a'};">${formatPlnWithSign(expDelta)}</td>
+        <td style="text-align: right;">${formatPln(totalActExp)}</td>
+        <td></td>
+      </tr>
+      <tr style="background: #e2e8f0; font-weight: 700; border-top: 1px solid #cbd5e1; border-bottom: 2px solid #94a3b8;">
+        <td colspan="2">${netResultLabel}</td>
+        <td style="text-align: right;">${formatPlnWithSign(baseNet)}</td>
+        <td style="text-align: right;">${formatPlnWithSign(propNet)}</td>
+        <td style="text-align: right; color: ${netDelta < 0 ? '#dc2626' : '#16a34a'};">${formatPlnWithSign(netDelta)}</td>
+        <td style="text-align: right;">${formatPlnWithSign(totalActNet)}</td>
+        <td></td>
+      </tr>
+    </tbody>
+  `;
+
+  return `<!DOCTYPE html>
+<html lang="${isEn ? 'en' : 'pl'}">
+<head>
+  <meta charset="UTF-8">
+  <base href="${typeof window !== 'undefined' ? window.location.origin : ''}/">
+  <title>${escapeHtml(title)}</title>
+  <style>
+    @page {
+      size: A4 landscape;
+      margin: 12mm 12mm 16mm 12mm;
+    }
+    * {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: #0f172a;
+      background: #ffffff;
+      margin: 0;
+      padding: 20px 20px 30px 20px;
+      font-size: 12px;
+      line-height: 1.4;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+    .rainbow-footer {
+      position: fixed !important;
+      bottom: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      width: 100% !important;
+      height: 5px !important;
+      background: linear-gradient(
+        to right,
+        #F15A24 0%, #F15A24 20%,
+        #7AC143 20%, #7AC143 40%,
+        #00AEEF 40%, #00AEEF 60%,
+        #EC008C 60%, #EC008C 80%,
+        #2E3192 80%, #2E3192 100%
+      ) !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+      z-index: 9999 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+
+    .header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 12px;
+    }
+    .header-titles h1 {
+      margin: 0 0 4px 0;
+      font-size: 20px;
+      color: #0f172a;
+    }
+    .header-titles .subtitle {
+      font-size: 12px;
+      color: #64748b;
+    }
+    .header-logo {
+      text-align: right;
+    }
+    .doc-logo {
+      max-height: 55px;
+      max-width: 220px;
+      object-fit: contain;
+      display: block;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 24px;
+      font-size: 11px;
+    }
+    th {
+      background: #f1f5f9;
+      color: #334155;
+      text-align: left;
+      padding: 6px 8px;
+      font-weight: 600;
+      border-bottom: 2px solid #cbd5e1;
+    }
+    td {
+      padding: 5px 8px;
+      border-bottom: 1px solid #e2e8f0;
+      vertical-align: middle;
+    }
+    tfoot td, .table-summary-tbody td {
+      padding: 6px 8px;
+    }
+    tfoot, .table-summary-tbody {
+      display: table-row-group;
+    }
+    .cat-header-row td {
+      background: #f8fafc;
+      font-size: 12px;
+      font-weight: 600;
+      padding-top: 8px;
+      padding-bottom: 8px;
+      border-top: 2px solid #e2e8f0;
+    }
+    .grp-header-row td {
+      background: #ffffff;
+      color: #475569;
+      font-weight: 600;
+      font-size: 11px;
+      padding-left: 12px;
+    }
+    code {
+      font-family: monospace;
+      font-weight: 600;
+      background: #f1f5f9;
+      padding: 2px 4px;
+      border-radius: 4px;
+      font-size: 10px;
+      white-space: nowrap;
+    }
+    .badge {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      margin-right: 6px;
+    }
+    .badge-rev { background: #dcfce7; color: #166534; }
+    .badge-exp { background: #fee2e2; color: #991b1b; }
+    .badge-cat {
+      background: #0f172a;
+      color: #ffffff;
+      font-weight: 800;
+      border-radius: 4px;
+      padding: 2px 7px;
+      margin-right: 6px;
+    }
+    .sec-header-row td {
+      background: #f8fafc;
+      font-size: 11px;
+      border-top: 1px solid #e2e8f0;
+      border-bottom: 1px solid #e2e8f0;
+      padding-top: 6px;
+      padding-bottom: 6px;
+    }
+    .sec-header-row.rev td:first-child {
+      border-left: 4px solid #16a34a;
+    }
+    .sec-header-row.exp td:first-child {
+      border-left: 4px solid #dc2626;
+    }
+
+    @media print {
+      * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      body {
+        padding: 0 !important;
+        margin: 0 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      .no-print { display: none !important; }
+      .rainbow-footer {
+        position: fixed !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        width: 100% !important;
+        height: 5px !important;
+        background: linear-gradient(
+          to right,
+          #F15A24 0%, #F15A24 20%,
+          #7AC143 20%, #7AC143 40%,
+          #00AEEF 40%, #00AEEF 60%,
+          #EC008C 60%, #EC008C 80%,
+          #2E3192 80%, #2E3192 100%
+        ) !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        z-index: 9999 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+      tr { page-break-inside: avoid !important; }
+      .cat-header-row { page-break-after: avoid !important; }
+      .grp-header-row { page-break-after: avoid !important; }
+      tfoot, .table-summary-tbody {
+        display: table-row-group !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+      }
+      .table-summary-tbody tr {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="header-row">
+    <div class="header-titles">
+      <h1>${title}</h1>
+      <div class="subtitle">${subtitle}</div>
+    </div>
+    ${logoUrl ? `
+    <div class="header-logo">
+      <img src="${logoUrl}" alt="Logo" class="doc-logo" />
+    </div>` : ''}
+  </div>
+
+  <table>
+    ${tableHtml}
+  </table>
+
+  ${options?.description ? `
+  <div style="margin-top: 16px; padding: 10px 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 11px;">
+    <strong>${isEn ? 'Justification / Resolution notes:' : 'Uzasadnienie / opis projektu nowelizacji:'}</strong>
+    <p style="margin: 4px 0 0 0; color: #475569;">${escapeHtml(options.description)}</p>
+  </div>
+  ` : ''}
+
+  <div class="rainbow-footer"></div>
+
+  <div class="no-print print-toolbar">
+    <button type="button" class="btn-print" onclick="window.print()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 6px;"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+      ${isEn ? 'Print / Save as PDF' : 'Drukuj / Zapisz jako PDF'}
+    </button>
+    <button type="button" class="btn-close" onclick="window.close()">
+      ${isEn ? 'Close tab' : 'Zamknij kartę'}
+    </button>
+  </div>
+
+  <style>
+    .print-toolbar {
+      position: fixed;
+      bottom: 20px;
+      right: 24px;
+      z-index: 9999;
+      display: flex;
+      gap: 10px;
+      background: rgba(15, 23, 42, 0.92);
+      backdrop-filter: blur(8px);
+      padding: 8px 12px;
+      border-radius: 30px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+    }
+    .print-toolbar button {
+      padding: 8px 16px;
+      font-size: 12px;
+      font-weight: 600;
+      border: none;
+      border-radius: 20px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      transition: all 0.2s;
+    }
+    .btn-print { background: #00AEEF; color: #ffffff; }
+    .btn-print:hover { background: #0098d4; }
+    .btn-close { background: #334155; color: #cbd5e1; }
+    .btn-close:hover { background: #475569; color: #ffffff; }
+  </style>
+
+  <script>
+    window.addEventListener('DOMContentLoaded', function() {
+      setTimeout(function() {
+        try { window.print(); } catch (e) {}
+      }, 450);
+    });
+  </script>
+</body>
+</html>`;
 }

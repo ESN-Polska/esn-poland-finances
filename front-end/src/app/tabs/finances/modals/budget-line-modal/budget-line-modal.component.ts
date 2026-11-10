@@ -18,6 +18,9 @@ export class BudgetLineModalComponent implements OnInit {
   @Input() groupCodePrefix: string = '';
   @Input() existingCodes: string[] = [];
   @Input() isNew: boolean = true;
+  @Input() isAmending: boolean = false;
+  @Input() currentApprovedAmount: number = 0;
+  @Input() initialJustification: string = '';
 
   code: string = '';
   namePl: string = '';
@@ -26,6 +29,12 @@ export class BudgetLineModalComponent implements OnInit {
   descriptionPl: string = '';
   descriptionEn: string = '';
   notes: string = '';
+  justification: string = '';
+
+  get proposedDiff(): number {
+    const prop = parseLocaleNumber(this.plannedAmount) || 0;
+    return prop - (this.currentApprovedAmount || 0);
+  }
 
   ngOnInit(): void {
     if (this.lineItem) {
@@ -38,6 +47,9 @@ export class BudgetLineModalComponent implements OnInit {
       this.notes = this.lineItem.notes || '';
     } else {
       this.code = '';
+    }
+    if (this.initialJustification) {
+      this.justification = this.initialJustification;
     }
   }
 
@@ -93,6 +105,6 @@ export class BudgetLineModalComponent implements OnInit {
       notes: this.notes.trim()
     };
 
-    this.modalCtrl.dismiss({ line: resultLine });
+    this.modalCtrl.dismiss({ line: resultLine, justification: this.justification });
   }
 }

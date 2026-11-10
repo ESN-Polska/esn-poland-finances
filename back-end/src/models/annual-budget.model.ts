@@ -133,12 +133,21 @@ export interface BudgetAmendmentItem {
     pl: string;
     en: string;
   };
+  oldLineName?: {
+    pl: string;
+    en: string;
+  };
+  newLineName?: {
+    pl: string;
+    en: string;
+  };
   type: BudgetLineType;
   changeType: BudgetAmendmentType;
   currentAmount: number;
   proposedAmount: number;
   /** delta = proposedAmount - currentAmount */
   deltaAmount: number;
+  actualAmountAtTime?: number;
   /** Mandatory justification for the amendment */
   explanation: string;
 
@@ -148,6 +157,7 @@ export interface BudgetAmendmentItem {
   newAmount?: number;
   difference?: number;
   justification?: string;
+  categoryPath?: string;
 }
 
 export interface BudgetAmendment {
@@ -171,6 +181,36 @@ export interface BudgetAmendment {
   createdAt?: string;
 }
 
+export interface BudgetVersionSnapshot {
+  id: string;
+  resolutionNumber: string;
+  adoptedDate: string;
+  title?: string;
+  type: 'INITIAL_ADOPTION' | 'AMENDMENT';
+  description?: string;
+  createdAt: string;
+  createdBy?: string;
+  amendmentId?: string;
+  totalRevenue: number;
+  totalExpense: number;
+  netResult: number;
+  categories: DynamicBudgetCategory[];
+}
+
+export interface BudgetAmendmentDraft {
+  id: string;
+  updatedAt: string;
+  updatedBy?: string;
+  resolutionNumber?: string;
+  adoptedDate?: string;
+  description?: string;
+  draftCategories: DynamicBudgetCategory[];
+  itemsDiff: BudgetAmendmentItem[];
+  totalRevenueDelta: number;
+  totalExpenseDelta: number;
+  netBudgetDelta: number;
+}
+
 export type AnnualBudgetStatus = 'DRAFT' | 'ADOPTED' | 'AMENDED' | 'ARCHIVED';
 
 export class AnnualBudget extends Resource {
@@ -185,6 +225,8 @@ export class AnnualBudget extends Resource {
   categories: DynamicBudgetCategory[];
   openingBalances: OpeningBalances;
   amendments: BudgetAmendment[];
+  versionHistory: BudgetVersionSnapshot[];
+  draftAmendment?: BudgetAmendmentDraft | null;
   currency: 'PLN';
 
   // Calculated high-level totals
@@ -399,6 +441,40 @@ export class AnnualBudget extends Resource {
         }))
       : [];
 
+    this.versionHistory = Array.isArray(x.versionHistory)
+      ? x.versionHistory.map((v: any) => ({
+          id: this.clean(v.id, String),
+          resolutionNumber: this.clean(v.resolutionNumber, String, ''),
+          adoptedDate: this.clean(v.adoptedDate, String, ''),
+          title: this.clean(v.title, String, ''),
+          type: (v.type === 'INITIAL_ADOPTION' ? 'INITIAL_ADOPTION' : 'AMENDMENT') as 'INITIAL_ADOPTION' | 'AMENDMENT',
+          description: this.clean(v.description, String, ''),
+          createdAt: this.clean(v.createdAt, String, new Date().toISOString()),
+          createdBy: this.clean(v.createdBy, String, ''),
+          amendmentId: this.clean(v.amendmentId, String, ''),
+          totalRevenue: this.clean(v.totalRevenue, Number, 0),
+          totalExpense: this.clean(v.totalExpense, Number, 0),
+          netResult: this.clean(v.netResult, Number, 0),
+          categories: Array.isArray(v.categories) ? v.categories : []
+        }))
+      : [];
+
+    this.draftAmendment = x.draftAmendment && typeof x.draftAmendment === 'object'
+      ? {
+          id: this.clean(x.draftAmendment.id, String),
+          updatedAt: this.clean(x.draftAmendment.updatedAt, String, new Date().toISOString()),
+          updatedBy: this.clean(x.draftAmendment.updatedBy, String, ''),
+          resolutionNumber: this.clean(x.draftAmendment.resolutionNumber, String, ''),
+          adoptedDate: this.clean(x.draftAmendment.adoptedDate, String, ''),
+          description: this.clean(x.draftAmendment.description, String, ''),
+          draftCategories: Array.isArray(x.draftAmendment.draftCategories) ? x.draftAmendment.draftCategories : [],
+          itemsDiff: Array.isArray(x.draftAmendment.itemsDiff) ? x.draftAmendment.itemsDiff : [],
+          totalRevenueDelta: this.clean(x.draftAmendment.totalRevenueDelta, Number, 0),
+          totalExpenseDelta: this.clean(x.draftAmendment.totalExpenseDelta, Number, 0),
+          netBudgetDelta: this.clean(x.draftAmendment.netBudgetDelta, Number, 0)
+        }
+      : null;
+
     this.createdAt = this.clean(x.createdAt, String, new Date().toISOString());
     this.updatedAt = this.clean(x.updatedAt, String, new Date().toISOString());
     this.createdBy = this.clean(x.createdBy, String, '');
@@ -413,16 +489,19 @@ export class AnnualBudget extends Resource {
   private recalculateNodeTotals(node: DynamicBudgetGroup | BudgetLineItem): { planned: number; actual: number } {
     if (isBudgetLine(node)) {
       if (node.isActive === false) return { planned: 0, actual: 0 };
-      const budgeted = Number(node.plannedAmount ?? node.budgetedAmount) || 0;
+      const baseBudgeted = Number(node.budgetedAmount ?? node.plannedAmount) || 0;
+      const delta = Number(node.amendmentsDelta) || 0;
+      const activePlanned = baseBudgeted + delta;
       const actual = Number(node.actualAmount) || 0;
 
-      node.budgetedAmount = budgeted;
-      node.plannedAmount = budgeted;
+      node.budgetedAmount = baseBudgeted;
+      node.amendmentsDelta = delta;
+      node.plannedAmount = activePlanned;
       node.actualAmount = actual;
-      node.variance = budgeted - actual;
-      node.executionPercentage = budgeted !== 0 ? Math.round((actual / budgeted) * 10000) / 100 : 0;
+      node.variance = activePlanned - actual;
+      node.executionPercentage = activePlanned !== 0 ? Math.round((actual / activePlanned) * 10000) / 100 : 0;
 
-      return { planned: budgeted, actual };
+      return { planned: activePlanned, actual };
     } else if (isBudgetGroup(node)) {
       let grpPlanned = 0;
       let grpActual = 0;
@@ -568,6 +647,82 @@ export class AnnualBudget extends Resource {
     const norm = String(code || '').toLowerCase().trim();
     if (!norm) return undefined;
     return this.getAllLines().find((ln) => ln.code.toLowerCase().trim() === norm);
+  }
+
+  /**
+   * Creates an immutable snapshot of the budget state tied to a resolution
+   */
+  createSnapshot(
+    type: 'INITIAL_ADOPTION' | 'AMENDMENT',
+    resolutionNumber: string,
+    adoptedDate: string,
+    title?: string,
+    description?: string,
+    amendmentId?: string,
+    user?: string
+  ): BudgetVersionSnapshot {
+    this.recalculateTotals();
+    const snapshot: BudgetVersionSnapshot = {
+      id: `snap_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      resolutionNumber: (resolutionNumber || '').trim(),
+      adoptedDate: adoptedDate || new Date().toISOString().substring(0, 10),
+      title: title || (type === 'INITIAL_ADOPTION' ? 'Uchwalenie budżetu pierwotnego' : `Nowelizacja (${(resolutionNumber || '').trim()})`),
+      type,
+      description: description || '',
+      createdAt: new Date().toISOString(),
+      createdBy: user || '',
+      amendmentId: amendmentId || '',
+      totalRevenue: this.totalBudgetedRevenue,
+      totalExpense: this.totalBudgetedExpense,
+      netResult: this.budgetedNetResult,
+      categories: JSON.parse(JSON.stringify(this.categories || []))
+    };
+
+    if (!Array.isArray(this.versionHistory)) {
+      this.versionHistory = [];
+    }
+    this.versionHistory.push(snapshot);
+    return snapshot;
+  }
+
+  /**
+   * Applies an approved amendment, updates categories and deltas, records a version snapshot,
+   * updates status to AMENDED and clears active draft.
+   */
+  applyAmendment(
+    amendment: BudgetAmendment,
+    updatedCategories?: DynamicBudgetCategory[],
+    user?: string
+  ): void {
+    if (updatedCategories && Array.isArray(updatedCategories) && updatedCategories.length > 0) {
+      this.categories = updatedCategories;
+    } else {
+      for (const item of amendment.items || []) {
+        const line = this.findLineByCode(item.budgetCode || item.lineCode || '');
+        if (line) {
+          line.amendmentsDelta = (line.amendmentsDelta || 0) + (item.deltaAmount || 0);
+          line.plannedAmount = (line.budgetedAmount || 0) + line.amendmentsDelta;
+          if (item.newLineName?.pl) line.name.pl = item.newLineName.pl;
+          if (item.newLineName?.en) line.name.en = item.newLineName.en;
+        }
+      }
+    }
+
+    this.status = 'AMENDED';
+    this.amendments = this.amendments || [];
+    this.amendments.push(amendment);
+    this.draftAmendment = null;
+    this.recalculateTotals();
+
+    this.createSnapshot(
+      'AMENDMENT',
+      amendment.resolutionNumber || '',
+      amendment.adoptedDate || amendment.date || '',
+      `Nowelizacja: ${amendment.resolutionNumber || amendment.amendmentNumber}`,
+      amendment.description || '',
+      amendment.id,
+      user
+    );
   }
 
   validate(): string[] {

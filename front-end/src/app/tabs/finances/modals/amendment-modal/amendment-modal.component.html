@@ -51,7 +51,7 @@
           <h3>{{ 'FINANCES.MODALS.AMENDMENT.MODIFIED_LINES' | translate }}</h3>
           <p>{{ 'FINANCES.MODALS.AMENDMENT.MODIFIED_LINES_DESC' | translate }}</p>
         </div>
-        <ion-button size="small" fill="outline" color="primary" (click)="addNewItemRow()">
+        <ion-button *ngIf="!itemsDiff" size="small" fill="outline" color="primary" (click)="addNewItemRow()">
           <ion-icon slot="start" name="add-outline"></ion-icon>
           {{ 'FINANCES.MODALS.AMENDMENT.ADD_LINE' | translate }}
         </ion-button>
@@ -62,6 +62,7 @@
           <div class="itemCardTop">
             <span class="itemBadge">#{{ idx + 1 }}</span>
             <ion-button
+              *ngIf="!itemsDiff"
               fill="clear"
               color="danger"
               size="small"

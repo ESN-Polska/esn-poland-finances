@@ -33,17 +33,127 @@
   </div>
 
   <div *ngIf="!loading && budget" class="budgetContent">
+    <!-- Snapshot View Banner -->
+    <div class="snapshotBanner" *ngIf="activeSnapshotView">
+      <div class="snapshotBannerContent">
+        <div class="snapshotBannerIcon">
+          <ion-icon name="time-outline"></ion-icon>
+        </div>
+        <div class="snapshotBannerText">
+          <h4>{{ 'FINANCES.BUDGET.SNAPSHOT_VIEW_BANNER' | translate:{ title: activeSnapshotView.title, number: activeSnapshotView.resolutionNumber, date: formatDate(activeSnapshotView.adoptedDate) } }}</h4>
+          <p *ngIf="activeSnapshotView.description">{{ activeSnapshotView.description }}</p>
+        </div>
+      </div>
+      <div class="snapshotBannerActions">
+        <ion-button fill="solid" color="light" size="small" class="exitSnapBtn" (click)="exitSnapshotView()">
+          <ion-icon slot="start" name="arrow-back-outline"></ion-icon>
+          {{ 'FINANCES.BUDGET.EXIT_SNAPSHOT_VIEW_BTN' | translate }}
+        </ion-button>
+      </div>
+    </div>
+
+    <!-- Draft Amendment Saved Banner (User can resume anytime) -->
+    <div class="draftAmendmentBanner" *ngIf="!isAmending && hasDraftAmendment && !activeSnapshotView">
+      <div class="draftBannerContent">
+        <div class="draftBannerIcon">
+          <ion-icon name="git-pull-request-outline"></ion-icon>
+        </div>
+        <div class="draftBannerText">
+          <h4>{{ 'FINANCES.BUDGET.DRAFT_AMENDMENT_BANNER' | translate:{ date: formatDate(budget.draftAmendment?.updatedAt) } }}</h4>
+          <p>
+            {{ 'FINANCES.BUDGET.MODIFIED_LINES_COUNT' | translate:{ count: budget.draftAmendment?.itemsDiff?.length || 0 } }}
+            <span *ngIf="budget.draftAmendment?.netBudgetDelta !== undefined">
+              • {{ 'FINANCES.BUDGET.NET_DELTA' | translate }}: {{ budget.draftAmendment?.netBudgetDelta | financeNumber:{ currency: 'PLN', forceSign: true } }}
+            </span>
+          </p>
+        </div>
+      </div>
+      <div class="draftBannerActions" *ngIf="canEdit && !isArchived">
+        <ion-button fill="solid" color="warning" size="small" class="resumeDraftBtn" (click)="startOrContinueAmendment()">
+          <ion-icon slot="start" name="create-outline"></ion-icon>
+          {{ 'FINANCES.BUDGET.CONTINUE_AMENDMENT_BTN' | translate }}
+        </ion-button>
+        <ion-button fill="outline" color="danger" size="small" class="discardDraftBtn" (click)="discardAmendmentDraft()">
+          <ion-icon slot="start" name="trash-outline"></ion-icon>
+          {{ 'FINANCES.BUDGET.DISCARD_AMENDMENT_DRAFT_BTN' | translate }}
+        </ion-button>
+      </div>
+    </div>
+
+    <!-- Amendment Mode Toolbar & Ribbon -->
+    <div class="amendModeToolbar" *ngIf="isAmending">
+      <div class="amendToolbarHeader">
+        <div class="amendModeTitle">
+          <div class="amendIconBadge">
+            <ion-icon name="create-outline"></ion-icon>
+          </div>
+          <div class="amendTitleText">
+            <h3>{{ 'FINANCES.BUDGET.AMEND_MODE_TITLE' | translate }}</h3>
+            <p>{{ 'FINANCES.BUDGET.AMEND_MODE_SUBTITLE' | translate }}</p>
+          </div>
+        </div>
+
+        <div class="amendToolbarActions">
+          <ion-button fill="outline" color="medium" size="small" (click)="exitAmendmentMode()">
+            <ion-icon slot="start" name="arrow-back-outline"></ion-icon>
+            {{ 'FINANCES.BUDGET.EXIT_AMENDMENT_BTN' | translate }}
+          </ion-button>
+
+          <ion-button fill="outline" color="primary" size="small" (click)="openExportAmendmentDraftModal()">
+            <ion-icon slot="start" name="download-outline"></ion-icon>
+            {{ 'FINANCES.BUDGET.EXPORT_AMENDMENT_DRAFT_BTN' | translate }}
+          </ion-button>
+
+          <ion-button fill="outline" color="danger" size="small" (click)="discardAmendmentDraft()">
+            <ion-icon slot="start" name="trash-outline"></ion-icon>
+            {{ 'FINANCES.BUDGET.DISCARD_AMENDMENT_DRAFT_BTN' | translate }}
+          </ion-button>
+
+          <ion-button fill="solid" color="success" size="small" (click)="openAdoptAmendmentModal()">
+            <ion-icon slot="start" name="checkmark-done-circle-outline"></ion-icon>
+            {{ 'FINANCES.BUDGET.ADOPT_AMENDMENT_BTN' | translate }}
+          </ion-button>
+        </div>
+      </div>
+
+      <!-- Delta metrics strip -->
+      <div class="amendDeltaStrip">
+        <div class="deltaCard">
+          <span class="deltaLabel">{{ 'FINANCES.BUDGET.MODIFIED_LINES_COUNT' | translate:{ count: amendmentItemsDiff.length } }}</span>
+          <span class="deltaValue info">{{ amendmentItemsDiff.length }}</span>
+        </div>
+        <div class="deltaCard">
+          <span class="deltaLabel">{{ 'FINANCES.BUDGET.REVENUE_DELTA' | translate }}</span>
+          <span class="deltaValue" [class.positive]="amendmentRevenueDelta > 0" [class.negative]="amendmentRevenueDelta < 0">
+            {{ amendmentRevenueDelta | financeNumber:{ currency: 'PLN', forceSign: true } }}
+          </span>
+        </div>
+        <div class="deltaCard">
+          <span class="deltaLabel">{{ 'FINANCES.BUDGET.EXPENSE_DELTA' | translate }}</span>
+          <span class="deltaValue" [class.positive]="amendmentExpenseDelta < 0" [class.negative]="amendmentExpenseDelta > 0">
+            {{ amendmentExpenseDelta | financeNumber:{ currency: 'PLN', forceSign: true } }}
+          </span>
+        </div>
+        <div class="deltaCard">
+          <span class="deltaLabel">{{ 'FINANCES.BUDGET.NET_DELTA' | translate }}</span>
+          <span class="deltaValue" [class.positive]="amendmentNetDelta > 0" [class.negative]="amendmentNetDelta < 0">
+            {{ amendmentNetDelta | financeNumber:{ currency: 'PLN', forceSign: true } }}
+          </span>
+        </div>
+      </div>
+    </div>
+
     <!-- Top Action Bar -->
-    <div class="budgetTopBar">
+    <div class="budgetTopBar" *ngIf="!isAmending">
       <div class="budgetTitleBlock">
         <div class="titleRow">
           <h2>{{ budgetTitle }}</h2>
           <span
             class="statusBadge"
             [class]="budget.status.toLowerCase()"
-            [class.clickable]="canEdit && !isArchived"
-            (click)="canEdit && !isArchived && openEditAdoptionAlert()"
-            [title]="canEdit && !isArchived ? ('FINANCES.BUDGET.EDIT_ADOPTION_TITLE' | translate) : ''"
+            [class.clickable]="canEdit && !isArchived && !activeSnapshotView"
+            (click)="canEdit && !isArchived && !activeSnapshotView && openEditAdoptionAlert()"
+            [title]="canEdit && !isArchived && !activeSnapshotView ? ('FINANCES.BUDGET.EDIT_ADOPTION_TITLE' | translate) : ''"
           >
             {{ budget.status === 'ADOPTED' ? ('FINANCES.BUDGET.STATUS_ADOPTED' | translate) : (budget.status === 'AMENDED' ? ('FINANCES.BUDGET.STATUS_AMENDED' | translate) : ('FINANCES.BUDGET.STATUS_DRAFT' | translate)) }}
           </span>
@@ -51,9 +161,9 @@
         <p
           class="resolutionNote"
           *ngIf="budget.resolutionNumber"
-          [class.clickable]="canEdit && !isArchived"
-          (click)="canEdit && !isArchived && openEditAdoptionAlert()"
-          [title]="canEdit && !isArchived ? ('FINANCES.BUDGET.EDIT_ADOPTION_TITLE' | translate) : ''"
+          [class.clickable]="canEdit && !isArchived && !activeSnapshotView"
+          (click)="canEdit && !isArchived && !activeSnapshotView && openEditAdoptionAlert()"
+          [title]="canEdit && !isArchived && !activeSnapshotView ? ('FINANCES.BUDGET.EDIT_ADOPTION_TITLE' | translate) : ''"
         >
           <ng-container *ngIf="budget.adoptedDate; else noDateResolution">
             {{ 'FINANCES.BUDGET.RESOLUTION_FULL' | translate:{ number: budget.resolutionNumber, date: formatDate(budget.adoptedDate) } }}
@@ -61,48 +171,65 @@
           <ng-template #noDateResolution>
             {{ 'FINANCES.BUDGET.RESOLUTION_WITHOUT_DATE' | translate:{ number: budget.resolutionNumber } }}
           </ng-template>
-          <ion-icon name="create-outline" class="editNoteIcon" *ngIf="canEdit && !isArchived"></ion-icon>
+          <ion-icon name="create-outline" class="editNoteIcon" *ngIf="canEdit && !isArchived && !activeSnapshotView"></ion-icon>
         </p>
       </div>
 
       <div class="topActions">
+        <!-- Uchwal budżet: only when status is DRAFT -->
         <ion-button
           fill="solid"
           color="success"
           class="actionBtn adoptBtn"
-          *ngIf="canEdit && !isArchived && budget.status === 'DRAFT'"
+          *ngIf="canEdit && !isArchived && isDraft"
           (click)="openAdoptBudgetAlert()"
         >
           <ion-icon slot="start" name="checkmark-circle-outline"></ion-icon>
           {{ 'FINANCES.BUDGET.ADOPT_BUDGET_BTN' | translate }}
         </ion-button>
 
+        <!-- Dodaj kategorię: only when canModifyStructure -->
         <ion-button
           fill="solid"
           color="primary"
           class="actionBtn addCategoryBtn"
-          *ngIf="canEdit && !isArchived"
+          *ngIf="canModifyStructure"
           (click)="openAddCategoryModal()"
         >
           <ion-icon slot="start" name="add-circle-outline"></ion-icon>
           {{ 'FINANCES.BUDGET.ADD_CATEGORY_BTN' | translate }}
         </ion-button>
 
+        <!-- Nowelizuj budżet / Kontynuuj nowelizację: only when isAdopted and !activeSnapshotView -->
         <ion-button
-          fill="outline"
+          fill="solid"
           color="secondary"
-          class="actionBtn"
-          *ngIf="canEdit && !isArchived"
-          (click)="openAmendmentModal()"
+          class="actionBtn amendBtn"
+          *ngIf="canEdit && !isArchived && isAdopted && !activeSnapshotView"
+          (click)="startOrContinueAmendment()"
         >
           <ion-icon slot="start" name="git-pull-request-outline"></ion-icon>
-          {{ 'FINANCES.BUDGET.AMENDMENT_BTN' | translate }}
+          {{ (hasDraftAmendment ? 'FINANCES.BUDGET.CONTINUE_AMENDMENT_BTN' : 'FINANCES.BUDGET.AMENDMENT_BTN') | translate }}
         </ion-button>
 
+        <!-- Historia uchwał / wersji -->
+        <ion-button
+          fill="outline"
+          color="primary"
+          class="actionBtn historyBtn"
+          *ngIf="budget && !isAmending"
+          (click)="openVersionHistoryModal()"
+        >
+          <ion-icon slot="start" name="time-outline"></ion-icon>
+          {{ 'FINANCES.BUDGET.VERSION_HISTORY_BTN' | translate }}
+        </ion-button>
+
+        <!-- Eksportuj raport -->
         <ion-button
           fill="solid"
           color="primary"
           class="actionBtn exportBtn"
+          *ngIf="!isAmending"
           (click)="openExportModal()"
         >
           <ion-icon slot="start" name="download-outline"></ion-icon>
@@ -186,7 +313,7 @@
           <ion-icon name="calendar-outline"></ion-icon>
           <h3>{{ 'FINANCES.BUDGET.OPENING_BALANCE_DATE' | translate }}</h3>
         </div>
-        <div class="obActions" *ngIf="canEdit && !isArchived">
+        <div class="obActions" *ngIf="canEdit && !isArchived && !isAmending && !activeSnapshotView">
           <ion-button
             *ngIf="!isEditingOpeningBalances"
             fill="clear"
@@ -345,7 +472,7 @@
         <div
           *ngFor="let category of filteredCategories; let cIdx = index"
           cdkDrag
-          [cdkDragDisabled]="!canEdit || isArchived"
+          [cdkDragDisabled]="!canModifyStructure"
           class="categoryAccordionWrapper"
         >
           <ion-accordion [value]="category.id" class="categoryAccordion">
@@ -356,7 +483,7 @@
                   <!-- Drag Handle for Category -->
                   <span
                     class="catDragHandle"
-                    *ngIf="canEdit && !isArchived"
+                    *ngIf="canModifyStructure"
                     cdkDragHandle
                     (click)="$event.stopPropagation()"
                     [title]="'FINANCES.BUDGET.DRAG_HANDLE_CATEGORY' | translate"
@@ -397,7 +524,7 @@
                   </div>
 
                   <!-- Category Action Buttons -->
-                  <div class="catActionsRow" *ngIf="canEdit && !isArchived">
+                  <div class="catActionsRow" *ngIf="canModifyStructure">
                     <ion-button
                       *ngIf="!category.revenues"
                       fill="outline"
@@ -457,7 +584,7 @@
                 *ngIf="(!category.revenues || category.revenues.enabled === false) && (!category.expenses || category.expenses.enabled === false)"
               >
                 <p>{{ 'FINANCES.BUDGET.NO_SECTIONS_IN_CAT' | translate }}</p>
-                <div class="emptyCatActions" *ngIf="canEdit && !isArchived">
+                <div class="emptyCatActions" *ngIf="canModifyStructure">
                   <ion-button fill="outline" color="success" size="small" (click)="addRevenueSection(category)">
                     <ion-icon slot="start" name="add-circle-outline"></ion-icon>
                     {{ 'FINANCES.BUDGET.ADD_REVENUE_SECTION' | translate }}
@@ -488,7 +615,7 @@
                     </span>
                   </div>
 
-                  <div class="secActions" *ngIf="canEdit && !isArchived">
+                  <div class="secActions" *ngIf="canModifyStructure">
                     <ion-button
                       fill="clear"
                       size="small"
@@ -539,7 +666,7 @@
                   <div
                     *ngFor="let item of category.revenues.items"
                     cdkDrag
-                    [cdkDragDisabled]="!canEdit || isArchived"
+                    [cdkDragDisabled]="!canModifyStructure"
                     class="draggableItemWrapper"
                   >
                     <!-- If item is a direct Line -->
@@ -574,7 +701,7 @@
                     </span>
                   </div>
 
-                  <div class="secActions" *ngIf="canEdit && !isArchived">
+                  <div class="secActions" *ngIf="canModifyStructure">
                     <ion-button
                       fill="clear"
                       size="small"
@@ -625,7 +752,7 @@
                   <div
                     *ngFor="let item of category.expenses.items"
                     cdkDrag
-                    [cdkDragDisabled]="!canEdit || isArchived"
+                    [cdkDragDisabled]="!canModifyStructure"
                     class="draggableItemWrapper"
                   >
                     <!-- If item is a direct Line -->
@@ -649,7 +776,7 @@
       <div class="emptyCategoriesMsg" *ngIf="filteredCategories.length === 0">
         <p>{{ 'FINANCES.BUDGET.NO_CATEGORIES' | translate }}</p>
         <ion-button
-          *ngIf="canEdit && !isArchived"
+          *ngIf="canModifyStructure"
           fill="solid"
           color="primary"
           class="addCatEmptyBtn"
@@ -678,7 +805,7 @@
           <div class="groupInfo">
             <span
               class="itemDragHandle"
-              *ngIf="canEdit && !isArchived"
+              *ngIf="canModifyStructure"
               cdkDragHandle
               [title]="'FINANCES.BUDGET.DRAG_HANDLE_ITEM' | translate"
             >
@@ -691,7 +818,7 @@
             <span class="grpStat">{{ 'FINANCES.BUDGET.PLAN_ABBR' | translate }} <strong>{{ group.subtotalPlanned | number:'1.2-2' }} PLN</strong></span>
             <span class="grpStat">{{ 'FINANCES.BUDGET.EXEC_ABBR' | translate }} <strong>{{ group.subtotalActual | number:'1.2-2' }} PLN</strong></span>
 
-            <div class="grpActions" *ngIf="canEdit && !isArchived">
+            <div class="grpActions" *ngIf="canModifyStructure">
               <ion-button
                 fill="clear"
                 size="small"
@@ -750,7 +877,7 @@
           <!-- Empty items in group -->
           <div class="emptyLinesInGroup" *ngIf="!group.items || group.items.length === 0">
             <p>{{ 'FINANCES.BUDGET.NO_ITEMS_IN_GROUP' | translate }}</p>
-            <div class="emptyGrpBtnRow" *ngIf="canEdit && !isArchived">
+            <div class="emptyGrpBtnRow" *ngIf="canModifyStructure">
               <ion-button
                 fill="outline"
                 size="small"
@@ -776,7 +903,7 @@
           <div
             *ngFor="let child of group.items"
             cdkDrag
-            [cdkDragDisabled]="!canEdit || isArchived"
+            [cdkDragDisabled]="!canModifyStructure"
             class="draggableChildWrapper"
           >
             <!-- Child Line -->
@@ -808,7 +935,7 @@
         [class.highlightedRow]="highlightedLineCode === line.code"
       >
         <!-- Drag Handle for Line -->
-        <div class="cellDragHandle" *ngIf="canEdit && !isArchived">
+        <div class="cellDragHandle" *ngIf="canModifyStructure">
           <span
             class="itemDragHandle"
             cdkDragHandle
@@ -825,7 +952,20 @@
 
         <!-- Name & notes -->
         <div class="cellName">
-          <div class="lineName">{{ (app.currentLanguage === 'en' ? line.name.en : line.name.pl) || line.name.pl || line.name.en }}</div>
+          <div class="lineName">
+            {{ (app.currentLanguage === 'en' ? line.name.en : line.name.pl) || line.name.pl || line.name.en }}
+            <span
+              class="amendDiffBadge"
+              *ngIf="getLineDiff(line.code) as diff"
+              [class.positive]="(diff.difference || 0) > 0"
+              [class.negative]="(diff.difference || 0) < 0"
+              [class.added]="diff.changeType === 'ADD_LINE'"
+            >
+              <ion-icon [name]="diff.changeType === 'ADD_LINE' ? 'add-circle-outline' : 'git-commit-outline'"></ion-icon>
+              <span *ngIf="diff.changeType === 'ADD_LINE'">{{ 'FINANCES.BUDGET.NEW_LINE_TAG' | translate }}</span>
+              <span *ngIf="diff.changeType !== 'ADD_LINE'">{{ diff.difference | financeNumber:{ currency: 'PLN', forceSign: true } }}</span>
+            </span>
+          </div>
           <div class="lineDesc" *ngIf="line.notes">
             {{ line.notes }}
           </div>
@@ -903,7 +1043,7 @@
             </ion-button>
 
             <ion-button
-              *ngIf="canEdit && !isArchived"
+              *ngIf="canModifyStructure"
               fill="clear"
               size="small"
               color="medium"
@@ -914,7 +1054,7 @@
             </ion-button>
 
             <ion-button
-              *ngIf="canEdit && !isArchived"
+              *ngIf="canModifyStructure"
               fill="clear"
               size="small"
               color="danger"

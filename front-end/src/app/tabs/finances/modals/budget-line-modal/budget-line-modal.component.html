@@ -11,6 +11,19 @@
 
 <ion-content class="ion-padding lineModalContent">
   <div class="lineModalWrapper">
+    <div class="amendmentContextCard" *ngIf="isAmending">
+      <div class="amendContextItem">
+        <span class="amendLabel">{{ 'FINANCES.MODALS.AMENDMENT.PREVIOUS_AMOUNT' | translate }}:</span>
+        <strong class="amendVal">{{ currentApprovedAmount | number:'1.2-2' }} PLN</strong>
+      </div>
+      <div class="amendContextItem">
+        <span class="amendLabel">{{ 'FINANCES.MODALS.AMENDMENT.DIFFERENCE' | translate }}:</span>
+        <strong class="amendVal" [class.posDiff]="proposedDiff > 0" [class.negDiff]="proposedDiff < 0">
+          {{ proposedDiff | number:'1.2-2' }} PLN
+        </strong>
+      </div>
+    </div>
+
     <div class="fieldRow">
       <div class="fieldCol codeCol">
         <label>{{ 'FINANCES.MODALS.BUDGET_LINE.CODE' | translate }}</label>
@@ -91,6 +104,18 @@
           [(ngModel)]="notes"
           [placeholder]="'FINANCES.MODALS.BUDGET_LINE.NOTES_PH' | translate"
         ></ion-input>
+      </ion-item>
+    </div>
+
+    <div class="fieldCol" *ngIf="isAmending">
+      <label>{{ 'FINANCES.MODALS.AMENDMENT.JUSTIFICATION' | translate }} *</label>
+      <ion-item lines="none" class="inputItem textareaItem">
+        <ion-textarea
+          [(ngModel)]="justification"
+          [autoGrow]="true"
+          rows="2"
+          [placeholder]="'FINANCES.MODALS.AMENDMENT.JUSTIFICATION_PH' | translate"
+        ></ion-textarea>
       </ion-item>
     </div>
 

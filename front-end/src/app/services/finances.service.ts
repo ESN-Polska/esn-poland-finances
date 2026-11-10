@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { IDEAApiService } from '@idea-ionic/common';
-import { AnnualBudget, BudgetAmendment } from '@models/annual-budget.model';
+import { AnnualBudget, BudgetAmendment, BudgetAmendmentDraft, DynamicBudgetCategory } from '@models/annual-budget.model';
 import { DocumentRecord } from '@models/accounting-document.model';
 import { BankTransactionRecord } from '@models/cashflow-transaction.model';
 import { FiscalMonthlyReport } from '@models/fiscal-report.model';
@@ -41,6 +41,27 @@ export class FinancesService {
 
   public async addAmendment(year: number, amendment: BudgetAmendment): Promise<AnnualBudget> {
     const raw = await this.api.postResource(['budgets', year.toString(), 'amendments'], { body: amendment });
+    return new AnnualBudget(raw);
+  }
+
+  public async saveAmendmentDraft(year: number, draft: BudgetAmendmentDraft): Promise<AnnualBudget> {
+    const raw = await this.api.putResource(['budgets', year.toString(), 'amendment-draft'], { body: draft });
+    return new AnnualBudget(raw);
+  }
+
+  public async discardAmendmentDraft(year: number): Promise<AnnualBudget> {
+    const res = await this.api.deleteResource(['budgets', year.toString(), 'amendment-draft']);
+    return new AnnualBudget(res?.budget || res);
+  }
+
+  public async adoptAmendment(
+    year: number,
+    amendment: BudgetAmendment,
+    draftCategories?: DynamicBudgetCategory[]
+  ): Promise<AnnualBudget> {
+    const raw = await this.api.postResource(['budgets', year.toString(), 'amendments'], {
+      body: { amendment, draftCategories }
+    });
     return new AnnualBudget(raw);
   }
 

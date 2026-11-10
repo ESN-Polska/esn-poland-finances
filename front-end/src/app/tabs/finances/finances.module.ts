@@ -15,6 +15,7 @@ import { BudgetLineModalComponent } from './modals/budget-line-modal/budget-line
 import { BudgetCategoryModalComponent } from './modals/budget-category-modal/budget-category-modal.component';
 import { BudgetGroupModalComponent } from './modals/budget-group-modal/budget-group-modal.component';
 import { CsvImportModalComponent } from './modals/csv-import-modal/csv-import-modal.component';
+import { BudgetHistoryModalComponent } from './modals/budget-history-modal/budget-history-modal.component';
 
 // Subtabs
 import { SummarySubtabComponent } from './subtabs/summary/summary-subtab.component';
@@ -42,6 +43,7 @@ import { AppDatePipe } from '../../pipes/app-date.pipe';
     BudgetCategoryModalComponent,
     BudgetGroupModalComponent,
     CsvImportModalComponent,
+    BudgetHistoryModalComponent,
     SummarySubtabComponent,
     BudgetSubtabComponent,
     DocumentsSubtabComponent,

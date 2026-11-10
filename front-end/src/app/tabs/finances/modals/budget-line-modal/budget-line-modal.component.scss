@@ -10,6 +10,38 @@
   gap: 14px;
 }
 
+.amendmentContextCard {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  background: rgba(2, 132, 199, 0.08);
+  border: 1px solid rgba(2, 132, 199, 0.25);
+  border-radius: 10px;
+  padding: 10px 14px;
+
+  .amendContextItem {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .amendLabel {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--ion-color-step-600, #475569);
+    text-transform: uppercase;
+  }
+
+  .amendVal {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--ion-color-step-900, #0f172a);
+
+    &.posDiff { color: #16a34a; }
+    &.negDiff { color: #dc2626; }
+  }
+}
+
 .fieldRow {
   display: grid;
   grid-template-columns: 1fr 1.5fr;

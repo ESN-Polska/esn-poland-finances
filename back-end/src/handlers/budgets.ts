@@ -105,12 +105,64 @@ class BudgetsRC extends ResourceController {
   }
 
   protected async putResource(): Promise<any> {
+    const rawPath = (this.event as any)?.rawPath || (this.event as any)?.path || '';
     const year = this.getYearParam();
+
+    if (rawPath.endsWith('/amendment-draft')) {
+      const budgetData = await ddb.get({
+        TableName: DDB_TABLES.budgets,
+        Key: { year }
+      }).catch(() => null);
+
+      if (!budgetData) {
+        this.returnStatusCode = 404;
+        throw new HandledError(`Budget for year ${year} not found`);
+      }
+
+      const budget = new AnnualBudget(budgetData);
+      const draft = this.body;
+      budget.draftAmendment = {
+        id: draft.id || `draft_${Date.now()}`,
+        updatedAt: new Date().toISOString(),
+        updatedBy: this.user?.userId || '',
+        resolutionNumber: draft.resolutionNumber || '',
+        adoptedDate: draft.adoptedDate || '',
+        description: draft.description || '',
+        draftCategories: Array.isArray(draft.draftCategories) ? draft.draftCategories : [],
+        itemsDiff: Array.isArray(draft.itemsDiff) ? draft.itemsDiff : [],
+        totalRevenueDelta: Number(draft.totalRevenueDelta) || 0,
+        totalExpenseDelta: Number(draft.totalExpenseDelta) || 0,
+        netBudgetDelta: Number(draft.netBudgetDelta) || 0
+      };
+      budget.updatedAt = new Date().toISOString();
+      budget.updatedBy = this.user?.userId || '';
+
+      await ddb.put({
+        TableName: DDB_TABLES.budgets,
+        Item: budget
+      });
+      return budget;
+    }
 
     const budget = new AnnualBudget(this.body);
     budget.year = year;
     budget.updatedAt = new Date().toISOString();
     budget.updatedBy = this.user?.userId || '';
+
+    // If adopting budget, automatically create initial version snapshot if not already present
+    if ((budget.status === 'ADOPTED' || budget.status === 'AMENDED') && budget.resolutionNumber) {
+      if (!Array.isArray(budget.versionHistory) || budget.versionHistory.length === 0) {
+        budget.createSnapshot(
+          'INITIAL_ADOPTION',
+          budget.resolutionNumber,
+          budget.adoptedDate || new Date().toISOString().substring(0, 10),
+          'Uchwalenie budżetu pierwotnego',
+          `Uchwała nr ${budget.resolutionNumber}`,
+          undefined,
+          this.user?.userId || ''
+        );
+      }
+    }
 
     const errors = budget.validate();
     if (errors.length > 0) {
@@ -124,6 +176,41 @@ class BudgetsRC extends ResourceController {
       Item: budget
     });
     return budget;
+  }
+
+  protected async deleteResources(): Promise<any> {
+    return this.deleteResource();
+  }
+
+  protected async deleteResource(): Promise<any> {
+    const rawPath = (this.event as any)?.rawPath || (this.event as any)?.path || '';
+    const year = this.getYearParam();
+
+    if (rawPath.endsWith('/amendment-draft')) {
+      const budgetData = await ddb.get({
+        TableName: DDB_TABLES.budgets,
+        Key: { year }
+      }).catch(() => null);
+
+      if (!budgetData) {
+        this.returnStatusCode = 404;
+        throw new HandledError(`Budget for year ${year} not found`);
+      }
+
+      const budget = new AnnualBudget(budgetData);
+      budget.draftAmendment = null;
+      budget.updatedAt = new Date().toISOString();
+      budget.updatedBy = this.user?.userId || '';
+
+      await ddb.put({
+        TableName: DDB_TABLES.budgets,
+        Item: budget
+      });
+      return { success: true, budget };
+    }
+
+    this.returnStatusCode = 405;
+    throw new HandledError('Budget cannot be deleted directly');
   }
 
   protected async postResources(): Promise<any> {
@@ -149,16 +236,18 @@ class BudgetsRC extends ResourceController {
       }
 
       const budget = new AnnualBudget(budgetData);
-      const newAmendment = this.body;
-      if (!newAmendment.resolutionNumber || !Array.isArray(newAmendment.items) || newAmendment.items.length === 0) {
+      const payload = this.body;
+      const newAmendment = payload.amendment || payload;
+      const updatedCategories = payload.draftCategories || payload.updatedCategories;
+
+      if (!newAmendment.resolutionNumber) {
         this.returnStatusCode = 400;
-        throw new HandledError('Amendment must contain a resolution number and at least one item');
+        throw new HandledError('Amendment must contain a resolution number');
       }
 
-      budget.amendments.push(newAmendment);
+      budget.applyAmendment(newAmendment, updatedCategories, this.user?.userId || '');
       budget.updatedAt = new Date().toISOString();
       budget.updatedBy = this.user?.userId || '';
-      budget.recalculateTotals();
 
       await ddb.put({
         TableName: DDB_TABLES.budgets,

@@ -14,6 +14,9 @@ import {
   DynamicBudgetGroup,
   BudgetLineItem,
   BudgetLineType,
+  BudgetVersionSnapshot,
+  BudgetAmendmentDraft,
+  BudgetAmendmentItem,
   isBudgetGroup,
   isBudgetLine
 } from '@models/annual-budget.model';
@@ -25,8 +28,18 @@ import { AmendmentModalComponent } from '../../modals/amendment-modal/amendment-
 import { BudgetLineModalComponent } from '../../modals/budget-line-modal/budget-line-modal.component';
 import { BudgetCategoryModalComponent } from '../../modals/budget-category-modal/budget-category-modal.component';
 import { BudgetGroupModalComponent } from '../../modals/budget-group-modal/budget-group-modal.component';
+import { BudgetHistoryModalComponent } from '../../modals/budget-history-modal/budget-history-modal.component';
 import { parseLocaleNumber } from '../../../../utils/number-utils';
-import { CurrentBankBalances, computeCurrentBankBalances, fetchNbpEurRateBeforeToday } from './budget-export.util';
+import {
+  CurrentBankBalances,
+  computeCurrentBankBalances,
+  fetchNbpEurRateBeforeToday,
+  generateAmendmentDraftCsvContent,
+  generateAmendmentDraftHtmlReport,
+  downloadCsvFile,
+  openPrintablePdf,
+  AmendmentDraftExportOptions
+} from './budget-export.util';
 
 @Component({
   selector: 'app-budget-subtab',
@@ -65,6 +78,24 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
   cachedDeposits: TermDeposit[] = [];
   cachedCurrentNbpRate: { rate: number; date: string } | null = null;
   currentBalances: CurrentBankBalances | null = null;
+
+  // ==========================================
+  // AMENDMENT DRAFT & VERSION HISTORY STATE
+  // ==========================================
+  isAmending: boolean = false;
+  activeSnapshotView: BudgetVersionSnapshot | null = null;
+  amendmentWorkingCategories: DynamicBudgetCategory[] = [];
+  amendmentItemsDiff: BudgetAmendmentItem[] = [];
+  amendmentJustifications: Record<string, string> = {};
+  amendmentOriginalLinesMap = new Map<string, {
+    lineId?: string;
+    code: string;
+    plannedAmount: number;
+    name: { pl: string; en: string };
+    type: BudgetLineType;
+    categoryPath: string;
+    actualAmountAtTime: number;
+  }>();
 
   formatDate(date: string | Date | number | null | undefined): string {
     return this.app.formatDate(date);
@@ -126,6 +157,11 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
         fetchNbpEurRateBeforeToday().catch(() => null)
       ]);
       this.budget = budget;
+      this.isAmending = false;
+      this.activeSnapshotView = null;
+      this.amendmentWorkingCategories = [];
+      this.amendmentItemsDiff = [];
+      this.amendmentJustifications = {};
       this.cachedTxs = txs || [];
       this.cachedDeposits = deposits || [];
       this.cachedCurrentNbpRate = nbpCurrent;
@@ -473,11 +509,62 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
     return this.stateService.isArchived;
   }
 
+  get isDraft(): boolean {
+    return this.budget?.status === 'DRAFT';
+  }
+
+  get isAdopted(): boolean {
+    return this.budget?.status === 'ADOPTED' || this.budget?.status === 'AMENDED';
+  }
+
+  get hasDraftAmendment(): boolean {
+    return !!this.budget?.draftAmendment && (
+      (this.budget.draftAmendment.itemsDiff && this.budget.draftAmendment.itemsDiff.length > 0) ||
+      (this.budget.draftAmendment.draftCategories && this.budget.draftAmendment.draftCategories.length > 0)
+    );
+  }
+
+  get canModifyStructure(): boolean {
+    return this.canEdit && !this.isArchived && !this.activeSnapshotView && (this.isDraft || this.isAmending);
+  }
+
+  get displayCategories(): DynamicBudgetCategory[] {
+    if (this.activeSnapshotView) {
+      return this.activeSnapshotView.categories || [];
+    }
+    if (this.isAmending) {
+      return this.amendmentWorkingCategories;
+    }
+    return this.budget?.categories || [];
+  }
+
+  get amendmentRevenueDelta(): number {
+    return this.amendmentItemsDiff
+      .filter((i) => i.type === 'REVENUE')
+      .reduce((sum, i) => sum + (i.deltaAmount || i.difference || 0), 0);
+  }
+
+  get amendmentExpenseDelta(): number {
+    return this.amendmentItemsDiff
+      .filter((i) => i.type === 'EXPENSE')
+      .reduce((sum, i) => sum + (i.deltaAmount || i.difference || 0), 0);
+  }
+
+  get amendmentNetDelta(): number {
+    return this.amendmentRevenueDelta - this.amendmentExpenseDelta;
+  }
+
   // ==========================================
   // METRICS COMPUTATIONS
   // ==========================================
 
   get totalPlannedRevenue(): number {
+    if (this.activeSnapshotView) {
+      return this.activeSnapshotView.totalRevenue || 0;
+    }
+    if (this.isAmending) {
+      return (this.budget?.totalPlannedRevenue || 0) + this.amendmentRevenueDelta;
+    }
     return this.budget?.totalPlannedRevenue || 0;
   }
 
@@ -491,6 +578,12 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
   }
 
   get totalPlannedExpenses(): number {
+    if (this.activeSnapshotView) {
+      return this.activeSnapshotView.totalExpense || 0;
+    }
+    if (this.isAmending) {
+      return (this.budget?.totalPlannedExpenses || 0) + this.amendmentExpenseDelta;
+    }
     return this.budget?.totalPlannedExpenses || 0;
   }
 
@@ -504,6 +597,12 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
   }
 
   get plannedResult(): number {
+    if (this.activeSnapshotView) {
+      return this.activeSnapshotView.netResult || 0;
+    }
+    if (this.isAmending) {
+      return this.totalPlannedRevenue - this.totalPlannedExpenses;
+    }
     return this.budget?.plannedNetResult || 0;
   }
 
@@ -549,21 +648,22 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
   // ==========================================
 
   get filteredCategories(): DynamicBudgetCategory[] {
-    if (!this.budget?.categories) return [];
-    let list = this.budget.categories;
+    const list = this.displayCategories;
+    if (!list || list.length === 0) return [];
+    let res = list;
 
     if (this.selectedTypeFilter === 'REVENUE') {
-      list = list.filter((c) => c.revenues && c.revenues.enabled !== false && (c.revenues.items.length > 0 || (c.totalPlannedRevenue || 0) > 0));
+      res = res.filter((c) => c.revenues && c.revenues.enabled !== false && ((c.revenues.items && c.revenues.items.length > 0) || (c.totalPlannedRevenue || 0) > 0));
     } else if (this.selectedTypeFilter === 'EXPENSE') {
-      list = list.filter((c) => c.expenses && c.expenses.enabled !== false && (c.expenses.items.length > 0 || (c.totalPlannedExpense || 0) > 0));
+      res = res.filter((c) => c.expenses && c.expenses.enabled !== false && ((c.expenses.items && c.expenses.items.length > 0) || (c.totalPlannedExpense || 0) > 0));
     }
 
     if (!this.searchQuery.trim()) {
-      return list;
+      return res;
     }
 
     const q = this.searchQuery.toLowerCase().trim();
-    return list.filter((cat) => {
+    return res.filter((cat) => {
       const catNamePl = cat.name?.pl?.toLowerCase() || '';
       const catNameEn = cat.name?.en?.toLowerCase() || '';
       if (catNamePl.includes(q) || catNameEn.includes(q) || String(cat.number).includes(q)) {
@@ -611,12 +711,24 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
   }
 
   getAllExistingCodes(): string[] {
-    if (!this.budget) return [];
-    return this.budget.getAllLines().map((l) => l.code);
+    const codes: string[] = [];
+    const collect = (items: (DynamicBudgetGroup | BudgetLineItem)[]) => {
+      for (const it of items || []) {
+        if (isBudgetLine(it)) {
+          if (it.code) codes.push(it.code);
+        } else if (isBudgetGroup(it)) {
+          collect(it.items || []);
+        }
+      }
+    };
+    for (const cat of this.displayCategories) {
+      if (cat.revenues?.items) collect(cat.revenues.items);
+      if (cat.expenses?.items) collect(cat.expenses.items);
+    }
+    return codes;
   }
 
   getAllExistingGroupCodes(): string[] {
-    if (!this.budget?.categories) return [];
     const codes: string[] = [];
     const collect = (items: (DynamicBudgetGroup | BudgetLineItem)[]) => {
       for (const it of items || []) {
@@ -626,7 +738,7 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
         }
       }
     };
-    for (const cat of this.budget.categories) {
+    for (const cat of this.displayCategories) {
       if (cat.revenues?.items) collect(cat.revenues.items);
       if (cat.expenses?.items) collect(cat.expenses.items);
     }
@@ -641,14 +753,21 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
    * Tier 1: Reordering entire categories via drag-and-drop
    */
   onDropCategory(event: CdkDragDrop<DynamicBudgetCategory[]>): void {
-    if (!this.budget?.categories) return;
-    moveItemInArray(this.budget.categories, event.previousIndex, event.currentIndex);
-    this.budget.categories.forEach((cat, idx) => {
+    const targetList = this.isAmending ? this.amendmentWorkingCategories : this.budget?.categories;
+    if (!targetList) return;
+    moveItemInArray(targetList, event.previousIndex, event.currentIndex);
+    targetList.forEach((cat, idx) => {
       cat.displayOrder = idx;
       cat.number = idx + 1;
     });
-    this.budget.recalculateTotals();
-    this.saveBudgetChanges();
+    if (this.isAmending) {
+      this.recalculateWorkingTotals();
+      this.recomputeAmendmentDiff();
+      this.saveDraftAmendment(true);
+    } else {
+      this.budget?.recalculateTotals();
+      this.saveBudgetChanges();
+    }
   }
 
   /**
@@ -660,8 +779,14 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
     section.items.forEach((it, idx) => {
       it.displayOrder = idx;
     });
-    this.budget?.recalculateTotals();
-    this.saveBudgetChanges();
+    if (this.isAmending) {
+      this.recalculateWorkingTotals();
+      this.recomputeAmendmentDiff();
+      this.saveDraftAmendment(true);
+    } else {
+      this.budget?.recalculateTotals();
+      this.saveBudgetChanges();
+    }
   }
 
   /**
@@ -673,8 +798,14 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
     group.items.forEach((it, idx) => {
       it.displayOrder = idx;
     });
-    this.budget?.recalculateTotals();
-    this.saveBudgetChanges();
+    if (this.isAmending) {
+      this.recalculateWorkingTotals();
+      this.recomputeAmendmentDiff();
+      this.saveDraftAmendment(true);
+    } else {
+      this.budget?.recalculateTotals();
+      this.saveBudgetChanges();
+    }
   }
 
   // ==========================================
@@ -682,8 +813,8 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
   // ==========================================
 
   async openAddCategoryModal(): Promise<void> {
-    if (!this.budget) return;
-    const nextNumber = (this.budget.categories?.length || 0) + 1;
+    const list = this.isAmending ? this.amendmentWorkingCategories : (this.budget?.categories || []);
+    const nextNumber = list.length + 1;
     const modal = await this.modalCtrl.create({
       component: BudgetCategoryModalComponent,
       componentProps: {
@@ -694,19 +825,26 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
     });
     await modal.present();
     const { data } = await modal.onWillDismiss();
-    if (data?.category && this.budget) {
-      this.budget.categories = this.budget.categories || [];
-      data.category.displayOrder = this.budget.categories.length;
-      data.category.number = this.budget.categories.length + 1;
-      this.budget.categories.push(data.category);
-      this.budget.recalculateTotals();
-      await this.saveBudgetChanges();
+    if (data?.category) {
+      data.category.displayOrder = list.length;
+      data.category.number = list.length + 1;
+      list.push(data.category);
+      if (this.isAmending) {
+        this.recalculateWorkingTotals();
+        this.recomputeAmendmentDiff();
+        await this.saveDraftAmendment(true);
+      } else if (this.budget) {
+        this.budget.categories = list;
+        this.budget.recalculateTotals();
+        await this.saveBudgetChanges();
+      }
     }
   }
 
   async openEditCategoryModal(category: DynamicBudgetCategory, event?: Event): Promise<void> {
     if (event) event.stopPropagation();
-    if (!this.budget) return;
+    const list = this.isAmending ? this.amendmentWorkingCategories : this.budget?.categories;
+    if (!list) return;
     const modal = await this.modalCtrl.create({
       component: BudgetCategoryModalComponent,
       componentProps: {
@@ -716,10 +854,9 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
     });
     await modal.present();
     const { data } = await modal.onWillDismiss();
-    if (data?.category && this.budget) {
-      const idx = this.budget.categories.findIndex((c) => c.id === category.id);
+    if (data?.category) {
+      const idx = list.findIndex((c) => c.id === category.id);
       if (idx !== -1) {
-        // preserve existing items
         if (data.category.revenues && category.revenues) {
           data.category.revenues.items = category.revenues.items;
         }
@@ -728,16 +865,21 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
         }
         data.category.number = category.number;
         data.category.displayOrder = category.displayOrder;
-        this.budget.categories[idx] = data.category;
-        this.budget.recalculateTotals();
-        await this.saveBudgetChanges();
+        list[idx] = data.category;
+        if (this.isAmending) {
+          this.recalculateWorkingTotals();
+          this.recomputeAmendmentDiff();
+          await this.saveDraftAmendment(true);
+        } else if (this.budget) {
+          this.budget.recalculateTotals();
+          await this.saveBudgetChanges();
+        }
       }
     }
   }
 
   async confirmDeleteCategory(category: DynamicBudgetCategory, event?: Event): Promise<void> {
     if (event) event.stopPropagation();
-    if (!this.budget) return;
     const alert = await this.alertCtrl.create({
       header: this.translate.instant('FINANCES.BUDGET.CONFIRM_DELETE_CAT_TITLE'),
       message: this.translate.instant('FINANCES.BUDGET.CONFIRM_DELETE_CAT_MSG', {
@@ -749,15 +891,24 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
           text: this.translate.instant('COMMON.DELETE'),
           role: 'destructive',
           handler: async () => {
-            if (!this.budget) return;
-            this.budget.categories = (this.budget.categories || []).filter((c) => c.id !== category.id);
-            // Re-number remaining categories
-            this.budget.categories.forEach((cat, idx) => {
-              cat.displayOrder = idx;
-              cat.number = idx + 1;
-            });
-            this.budget.recalculateTotals();
-            await this.saveBudgetChanges();
+            if (this.isAmending) {
+              this.amendmentWorkingCategories = this.amendmentWorkingCategories.filter((c) => c.id !== category.id);
+              this.amendmentWorkingCategories.forEach((cat, idx) => {
+                cat.displayOrder = idx;
+                cat.number = idx + 1;
+              });
+              this.recalculateWorkingTotals();
+              this.recomputeAmendmentDiff();
+              await this.saveDraftAmendment(true);
+            } else if (this.budget) {
+              this.budget.categories = (this.budget.categories || []).filter((c) => c.id !== category.id);
+              this.budget.categories.forEach((cat, idx) => {
+                cat.displayOrder = idx;
+                cat.number = idx + 1;
+              });
+              this.budget.recalculateTotals();
+              await this.saveBudgetChanges();
+            }
           }
         }
       ]
@@ -776,8 +927,14 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
       type: 'REVENUE',
       items: []
     };
-    this.budget?.recalculateTotals();
-    await this.saveBudgetChanges();
+    if (this.isAmending) {
+      this.recalculateWorkingTotals();
+      this.recomputeAmendmentDiff();
+      await this.saveDraftAmendment(true);
+    } else {
+      this.budget?.recalculateTotals();
+      await this.saveBudgetChanges();
+    }
   }
 
   async addExpenseSection(category: DynamicBudgetCategory, event?: Event): Promise<void> {
@@ -787,8 +944,14 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
       type: 'EXPENSE',
       items: []
     };
-    this.budget?.recalculateTotals();
-    await this.saveBudgetChanges();
+    if (this.isAmending) {
+      this.recalculateWorkingTotals();
+      this.recomputeAmendmentDiff();
+      await this.saveDraftAmendment(true);
+    } else {
+      this.budget?.recalculateTotals();
+      await this.saveBudgetChanges();
+    }
   }
 
   async confirmRemoveSection(category: DynamicBudgetCategory, type: 'REVENUE' | 'EXPENSE', event?: Event): Promise<void> {
@@ -807,8 +970,14 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
             } else {
               category.expenses = undefined;
             }
-            this.budget?.recalculateTotals();
-            await this.saveBudgetChanges();
+            if (this.isAmending) {
+              this.recalculateWorkingTotals();
+              this.recomputeAmendmentDiff();
+              await this.saveDraftAmendment(true);
+            } else {
+              this.budget?.recalculateTotals();
+              await this.saveBudgetChanges();
+            }
           }
         }
       ]
@@ -826,8 +995,6 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
     event?: Event
   ): Promise<void> {
     if (event) event.stopPropagation();
-    if (!this.budget) return;
-
     const modal = await this.modalCtrl.create({
       component: BudgetGroupModalComponent,
       componentProps: {
@@ -837,13 +1004,19 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
     });
     await modal.present();
     const { data } = await modal.onWillDismiss();
-    if (data?.group && this.budget) {
+    if (data?.group) {
       delete data.group.code;
       targetContainer.items = targetContainer.items || [];
       data.group.displayOrder = targetContainer.items.length;
       targetContainer.items.push(data.group);
-      this.budget.recalculateTotals();
-      await this.saveBudgetChanges();
+      if (this.isAmending) {
+        this.recalculateWorkingTotals();
+        this.recomputeAmendmentDiff();
+        await this.saveDraftAmendment(true);
+      } else {
+        this.budget?.recalculateTotals();
+        await this.saveBudgetChanges();
+      }
     }
   }
 
@@ -853,7 +1026,6 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
     event?: Event
   ): Promise<void> {
     if (event) event.stopPropagation();
-    if (!this.budget) return;
     const modal = await this.modalCtrl.create({
       component: BudgetGroupModalComponent,
       componentProps: {
@@ -864,11 +1036,17 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
     });
     await modal.present();
     const { data } = await modal.onWillDismiss();
-    if (data?.group && this.budget) {
+    if (data?.group) {
       delete group.code;
       group.name = data.group.name;
-      this.budget.recalculateTotals();
-      await this.saveBudgetChanges();
+      if (this.isAmending) {
+        this.recalculateWorkingTotals();
+        this.recomputeAmendmentDiff();
+        await this.saveDraftAmendment(true);
+      } else {
+        this.budget?.recalculateTotals();
+        await this.saveBudgetChanges();
+      }
     }
   }
 
@@ -878,7 +1056,6 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
     event?: Event
   ): Promise<void> {
     if (event) event.stopPropagation();
-    if (!this.budget) return;
     const alert = await this.alertCtrl.create({
       header: this.translate.instant('FINANCES.BUDGET.CONFIRM_DELETE_GRP_TITLE'),
       message: this.translate.instant('FINANCES.BUDGET.CONFIRM_DELETE_GRP_MSG', {
@@ -890,10 +1067,15 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
           text: this.translate.instant('COMMON.DELETE'),
           role: 'destructive',
           handler: async () => {
-            if (!this.budget) return;
             targetContainer.items = (targetContainer.items || []).filter((it) => it !== group);
-            this.budget.recalculateTotals();
-            await this.saveBudgetChanges();
+            if (this.isAmending) {
+              this.recalculateWorkingTotals();
+              this.recomputeAmendmentDiff();
+              await this.saveDraftAmendment(true);
+            } else {
+              this.budget?.recalculateTotals();
+              await this.saveBudgetChanges();
+            }
           }
         }
       ]
@@ -917,18 +1099,31 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
       componentProps: {
         groupCodePrefix: prefix,
         existingCodes: this.getAllExistingCodes(),
-        isNew: true
+        isNew: true,
+        isAmending: this.isAmending,
+        currentApprovedAmount: 0,
+        initialJustification: ''
       }
     });
     await modal.present();
     const { data } = await modal.onWillDismiss();
-    if (data?.line && this.budget) {
+    if (data?.line) {
       data.line.type = defaultType;
       targetContainer.items = targetContainer.items || [];
       data.line.displayOrder = targetContainer.items.length;
       targetContainer.items.push(data.line);
-      this.budget.recalculateTotals();
-      await this.saveBudgetChanges();
+
+      if (this.isAmending) {
+        if (data.justification) {
+          this.amendmentJustifications[data.line.code] = data.justification;
+        }
+        this.recalculateWorkingTotals();
+        this.recomputeAmendmentDiff();
+        await this.saveDraftAmendment(true);
+      } else if (this.budget) {
+        this.budget.recalculateTotals();
+        await this.saveBudgetChanges();
+      }
     }
   }
 
@@ -938,6 +1133,9 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
   ): Promise<void> {
     const isGrp = isBudgetGroup(targetContainer);
     const prefix = isGrp ? (targetContainer as DynamicBudgetGroup).code || '' : '';
+    const orig = this.amendmentOriginalLinesMap.get(lineItem.code);
+    const currentApproved = orig ? orig.plannedAmount : (lineItem.plannedAmount || 0);
+    const existingJustification = this.amendmentJustifications[lineItem.code] || '';
 
     const modal = await this.modalCtrl.create({
       component: BudgetLineModalComponent,
@@ -945,18 +1143,31 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
         lineItem,
         groupCodePrefix: prefix,
         existingCodes: this.getAllExistingCodes(),
-        isNew: false
+        isNew: false,
+        isAmending: this.isAmending,
+        currentApprovedAmount: currentApproved,
+        initialJustification: existingJustification
       }
     });
     await modal.present();
     const { data } = await modal.onWillDismiss();
-    if (data?.line && this.budget) {
+    if (data?.line) {
       const idx = (targetContainer.items || []).findIndex((it) => isBudgetLine(it) && it.code === lineItem.code);
       if (idx !== -1) {
         data.line.type = lineItem.type;
         targetContainer.items[idx] = data.line;
-        this.budget.recalculateTotals();
-        await this.saveBudgetChanges();
+
+        if (this.isAmending) {
+          if (data.justification !== undefined) {
+            this.amendmentJustifications[data.line.code] = data.justification;
+          }
+          this.recalculateWorkingTotals();
+          this.recomputeAmendmentDiff();
+          await this.saveDraftAmendment(true);
+        } else if (this.budget) {
+          this.budget.recalculateTotals();
+          await this.saveBudgetChanges();
+        }
       }
     }
   }
@@ -974,15 +1185,419 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
           text: this.translate.instant('COMMON.DELETE'),
           role: 'destructive',
           handler: async () => {
-            if (!this.budget) return;
             targetContainer.items = (targetContainer.items || []).filter((it) => !isBudgetLine(it) || it.code !== lineItem.code);
-            this.budget.recalculateTotals();
-            await this.saveBudgetChanges();
+            if (this.isAmending) {
+              this.recalculateWorkingTotals();
+              this.recomputeAmendmentDiff();
+              await this.saveDraftAmendment(true);
+            } else if (this.budget) {
+              this.budget.recalculateTotals();
+              await this.saveBudgetChanges();
+            }
           }
         }
       ]
     });
     await alert.present();
+  }
+
+  // ==========================================
+  // AMENDMENT LIFECYCLE METHODS
+  // ==========================================
+
+  getLineDiff(code: string): BudgetAmendmentItem | undefined {
+    if (!this.isAmending) return undefined;
+    return this.amendmentItemsDiff.find((d) => d.budgetCode === code || d.lineCode === code);
+  }
+
+  recalculateWorkingTotals(): void {
+    const tempBudget = new AnnualBudget({ categories: this.amendmentWorkingCategories });
+    tempBudget.recalculateTotals();
+    this.amendmentWorkingCategories = tempBudget.categories;
+  }
+
+  private buildLinesMap(categories: DynamicBudgetCategory[]): Map<string, {
+    lineId?: string;
+    code: string;
+    plannedAmount: number;
+    name: { pl: string; en: string };
+    type: BudgetLineType;
+    categoryPath: string;
+    actualAmountAtTime: number;
+  }> {
+    const map = new Map();
+    for (const cat of categories || []) {
+      const catName = (this.app.currentLanguage === 'en' ? cat.name?.en : cat.name?.pl) || cat.name?.pl || cat.name?.en || `Kategoria ${cat.number}`;
+      if (cat.revenues?.items) {
+        this.collectLinesIntoMap(cat.revenues.items, `${catName} > Przychody`, 'REVENUE', map);
+      }
+      if (cat.expenses?.items) {
+        this.collectLinesIntoMap(cat.expenses.items, `${catName} > Koszty`, 'EXPENSE', map);
+      }
+    }
+    return map;
+  }
+
+  private collectLinesIntoMap(
+    items: (DynamicBudgetGroup | BudgetLineItem)[],
+    currentPath: string,
+    defaultType: BudgetLineType,
+    map: Map<string, any>
+  ): void {
+    for (const item of items || []) {
+      if (isBudgetGroup(item)) {
+        const grpName = (this.app.currentLanguage === 'en' ? item.name?.en : item.name?.pl) || item.name?.pl || item.name?.en || item.id;
+        this.collectLinesIntoMap(item.items || [], `${currentPath} > ${grpName}`, defaultType, map);
+      } else if (isBudgetLine(item)) {
+        map.set(item.code, {
+          lineId: item.id || item.code,
+          code: item.code,
+          plannedAmount: Number(item.plannedAmount ?? item.budgetedAmount) || 0,
+          name: { pl: item.name?.pl || '', en: item.name?.en || '' },
+          type: item.type || defaultType,
+          categoryPath: currentPath,
+          actualAmountAtTime: Number(item.actualAmount) || 0
+        });
+      }
+    }
+  }
+
+  private extractAllLinesWithPaths(categories: DynamicBudgetCategory[]): { line: BudgetLineItem; categoryPath: string }[] {
+    const list: { line: BudgetLineItem; categoryPath: string }[] = [];
+    for (const cat of categories || []) {
+      const catName = (this.app.currentLanguage === 'en' ? cat.name?.en : cat.name?.pl) || cat.name?.pl || cat.name?.en || `Kategoria ${cat.number}`;
+      if (cat.revenues?.items) {
+        this.collectLinesWithPaths(cat.revenues.items, `${catName} > Przychody`, 'REVENUE', list);
+      }
+      if (cat.expenses?.items) {
+        this.collectLinesWithPaths(cat.expenses.items, `${catName} > Koszty`, 'EXPENSE', list);
+      }
+    }
+    return list;
+  }
+
+  private collectLinesWithPaths(
+    items: (DynamicBudgetGroup | BudgetLineItem)[],
+    currentPath: string,
+    defaultType: BudgetLineType,
+    list: { line: BudgetLineItem; categoryPath: string }[]
+  ): void {
+    for (const item of items || []) {
+      if (isBudgetGroup(item)) {
+        const grpName = (this.app.currentLanguage === 'en' ? item.name?.en : item.name?.pl) || item.name?.pl || item.name?.en || item.id;
+        this.collectLinesWithPaths(item.items || [], `${currentPath} > ${grpName}`, defaultType, list);
+      } else if (isBudgetLine(item)) {
+        list.push({ line: item, categoryPath: currentPath });
+      }
+    }
+  }
+
+  recomputeAmendmentDiff(): void {
+    const workingLines = this.extractAllLinesWithPaths(this.amendmentWorkingCategories);
+    const diffItems: BudgetAmendmentItem[] = [];
+    const seenCodes = new Set<string>();
+
+    for (const w of workingLines) {
+      seenCodes.add(w.line.code);
+      const orig = this.amendmentOriginalLinesMap.get(w.line.code);
+      const justification = this.amendmentJustifications[w.line.code] || '';
+
+      if (!orig) {
+        // Newly added line
+        const proposed = Number(w.line.plannedAmount) || 0;
+        diffItems.push({
+          lineId: w.line.id || w.line.code,
+          budgetCode: w.line.code,
+          lineCode: w.line.code,
+          lineName: { pl: w.line.name?.pl || '', en: w.line.name?.en || '' },
+          newLineName: { pl: w.line.name?.pl || '', en: w.line.name?.en || '' },
+          type: w.line.type || 'EXPENSE',
+          changeType: 'ADD_LINE',
+          currentAmount: 0,
+          previousAmount: 0,
+          proposedAmount: proposed,
+          newAmount: proposed,
+          deltaAmount: proposed,
+          difference: proposed,
+          actualAmountAtTime: 0,
+          explanation: justification,
+          justification,
+          categoryPath: w.categoryPath
+        });
+      } else {
+        const proposed = Number(w.line.plannedAmount) || 0;
+        const current = Number(orig.plannedAmount) || 0;
+        const delta = Math.round((proposed - current) * 100) / 100;
+        const nameChanged = (w.line.name?.pl || '') !== orig.name.pl || (w.line.name?.en || '') !== orig.name.en;
+        const amountChanged = Math.abs(delta) > 0.001;
+
+        if (amountChanged || nameChanged) {
+          diffItems.push({
+            lineId: orig.lineId || w.line.code,
+            budgetCode: w.line.code,
+            lineCode: w.line.code,
+            lineName: { pl: w.line.name?.pl || '', en: w.line.name?.en || '' },
+            oldLineName: { pl: orig.name.pl, en: orig.name.en },
+            newLineName: { pl: w.line.name?.pl || '', en: w.line.name?.en || '' },
+            type: orig.type,
+            changeType: amountChanged ? 'MODIFY_LINE' : 'RENAME_LINE',
+            currentAmount: current,
+            previousAmount: current,
+            proposedAmount: proposed,
+            newAmount: proposed,
+            deltaAmount: delta,
+            difference: delta,
+            actualAmountAtTime: orig.actualAmountAtTime,
+            explanation: justification,
+            justification,
+            categoryPath: w.categoryPath
+          });
+        }
+      }
+    }
+
+    // Lines removed in draft
+    for (const [code, orig] of this.amendmentOriginalLinesMap.entries()) {
+      if (!seenCodes.has(code)) {
+        const current = Number(orig.plannedAmount) || 0;
+        const justification = this.amendmentJustifications[code] || '';
+        diffItems.push({
+          lineId: orig.lineId || code,
+          budgetCode: code,
+          lineCode: code,
+          lineName: { pl: orig.name.pl, en: orig.name.en },
+          oldLineName: { pl: orig.name.pl, en: orig.name.en },
+          type: orig.type,
+          changeType: 'REMOVE_LINE',
+          currentAmount: current,
+          previousAmount: current,
+          proposedAmount: 0,
+          newAmount: 0,
+          deltaAmount: -current,
+          difference: -current,
+          actualAmountAtTime: orig.actualAmountAtTime,
+          explanation: justification,
+          justification,
+          categoryPath: orig.categoryPath
+        });
+      }
+    }
+
+    this.amendmentItemsDiff = diffItems;
+  }
+
+  async startOrContinueAmendment(): Promise<void> {
+    if (!this.budget) return;
+
+    this.amendmentOriginalLinesMap = this.buildLinesMap(this.budget.categories || []);
+
+    if (this.budget.draftAmendment && this.budget.draftAmendment.draftCategories?.length) {
+      this.amendmentWorkingCategories = JSON.parse(JSON.stringify(this.budget.draftAmendment.draftCategories));
+      this.amendmentJustifications = {};
+      for (const it of this.budget.draftAmendment.itemsDiff || []) {
+        const c = it.budgetCode || it.lineCode;
+        if (c && (it.explanation || it.justification)) {
+          this.amendmentJustifications[c] = it.explanation || it.justification || '';
+        }
+      }
+    } else {
+      this.amendmentWorkingCategories = JSON.parse(JSON.stringify(this.budget.categories || []));
+      this.amendmentJustifications = {};
+    }
+
+    this.recalculateWorkingTotals();
+    this.recomputeAmendmentDiff();
+    this.isAmending = true;
+  }
+
+  async saveDraftAmendment(silent: boolean = false): Promise<void> {
+    if (!this.budget) return;
+    const draft: BudgetAmendmentDraft = {
+      id: this.budget.draftAmendment?.id || `draft_amend_${Date.now()}`,
+      updatedAt: new Date().toISOString(),
+      draftCategories: this.amendmentWorkingCategories,
+      itemsDiff: this.amendmentItemsDiff,
+      totalRevenueDelta: this.amendmentRevenueDelta,
+      totalExpenseDelta: this.amendmentExpenseDelta,
+      netBudgetDelta: this.amendmentNetDelta
+    };
+
+    try {
+      const updated = await this.financesService.saveAmendmentDraft(this.budget.year, draft);
+      this.budget.draftAmendment = updated.draftAmendment || draft;
+      if (!silent) {
+        const toast = await this.toastCtrl.create({
+          message: this.translate.instant('FINANCES.BUDGET.DRAFT_SAVED_CAN_RESUME'),
+          duration: 2500,
+          color: 'success'
+        });
+        await toast.present();
+      }
+    } catch (err: any) {
+      if (!silent) {
+        const toast = await this.toastCtrl.create({
+          message: err?.message || this.translate.instant('COMMON.SAVE_ERROR'),
+          duration: 3500,
+          color: 'danger'
+        });
+        await toast.present();
+      }
+    }
+  }
+
+  async exitAmendmentMode(): Promise<void> {
+    await this.saveDraftAmendment(true);
+    this.isAmending = false;
+    const toast = await this.toastCtrl.create({
+      message: this.translate.instant('FINANCES.BUDGET.DRAFT_SAVED_CAN_RESUME'),
+      duration: 3000,
+      color: 'primary'
+    });
+    await toast.present();
+  }
+
+  async discardAmendmentDraft(): Promise<void> {
+    if (!this.budget) return;
+    const alert = await this.alertCtrl.create({
+      header: this.translate.instant('FINANCES.BUDGET.CONFIRM_DISCARD_AMENDMENT_TITLE'),
+      message: this.translate.instant('FINANCES.BUDGET.CONFIRM_DISCARD_AMENDMENT_MSG'),
+      buttons: [
+        { text: this.translate.instant('COMMON.CANCEL'), role: 'cancel' },
+        {
+          text: this.translate.instant('FINANCES.BUDGET.DISCARD_AMENDMENT_DRAFT_BTN'),
+          role: 'destructive',
+          handler: async () => {
+            if (!this.budget) return;
+            try {
+              await this.financesService.discardAmendmentDraft(this.budget.year);
+              this.budget.draftAmendment = null;
+              this.isAmending = false;
+              this.amendmentWorkingCategories = [];
+              this.amendmentItemsDiff = [];
+              this.amendmentJustifications = {};
+              const toast = await this.toastCtrl.create({
+                message: this.translate.instant('FINANCES.BUDGET.DISCARD_AMENDMENT_SUCCESS'),
+                duration: 2500,
+                color: 'success'
+              });
+              await toast.present();
+            } catch (err: any) {
+              const toast = await this.toastCtrl.create({
+                message: err?.message || this.translate.instant('COMMON.SAVE_ERROR'),
+                duration: 3500,
+                color: 'danger'
+              });
+              await toast.present();
+            }
+          }
+        }
+      ]
+    });
+    await alert.present();
+  }
+
+  async openAdoptAmendmentModal(): Promise<void> {
+    if (!this.budget) return;
+    if (this.amendmentItemsDiff.length === 0) {
+      const toast = await this.toastCtrl.create({
+        message: this.translate.instant('FINANCES.BUDGET.NO_CHANGES_TO_ADOPT'),
+        duration: 3000,
+        color: 'warning'
+      });
+      await toast.present();
+      return;
+    }
+
+    const modal = await this.modalCtrl.create({
+      component: AmendmentModalComponent,
+      componentProps: {
+        budget: this.budget,
+        year: this.budget.year,
+        itemsDiff: this.amendmentItemsDiff,
+        draftCategories: this.amendmentWorkingCategories
+      }
+    });
+    await modal.present();
+    const { data } = await modal.onWillDismiss();
+    if (data?.saved && data?.budget) {
+      this.budget = data.budget;
+      this.isAmending = false;
+      this.amendmentWorkingCategories = [];
+      this.amendmentItemsDiff = [];
+      this.amendmentJustifications = {};
+      const toast = await this.toastCtrl.create({
+        message: this.translate.instant('FINANCES.BUDGET.AMENDMENT_ADOPTED_SUCCESS'),
+        duration: 3000,
+        color: 'success'
+      });
+      await toast.present();
+    }
+  }
+
+  async openExportAmendmentDraftModal(): Promise<void> {
+    if (!this.budget) return;
+    const alert = await this.alertCtrl.create({
+      header: this.translate.instant('FINANCES.BUDGET.EXPORT_AMENDMENT_DRAFT_TITLE'),
+      message: this.translate.instant('FINANCES.BUDGET.EXPORT_AMENDMENT_DRAFT_DESC'),
+      buttons: [
+        { text: this.translate.instant('COMMON.CANCEL'), role: 'cancel' },
+        {
+          text: this.translate.instant('FINANCES.BUDGET.EXPORT_PDF_BTN'),
+          handler: () => {
+            this.exportAmendmentDraft('PDF');
+          }
+        },
+        {
+          text: this.translate.instant('FINANCES.BUDGET.EXPORT_CSV_BTN'),
+          handler: () => {
+            this.exportAmendmentDraft('CSV');
+          }
+        }
+      ]
+    });
+    await alert.present();
+  }
+
+  exportAmendmentDraft(format: 'PDF' | 'CSV'): void {
+    if (!this.budget) return;
+    const isEn = this.app.currentLanguage === 'en';
+
+    const options: AmendmentDraftExportOptions = {
+      language: isEn ? 'en' : 'pl',
+      organisationNamePl: this.app.getBudgetOrganisation('pl'),
+      organisationNameEn: this.app.getBudgetOrganisation('en'),
+      logoUrl: this.app.getOrganisationLogo(),
+      description: this.budget.draftAmendment?.description
+    };
+
+    if (format === 'PDF') {
+      const html = generateAmendmentDraftHtmlReport(this.budget, this.amendmentItemsDiff, options);
+      openPrintablePdf(html);
+    } else {
+      const csv = generateAmendmentDraftCsvContent(this.budget, this.amendmentItemsDiff, options);
+      const filename = `ESN_Poland_Projekt_Nowelizacji_${this.budget.year}.csv`;
+      downloadCsvFile(filename, csv);
+    }
+  }
+
+  async openVersionHistoryModal(): Promise<void> {
+    if (!this.budget) return;
+    const modal = await this.modalCtrl.create({
+      component: BudgetHistoryModalComponent,
+      componentProps: {
+        budget: this.budget,
+        activeSnapshotId: this.activeSnapshotView?.id
+      }
+    });
+    await modal.present();
+    const { data } = await modal.onWillDismiss();
+    if (data?.action === 'VIEW_SNAPSHOT' && data.snapshot) {
+      this.activeSnapshotView = data.snapshot;
+    }
+  }
+
+  exitSnapshotView(): void {
+    this.activeSnapshotView = null;
   }
 
   // ==========================================

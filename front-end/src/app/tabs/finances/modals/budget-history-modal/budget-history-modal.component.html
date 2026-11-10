@@ -1,0 +1,119 @@
+<ion-header>
+  <ion-toolbar color="ideaToolbar">
+    <ion-title>{{ 'FINANCES.MODALS.BUDGET_HISTORY.TITLE' | translate:{ year: budget?.year } }}</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="close()">
+        <ion-icon slot="icon-only" name="close-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding historyModalContent">
+  <div class="historyWrapper">
+    <div class="historyIntro">
+      <p>{{ 'FINANCES.MODALS.BUDGET_HISTORY.SUBTITLE' | translate }}</p>
+    </div>
+
+    <!-- Empty State -->
+    <div class="emptyState" *ngIf="versionHistory.length === 0">
+      <ion-icon name="time-outline"></ion-icon>
+      <h4>{{ 'FINANCES.MODALS.BUDGET_HISTORY.EMPTY_TITLE' | translate }}</h4>
+      <p>{{ 'FINANCES.MODALS.BUDGET_HISTORY.EMPTY_DESC' | translate }}</p>
+    </div>
+
+    <!-- Timeline List -->
+    <div class="timelineList" *ngIf="versionHistory.length > 0">
+      <div
+        class="timelineCard"
+        *ngFor="let snap of versionHistory; let idx = index"
+        [class.activeCard]="activeSnapshotId === snap.id"
+      >
+        <div class="timelineNode">
+          <div class="timelineDot" [class.initialDot]="snap.type === 'INITIAL_ADOPTION'">
+            <ion-icon [name]="snap.type === 'INITIAL_ADOPTION' ? 'flag-outline' : 'git-commit-outline'"></ion-icon>
+          </div>
+          <div class="timelineLine" *ngIf="idx < versionHistory.length - 1"></div>
+        </div>
+
+        <div class="timelineCardContent">
+          <div class="cardHeader">
+            <div class="headerLeft">
+              <span
+                class="typeBadge"
+                [class.initialBadge]="snap.type === 'INITIAL_ADOPTION'"
+                [class.amendBadge]="snap.type === 'AMENDMENT'"
+              >
+                {{ (snap.type === 'INITIAL_ADOPTION' ? 'FINANCES.MODALS.BUDGET_HISTORY.TYPE_INITIAL' : 'FINANCES.MODALS.BUDGET_HISTORY.TYPE_AMENDMENT') | translate }}
+              </span>
+              <h3 class="resolutionTitle">{{ snap.resolutionNumber }}</h3>
+            </div>
+            <span class="adoptedDate">
+              <ion-icon name="calendar-outline"></ion-icon>
+              {{ formatDate(snap.adoptedDate) }}
+            </span>
+          </div>
+
+          <p class="snapDescription" *ngIf="snap.description">
+            {{ snap.description }}
+          </p>
+
+          <div class="totalsRibbon">
+            <div class="totalItem">
+              <span class="totLabel">{{ 'FINANCES.BUDGET.KPI_REVENUE' | translate }}</span>
+              <strong class="totVal revVal">{{ snap.totalRevenue | number:'1.2-2' }} PLN</strong>
+            </div>
+            <div class="totalItem">
+              <span class="totLabel">{{ 'FINANCES.BUDGET.KPI_EXPENSES' | translate }}</span>
+              <strong class="totVal expVal">{{ snap.totalExpense | number:'1.2-2' }} PLN</strong>
+            </div>
+            <div class="totalItem">
+              <span class="totLabel">{{ 'FINANCES.BUDGET.KPI_NET' | translate }}</span>
+              <strong class="totVal" [class.revVal]="snap.netResult >= 0" [class.expVal]="snap.netResult < 0">
+                {{ snap.netResult | number:'1.2-2' }} PLN
+              </strong>
+            </div>
+          </div>
+
+          <div class="cardActions">
+            <ion-button
+              size="small"
+              fill="solid"
+              color="primary"
+              class="actionBtn"
+              (click)="viewSnapshot(snap)"
+            >
+              <ion-icon slot="start" name="eye-outline"></ion-icon>
+              {{ 'FINANCES.MODALS.BUDGET_HISTORY.VIEW_SNAPSHOT_BTN' | translate }}
+            </ion-button>
+
+            <ion-button
+              size="small"
+              fill="outline"
+              color="medium"
+              class="actionBtn"
+              (click)="exportSnapshot(snap, 'PDF')"
+              [title]="'FINANCES.MODALS.BUDGET_HISTORY.EXPORT_PDF' | translate"
+            >
+              <ion-icon slot="start" name="document-text-outline"></ion-icon>
+              PDF
+            </ion-button>
+
+            <ion-button
+              size="small"
+              fill="outline"
+              color="medium"
+              class="actionBtn"
+              (click)="exportSnapshot(snap, 'EXCEL')"
+              [title]="'FINANCES.MODALS.BUDGET_HISTORY.EXPORT_CSV' | translate"
+            >
+              <ion-icon slot="start" name="download-outline"></ion-icon>
+              CSV
+            </ion-button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</ion-content>
+

@@ -19,6 +19,10 @@ export class AmendmentModalComponent implements OnInit {
 
   @Input() budget!: AnnualBudget;
   @Input() year!: number;
+  @Input() itemsDiff?: BudgetAmendmentItem[];
+  @Input() totalRevenueDelta: number = 0;
+  @Input() totalExpenseDelta: number = 0;
+  @Input() netBudgetDelta: number = 0;
 
   resolutionNumber: string = '';
   adoptedDate: string = '';
@@ -37,8 +41,19 @@ export class AmendmentModalComponent implements OnInit {
 
   ngOnInit(): void {
     this.adoptedDate = new Date().toISOString().split('T')[0];
-    this.populateLinesList();
-    this.addNewItemRow();
+    if (this.itemsDiff && this.itemsDiff.length > 0) {
+      this.items = this.itemsDiff.map((it) => ({
+        lineCode: it.budgetCode || it.lineCode || '',
+        lineName: it.lineName?.pl || it.lineName?.en || it.budgetCode || '',
+        previousAmount: it.previousAmount || it.currentAmount || 0,
+        newAmount: it.proposedAmount ?? ((it.previousAmount || it.currentAmount || 0) + (it.deltaAmount || 0)),
+        difference: it.deltaAmount ?? ((it.proposedAmount || 0) - (it.previousAmount || 0)),
+        justification: it.explanation || it.justification || ''
+      }));
+    } else {
+      this.populateLinesList();
+      this.addNewItemRow();
+    }
   }
 
   private populateLinesList(): void {
@@ -104,6 +119,16 @@ export class AmendmentModalComponent implements OnInit {
         color: 'warning'
       });
       await toast.present();
+      return;
+    }
+
+    if (this.itemsDiff && this.itemsDiff.length > 0) {
+      this.modalCtrl.dismiss({
+        confirmed: true,
+        resolutionNumber: this.resolutionNumber.trim(),
+        adoptedDate: this.adoptedDate || new Date().toISOString().substring(0, 10),
+        description: this.description.trim()
+      });
       return;
     }
 
