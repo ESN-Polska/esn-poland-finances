@@ -1,6 +1,6 @@
 import { default as Axios } from 'axios';
 import { sign } from 'jsonwebtoken';
-import { DynamoDB, HandledError, ResourceController, SystemsManager } from 'idea-aws';
+import { DynamoDB, HandledError, ResourceController, SystemsManager, S3 } from 'idea-aws';
 
 import { User, UserMembershipGroup } from '../models/user.model';
 import { Configurations } from '../models/configurations.model';
@@ -13,12 +13,15 @@ const JWT_EXPIRE_TIME = '7 days';
 const PROJECT = process.env.PROJECT || 'esn-poland-finances';
 const APP_DOMAIN = process.env.APP_DOMAIN || 'finances.esn.pl';
 const APP_URL = `https://${APP_DOMAIN}`;
+const MEDIA_DOMAIN = process.env.MEDIA_DOMAIN || 'media.finances.esn-poland.link';
+const S3_BUCKET_MEDIA = process.env.S3_BUCKET_MEDIA || `${PROJECT}-media`;
 
 const DDB_TABLES = {
   configurations: process.env.DDB_TABLE_configurations,
   users: process.env.DDB_TABLE_users
 };
 const ddb = new DynamoDB();
+const s3 = new S3();
 
 const SECRETS_PATH = `/${PROJECT}/auth`;
 const systemsManager = new SystemsManager();
@@ -278,7 +281,17 @@ class Login extends ResourceController {
     const sectionCode = primarySection?.code || existingUserRecord?.sectionCode || '';
     const section = primarySection?.name || existingUserRecord?.section || '';
     const country = primaryCountry?.name || existingUserRecord?.country || '';
-    const avatarURL = userInfo.picture || '';
+
+    const incomingExternalAvatar = (typeof userInfo.picture === 'string' ? userInfo.picture.trim() : '') ||
+      (typeof userInfo.avatar === 'string' ? userInfo.avatar.trim() : '') ||
+      (typeof userInfo.avatar_url === 'string' ? userInfo.avatar_url.trim() : '') || '';
+
+    const { avatarURL, externalAvatarURL } = await this.syncUserProfilePicture(
+      userId,
+      incomingExternalAvatar,
+      existingUserRecord,
+      accessToken
+    );
 
     this.logger.info('Extracted user attributes from OAuth profile', {
       userId,
@@ -286,6 +299,8 @@ class Login extends ResourceController {
       sectionCode,
       section,
       country,
+      avatarURL,
+      externalAvatarURL,
       availableSectionsCount: uniqueSections.length,
       availableCountriesCount: uniqueCountries.length
     });
@@ -317,6 +332,7 @@ class Login extends ResourceController {
       availableSections: uniqueSections,
       availableCountries: uniqueCountries,
       avatarURL,
+      externalAvatarURL,
       lastLoginAt: new Date().toISOString(),
       isAdministrator: false,
       disabledEmailNotifications: existingUserRecord?.disabledEmailNotifications || [],
@@ -382,6 +398,7 @@ class Login extends ResourceController {
             availableSections: user.availableSections || [],
             availableCountries: user.availableCountries || [],
             avatarURL: user.avatarURL,
+            externalAvatarURL: user.externalAvatarURL || '',
             roles: user.roles,
             extendedRoles: user.extendedRoles,
             isAdministrator: user.isAdministrator,
@@ -495,6 +512,7 @@ class Login extends ResourceController {
             sectionCode: '',
             country: '',
             avatarURL: '',
+            externalAvatarURL: '',
             roles: guestUser.roles,
             extendedRoles: guestUser.extendedRoles,
             isAdministrator: false,
@@ -598,6 +616,293 @@ class Login extends ResourceController {
         return configurations;
       }
       throw new HandledError('Error loading configuration');
+    }
+  }
+
+  private isOurCdnAvatar(url?: string | null): boolean {
+    if (!url || typeof url !== 'string') return false;
+    try {
+      const parsed = new URL(url);
+      const mediaDomain = process.env.MEDIA_DOMAIN || MEDIA_DOMAIN;
+      const hostname = parsed.hostname.toLowerCase();
+      if (
+        hostname === mediaDomain.toLowerCase() ||
+        hostname.endsWith('.finances.esn-poland.link') ||
+        hostname.endsWith('.finances.esn.pl')
+      ) {
+        return true;
+      }
+      const bucket = (process.env.S3_BUCKET_MEDIA || S3_BUCKET_MEDIA).toLowerCase();
+      if (hostname.includes(bucket) || parsed.pathname.toLowerCase().includes(bucket)) {
+        return true;
+      }
+    } catch {
+      if (url.startsWith('/avatars/') || url.startsWith('avatars/')) return true;
+    }
+    return false;
+  }
+
+  private async deleteS3Avatar(fileUrl?: string): Promise<void> {
+    if (!fileUrl) return;
+    try {
+      let key = '';
+      if (fileUrl.startsWith('http://') || fileUrl.startsWith('https://')) {
+        if (!this.isOurCdnAvatar(fileUrl)) return;
+        const url = new URL(fileUrl);
+        key = url.pathname.replace(/^\/+/, '');
+      } else if (fileUrl.startsWith('avatars/') || fileUrl.startsWith('/avatars/')) {
+        key = fileUrl.replace(/^\/+/, '');
+      }
+      if (key && key.startsWith('avatars/')) {
+        await s3.deleteObject({ bucket: S3_BUCKET_MEDIA, key });
+        this.logger.info('Deleted old avatar from S3', { key });
+      }
+    } catch (err: any) {
+      this.logger.warn('Failed to delete old avatar from S3', { fileUrl, err: err?.message || err });
+    }
+  }
+
+  private getAvatarCandidateUrls(rawUrl: string): string[] {
+    const candidates: string[] = [];
+    if (!rawUrl || typeof rawUrl !== 'string') return candidates;
+
+    try {
+      let fullUrl = rawUrl.trim();
+      if (fullUrl.startsWith('//')) {
+        fullUrl = `https:${fullUrl}`;
+      } else if (fullUrl.startsWith('/')) {
+        fullUrl = `https://accounts.esn.org${fullUrl}`;
+      }
+
+      const parsed = new URL(fullUrl);
+      const pathname = parsed.pathname;
+
+      // When OAuth/CAS provides the default (non-styled) URL, Drupal stores the raw upload privately in S3 (403 Forbidden),
+      // while the public rendered image is generated and stored under image styles (such as user_block).
+      const avatarMatch = pathname.match(/(?:^|\/)(accounts\/avatars\/.+)$/);
+      if (avatarMatch && !pathname.includes('/styles/')) {
+        const avatarPath = avatarMatch[1]; // e.g. 'accounts/avatars/2026-07/uuid.jpg'
+        const hosts = Array.from(new Set([parsed.host, 'esn-images-prod.s3.eu-west-1.amazonaws.com']));
+        const styles = ['user_block', 'thumbnail', 'medium'];
+
+        for (const host of hosts) {
+          for (const style of styles) {
+            // Drupal user_block image style converts images and appends .png (e.g. uuid.jpg.png)
+            candidates.push(`https://${host}/styles/${style}/s3/${avatarPath}.png`);
+            // Preserving original extension
+            candidates.push(`https://${host}/styles/${style}/s3/${avatarPath}`);
+            // Replacing extension with .png
+            const withoutExt = avatarPath.replace(/\.[^/.]+$/, '');
+            candidates.push(`https://${host}/styles/${style}/s3/${withoutExt}.png`);
+            // Standard public files path fallback
+            candidates.push(`https://${host}/sites/default/files/styles/${style}/public/${avatarPath}`);
+          }
+        }
+      }
+
+      // Include clean URL without query parameters
+      const cleanUrl = `${parsed.origin}${parsed.pathname}`;
+      if (!candidates.includes(cleanUrl)) {
+        candidates.push(cleanUrl);
+      }
+
+      // Include original full URL
+      if (!candidates.includes(fullUrl)) {
+        candidates.push(fullUrl);
+      }
+    } catch {
+      candidates.push(rawUrl);
+    }
+
+    return candidates;
+  }
+
+  private async downloadAvatar(
+    avatarUrl: string,
+    accessToken?: string
+  ): Promise<{ buffer: Buffer; ext: string; mimeType: string } | null> {
+    const candidateUrls = this.getAvatarCandidateUrls(avatarUrl);
+    if (candidateUrls.length === 0) return null;
+
+    let response: any;
+    let successfulUrl: string = '';
+
+    for (const url of candidateUrls) {
+      try {
+        const headers: Record<string, string> = {
+          'User-Agent': 'ESN-Poland-Finances/1.0',
+          Accept: 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8'
+        };
+        if (accessToken && url.includes('accounts.esn.org')) {
+          headers['Authorization'] = `Bearer ${accessToken}`;
+        }
+
+        try {
+          response = await Axios.get(url, {
+            responseType: 'arraybuffer',
+            timeout: 8000,
+            headers
+          });
+        } catch (authErr: any) {
+          if (headers['Authorization']) {
+            delete headers['Authorization'];
+            response = await Axios.get(url, {
+              responseType: 'arraybuffer',
+              timeout: 8000,
+              headers
+            });
+          } else {
+            throw authErr;
+          }
+        }
+
+        if (response && response.status === 200 && response.data && response.data.length > 0) {
+          successfulUrl = url;
+          break;
+        }
+      } catch {
+        // Try next candidate URL
+      }
+    }
+
+    if (!response || !response.data || response.data.length === 0) {
+      this.logger.warn('Failed to download avatar from all candidate URLs', { avatarUrl, candidateCount: candidateUrls.length });
+      return null;
+    }
+
+    this.logger.info('Successfully downloaded avatar from candidate URL', { successfulUrl });
+    const buffer = Buffer.from(response.data);
+    const contentType = (response.headers?.['content-type'] || response.headers?.['Content-Type'] || '').toLowerCase();
+    let ext = 'jpg';
+    let mimeType = 'image/jpeg';
+
+    if (contentType.includes('png') || (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47)) {
+      ext = 'png';
+      mimeType = 'image/png';
+    } else if (contentType.includes('webp') || (buffer.subarray(0, 4).toString() === 'RIFF' && buffer.subarray(8, 12).toString() === 'WEBP')) {
+      ext = 'webp';
+      mimeType = 'image/webp';
+    } else if (contentType.includes('gif') || buffer.subarray(0, 4).toString() === 'GIF8') {
+      ext = 'gif';
+      mimeType = 'image/gif';
+    } else if (contentType.includes('svg')) {
+      ext = 'svg';
+      mimeType = 'image/svg+xml';
+    } else if (contentType.includes('jpeg') || contentType.includes('jpg') || (buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff)) {
+      ext = 'jpg';
+      mimeType = 'image/jpeg';
+    } else {
+      try {
+        const parsed = new URL(successfulUrl || avatarUrl);
+        const match = parsed.pathname.match(/\.(jpe?g|png|webp|gif|svg)$/i);
+        if (match) {
+          const matchedExt = match[1].toLowerCase();
+          if (matchedExt === 'jpeg' || matchedExt === 'jpg') {
+            ext = 'jpg';
+            mimeType = 'image/jpeg';
+          } else if (matchedExt === 'png') {
+            ext = 'png';
+            mimeType = 'image/png';
+          } else if (matchedExt === 'webp') {
+            ext = 'webp';
+            mimeType = 'image/webp';
+          } else if (matchedExt === 'gif') {
+            ext = 'gif';
+            mimeType = 'image/gif';
+          } else if (matchedExt === 'svg') {
+            ext = 'svg';
+            mimeType = 'image/svg+xml';
+          }
+        }
+      } catch {}
+    }
+
+    return { buffer, ext, mimeType };
+  }
+
+  private async syncUserProfilePicture(
+    userId: string,
+    incomingExternalUrl: string,
+    existingUserRecord: any,
+    accessToken?: string
+  ): Promise<{ avatarURL: string; externalAvatarURL: string }> {
+    const stage = this.stage || process.env.STAGE || 'dev';
+    const mediaDomain = process.env.MEDIA_DOMAIN || MEDIA_DOMAIN;
+    const previousStoredAvatar: string = existingUserRecord?.avatarURL || '';
+    const previousExternalAvatar: string =
+      existingUserRecord?.externalAvatarURL ||
+      (!this.isOurCdnAvatar(previousStoredAvatar) ? previousStoredAvatar : '') ||
+      '';
+
+    let cleanIncoming = (incomingExternalUrl || '').trim();
+    if (cleanIncoming.startsWith('//')) {
+      cleanIncoming = `https:${cleanIncoming}`;
+    } else if (cleanIncoming.startsWith('/')) {
+      cleanIncoming = `https://accounts.esn.org${cleanIncoming}`;
+    }
+
+    // Case 1: User has no external avatar now
+    if (!cleanIncoming) {
+      if (previousStoredAvatar && this.isOurCdnAvatar(previousStoredAvatar)) {
+        await this.deleteS3Avatar(previousStoredAvatar);
+      }
+      return { avatarURL: '', externalAvatarURL: '' };
+    }
+
+    // Case 2: External URL has not changed and image is already stored in our S3
+    const isAlreadyStoredInS3 = this.isOurCdnAvatar(previousStoredAvatar);
+    if (cleanIncoming === previousExternalAvatar && isAlreadyStoredInS3) {
+      this.logger.info('User avatar URL unchanged, keeping stored S3 avatar', {
+        userId,
+        avatarURL: previousStoredAvatar
+      });
+      return { avatarURL: previousStoredAvatar, externalAvatarURL: cleanIncoming };
+    }
+
+    // Case 3: URL changed OR external avatar has never been saved to our S3 yet
+    this.logger.info('Refreshing user avatar in S3', {
+      userId,
+      incomingUrl: cleanIncoming,
+      previousExternalUrl: previousExternalAvatar,
+      isAlreadyStoredInS3
+    });
+
+    const downloaded = await this.downloadAvatar(cleanIncoming, accessToken);
+    if (!downloaded) {
+      this.logger.warn('Could not download avatar, falling back to existing or external URL', { userId });
+      return {
+        avatarURL: previousStoredAvatar || cleanIncoming,
+        externalAvatarURL: previousExternalAvatar || cleanIncoming
+      };
+    }
+
+    try {
+      const cleanUserId = (userId || 'user').replace(/[^a-zA-Z0-9_-]/g, '_');
+      const timestamp = Date.now();
+      const key = `avatars/${stage}/${cleanUserId}_${timestamp}.${downloaded.ext}`;
+
+      await s3.putObject({
+        bucket: S3_BUCKET_MEDIA,
+        key,
+        body: downloaded.buffer,
+        contentType: downloaded.mimeType
+      });
+
+      const newAvatarURL = `https://${mediaDomain}/${key}`;
+      this.logger.info('User avatar successfully stored in S3', { userId, key, newAvatarURL });
+
+      // Clean up previous S3 avatar file if present
+      if (previousStoredAvatar && isAlreadyStoredInS3 && previousStoredAvatar !== newAvatarURL) {
+        await this.deleteS3Avatar(previousStoredAvatar);
+      }
+
+      return { avatarURL: newAvatarURL, externalAvatarURL: cleanIncoming };
+    } catch (s3Err: any) {
+      this.logger.error('Failed to upload user avatar to S3', { userId, error: s3Err?.message || s3Err });
+      return {
+        avatarURL: previousStoredAvatar || cleanIncoming,
+        externalAvatarURL: previousExternalAvatar || cleanIncoming
+      };
     }
   }
 }

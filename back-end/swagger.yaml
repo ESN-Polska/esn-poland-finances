@@ -722,6 +722,9 @@ components:
           example: [{"code": "PL", "name": "Poland"}]
         avatarURL:
           type: string
+          example: https://media.finances.esn-poland.link/avatars/dev/user_123_1731190000000.jpg
+        externalAvatarURL:
+          type: string
           example: https://accounts.esn.org/sites/default/files/pictures/picture-default.png
         roles:
           type: array

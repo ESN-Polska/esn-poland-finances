@@ -20,6 +20,7 @@ export interface ApiProps extends cdk.StackProps {
   project: string;
   stage: string;
   apiDomain: string;
+  mediaDomain?: string;
   resourceControllers: ResourceController[];
   tables: { [tableName: string]: DDBTable };
   mediaBucketArn: string;
@@ -104,7 +105,8 @@ export class ApiStack extends cdk.Stack {
       LOG_LEVEL: props.lambdaLogLevel,
       S3_BUCKET_MEDIA: `${props.project}-media`,
       S3_IMAGES_FOLDER: `images/${props.stage}`,
-      S3_ASSETS_FOLDER: `assets/${props.stage}`
+      S3_ASSETS_FOLDER: `assets/${props.stage}`,
+      MEDIA_DOMAIN: props.mediaDomain || `media.${domainName}`
     };
     for (const [tableName, table] of Object.entries(this.ddbTables)) {
       lambdaEnv[`DDB_TABLE_${tableName}`] = table.tableName;

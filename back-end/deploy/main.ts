@@ -156,6 +156,7 @@ for (const [stageName, stageConfig] of Object.entries(activeStages)) {
     project: parameters.project,
     stage: stageName,
     apiDomain: parameters.apiDomain,
+    mediaDomain: parameters.mediaDomain,
     resourceControllers: apiResources,
     tables,
     mediaBucketArn: mediaStack.mediaBucketArn,

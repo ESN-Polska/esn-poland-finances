@@ -449,7 +449,10 @@ export class AppService {
       const clean = target.replace(/^@/, '').trim();
       if (!clean || clean.startsWith('guest_')) return;
 
-      if (this.currentUser && (
+      const urlMatch = clean.match(/accounts\.esn\.org\/user\/([^/?#]+)/i);
+      if (urlMatch) {
+        handle = decodeURIComponent(urlMatch[1]);
+      } else if (this.currentUser && (
         this.currentUser.userId?.toLowerCase() === clean.toLowerCase() ||
         this.currentUser.nickname?.toLowerCase() === clean.toLowerCase() ||
         this.currentUser.preferredUsername?.toLowerCase() === clean.toLowerCase()
@@ -473,7 +476,7 @@ export class AppService {
     }
 
     if (handle && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(handle)) {
-      window.open(`https://accounts.esn.org/user/${encodeURIComponent(handle)}`, '_blank', 'noopener,noreferrer');
+      window.open(User.formatAccountsUrl(handle), '_blank', 'noopener,noreferrer');
     }
   }
 

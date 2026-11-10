@@ -41,8 +41,10 @@ export class User extends Resource {
   availableSections: UserMembershipGroup[];
   /** Available countries from ESN Accounts OAuth */
   availableCountries: UserMembershipGroup[];
-  /** Avatar URL from ESN Accounts */
+  /** Avatar URL (stored media CDN URL or provider URL) */
   avatarURL: string;
+  /** External original avatar URL from OAuth provider */
+  externalAvatarURL?: string;
   /** ESN Accounts roles */
   roles: string[];
   /** Scoped extended roles (e.g. PL-WAR-SGH:section-treasurer, PL:country-president) */
@@ -305,6 +307,7 @@ export class User extends Resource {
           .filter((c: any) => c.code || c.name)
       : [];
     this.avatarURL = this.clean(x.avatarURL, String);
+    this.externalAvatarURL = this.clean(x.externalAvatarURL, String);
     this.roles = this.cleanArray(x.roles, String);
     this.extendedRoles = this.cleanArray(x.extendedRoles, String);
     this.lastLoginAt = this.clean(x.lastLoginAt, String);
@@ -351,11 +354,27 @@ export class User extends Resource {
     return this.nickname || this.preferredUsername || this.userId || '';
   }
 
+  /**
+   * Formats an ESN Accounts profile URL from a handle, username, or existing URL.
+   * Removes underscores (_) and dots (.) to match Drupal account profile routing
+   * (e.g. aleksander_szaforski -> aleksanderszaforski, t.ossowski -> tossowski).
+   */
+  static formatAccountsUrl(handleOrUrl?: string): string {
+    if (!handleOrUrl) return 'https://accounts.esn.org';
+    let handle = String(handleOrUrl).replace(/^@/, '').trim();
+    const urlMatch = handle.match(/accounts\.esn\.org\/user\/([^/?#]+)/i);
+    if (urlMatch) {
+      handle = decodeURIComponent(urlMatch[1]);
+    }
+    const cleanHandle = handle.replace(/[._]/g, '');
+    return cleanHandle
+      ? `https://accounts.esn.org/user/${encodeURIComponent(cleanHandle)}`
+      : 'https://accounts.esn.org';
+  }
+
   getAccountsProfileURL(): string {
     const handle = this.preferredUsername || this.nickname || this.userId;
-    return handle
-      ? `https://accounts.esn.org/user/${encodeURIComponent(handle)}`
-      : 'https://accounts.esn.org';
+    return User.formatAccountsUrl(handle);
   }
 
   getSectionOrCountry(): string {
