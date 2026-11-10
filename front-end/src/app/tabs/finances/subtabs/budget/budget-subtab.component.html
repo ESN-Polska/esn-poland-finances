@@ -1179,18 +1179,6 @@
               {{ 'FINANCES.BUDGET.KPI_NET' | translate }}: {{ getAmendmentNetResult(am) | financeNumber:{ currency: 'PLN', forceSign: true } }}
             </span>
           </div>
-          <div class="amLinesTags" *ngIf="am.items?.length">
-            <span
-              class="amLineTag"
-              *ngFor="let it of am.items"
-              [class.pos]="(it.difference !== undefined ? it.difference : it.deltaAmount) > 0"
-              [class.neg]="(it.difference !== undefined ? it.difference : it.deltaAmount) < 0"
-              [title]="(it.lineName?.pl || it.lineName?.en || '') + (it.explanation || it.justification ? ' — ' + (it.explanation || it.justification) : '')"
-            >
-              <strong>{{ it.lineCode || it.budgetCode }}:</strong>
-              {{ (it.difference !== undefined ? it.difference : it.deltaAmount) | financeNumber:{ currency: 'PLN', forceSign: true } }}
-            </span>
-          </div>
         </div>
       </div>
     </div>
