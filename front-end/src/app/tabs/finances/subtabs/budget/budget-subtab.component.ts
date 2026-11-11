@@ -392,9 +392,9 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
               await toast.present();
               return false;
             }
-            this.budget.resolutionNumber = data.resolutionNumber.trim();
-            this.budget.adoptedDate = data.adoptedDate || new Date().toISOString().substring(0, 10);
-            this.budget.status = 'ADOPTED';
+            const res = data.resolutionNumber.trim();
+            const date = data.adoptedDate || new Date().toISOString().substring(0, 10);
+            this.budget.adopt(res, date, this.app.currentUser?.userId);
             await this.saveBudgetChanges();
             return true;
           }

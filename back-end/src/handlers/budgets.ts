@@ -149,13 +149,25 @@ class BudgetsRC extends ResourceController {
     budget.updatedAt = new Date().toISOString();
     budget.updatedBy = this.user?.userId || '';
 
-    // If adopting budget, automatically create initial version snapshot if not already present
-    if ((budget.status === 'ADOPTED' || budget.status === 'AMENDED') && budget.resolutionNumber) {
+    // If budget is DRAFT, ensure it retains no resolution numbers or history
+    if (budget.status === 'DRAFT') {
+      budget.resolutionNumber = '';
+      budget.adoptedDate = '';
+      budget.initialResolutionNumber = '';
+      budget.initialAdoptedDate = '';
+      budget.versionHistory = [];
+      budget.amendments = [];
+      budget.draftAmendment = null;
+    } else if ((budget.status === 'ADOPTED' || budget.status === 'AMENDED') && budget.resolutionNumber) {
+      if (!budget.initialResolutionNumber) {
+        budget.initialResolutionNumber = budget.resolutionNumber;
+        budget.initialAdoptedDate = budget.adoptedDate;
+      }
       if (!Array.isArray(budget.versionHistory) || budget.versionHistory.length === 0) {
         budget.createSnapshot(
           'INITIAL_ADOPTION',
-          budget.resolutionNumber,
-          budget.adoptedDate || new Date().toISOString().substring(0, 10),
+          budget.initialResolutionNumber || budget.resolutionNumber,
+          budget.initialAdoptedDate || budget.adoptedDate || new Date().toISOString().substring(0, 10),
           'Initial budget adoption',
           '',
           undefined,

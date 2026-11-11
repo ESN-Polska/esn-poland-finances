@@ -1936,7 +1936,7 @@ export class ConfigurationsPage implements OnInit {
               if (!budget) {
                 budget = await this.financesService.getBudget(year);
               }
-              budget.status = 'DRAFT';
+              budget.revertToDraft();
               const saved = await this.financesService.saveBudget(budget);
               this.openingBalanceBudgetMap[year] = saved;
 

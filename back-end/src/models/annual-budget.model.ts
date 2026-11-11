@@ -730,6 +730,74 @@ export class AnnualBudget extends Resource {
   }
 
   /**
+   * Adopts a draft budget with a given resolution number and date.
+   * Sets initial resolution, resets any prior amendments/history, updates line budgeted amounts,
+   * sets status to ADOPTED and creates the initial adoption snapshot.
+   */
+  adopt(resolutionNumber: string, adoptedDate: string, user?: string): BudgetVersionSnapshot {
+    const res = (resolutionNumber || '').trim();
+    const date = (adoptedDate || new Date().toISOString().substring(0, 10)).trim();
+
+    this.status = 'ADOPTED';
+    this.resolutionNumber = res;
+    this.adoptedDate = date;
+    this.initialResolutionNumber = res;
+    this.initialAdoptedDate = date;
+
+    this.amendments = [];
+    this.draftAmendment = null;
+    this.versionHistory = [];
+
+    const lines = typeof this.getAllLines === 'function' ? this.getAllLines() : [];
+    for (const line of lines) {
+      line.budgetedAmount = line.plannedAmount ?? line.budgetedAmount ?? 0;
+      line.amendmentsDelta = 0;
+    }
+
+    this.recalculateTotals();
+
+    return this.createSnapshot(
+      'INITIAL_ADOPTION',
+      res,
+      date,
+      'Uchwalenie budżetu pierwotnego',
+      '',
+      undefined,
+      user || ''
+    );
+  }
+
+  /**
+   * Reverts an adopted or amended budget back to draft.
+   * Restores initial categories if available, completely clears resolution numbers,
+   * adoption dates, amendment drafts, amendments, and the version history.
+   */
+  revertToDraft(): void {
+    const initSnap = this.versionHistory?.find((s) => s.type === 'INITIAL_ADOPTION');
+    if (initSnap?.categories && Array.isArray(initSnap.categories) && initSnap.categories.length > 0) {
+      this.categories = JSON.parse(JSON.stringify(initSnap.categories));
+    }
+
+    this.status = 'DRAFT';
+    this.resolutionNumber = '';
+    this.adoptedDate = '';
+    this.initialResolutionNumber = '';
+    this.initialAdoptedDate = '';
+    this.versionHistory = [];
+    this.amendments = [];
+    this.draftAmendment = null;
+
+    const lines = typeof this.getAllLines === 'function' ? this.getAllLines() : [];
+    for (const line of lines) {
+      line.amendmentsDelta = 0;
+      line.plannedAmount = line.budgetedAmount ?? line.plannedAmount ?? 0;
+      line.budgetedAmount = line.plannedAmount;
+    }
+
+    this.recalculateTotals();
+  }
+
+  /**
    * Applies an approved amendment, updates categories and deltas, records a version snapshot,
    * updates status to AMENDED and clears active draft.
    */
