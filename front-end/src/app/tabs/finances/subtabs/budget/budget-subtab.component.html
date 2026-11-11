@@ -151,9 +151,6 @@
           <span
             class="statusBadge"
             [class]="budget.status.toLowerCase()"
-            [class.clickable]="canEdit && !isArchived && !activeSnapshotView"
-            (click)="canEdit && !isArchived && !activeSnapshotView && openEditAdoptionAlert()"
-            [title]="canEdit && !isArchived && !activeSnapshotView ? ('FINANCES.BUDGET.EDIT_ADOPTION_TITLE' | translate) : ''"
           >
             {{ budget.status === 'ADOPTED' ? ('FINANCES.BUDGET.STATUS_ADOPTED' | translate) : (budget.status === 'AMENDED' ? ('FINANCES.BUDGET.STATUS_AMENDED' | translate) : ('FINANCES.BUDGET.STATUS_DRAFT' | translate)) }}
           </span>
@@ -162,9 +159,6 @@
           <p
             class="resolutionNote"
             *ngIf="currentResolutionNumber"
-            [class.clickable]="canEdit && !isArchived && !activeSnapshotView"
-            (click)="canEdit && !isArchived && !activeSnapshotView && openEditAdoptionAlert()"
-            [title]="canEdit && !isArchived && !activeSnapshotView ? ('FINANCES.BUDGET.EDIT_ADOPTION_TITLE' | translate) : ''"
           >
             <ng-container *ngIf="currentAdoptedDate; else noDateResolution">
               {{ 'FINANCES.BUDGET.RESOLUTION_FULL' | translate:{ number: currentResolutionNumber, date: formatDate(currentAdoptedDate) } }}
@@ -172,7 +166,6 @@
             <ng-template #noDateResolution>
               {{ 'FINANCES.BUDGET.RESOLUTION_WITHOUT_DATE' | translate:{ number: currentResolutionNumber } }}
             </ng-template>
-            <ion-icon name="create-outline" class="editNoteIcon" *ngIf="canEdit && !isArchived && !activeSnapshotView"></ion-icon>
           </p>
 
           <!-- History chip next to resolution -->
@@ -1107,11 +1100,21 @@
               <span class="amResolution">
                 {{ 'FINANCES.BUDGET.RESOLUTION_PREFIX' | translate }} {{ initialResolutionNumber }}
               </span>
-            </div>
-            <div class="amItemRight">
               <span class="amDate" *ngIf="initialAdoptedDate">
                 {{ 'FINANCES.BUDGET.ADOPTED_DATE_NOTE' | translate:{ date: formatDate(initialAdoptedDate) } }}
               </span>
+            </div>
+            <div class="amItemRight">
+              <ion-button
+                *ngIf="canEdit && !isArchived && !activeSnapshotView"
+                fill="clear"
+                size="small"
+                class="editSnapBtn"
+                (click)="openEditInitialAdoptionAlert()"
+                [title]="'FINANCES.BUDGET.EDIT_INITIAL_ADOPTION_TITLE' | translate"
+              >
+                <ion-icon slot="icon-only" name="create-outline"></ion-icon>
+              </ion-button>
               <ion-button
                 *ngIf="initialSnapshot"
                 fill="clear"
@@ -1124,7 +1127,7 @@
               </ion-button>
             </div>
           </div>
-          <p class="amDesc">
+          <p class="amDesc" *ngIf="initialAdoptionDescription">
             {{ initialAdoptionDescription }}
           </p>
           <div class="amTotalsStrip">
@@ -1150,11 +1153,21 @@
               <span class="amResolution">
                 {{ 'FINANCES.BUDGET.RESOLUTION_PREFIX' | translate }} {{ am.resolutionNumber }}
               </span>
-            </div>
-            <div class="amItemRight">
               <span class="amDate" *ngIf="am.adoptedDate || am.date">
                 {{ 'FINANCES.BUDGET.ADOPTED_DATE_NOTE' | translate:{ date: formatDate(am.adoptedDate || am.date) } }}
               </span>
+            </div>
+            <div class="amItemRight">
+              <ion-button
+                *ngIf="canEdit && !isArchived && !activeSnapshotView"
+                fill="clear"
+                size="small"
+                class="editSnapBtn"
+                (click)="openEditAmendmentAlert(am)"
+                [title]="'FINANCES.BUDGET.EDIT_AMENDMENT_TITLE' | translate"
+              >
+                <ion-icon slot="icon-only" name="create-outline"></ion-icon>
+              </ion-button>
               <ion-button
                 *ngIf="getSnapshotForAmendment(am)"
                 fill="clear"

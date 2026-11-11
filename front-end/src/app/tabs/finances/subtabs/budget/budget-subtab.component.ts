@@ -455,17 +455,7 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
   }
 
   get initialAdoptionDescription(): string {
-    const desc = this.initialSnapshot?.description?.trim();
-    if (
-      !desc ||
-      desc.startsWith('Uchwała nr') ||
-      desc.startsWith('Resolution no') ||
-      desc === 'Uchwalenie budżetu pierwotnego' ||
-      desc === 'Initial budget adoption'
-    ) {
-      return this.translate.instant('FINANCES.BUDGET.INITIAL_ADOPTION_DESC');
-    }
-    return desc;
+    return this.initialSnapshot?.description?.trim() || '';
   }
 
   get initialTotalRevenue(): number {
@@ -547,56 +537,117 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
     this.activeSnapshotView = snap;
   }
 
-  async openEditAdoptionAlert(): Promise<void> {
+  async openEditInitialAdoptionAlert(): Promise<void> {
     if (!this.budget) return;
     const alert = await this.alertCtrl.create({
-      header: this.translate.instant('FINANCES.BUDGET.EDIT_ADOPTION_TITLE'),
-      message: this.translate.instant('FINANCES.BUDGET.EDIT_ADOPTION_DESC'),
+      header: this.translate.instant('FINANCES.BUDGET.EDIT_INITIAL_ADOPTION_TITLE'),
+      message: this.translate.instant('FINANCES.BUDGET.EDIT_INITIAL_ADOPTION_DESC'),
       inputs: [
         {
           name: 'resolutionNumber',
           type: 'text',
           placeholder: this.translate.instant('FINANCES.BUDGET.RESOLUTION_NO_PH'),
-          value: this.currentResolutionNumber || ''
+          value: this.initialResolutionNumber || ''
         },
         {
           name: 'adoptedDate',
           type: 'date',
-          value: this.currentAdoptedDate || ''
+          value: this.initialAdoptedDate || ''
+        },
+        {
+          name: 'description',
+          type: 'text',
+          placeholder: this.translate.instant('FINANCES.MODALS.AMENDMENT.JUSTIFICATION_PH'),
+          value: this.initialSnapshot?.description || ''
         }
       ],
       buttons: [
         { text: this.translate.instant('COMMON.CANCEL'), role: 'cancel' },
-        {
-          text: this.translate.instant('FINANCES.BUDGET.REVERT_TO_DRAFT'),
-          role: 'destructive',
-          handler: async () => {
-            if (!this.budget) return;
-            this.budget.status = 'DRAFT';
-            await this.saveBudgetChanges();
-          }
-        },
         {
           text: this.translate.instant('COMMON.SAVE'),
           handler: async (data) => {
             if (!this.budget) return;
             const newRes = data.resolutionNumber?.trim() || '';
             const newDate = data.adoptedDate || '';
-            if (this.budget.amendments && this.budget.amendments.length > 0) {
-              const latest = this.budget.amendments[this.budget.amendments.length - 1];
-              latest.resolutionNumber = newRes;
-              latest.adoptedDate = newDate;
-              latest.date = newDate;
-            }
-            this.budget.resolutionNumber = newRes;
-            this.budget.adoptedDate = newDate;
+            const newDesc = data.description?.trim() || '';
 
-            if (this.budget.versionHistory && this.budget.versionHistory.length > 0) {
-              const latestSnap = this.budget.versionHistory[this.budget.versionHistory.length - 1];
-              if (latestSnap) {
-                latestSnap.resolutionNumber = newRes;
-                latestSnap.adoptedDate = newDate;
-              }
+            this.budget.initialResolutionNumber = newRes;
+            this.budget.initialAdoptedDate = newDate;
+
+            if (this.initialSnapshot) {
+              this.initialSnapshot.resolutionNumber = newRes;
+              this.initialSnapshot.adoptedDate = newDate;
+              this.initialSnapshot.description = newDesc;
+            }
+
+            // If there are no amendments, current resolution is the initial one
+            if (!this.budget.amendments || this.budget.amendments.length === 0) {
+              this.budget.resolutionNumber = newRes;
+              this.budget.adoptedDate = newDate;
+            }
+
+            await this.saveBudgetChanges();
+          }
+        }
+      ]
+    });
+    await alert.present();
+  }
+
+  async openEditAmendmentAlert(am: BudgetAmendment): Promise<void> {
+    if (!this.budget || !am) return;
+    const alert = await this.alertCtrl.create({
+      header: this.translate.instant('FINANCES.BUDGET.EDIT_AMENDMENT_TITLE'),
+      message: this.translate.instant('FINANCES.BUDGET.EDIT_AMENDMENT_DESC'),
+      inputs: [
+        {
+          name: 'resolutionNumber',
+          type: 'text',
+          placeholder: this.translate.instant('FINANCES.BUDGET.RESOLUTION_NO_PH'),
+          value: am.resolutionNumber || ''
+        },
+        {
+          name: 'adoptedDate',
+          type: 'date',
+          value: am.adoptedDate || am.date || ''
+        },
+        {
+          name: 'description',
+          type: 'text',
+          placeholder: this.translate.instant('FINANCES.MODALS.AMENDMENT.JUSTIFICATION_PH'),
+          value: am.description || ''
+        }
+      ],
+      buttons: [
+        { text: this.translate.instant('COMMON.CANCEL'), role: 'cancel' },
+        {
+          text: this.translate.instant('COMMON.SAVE'),
+          handler: async (data) => {
+            if (!this.budget) return;
+            const newRes = data.resolutionNumber?.trim() || '';
+            const newDate = data.adoptedDate || '';
+            const newDesc = data.description?.trim() || '';
+
+            am.resolutionNumber = newRes;
+            am.adoptedDate = newDate;
+            am.date = newDate;
+            am.description = newDesc;
+
+            const snap = this.getSnapshotForAmendment(am);
+            if (snap) {
+              snap.resolutionNumber = newRes;
+              snap.adoptedDate = newDate;
+              if (newDesc) snap.description = newDesc;
+            }
+
+            // If this is the latest amendment, also update current resolution
+            const isLatest =
+              this.budget.amendments &&
+              this.budget.amendments.length > 0 &&
+              this.budget.amendments[this.budget.amendments.length - 1] === am;
+            if (isLatest) {
+              this.budget.resolutionNumber = newRes;
+              this.budget.adoptedDate = newDate;
             }
 
             await this.saveBudgetChanges();

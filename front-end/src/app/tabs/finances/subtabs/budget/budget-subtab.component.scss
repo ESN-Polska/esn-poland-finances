@@ -1401,6 +1401,11 @@
             font-size: 0.9rem;
             color: var(--ion-color-step-900, #0f172a);
           }
+
+          .amDate {
+            font-size: 0.8rem;
+            color: var(--ion-color-step-500, #64748b);
+          }
         }
 
         .amItemRight {
@@ -1408,17 +1413,18 @@
           align-items: center;
           gap: 6px;
 
-          .amDate {
-            font-size: 0.8rem;
-            color: var(--ion-color-step-500, #64748b);
-          }
-
+          .editSnapBtn,
           .viewSnapBtn {
             --padding-start: 4px;
             --padding-end: 4px;
             height: 28px;
             margin: 0;
-            color: var(--ion-color-primary, #00aeef);
+            color: var(--ion-color-step-600, #64748b);
+            transition: color 0.15s;
+
+            &:hover {
+              color: var(--ion-color-primary, #00aeef);
+            }
           }
         }
       }
@@ -1956,13 +1962,18 @@ body.dark {
           .amResolution {
             color: var(--ion-text-color, #f8fafc);
           }
-        }
-        .amItemRight {
           .amDate {
             color: #94a3b8;
           }
+        }
+        .amItemRight {
+          .editSnapBtn,
           .viewSnapBtn {
-            color: #38bdf8;
+            color: #94a3b8;
+
+            &:hover {
+              color: #38bdf8;
+            }
           }
         }
       }

@@ -1915,6 +1915,55 @@ export class ConfigurationsPage implements OnInit {
     return `${amount.toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} PLN`;
   }
 
+  async revertBudgetToDraft(year: number): Promise<void> {
+    if (!this.canModifyFinances()) return;
+    const alert = await this.alertCtrl.create({
+      header: this.translate.instant('FINANCES.BUDGET.REVERT_TO_DRAFT'),
+      message: this.translate.instant('CONFIGURATIONS.FINANCES_REVERT_TO_DRAFT_CONFIRM_MSG', { year }),
+      buttons: [
+        { text: this.translate.instant('COMMON.CANCEL'), role: 'cancel' },
+        {
+          text: this.translate.instant('FINANCES.BUDGET.REVERT_TO_DRAFT'),
+          role: 'destructive',
+          handler: async () => {
+            this.isUpdatingOpeningBalanceLock = true;
+            const loading = await this.loadingCtrl.create({
+              message: this.translate.instant('COMMON.SAVING')
+            });
+            await loading.present();
+            try {
+              let budget = this.openingBalanceBudgetMap[year];
+              if (!budget) {
+                budget = await this.financesService.getBudget(year);
+              }
+              budget.status = 'DRAFT';
+              const saved = await this.financesService.saveBudget(budget);
+              this.openingBalanceBudgetMap[year] = saved;
+
+              const toast = await this.toastCtrl.create({
+                message: this.translate.instant('CONFIGURATIONS.FINANCES_REVERT_TO_DRAFT_SUCCESS', { year }),
+                duration: 3500,
+                color: 'success'
+              });
+              await toast.present();
+            } catch (err: any) {
+              const toast = await this.toastCtrl.create({
+                message: err?.message || this.translate.instant('COMMON.SAVE_ERROR'),
+                duration: 4000,
+                color: 'danger'
+              });
+              await toast.present();
+            } finally {
+              this.isUpdatingOpeningBalanceLock = false;
+              await loading.dismiss();
+            }
+          }
+        }
+      ]
+    });
+    await alert.present();
+  }
+
   //
   // USERS SUBTAB
   //

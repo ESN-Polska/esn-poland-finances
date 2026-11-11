@@ -2035,6 +2035,33 @@
             {{ 'CONFIGURATIONS.FINANCES_LOCK_OPENING_BALANCE_BTN' | translate:{ year: selectedOpeningBalanceYear } }}
           </ion-button>
         </ion-item>
+
+        <!-- Budget Status & Revert to Draft -->
+        <ion-item *ngIf="openingBalanceBudgetMap[selectedOpeningBalanceYear] as b">
+          <ion-icon
+            slot="start"
+            [name]="b.status === 'DRAFT' ? 'document-text-outline' : 'checkmark-done-circle-outline'"
+            [color]="b.status === 'DRAFT' ? 'medium' : 'primary'"
+          ></ion-icon>
+          <ion-label class="ion-text-wrap">
+            <h3>{{ 'CONFIGURATIONS.FINANCES_BUDGET_STATUS' | translate }}: {{ b.status === 'ADOPTED' ? ('FINANCES.BUDGET.STATUS_ADOPTED' | translate) : (b.status === 'AMENDED' ? ('FINANCES.BUDGET.STATUS_AMENDED' | translate) : ('FINANCES.BUDGET.STATUS_DRAFT' | translate)) }}</h3>
+            <p *ngIf="b.status !== 'DRAFT'">
+              {{ 'CONFIGURATIONS.FINANCES_REVERT_TO_DRAFT_DESC' | translate }}
+            </p>
+          </ion-label>
+          <ion-button
+            *ngIf="b.status !== 'DRAFT' && canModifyFinances()"
+            slot="end"
+            fill="outline"
+            color="danger"
+            size="small"
+            (click)="revertBudgetToDraft(selectedOpeningBalanceYear)"
+            [disabled]="isUpdatingOpeningBalanceLock || isOpeningBalanceLoading"
+          >
+            <ion-icon slot="start" name="arrow-undo-outline"></ion-icon>
+            {{ 'FINANCES.BUDGET.REVERT_TO_DRAFT' | translate }}
+          </ion-button>
+        </ion-item>
       </ion-list>
 
 
