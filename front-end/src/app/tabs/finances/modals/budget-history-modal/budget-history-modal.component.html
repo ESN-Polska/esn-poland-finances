@@ -47,11 +47,22 @@
                 {{ (snap.type === 'INITIAL_ADOPTION' ? 'FINANCES.MODALS.BUDGET_HISTORY.TYPE_INITIAL' : 'FINANCES.MODALS.BUDGET_HISTORY.TYPE_AMENDMENT') | translate }}
               </span>
               <h3 class="resolutionTitle">{{ snap.resolutionNumber }}</h3>
+              <span class="adoptedDate" *ngIf="snap.adoptedDate">
+                <ion-icon name="calendar-outline"></ion-icon>
+                {{ formatDate(snap.adoptedDate) }}
+              </span>
             </div>
-            <span class="adoptedDate">
-              <ion-icon name="calendar-outline"></ion-icon>
-              {{ formatDate(snap.adoptedDate) }}
-            </span>
+            <div class="headerRight" *ngIf="canEdit">
+              <ion-button
+                fill="clear"
+                size="small"
+                class="editIconBtn"
+                (click)="editSnapshot(snap)"
+                [title]="(snap.type === 'INITIAL_ADOPTION' ? 'FINANCES.BUDGET.EDIT_INITIAL_ADOPTION_TITLE' : 'FINANCES.BUDGET.EDIT_AMENDMENT_TITLE') | translate"
+              >
+                <ion-icon slot="icon-only" name="create-outline"></ion-icon>
+              </ion-button>
+            </div>
           </div>
 
           <p class="snapDescription" *ngIf="snap.description">
@@ -59,15 +70,15 @@
           </p>
 
           <div class="totalsRibbon">
-            <div class="totalItem">
+            <div class="totalItem" [title]="getDeltaTitle(snap, 'revenue')">
               <span class="totLabel">{{ 'FINANCES.BUDGET.KPI_REVENUE' | translate }}</span>
               <strong class="totVal revVal">{{ snap.totalRevenue | financeNumber:{ currency: 'PLN' } }}</strong>
             </div>
-            <div class="totalItem">
+            <div class="totalItem" [title]="getDeltaTitle(snap, 'expense')">
               <span class="totLabel">{{ 'FINANCES.BUDGET.KPI_EXPENSES' | translate }}</span>
               <strong class="totVal expVal">{{ snap.totalExpense | financeNumber:{ currency: 'PLN' } }}</strong>
             </div>
-            <div class="totalItem">
+            <div class="totalItem" [title]="getDeltaTitle(snap, 'net')">
               <span class="totLabel">{{ 'FINANCES.BUDGET.KPI_NET' | translate }}</span>
               <strong class="totVal" [class.revVal]="snap.netResult >= 0" [class.expVal]="snap.netResult < 0">
                 {{ snap.netResult | financeNumber:{ currency: 'PLN', forceSign: true } }}
@@ -85,6 +96,19 @@
             >
               <ion-icon slot="start" name="eye-outline"></ion-icon>
               {{ 'FINANCES.MODALS.BUDGET_HISTORY.VIEW_SNAPSHOT_BTN' | translate }}
+            </ion-button>
+
+            <ion-button
+              *ngIf="canEdit"
+              size="small"
+              fill="outline"
+              color="medium"
+              class="actionBtn editBtn"
+              (click)="editSnapshot(snap)"
+              [title]="(snap.type === 'INITIAL_ADOPTION' ? 'FINANCES.BUDGET.EDIT_INITIAL_ADOPTION_TITLE' : 'FINANCES.BUDGET.EDIT_AMENDMENT_TITLE') | translate"
+            >
+              <ion-icon slot="start" name="create-outline"></ion-icon>
+              {{ 'COMMON.EDIT' | translate }}
             </ion-button>
 
             <ion-button

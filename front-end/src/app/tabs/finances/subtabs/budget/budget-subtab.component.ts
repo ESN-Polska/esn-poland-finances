@@ -430,232 +430,8 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
     return this.budget?.adoptedDate || '';
   }
 
-  get initialSnapshot(): BudgetVersionSnapshot | undefined {
-    return this.budget?.versionHistory?.find((s) => s.type === 'INITIAL_ADOPTION');
-  }
-
-  get initialResolutionNumber(): string {
-    if (this.initialSnapshot?.resolutionNumber) {
-      return this.initialSnapshot.resolutionNumber;
-    }
-    if (this.budget?.initialResolutionNumber) {
-      return this.budget.initialResolutionNumber;
-    }
-    return this.budget?.resolutionNumber || '';
-  }
-
-  get initialAdoptedDate(): string {
-    if (this.initialSnapshot?.adoptedDate) {
-      return this.initialSnapshot.adoptedDate;
-    }
-    if (this.budget?.initialAdoptedDate) {
-      return this.budget.initialAdoptedDate;
-    }
-    return this.budget?.adoptedDate || '';
-  }
-
-  get initialAdoptionDescription(): string {
-    return this.initialSnapshot?.description?.trim() || '';
-  }
-
-  get initialTotalRevenue(): number {
-    if (this.initialSnapshot?.totalRevenue !== undefined) {
-      return this.initialSnapshot.totalRevenue;
-    }
-    const lines = typeof this.budget?.getAllLines === 'function' ? this.budget.getAllLines() : [];
-    return lines
-      .filter((l) => l.type === 'REVENUE')
-      .reduce((sum, l) => sum + (l.plannedAmount - (l.amendmentsDelta || 0)), 0);
-  }
-
-  get initialTotalExpense(): number {
-    if (this.initialSnapshot?.totalExpense !== undefined) {
-      return this.initialSnapshot.totalExpense;
-    }
-    const lines = typeof this.budget?.getAllLines === 'function' ? this.budget.getAllLines() : [];
-    return lines
-      .filter((l) => l.type === 'EXPENSE')
-      .reduce((sum, l) => sum + (l.plannedAmount - (l.amendmentsDelta || 0)), 0);
-  }
-
-  get initialNetResult(): number {
-    if (this.initialSnapshot?.netResult !== undefined) {
-      return this.initialSnapshot.netResult;
-    }
-    return this.initialTotalRevenue - this.initialTotalExpense;
-  }
-
-  getSnapshotForAmendment(am: BudgetAmendment): BudgetVersionSnapshot | undefined {
-    return this.budget?.versionHistory?.find(
-      (s) => (s.amendmentId && s.amendmentId === am.id) || s.resolutionNumber === am.resolutionNumber
-    );
-  }
-
-  getAmendmentTotalRevenue(am: BudgetAmendment): number {
-    const snap = this.getSnapshotForAmendment(am);
-    if (snap?.totalRevenue !== undefined) {
-      return snap.totalRevenue;
-    }
-    const idx = this.budget?.amendments?.indexOf(am) ?? -1;
-    let total = this.initialTotalRevenue;
-    if (idx >= 0 && this.budget?.amendments) {
-      for (let i = 0; i <= idx; i++) {
-        total += this.budget.amendments[i].totalRevenueDelta || 0;
-      }
-    } else {
-      total += am.totalRevenueDelta || 0;
-    }
-    return total;
-  }
-
-  getAmendmentTotalExpense(am: BudgetAmendment): number {
-    const snap = this.getSnapshotForAmendment(am);
-    if (snap?.totalExpense !== undefined) {
-      return snap.totalExpense;
-    }
-    const idx = this.budget?.amendments?.indexOf(am) ?? -1;
-    let total = this.initialTotalExpense;
-    if (idx >= 0 && this.budget?.amendments) {
-      for (let i = 0; i <= idx; i++) {
-        total += this.budget.amendments[i].totalExpenseDelta || 0;
-      }
-    } else {
-      total += am.totalExpenseDelta || 0;
-    }
-    return total;
-  }
-
-  getAmendmentNetResult(am: BudgetAmendment): number {
-    const snap = this.getSnapshotForAmendment(am);
-    if (snap?.netResult !== undefined) {
-      return snap.netResult;
-    }
-    return this.getAmendmentTotalRevenue(am) - this.getAmendmentTotalExpense(am);
-  }
-
   enterSnapshotView(snap: BudgetVersionSnapshot): void {
     this.activeSnapshotView = snap;
-  }
-
-  async openEditInitialAdoptionAlert(): Promise<void> {
-    if (!this.budget) return;
-    const alert = await this.alertCtrl.create({
-      header: this.translate.instant('FINANCES.BUDGET.EDIT_INITIAL_ADOPTION_TITLE'),
-      message: this.translate.instant('FINANCES.BUDGET.EDIT_INITIAL_ADOPTION_DESC'),
-      inputs: [
-        {
-          name: 'resolutionNumber',
-          type: 'text',
-          placeholder: this.translate.instant('FINANCES.BUDGET.RESOLUTION_NO_PH'),
-          value: this.initialResolutionNumber || ''
-        },
-        {
-          name: 'adoptedDate',
-          type: 'date',
-          value: this.initialAdoptedDate || ''
-        },
-        {
-          name: 'description',
-          type: 'text',
-          placeholder: this.translate.instant('FINANCES.MODALS.AMENDMENT.JUSTIFICATION_PH'),
-          value: this.initialSnapshot?.description || ''
-        }
-      ],
-      buttons: [
-        { text: this.translate.instant('COMMON.CANCEL'), role: 'cancel' },
-        {
-          text: this.translate.instant('COMMON.SAVE'),
-          handler: async (data) => {
-            if (!this.budget) return;
-            const newRes = data.resolutionNumber?.trim() || '';
-            const newDate = data.adoptedDate || '';
-            const newDesc = data.description?.trim() || '';
-
-            this.budget.initialResolutionNumber = newRes;
-            this.budget.initialAdoptedDate = newDate;
-
-            if (this.initialSnapshot) {
-              this.initialSnapshot.resolutionNumber = newRes;
-              this.initialSnapshot.adoptedDate = newDate;
-              this.initialSnapshot.description = newDesc;
-            }
-
-            // If there are no amendments, current resolution is the initial one
-            if (!this.budget.amendments || this.budget.amendments.length === 0) {
-              this.budget.resolutionNumber = newRes;
-              this.budget.adoptedDate = newDate;
-            }
-
-            await this.saveBudgetChanges();
-          }
-        }
-      ]
-    });
-    await alert.present();
-  }
-
-  async openEditAmendmentAlert(am: BudgetAmendment): Promise<void> {
-    if (!this.budget || !am) return;
-    const alert = await this.alertCtrl.create({
-      header: this.translate.instant('FINANCES.BUDGET.EDIT_AMENDMENT_TITLE'),
-      message: this.translate.instant('FINANCES.BUDGET.EDIT_AMENDMENT_DESC'),
-      inputs: [
-        {
-          name: 'resolutionNumber',
-          type: 'text',
-          placeholder: this.translate.instant('FINANCES.BUDGET.RESOLUTION_NO_PH'),
-          value: am.resolutionNumber || ''
-        },
-        {
-          name: 'adoptedDate',
-          type: 'date',
-          value: am.adoptedDate || am.date || ''
-        },
-        {
-          name: 'description',
-          type: 'text',
-          placeholder: this.translate.instant('FINANCES.MODALS.AMENDMENT.JUSTIFICATION_PH'),
-          value: am.description || ''
-        }
-      ],
-      buttons: [
-        { text: this.translate.instant('COMMON.CANCEL'), role: 'cancel' },
-        {
-          text: this.translate.instant('COMMON.SAVE'),
-          handler: async (data) => {
-            if (!this.budget) return;
-            const newRes = data.resolutionNumber?.trim() || '';
-            const newDate = data.adoptedDate || '';
-            const newDesc = data.description?.trim() || '';
-
-            am.resolutionNumber = newRes;
-            am.adoptedDate = newDate;
-            am.date = newDate;
-            am.description = newDesc;
-
-            const snap = this.getSnapshotForAmendment(am);
-            if (snap) {
-              snap.resolutionNumber = newRes;
-              snap.adoptedDate = newDate;
-              if (newDesc) snap.description = newDesc;
-            }
-
-            // If this is the latest amendment, also update current resolution
-            const isLatest =
-              this.budget.amendments &&
-              this.budget.amendments.length > 0 &&
-              this.budget.amendments[this.budget.amendments.length - 1] === am;
-            if (isLatest) {
-              this.budget.resolutionNumber = newRes;
-              this.budget.adoptedDate = newDate;
-            }
-
-            await this.saveBudgetChanges();
-          }
-        }
-      ]
-    });
-    await alert.present();
   }
 
   private async initOpeningBalancesState(): Promise<void> {
@@ -1835,11 +1611,17 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
       component: BudgetHistoryModalComponent,
       componentProps: {
         budget: this.budget,
-        activeSnapshotId: this.activeSnapshotView?.id
+        activeSnapshotId: this.activeSnapshotView?.id,
+        canEdit: this.canEdit && !this.isArchived
       }
     });
     await modal.present();
     const { data } = await modal.onWillDismiss();
+    if (data?.budget) {
+      this.budget = data.budget;
+      this.budget.recalculateTotals();
+      this.recomputeCurrentBalances();
+    }
     if (data?.action === 'VIEW_SNAPSHOT' && data.snapshot) {
       this.activeSnapshotView = data.snapshot;
     }

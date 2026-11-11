@@ -123,6 +123,24 @@
   flex-wrap: wrap;
 }
 
+.headerRight {
+  display: flex;
+  align-items: center;
+
+  .editIconBtn {
+    --padding-start: 4px;
+    --padding-end: 4px;
+    height: 28px;
+    margin: 0;
+    color: var(--ion-color-step-600, #64748b);
+    transition: color 0.15s;
+
+    &:hover {
+      color: var(--ion-color-primary, #0284c7);
+    }
+  }
+}
+
 .typeBadge {
   font-size: 0.72rem;
   font-weight: 700;
@@ -254,6 +272,13 @@ body.dark {
   .typeBadge.amendBadge {
     background: rgba(168, 85, 247, 0.2);
     color: #c084fc;
+  }
+
+  .editIconBtn {
+    color: #94a3b8;
+    &:hover {
+      color: #38bdf8;
+    }
   }
 }
 
