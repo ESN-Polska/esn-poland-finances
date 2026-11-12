@@ -156,35 +156,40 @@ export class ProfilePage implements OnInit {
     this.app.openAccountsProfile(identifier || this.user);
   }
 
+  private populateBankDetails(saved: any): void {
+    if (!saved) return;
+    if (saved.pln) {
+      this.plnBankDetails = {
+        accountHolderName: saved.pln.accountHolderName || '',
+        accountHolderAddress: saved.pln.accountHolderAddress || '',
+        iban: saved.pln.iban || '',
+        swiftBic: saved.pln.swiftBic || ''
+      };
+      this.plnBankAccountType =
+        saved.pln.accountType ||
+        (saved.pln.swiftBic || (saved.pln.iban && /^[A-Za-z]{2}/.test(saved.pln.iban.trim()) && !saved.pln.iban.trim().toUpperCase().startsWith('PL'))
+          ? 'INTERNATIONAL'
+          : 'DOMESTIC');
+    }
+    if (saved.eur) {
+      this.eurBankDetails = {
+        accountHolderName: saved.eur.accountHolderName || '',
+        accountHolderAddress: saved.eur.accountHolderAddress || '',
+        iban: saved.eur.iban || '',
+        swiftBic: saved.eur.swiftBic || ''
+      };
+      this.eurBankAccountType =
+        saved.eur.accountType ||
+        (saved.eur.swiftBic || (saved.eur.iban && /^[A-Za-z]{2}/.test(saved.eur.iban.trim()) && !saved.eur.iban.trim().toUpperCase().startsWith('PL'))
+          ? 'INTERNATIONAL'
+          : 'DOMESTIC');
+    }
+  }
+
   public async ngOnInit(): Promise<void> {
     const saved = await this.app.getDefaultBankDetails();
     if (saved) {
-      if (saved.pln) {
-        this.plnBankDetails = {
-          accountHolderName: saved.pln.accountHolderName || '',
-          accountHolderAddress: saved.pln.accountHolderAddress || '',
-          iban: saved.pln.iban || '',
-          swiftBic: saved.pln.swiftBic || ''
-        };
-        this.plnBankAccountType =
-          saved.pln.accountType ||
-          (saved.pln.swiftBic || (saved.pln.iban && /^[A-Za-z]{2}/.test(saved.pln.iban.trim()) && !saved.pln.iban.trim().toUpperCase().startsWith('PL'))
-            ? 'INTERNATIONAL'
-            : 'DOMESTIC');
-      }
-      if (saved.eur) {
-        this.eurBankDetails = {
-          accountHolderName: saved.eur.accountHolderName || '',
-          accountHolderAddress: saved.eur.accountHolderAddress || '',
-          iban: saved.eur.iban || '',
-          swiftBic: saved.eur.swiftBic || ''
-        };
-        this.eurBankAccountType =
-          saved.eur.accountType ||
-          (saved.eur.swiftBic || (saved.eur.iban && /^[A-Za-z]{2}/.test(saved.eur.iban.trim()) && !saved.eur.iban.trim().toUpperCase().startsWith('PL'))
-            ? 'INTERNATIONAL'
-            : 'DOMESTIC');
-      }
+      this.populateBankDetails(saved);
     }
     if (this.user) {
       if (this.user.disabledEmailNotifications) {
@@ -195,6 +200,9 @@ export class ProfilePage implements OnInit {
           if (freshUser) {
             if (freshUser.disabledEmailNotifications) {
               this.disabledEmailNotifications = [...freshUser.disabledEmailNotifications];
+            }
+            if (freshUser.defaultBankDetails) {
+              this.populateBankDetails(freshUser.defaultBankDetails);
             }
             this.app.updateCurrentUserRecord(freshUser);
           }

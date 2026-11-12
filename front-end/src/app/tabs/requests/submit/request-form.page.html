@@ -789,8 +789,23 @@
 
       <!-- Section 4: Financial Information (Payout Bank Details - shown for reimbursement, advance, delegation) -->
       <div class="formCard" *ngIf="request.requestType !== 'INVOICE_TO_PAY'">
-        <h2 class="cardTitle">4. {{ 'REQUESTS.SECTIONS.FINANCIAL_INFO' | translate }}</h2>
-        <p class="sectionHelp">{{ 'REQUESTS.PAYOUT_BANK_HELP' | translate }}</p>
+        <div class="cardHeaderRow">
+          <div>
+            <h2 class="cardTitle">4. {{ 'REQUESTS.SECTIONS.FINANCIAL_INFO' | translate }}</h2>
+            <p class="sectionHelp">{{ 'REQUESTS.PAYOUT_BANK_HELP' | translate }}</p>
+          </div>
+
+          <ion-button
+            fill="outline"
+            size="small"
+            class="prefillBankBtn"
+            (click)="loadBankDetailsFromProfile(true)"
+            [title]="'REQUESTS.LOAD_PROFILE_BANK_TOOLTIP' | translate"
+          >
+            <ion-icon slot="start" name="sync-outline"></ion-icon>
+            {{ 'REQUESTS.LOAD_PROFILE_BANK' | translate }}
+          </ion-button>
+        </div>
 
         <!-- Mixed Currency Notice -->
         <div class="mixedCurrencyNotice" *ngIf="isMixedCurrency" style="margin-bottom: 1.25rem; padding: 0.85rem 1rem; background: rgba(var(--ion-color-warning-rgb, 255, 196, 9), 0.12); border-left: 4px solid var(--ion-color-warning, #ffc409); border-radius: 8px;">
@@ -803,10 +818,13 @@
           </p>
         </div>
 
-        <!-- Sub-section: PLN Payout Bank Account -->
+        <!-- Sub-section: Payout Bank Account -->
         <div class="bankSubSection">
-          <h3 class="subSectionTitle" *ngIf="isMixedCurrency" style="font-size: 1rem; font-weight: 600; margin-bottom: 0.75rem; color: var(--ion-color-primary, #3880ff);">
-            {{ 'REQUESTS.PLN_PAYOUT_ACCOUNT' | translate }}
+          <h3
+            class="subSectionTitle"
+            style="font-size: 1rem; font-weight: 600; margin-bottom: 0.75rem; color: var(--ion-color-primary, #3880ff);"
+          >
+            {{ (!isMixedCurrency && request.currency === 'EUR' ? 'REQUESTS.EUR_PAYOUT_ACCOUNT' : 'REQUESTS.PLN_PAYOUT_ACCOUNT') | translate }}
           </h3>
 
           <!-- Bank Account Type Toggle for PLN -->

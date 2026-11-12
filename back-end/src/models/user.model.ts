@@ -18,6 +18,19 @@ export interface UserMembershipGroup {
   name: string;
 }
 
+export interface UserDefaultBankAccount {
+  accountHolderName?: string;
+  accountHolderAddress?: string;
+  iban?: string;
+  swiftBic?: string;
+  accountType?: 'DOMESTIC' | 'INTERNATIONAL';
+}
+
+export interface UserDefaultBankDetails {
+  pln?: UserDefaultBankAccount;
+  eur?: UserDefaultBankAccount;
+}
+
 export class User extends Resource {
   /** User identifier in ESN Accounts (UUID in OAuth v2, or legacy username) */
   userId: string;
@@ -85,6 +98,8 @@ export class User extends Resource {
   disabledEmailNotifications?: string[];
   /** Whether the user has explicitly selected/confirmed their primary section */
   primarySectionChosen?: boolean;
+  /** Default payout bank account details for PLN and EUR */
+  defaultBankDetails?: UserDefaultBankDetails;
 
   constructor(data?: any) {
     super();
@@ -341,6 +356,38 @@ export class User extends Resource {
       Boolean,
       !hasMultipleSections
     );
+
+    if (x.defaultBankDetails && typeof x.defaultBankDetails === 'object') {
+      const cleanAccount = (acc: any): UserDefaultBankAccount | undefined => {
+        if (!acc || typeof acc !== 'object') return undefined;
+        const cleaned: UserDefaultBankAccount = {};
+        if (acc.accountHolderName !== undefined) cleaned.accountHolderName = this.clean(acc.accountHolderName, String, '');
+        if (acc.accountHolderAddress !== undefined) cleaned.accountHolderAddress = this.clean(acc.accountHolderAddress, String, '');
+        if (acc.iban !== undefined) cleaned.iban = this.clean(acc.iban, String, '');
+        if (acc.swiftBic !== undefined) cleaned.swiftBic = this.clean(acc.swiftBic, String, '');
+        if (acc.accountType === 'DOMESTIC' || acc.accountType === 'INTERNATIONAL') {
+          cleaned.accountType = acc.accountType;
+        } else if (cleaned.iban) {
+          cleaned.accountType = (cleaned.swiftBic || (/^[A-Za-z]{2}/.test(cleaned.iban.trim()) && !cleaned.iban.trim().toUpperCase().startsWith('PL')))
+            ? 'INTERNATIONAL'
+            : 'DOMESTIC';
+        }
+        return (cleaned.accountHolderName || cleaned.accountHolderAddress || cleaned.iban || cleaned.swiftBic) ? cleaned : undefined;
+      };
+
+      const pln = cleanAccount(x.defaultBankDetails.pln);
+      const eur = cleanAccount(x.defaultBankDetails.eur);
+      if (pln || eur) {
+        this.defaultBankDetails = {
+          ...(pln ? { pln } : {}),
+          ...(eur ? { eur } : {})
+        };
+      } else {
+        this.defaultBankDetails = undefined;
+      }
+    } else {
+      this.defaultBankDetails = undefined;
+    }
   }
 
   isEmailNotificationEnabled(templateType: string): boolean {

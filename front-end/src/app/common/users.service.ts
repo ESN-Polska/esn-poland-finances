@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { IDEAApiService } from '@idea-ionic/common';
-import { User } from '@models/user.model';
+import { User, UserDefaultBankDetails } from '@models/user.model';
 
 @Injectable({ providedIn: 'root' })
 export class UsersService {
@@ -63,6 +63,24 @@ export class UsersService {
       return raw ? new User(raw) : null;
     } catch (err) {
       console.error('Failed to update user origin preferences', err);
+      throw err;
+    }
+  }
+
+  /**
+   * Update default payout bank details for user.
+   */
+  async updateDefaultBankDetails(
+    userId: string,
+    defaultBankDetails: UserDefaultBankDetails | null
+  ): Promise<User | null> {
+    try {
+      const raw = await this.api.patchResource(['users', encodeURIComponent(userId.toLowerCase())], {
+        body: { defaultBankDetails }
+      });
+      return raw ? new User(raw) : null;
+    } catch (err) {
+      console.error('Failed to update user default bank details', err);
       throw err;
     }
   }

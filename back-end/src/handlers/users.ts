@@ -191,6 +191,40 @@ class UsersRC extends ResourceController {
       userRecord.primarySectionChosen = !!this.body.primarySectionChosen;
     }
 
+    if (this.body?.defaultBankDetails !== undefined) {
+      if (this.body.defaultBankDetails === null) {
+        delete userRecord.defaultBankDetails;
+      } else if (typeof this.body.defaultBankDetails === 'object') {
+        const cleanAccount = (acc: any) => {
+          if (!acc || typeof acc !== 'object') return undefined;
+          const cleaned: any = {};
+          if (acc.accountHolderName !== undefined) cleaned.accountHolderName = String(acc.accountHolderName || '').trim();
+          if (acc.accountHolderAddress !== undefined) cleaned.accountHolderAddress = String(acc.accountHolderAddress || '').trim();
+          if (acc.iban !== undefined) cleaned.iban = String(acc.iban || '').trim();
+          if (acc.swiftBic !== undefined) cleaned.swiftBic = String(acc.swiftBic || '').trim();
+          if (acc.accountType === 'DOMESTIC' || acc.accountType === 'INTERNATIONAL') {
+            cleaned.accountType = acc.accountType;
+          } else if (cleaned.iban) {
+            cleaned.accountType = (cleaned.swiftBic || (/^[A-Za-z]{2}/.test(cleaned.iban) && !cleaned.iban.toUpperCase().startsWith('PL')))
+              ? 'INTERNATIONAL'
+              : 'DOMESTIC';
+          }
+          return (cleaned.accountHolderName || cleaned.accountHolderAddress || cleaned.iban || cleaned.swiftBic) ? cleaned : undefined;
+        };
+
+        const pln = cleanAccount(this.body.defaultBankDetails.pln);
+        const eur = cleanAccount(this.body.defaultBankDetails.eur);
+        if (pln || eur) {
+          userRecord.defaultBankDetails = {
+            ...(pln ? { pln } : {}),
+            ...(eur ? { eur } : {})
+          };
+        } else {
+          delete userRecord.defaultBankDetails;
+        }
+      }
+    }
+
     await ddb.put({
       TableName: DDB_TABLES.users,
       Item: userRecord

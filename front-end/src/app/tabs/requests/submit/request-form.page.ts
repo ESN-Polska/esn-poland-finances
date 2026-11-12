@@ -3,14 +3,16 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { NgForm } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { debounceTime } from 'rxjs/operators';
-import { ToastController, LoadingController, AlertController } from '@ionic/angular';
+import { ToastController, LoadingController, AlertController, ViewWillEnter } from '@ionic/angular';
 import { TranslateService } from '@ngx-translate/core';
 import {
   AttachmentFile,
+  Currency,
   FinancialRequest,
   FinancialRequestType,
   InvoiceDocumentItem
 } from '@models/financial-request.model';
+import { UserDefaultBankDetails } from '@models/user.model';
 import { AppService } from '../../../app.service';
 import { RequestsService } from '../../../services/requests.service';
 import { MediaService } from '../../../common/media.service';
@@ -21,7 +23,7 @@ import { parseLocaleNumber } from '../../../utils/number-utils';
   templateUrl: './request-form.page.html',
   styleUrls: ['./request-form.page.scss']
 })
-export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy {
+export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy, ViewWillEnter {
   @ViewChild('requestForm') requestForm?: NgForm;
   private formSub?: Subscription;
   private readonly DRAFT_KEY = 'esn_finances_request_draft';
@@ -38,6 +40,8 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy {
   private readonly MAX_FILE_SIZE = this.MAX_FILE_SIZE_MB * 1024 * 1024;
 
   public isMixedCurrency = false;
+  private lastResolvedCurrency: Currency = 'PLN';
+  private lastWasMixedCurrency = false;
   public totalGrossPLN = 0;
   public totalVatPLN = 0;
   public totalNetPLN = 0;
@@ -127,6 +131,12 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy {
     } else {
       this.isEditMode = false;
       await this.initNewRequest();
+    }
+  }
+
+  public async ionViewWillEnter(): Promise<void> {
+    if (!this.isEditMode) {
+      await this.syncProfileBankDetailsIfNeeded();
     }
   }
 
@@ -242,6 +252,134 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy {
     this.recalculateTotals();
   }
 
+  public applyProfileBankDefaults(defaultBank: UserDefaultBankDetails | null, overrideExisting = false): void {
+    if (!defaultBank) return;
+    const user = this.appService.currentUser;
+    const plnBank = defaultBank.pln;
+    const eurBank = defaultBank.eur;
+    const isEur = this.request.currency === 'EUR' && !this.isMixedCurrency;
+    const primaryBank = isEur ? (eurBank || plnBank) : plnBank;
+
+    if (primaryBank) {
+      if (overrideExisting || !this.request.accountHolderName?.trim()) {
+        this.request.accountHolderName = primaryBank.accountHolderName || user?.getDisplayName() || '';
+      }
+      if (overrideExisting || !this.request.accountHolderAddress?.trim()) {
+        this.request.accountHolderAddress = primaryBank.accountHolderAddress || '';
+      }
+      if (overrideExisting || !this.request.iban?.trim()) {
+        this.request.iban = primaryBank.iban || '';
+        this.bankAccountType =
+          primaryBank.accountType ||
+          (primaryBank.swiftBic || (primaryBank.iban && /^[A-Za-z]{2}/.test(primaryBank.iban.trim()) && !primaryBank.iban.trim().toUpperCase().startsWith('PL'))
+            ? 'INTERNATIONAL'
+            : 'DOMESTIC');
+      }
+      if (overrideExisting || !this.request.swiftBic?.trim()) {
+        this.request.swiftBic = primaryBank.swiftBic || '';
+      }
+    } else if (overrideExisting || !this.request.accountHolderName?.trim()) {
+      this.request.accountHolderName = user?.getDisplayName() || '';
+    }
+
+    if (eurBank) {
+      if (overrideExisting || !this.request.accountHolderNameEUR?.trim()) {
+        this.request.accountHolderNameEUR = eurBank.accountHolderName || plnBank?.accountHolderName || user?.getDisplayName() || '';
+      }
+      if (overrideExisting || !this.request.accountHolderAddressEUR?.trim()) {
+        this.request.accountHolderAddressEUR = eurBank.accountHolderAddress || plnBank?.accountHolderAddress || '';
+      }
+      if (overrideExisting || !this.request.ibanEUR?.trim()) {
+        this.request.ibanEUR = eurBank.iban || '';
+        this.eurBankAccountType =
+          eurBank.accountType ||
+          (eurBank.swiftBic || (eurBank.iban && /^[A-Za-z]{2}/.test(eurBank.iban.trim()) && !eurBank.iban.trim().toUpperCase().startsWith('PL'))
+            ? 'INTERNATIONAL'
+            : 'DOMESTIC');
+      }
+      if (overrideExisting || !this.request.swiftBicEUR?.trim()) {
+        this.request.swiftBicEUR = eurBank.swiftBic || '';
+      }
+    }
+  }
+
+  private async syncProfileBankDetailsIfNeeded(): Promise<void> {
+    const defaultBank = await this.appService.getDefaultBankDetails();
+    if (!defaultBank) return;
+
+    const hasNoIban = !this.request.iban?.trim();
+    const hasNoAddress = !this.request.accountHolderAddress?.trim();
+    if (hasNoIban || hasNoAddress) {
+      this.applyProfileBankDefaults(defaultBank, false);
+      this.cdr.markForCheck();
+    }
+  }
+
+  public async loadBankDetailsFromProfile(force = true): Promise<void> {
+    const defaultBank = await this.appService.getDefaultBankDetails();
+    if (!defaultBank || (!defaultBank.pln && !defaultBank.eur)) {
+      await this.showToast('REQUESTS.NO_PROFILE_BANK_SAVED', 'warning');
+      return;
+    }
+
+    this.applyProfileBankDefaults(defaultBank, force);
+    this.requestForm?.form.markAsDirty();
+    this.requestForm?.form.updateValueAndValidity();
+    this.cdr.markForCheck();
+    await this.showToast('REQUESTS.PROFILE_BANK_LOADED', 'success');
+  }
+
+  private async syncBankDetailsOnCurrencyChange(newCurrency: Currency, isMixed: boolean): Promise<void> {
+    const defaultBank = await this.appService.getDefaultBankDetails();
+    if (!defaultBank) return;
+
+    const plnIban = (defaultBank.pln?.iban || '').replace(/\s+/g, '').toUpperCase();
+    const eurIban = (defaultBank.eur?.iban || '').replace(/\s+/g, '').toUpperCase();
+    const currentIban = (this.request.iban || '').replace(/\s+/g, '').toUpperCase();
+
+    if (!isMixed) {
+      if (newCurrency === 'EUR') {
+        if (defaultBank.eur?.iban && (!currentIban || currentIban === plnIban)) {
+          this.request.iban = defaultBank.eur.iban;
+          this.request.swiftBic = defaultBank.eur.swiftBic || '';
+          this.bankAccountType = defaultBank.eur.accountType || (defaultBank.eur.swiftBic ? 'INTERNATIONAL' : 'DOMESTIC');
+          if (defaultBank.eur.accountHolderName) {
+            this.request.accountHolderName = defaultBank.eur.accountHolderName;
+          }
+          if (defaultBank.eur.accountHolderAddress) {
+            this.request.accountHolderAddress = defaultBank.eur.accountHolderAddress;
+          }
+        }
+      } else if (newCurrency === 'PLN') {
+        if (defaultBank.pln?.iban && (!currentIban || currentIban === eurIban)) {
+          this.request.iban = defaultBank.pln.iban;
+          this.request.swiftBic = defaultBank.pln.swiftBic || '';
+          this.bankAccountType = defaultBank.pln.accountType || (defaultBank.pln.swiftBic ? 'INTERNATIONAL' : 'DOMESTIC');
+          if (defaultBank.pln.accountHolderName) {
+            this.request.accountHolderName = defaultBank.pln.accountHolderName;
+          }
+          if (defaultBank.pln.accountHolderAddress) {
+            this.request.accountHolderAddress = defaultBank.pln.accountHolderAddress;
+          }
+        }
+      }
+    } else {
+      if (defaultBank.pln?.iban && (!currentIban || currentIban === eurIban)) {
+        this.request.iban = defaultBank.pln.iban;
+        this.request.swiftBic = defaultBank.pln.swiftBic || '';
+        this.bankAccountType = defaultBank.pln.accountType || (defaultBank.pln.swiftBic ? 'INTERNATIONAL' : 'DOMESTIC');
+      }
+      if (defaultBank.eur?.iban && !this.request.ibanEUR?.trim()) {
+        this.request.ibanEUR = defaultBank.eur.iban;
+        this.request.swiftBicEUR = defaultBank.eur.swiftBic || '';
+        this.eurBankAccountType = defaultBank.eur.accountType || (defaultBank.eur.swiftBic ? 'INTERNATIONAL' : 'DOMESTIC');
+        this.request.accountHolderNameEUR = defaultBank.eur.accountHolderName || defaultBank.pln?.accountHolderName || this.appService.currentUser?.getDisplayName() || '';
+        this.request.accountHolderAddressEUR = defaultBank.eur.accountHolderAddress || defaultBank.pln?.accountHolderAddress || '';
+      }
+    }
+    this.cdr.markForCheck();
+  }
+
   private async initNewRequest(): Promise<void> {
     const user = this.appService.currentUser;
     const defaultBank = await this.appService.getDefaultBankDetails();
@@ -250,9 +388,6 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy {
     const defaultType: FinancialRequestType = allowed.includes('INVOICE_REIMBURSEMENT')
       ? 'INVOICE_REIMBURSEMENT'
       : (allowed[0] || 'INVOICE_REIMBURSEMENT');
-
-    const plnBank = defaultBank?.pln;
-    const eurBank = defaultBank?.eur;
 
     let initialSection = user?.section || user?.sectionCode || '';
     if (user?.availableSections?.length) {
@@ -286,6 +421,9 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy {
           }
           this.recalculateTotals();
 
+          // Intelligently backfill empty bank fields from defaultBank without overriding existing draft values
+          this.applyProfileBankDefaults(defaultBank, false);
+
           this.bankAccountType =
             this.request.swiftBic || (this.request.iban && /^[A-Za-z]{2}/.test(this.request.iban.trim()) && !this.request.iban.trim().toUpperCase().startsWith('PL'))
               ? 'INTERNATIONAL'
@@ -311,31 +449,20 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy {
       totalGrossAmount: undefined,
       totalVatAmount: undefined,
       documents: [],
-      accountHolderName: plnBank?.accountHolderName || user?.getDisplayName() || '',
-      accountHolderAddress: plnBank?.accountHolderAddress || '',
-      iban: plnBank?.iban || '',
-      swiftBic: plnBank?.swiftBic || '',
-      accountHolderNameEUR: eurBank?.accountHolderName || plnBank?.accountHolderName || user?.getDisplayName() || '',
-      accountHolderAddressEUR: eurBank?.accountHolderAddress || plnBank?.accountHolderAddress || '',
-      ibanEUR: eurBank?.iban || '',
-      swiftBicEUR: eurBank?.swiftBic || '',
+      accountHolderName: '',
+      accountHolderAddress: '',
+      iban: '',
+      swiftBic: '',
+      accountHolderNameEUR: '',
+      accountHolderAddressEUR: '',
+      ibanEUR: '',
+      swiftBicEUR: '',
       additionalRemarks: '',
       ticketAttachments: []
     };
 
+    this.applyProfileBankDefaults(defaultBank, true);
     this.updateCountryFromSection();
-
-    this.bankAccountType =
-      plnBank?.accountType ||
-      (plnBank?.swiftBic || (plnBank?.iban && /^[A-Za-z]{2}/.test(plnBank.iban.trim()) && !plnBank.iban.trim().toUpperCase().startsWith('PL'))
-        ? 'INTERNATIONAL'
-        : 'DOMESTIC');
-
-    this.eurBankAccountType =
-      eurBank?.accountType ||
-      (eurBank?.swiftBic || (eurBank?.iban && /^[A-Za-z]{2}/.test(eurBank.iban.trim()) && !eurBank.iban.trim().toUpperCase().startsWith('PL'))
-        ? 'INTERNATIONAL'
-        : 'DOMESTIC');
 
     if (this.request.requestType === 'INVOICE_TO_PAY' || this.request.requestType === 'INVOICE_REIMBURSEMENT') {
       this.addDocumentItem();
@@ -550,6 +677,18 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy {
       const gross = parseLocaleNumber(this.request.totalGrossAmount) || 0;
       const vat = parseLocaleNumber(this.request.totalVatAmount) || 0;
       this.totalNetAmount = Math.max(0, Math.round((gross - vat) * 100) / 100);
+    }
+
+    const currentCurrency = (this.request.currency || 'PLN') as Currency;
+    const isMixed = this.isMixedCurrency;
+
+    if (
+      !this.isEditMode &&
+      (currentCurrency !== this.lastResolvedCurrency || isMixed !== this.lastWasMixedCurrency)
+    ) {
+      this.syncBankDetailsOnCurrencyChange(currentCurrency, isMixed);
+      this.lastResolvedCurrency = currentCurrency;
+      this.lastWasMixedCurrency = isMixed;
     }
   }
 

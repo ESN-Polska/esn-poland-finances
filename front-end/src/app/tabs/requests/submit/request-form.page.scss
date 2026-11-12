@@ -614,7 +614,8 @@
   }
 }
 
-.addDocBtn {
+.addDocBtn,
+.prefillBankBtn {
   --color: var(--ion-color-primary, var(--esn-cyan));
   --border-color: var(--ion-color-primary, var(--esn-cyan));
   font-size: 0.85rem;

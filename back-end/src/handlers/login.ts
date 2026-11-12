@@ -338,7 +338,8 @@ class Login extends ResourceController {
       disabledEmailNotifications: existingUserRecord?.disabledEmailNotifications || [],
       primarySectionChosen: isChosenSectionStillValid
         ? (existingUserRecord?.primarySectionChosen ?? (uniqueSections.length <= 1))
-        : (uniqueSections.length <= 1)
+        : (uniqueSections.length <= 1),
+      defaultBankDetails: existingUserRecord?.defaultBankDetails
     });
     User.applyConfigurationPermissions(user, configurations);
     this.logger.info('ESN Accounts OAuth login successful', { userId: user.userId, nickname: user.nickname, section: user.sectionCode });
@@ -405,7 +406,8 @@ class Login extends ResourceController {
             canManageFinances: user.canManageFinances,
             lastLoginAt: user.lastLoginAt,
             disabledEmailNotifications: user.disabledEmailNotifications || [],
-            primarySectionChosen: user.primarySectionChosen
+            primarySectionChosen: user.primarySectionChosen,
+            ...(user.defaultBankDetails ? { defaultBankDetails: user.defaultBankDetails } : {})
           }
         });
       } catch (dbErr) {
@@ -492,7 +494,8 @@ class Login extends ResourceController {
       guestMaxAmount: invitation.maxAmount,
       guestInstructions: invitation.instructions,
       lastLoginAt: now,
-      disabledEmailNotifications: existingGuestRecord?.disabledEmailNotifications || []
+      disabledEmailNotifications: existingGuestRecord?.disabledEmailNotifications || [],
+      defaultBankDetails: existingGuestRecord?.defaultBankDetails
     });
 
     // Persist guest user to DynamoDB users table
@@ -523,7 +526,8 @@ class Login extends ResourceController {
             guestPosition: guestUser.guestPosition,
             guestDefaultSourceOfFunding: guestUser.guestDefaultSourceOfFunding,
             lastLoginAt: guestUser.lastLoginAt,
-            disabledEmailNotifications: guestUser.disabledEmailNotifications || []
+            disabledEmailNotifications: guestUser.disabledEmailNotifications || [],
+            ...(guestUser.defaultBankDetails ? { defaultBankDetails: guestUser.defaultBankDetails } : {})
           }
         });
       } catch (dbErr) {

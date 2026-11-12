@@ -8,7 +8,7 @@ import { ToastController } from '@ionic/angular';
 import { IDEAApiService } from '@idea-ionic/common';
 
 import { environment as env } from '@env';
-import { User } from '@models/user.model';
+import { User, UserDefaultBankDetails } from '@models/user.model';
 import { ALL_APP_PERMISSIONS, Configurations, CustomRole, AppPermission, DateFormatOption } from '@models/configurations.model';
 import { formatDateOption, FormatDateOptions, clearDateFormatCache } from './utils/date-utils';
 import { ConfigurationsService } from './tabs/configurations/configurations.service';
@@ -238,6 +238,12 @@ export class AppService {
       current.primarySectionChosen = Boolean(userRecord.primarySectionChosen);
     }
     User.applyConfigurationPermissions(current, this.configurations);
+    if (current.defaultBankDetails && this._storage) {
+      await this._storage.set(DEFAULT_BANK_KEY, current.defaultBankDetails);
+      if (current.userId) {
+        await this._storage.set(`${DEFAULT_BANK_KEY}_${current.userId}`, current.defaultBankDetails);
+      }
+    }
     if (this.originalUser) {
       this.originalUser.load(userRecord);
       if (userRecord?.primarySectionChosen !== undefined) {
@@ -660,44 +666,78 @@ export class AppService {
     this.exitPreview(navigate);
   }
 
-  public async getDefaultBankDetails(): Promise<{
-    pln?: {
-      accountHolderName?: string;
-      accountHolderAddress?: string;
-      iban?: string;
-      swiftBic?: string;
-      accountType?: 'DOMESTIC' | 'INTERNATIONAL';
-    };
-    eur?: {
-      accountHolderName?: string;
-      accountHolderAddress?: string;
-      iban?: string;
-      swiftBic?: string;
-      accountType?: 'DOMESTIC' | 'INTERNATIONAL';
-    };
-  } | null> {
+  public async getDefaultBankDetails(): Promise<UserDefaultBankDetails | null> {
     if (!this._storage) await this.init();
-    return (await this._storage?.get(DEFAULT_BANK_KEY)) || null;
+
+    // 1. If currentUser already has defaultBankDetails from backend, prefer it
+    if (this.currentUser?.defaultBankDetails && (this.currentUser.defaultBankDetails.pln || this.currentUser.defaultBankDetails.eur)) {
+      return this.currentUser.defaultBankDetails;
+    }
+
+    const userId = this.currentUser?.userId;
+    let stored: any = null;
+
+    // 2. Try user-scoped storage key
+    if (userId) {
+      stored = await this._storage?.get(`${DEFAULT_BANK_KEY}_${userId}`);
+    }
+
+    // 3. Fallback to global storage key
+    if (!stored) {
+      stored = await this._storage?.get(DEFAULT_BANK_KEY);
+    }
+
+    if (!stored) return null;
+
+    // 4. Normalize legacy flat format if present
+    if (!stored.pln && !stored.eur && (stored.iban || stored.accountHolderName)) {
+      const normalized: UserDefaultBankDetails = {
+        pln: {
+          accountHolderName: stored.accountHolderName || '',
+          accountHolderAddress: stored.accountHolderAddress || '',
+          iban: stored.iban || '',
+          swiftBic: stored.swiftBic || '',
+          accountType: stored.accountType || (stored.swiftBic ? 'INTERNATIONAL' : 'DOMESTIC')
+        }
+      };
+      return normalized;
+    }
+
+    return stored;
   }
 
-  public async saveDefaultBankDetails(details: {
-    pln?: {
-      accountHolderName?: string;
-      accountHolderAddress?: string;
-      iban?: string;
-      swiftBic?: string;
-      accountType?: 'DOMESTIC' | 'INTERNATIONAL';
-    };
-    eur?: {
-      accountHolderName?: string;
-      accountHolderAddress?: string;
-      iban?: string;
-      swiftBic?: string;
-      accountType?: 'DOMESTIC' | 'INTERNATIONAL';
-    };
-  }): Promise<void> {
+  public async saveDefaultBankDetails(details: UserDefaultBankDetails): Promise<void> {
     if (!this._storage) await this.init();
+
+    // 1. Save to local storage (both global and user-scoped)
     await this._storage?.set(DEFAULT_BANK_KEY, details);
+    const userId = this.currentUser?.userId;
+    if (userId) {
+      await this._storage?.set(`${DEFAULT_BANK_KEY}_${userId}`, details);
+    }
+
+    // 2. Update in-memory user
+    if (this.currentUser) {
+      this.currentUser.defaultBankDetails = details;
+      if (this.originalUser) {
+        this.originalUser.defaultBankDetails = details;
+      }
+      if (this._storage) {
+        await this._storage.set(USER_KEY, JSON.parse(JSON.stringify(this.currentUser)));
+      }
+      this.userSubject.next(this.currentUser);
+    }
+
+    // 3. Persist to backend if user is authenticated
+    if (userId && !this.currentUser?.isGuest) {
+      try {
+        await this.api.patchResource(['users', encodeURIComponent(userId.toLowerCase())], {
+          body: { defaultBankDetails: details }
+        });
+      } catch (err) {
+        console.warn('Failed to sync default bank details to backend', err);
+      }
+    }
   }
 
   public async clearAuth(): Promise<void> {
