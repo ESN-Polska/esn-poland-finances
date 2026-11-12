@@ -1098,8 +1098,11 @@
         </div>
 
         <!-- Code -->
-        <div class="cellCode" [title]="line.code || ''">
-          <span class="lineCodeTag" [title]="line.code || ''">{{ line.code || '—' }}</span>
+        <div class="cellCode">
+          <span
+            class="lineCodeTag"
+            [class.is-truncated]="isCodeTruncated(line.code)"
+          >{{ line.code || '—' }}</span>
         </div>
 
         <!-- Name & notes -->

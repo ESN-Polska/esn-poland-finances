@@ -1223,20 +1223,24 @@
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
-      cursor: help;
+      cursor: default;
       transition: all 0.15s ease;
 
-      &:hover {
-        position: absolute;
-        left: 0;
-        top: 50%;
-        transform: translateY(-50%);
-        max-width: none;
-        width: max-content;
-        z-index: 100;
-        background: var(--ion-color-step-200, #e2e8f0);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-        border: 1px solid var(--ion-color-step-300, #cbd5e1);
+      &.is-truncated {
+        cursor: help;
+
+        &:hover {
+          position: absolute;
+          left: 0;
+          top: 50%;
+          transform: translateY(-50%);
+          max-width: none;
+          width: max-content;
+          z-index: 100;
+          background: var(--ion-color-step-200, #e2e8f0);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+          border: 1px solid var(--ion-color-step-300, #cbd5e1);
+        }
       }
     }
   }
@@ -1796,7 +1800,7 @@ body.dark {
       background: rgba(255, 255, 255, 0.08);
       color: #e2e8f0;
 
-      &:hover {
+      &.is-truncated:hover {
         background: #2a2a2a;
         color: #ffffff;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);

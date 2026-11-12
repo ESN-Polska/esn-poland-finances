@@ -733,6 +733,10 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
     this.searchQuery = '';
   }
 
+  isCodeTruncated(code?: string): boolean {
+    return !!code && code.trim().length >= 10;
+  }
+
   getAllExistingCodes(type?: BudgetLineType): string[] {
     const codes: string[] = [];
     const collect = (items: (DynamicBudgetGroup | BudgetLineItem)[]) => {
