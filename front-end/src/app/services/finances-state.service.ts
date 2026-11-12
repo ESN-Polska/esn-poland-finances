@@ -42,11 +42,15 @@ export class FinancesStateService {
   public refreshAvailableYears(firstYear?: number): void {
     const configFirstYear = firstYear ?? this.appService.configurations?.financesConfig?.firstYear;
     const computed = computeAvailableYears(configFirstYear);
-    if (!computed.includes(this._activeYear$.value)) {
-      computed.push(this._activeYear$.value);
-      computed.sort((a, b) => b - a);
-    }
     this._availableYears$.next(computed);
+    if (!computed.includes(this._activeYear$.value)) {
+      const fallbackYear = computed.includes(new Date().getFullYear()) ? new Date().getFullYear() : computed[0];
+      this.setYear(fallbackYear, true);
+    }
+  }
+
+  public isYearAvailable(year: number): boolean {
+    return this._availableYears$.value.includes(year);
   }
 
   private initFromRoute(): void {
@@ -59,8 +63,19 @@ export class FinancesStateService {
       currentRoute.queryParams.subscribe((params) => {
         if (params['year']) {
           const parsedYear = parseInt(params['year'], 10);
-          if (!isNaN(parsedYear) && parsedYear !== this._activeYear$.value) {
-            this.setYear(parsedYear, false);
+          if (!isNaN(parsedYear)) {
+            const available = this._availableYears$.value;
+            if (available.includes(parsedYear)) {
+              if (parsedYear !== this._activeYear$.value) {
+                this.setYear(parsedYear, false);
+              }
+            } else {
+              // Year is not valid/does not exist: redirect URL and active year to fallback
+              const fallbackYear = available.includes(this._activeYear$.value)
+                ? this._activeYear$.value
+                : (available.includes(new Date().getFullYear()) ? new Date().getFullYear() : available[0]);
+              this.setYear(fallbackYear, true);
+            }
           }
         }
         if (params['subtab'] && params['subtab'] !== this._activeSubtab$.value) {
@@ -83,15 +98,27 @@ export class FinancesStateService {
   }
 
   public setYear(year: number, updateUrl: boolean = true): void {
-    if (this._activeYear$.value === year) return;
+    const available = this._availableYears$.value;
+    if (!available.includes(year)) {
+      const fallback = available.includes(new Date().getFullYear()) ? new Date().getFullYear() : available[0];
+      year = fallback;
+      updateUrl = true;
+    }
+
+    if (this._activeYear$.value === year) {
+      if (updateUrl) {
+        this.router.navigate([], {
+          queryParams: { year, code: null, targetId: null },
+          queryParamsHandling: 'merge'
+        });
+      }
+      return;
+    }
+
     this._activeYear$.next(year);
     // Mark previous years as archived / read-only by default (except current active operational year)
     const currentYear = new Date().getFullYear();
     this._isArchived$.next(year < currentYear);
-
-    if (!this._availableYears$.value.includes(year)) {
-      this.addYear(year);
-    }
 
     if (updateUrl) {
       this.router.navigate([], {

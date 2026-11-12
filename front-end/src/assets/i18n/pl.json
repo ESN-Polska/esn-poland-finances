@@ -1203,7 +1203,15 @@
       "REVERT_TO_DRAFT": "Przywróć status Projekt (Draft)",
       "SAVING": "Zapisywanie zmian w budżecie...",
       "SAVE_SUCCESS": "Zmiany w budżecie zostały zapisane",
-      "SAVE_ERROR": "Błąd podczas zapisywania budżetu"
+      "SAVE_ERROR": "Błąd podczas zapisywania budżetu",
+      "UNBUDGETED_CASHFLOWS_TITLE": "Niezabudżetowane przepływy finansowe",
+      "UNBUDGETED_CASHFLOWS_DESC": "Transakcje bankowe i przepływy nieprzypisane do żadnej pozycji budżetowej",
+      "UNBUDGETED_REVENUES": "Niezabudżetowane przychody",
+      "UNBUDGETED_EXPENSES": "Niezabudżetowane koszty",
+      "UNBUDGETED_EMPTY": "Wszystkie przepływy finansowe są w pełni powiązane z pozycjami budżetu.",
+      "SHOW_UNBUDGETED_TRANSACTIONS": "Pokaż listę transakcji",
+      "HIDE_UNBUDGETED_TRANSACTIONS": "Ukryj listę transakcji",
+      "VIEW_IN_TRANSACTIONS": "Pokaż w transakcjach"
     },
     "DOCUMENTS": {
       "TITLE": "Rejestr faktur i dokumentów kosztowych",

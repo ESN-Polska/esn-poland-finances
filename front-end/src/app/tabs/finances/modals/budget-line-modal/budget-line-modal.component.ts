@@ -1,7 +1,7 @@
 import { Component, Input, OnInit, inject } from '@angular/core';
 import { ModalController, ToastController } from '@ionic/angular';
 import { TranslateService } from '@ngx-translate/core';
-import { BudgetLineItem } from '@models/annual-budget.model';
+import { BudgetLineItem, BudgetLineType } from '@models/annual-budget.model';
 import { parseLocaleNumber } from '../../../../utils/number-utils';
 
 @Component({
@@ -17,6 +17,7 @@ export class BudgetLineModalComponent implements OnInit {
   @Input() lineItem?: BudgetLineItem;
   @Input() groupCodePrefix: string = '';
   @Input() existingCodes: string[] = [];
+  @Input() lineType?: BudgetLineType;
   @Input() isNew: boolean = true;
   @Input() isAmending: boolean = false;
   @Input() currentApprovedAmount: number = 0;
@@ -91,6 +92,7 @@ export class BudgetLineModalComponent implements OnInit {
 
     const resultLine: BudgetLineItem = {
       code: trimmedCode,
+      type: this.lineType || this.lineItem?.type || 'EXPENSE',
       name: {
         pl: this.namePl.trim(),
         en: this.nameEn.trim()

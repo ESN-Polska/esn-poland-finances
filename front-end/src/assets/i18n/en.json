@@ -1203,7 +1203,15 @@
       "REVERT_TO_DRAFT": "Revert to Draft",
       "SAVING": "Saving budget changes...",
       "SAVE_SUCCESS": "Budget changes have been saved",
-      "SAVE_ERROR": "Failed to save budget changes"
+      "SAVE_ERROR": "Failed to save budget changes",
+      "UNBUDGETED_CASHFLOWS_TITLE": "Unbudgeted cash flows",
+      "UNBUDGETED_CASHFLOWS_DESC": "Bank transactions and flows not allocated to any budget line",
+      "UNBUDGETED_REVENUES": "Unbudgeted revenues",
+      "UNBUDGETED_EXPENSES": "Unbudgeted expenses",
+      "UNBUDGETED_EMPTY": "All cash flows are fully reconciled with budget lines.",
+      "SHOW_UNBUDGETED_TRANSACTIONS": "Show transactions list",
+      "HIDE_UNBUDGETED_TRANSACTIONS": "Hide transactions list",
+      "VIEW_IN_TRANSACTIONS": "View in transactions"
     },
     "DOCUMENTS": {
       "TITLE": "Invoices & Cost Documents Registry",

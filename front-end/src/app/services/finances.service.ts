@@ -35,7 +35,8 @@ export class FinancesService {
   }
 
   public async saveBudget(budget: AnnualBudget): Promise<AnnualBudget> {
-    const raw = await this.api.putResource('budgets', { body: budget });
+    const path = budget?.year ? ['budgets', budget.year.toString()] : 'budgets';
+    const raw = await this.api.putResource(path, { body: budget });
     return new AnnualBudget(raw);
   }
 

@@ -358,8 +358,8 @@
         <div class="obCol">
           <span class="obColLabel">{{ 'FINANCES.BUDGET.BANK_EUR' | translate }}</span>
           <span class="obColValue">{{ budget.openingBalances.bankEurInPln | financeNumber:{ currency: 'PLN' } }}</span>
-          <span class="obColSub" *ngIf="budget.openingBalances.bankEurStartingBalance">
-            {{ budget.openingBalances.bankEurStartingBalance | financeNumber:{ currency: 'EUR' } }}
+          <span class="obColSub" *ngIf="budget.openingBalances.bankEurStartingBalance || budget.openingBalances.bankEur">
+            {{ (budget.openingBalances.bankEurStartingBalance || budget.openingBalances.bankEur) | financeNumber:{ currency: 'EUR' } }}
             <span *ngIf="budget.openingBalances.eurExchangeRate">
               ({{ 'FINANCES.BUDGET.NBP_RATE_PREFIX' | translate }}: <a [href]="'https://api.nbp.pl/api/exchangerates/rates/A/EUR/' + budget.openingBalances.eurExchangeDate + '/'" target="_blank" rel="noopener noreferrer" class="nbpLink">{{ budget.openingBalances.eurExchangeRate }}</a> {{ 'FINANCES.BUDGET.NBP_DATE_PREFIX' | translate:{ date: formatDate(budget.openingBalances.eurExchangeDate) } }})
             </span>
@@ -803,6 +803,144 @@
     </div>
 
     <!-- ========================================== -->
+    <!-- UNBUDGETED CASH FLOWS CARD                -->
+    <!-- ========================================== -->
+    <div class="unbudgetedCashflowsCard" *ngIf="budget && !isAmending">
+      <div class="ubHeader">
+        <div class="ubTitleGroup">
+          <div class="ubIconBadge">
+            <ion-icon name="wallet-outline"></ion-icon>
+          </div>
+          <div>
+            <div class="ubTitleRow">
+              <h3 class="ubTitle">
+                {{ 'FINANCES.BUDGET.UNBUDGETED_CASHFLOWS_TITLE' | translate }}
+                <span class="ubCountText" *ngIf="unbudgetedCashFlows.length > 0">({{ unbudgetedCashFlows.length }})</span>
+              </h3>
+            </div>
+            <p class="ubSubtitle">{{ 'FINANCES.BUDGET.UNBUDGETED_CASHFLOWS_DESC' | translate }}</p>
+          </div>
+        </div>
+
+        <div class="ubHeaderActions" *ngIf="unbudgetedCashFlows.length > 0">
+          <ion-button
+            fill="outline"
+            size="small"
+            class="ubToggleBtn"
+            (click)="toggleUnbudgetedDetails()"
+          >
+            <ion-icon
+              slot="start"
+              [name]="showUnbudgetedDetails ? 'chevron-up-outline' : 'chevron-down-outline'"
+            ></ion-icon>
+            {{ (showUnbudgetedDetails ? 'FINANCES.BUDGET.HIDE_UNBUDGETED_TRANSACTIONS' : 'FINANCES.BUDGET.SHOW_UNBUDGETED_TRANSACTIONS') | translate }}
+          </ion-button>
+        </div>
+      </div>
+
+      <!-- KPI Ribbon: Revenues, Expenses, Net result -->
+      <div class="ubRibbonGrid">
+        <!-- Revenues -->
+        <div class="ubMetricCard revCard">
+          <div class="ubMetricHeader">
+            <span class="ubMetricLabel">{{ 'FINANCES.BUDGET.UNBUDGETED_REVENUES' | translate }}</span>
+            <span class="ubItemCount" *ngIf="unbudgetedRevenues.length > 0">({{ unbudgetedRevenues.length }})</span>
+          </div>
+          <div class="ubMetricValue revVal">
+            {{ unbudgetedRevenueTotalPln | financeNumber:{ currency: 'PLN' } }}
+          </div>
+        </div>
+
+        <!-- Expenses -->
+        <div class="ubMetricCard expCard">
+          <div class="ubMetricHeader">
+            <span class="ubMetricLabel">{{ 'FINANCES.BUDGET.UNBUDGETED_EXPENSES' | translate }}</span>
+            <span class="ubItemCount" *ngIf="unbudgetedExpenses.length > 0">({{ unbudgetedExpenses.length }})</span>
+          </div>
+          <div class="ubMetricValue expVal">
+            {{ unbudgetedExpenseTotalPln | financeNumber:{ currency: 'PLN' } }}
+          </div>
+        </div>
+
+        <!-- Net result -->
+        <div class="ubMetricCard netCard">
+          <div class="ubMetricHeader">
+            <span class="ubMetricLabel">{{ 'FINANCES.BUDGET.KPI_NET' | translate }}</span>
+          </div>
+          <div
+            class="ubMetricValue"
+            [class.revVal]="unbudgetedNetResultPln >= 0"
+            [class.expVal]="unbudgetedNetResultPln < 0"
+          >
+            {{ unbudgetedNetResultPln | financeNumber:{ currency: 'PLN', forceSign: true } }}
+          </div>
+        </div>
+      </div>
+
+      <!-- Empty state when all reconciled -->
+      <div class="ubEmptyState" *ngIf="unbudgetedCashFlows.length === 0">
+        <ion-icon name="checkmark-circle-outline"></ion-icon>
+        <span>{{ 'FINANCES.BUDGET.UNBUDGETED_EMPTY' | translate }}</span>
+      </div>
+
+      <!-- Expandable Transactions List -->
+      <div class="ubTransactionsSection" *ngIf="showUnbudgetedDetails && unbudgetedCashFlows.length > 0">
+        <div class="ubTableResponsive">
+          <table class="ubTable">
+            <thead>
+              <tr>
+                <th>{{ 'FINANCES.TRANSACTIONS.COL_DATE' | translate }}</th>
+                <th>{{ 'FINANCES.BUDGET.TYPE_LABEL' | translate }}</th>
+                <th>{{ 'FINANCES.TRANSACTIONS.COL_PARTY' | translate }} / {{ 'FINANCES.TRANSACTIONS.COL_TITLE' | translate }}</th>
+                <th class="colAmountHead">{{ 'FINANCES.TRANSACTIONS.COL_AMOUNT' | translate }}</th>
+                <th class="colActionHead"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let flow of unbudgetedCashFlows" class="ubRow">
+                <td class="colDate">
+                  {{ (flow.tx.bookingDate || flow.tx.operationDate) | date:'yyyy-MM-dd' }}
+                </td>
+                <td class="colType">
+                  <span
+                    class="ubTypeBadge"
+                    [class.ubRevBadge]="flow.type === 'REVENUE'"
+                    [class.ubExpBadge]="flow.type === 'EXPENSE'"
+                  >
+                    {{ (flow.type === 'REVENUE' ? 'FINANCES.BUDGET.KPI_REVENUE' : 'FINANCES.BUDGET.KPI_EXPENSES') | translate }}
+                  </span>
+                </td>
+                <td class="colDetails">
+                  <div class="ubParty" *ngIf="flow.tx.partyName">{{ flow.tx.partyName }}</div>
+                  <div class="ubTitleText">{{ flow.tx.transferTitle || '-' }}</div>
+                </td>
+                <td class="colAmount" [class.revVal]="flow.type === 'REVENUE'" [class.expVal]="flow.type === 'EXPENSE'">
+                  <div class="ubOrigAmount">
+                    {{ (flow.type === 'EXPENSE' ? -flow.unallocatedAmount : flow.unallocatedAmount) | financeNumber:{ currency: flow.tx.currency, forceSign: true } }}
+                  </div>
+                  <div class="ubPlnEquiv" *ngIf="flow.tx.currency === 'EUR'">
+                    ≈ {{ (flow.type === 'EXPENSE' ? -flow.unallocatedAmountPln : flow.unallocatedAmountPln) | financeNumber:{ currency: 'PLN', forceSign: true } }}
+                  </div>
+                </td>
+                <td class="colAction">
+                  <ion-button
+                    fill="clear"
+                    size="small"
+                    class="ubJumpBtn"
+                    (click)="jumpToTransaction(flow.tx.id)"
+                    [title]="'FINANCES.BUDGET.VIEW_IN_TRANSACTIONS' | translate"
+                  >
+                    <ion-icon slot="icon-only" name="arrow-forward-circle-outline"></ion-icon>
+                  </ion-button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
     <!-- REUSABLE TEMPLATE: RECURSIVE GROUP NODE    -->
     <!-- ========================================== -->
     <ng-template
@@ -960,8 +1098,8 @@
         </div>
 
         <!-- Code -->
-        <div class="cellCode">
-          <span class="lineCodeTag">{{ line.code || '—' }}</span>
+        <div class="cellCode" [title]="line.code || ''">
+          <span class="lineCodeTag" [title]="line.code || ''">{{ line.code || '—' }}</span>
         </div>
 
         <!-- Name & notes -->
@@ -970,7 +1108,7 @@
             {{ (app.currentLanguage === 'en' ? line.name.en : line.name.pl) || line.name.pl || line.name.en }}
             <span
               class="amendDiffBadge"
-              *ngIf="getLineDiff(line.code) as diff"
+              *ngIf="getLineDiff(line.code, line.type) as diff"
               [class.positive]="(diff.difference || 0) > 0"
               [class.negative]="(diff.difference || 0) < 0"
               [class.added]="diff.changeType === 'ADD_LINE'"

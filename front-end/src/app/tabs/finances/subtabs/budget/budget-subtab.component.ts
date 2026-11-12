@@ -436,7 +436,7 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
 
   private async initOpeningBalancesState(): Promise<void> {
     if (this.budget?.openingBalances) {
-      const bEur = this.budget.openingBalances.bankEurStartingBalance || 0;
+      let bEur = this.budget.openingBalances.bankEurStartingBalance || this.budget.openingBalances.bankEur || 0;
       let rate = this.budget.openingBalances.eurExchangeRate || 0;
       let date = this.budget.openingBalances.eurExchangeDate || '';
 
@@ -446,6 +446,14 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
           rate = nbp.rate;
           date = nbp.date;
         }
+      }
+
+      // If EUR starting balance was not explicitly set, but bankEurInPln exists,
+      // it means the user entered the opening balance in EUR, but it was stored under bankEurInPln:
+      if (!bEur && this.budget.openingBalances.bankEurInPln) {
+        bEur = this.budget.openingBalances.bankEurInPln;
+        this.budget.openingBalances.bankEurStartingBalance = bEur;
+        this.budget.openingBalances.bankEur = bEur;
       }
 
       const bEurInPln = rate > 0 && bEur > 0
@@ -725,7 +733,7 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
     this.searchQuery = '';
   }
 
-  getAllExistingCodes(): string[] {
+  getAllExistingCodes(type?: BudgetLineType): string[] {
     const codes: string[] = [];
     const collect = (items: (DynamicBudgetGroup | BudgetLineItem)[]) => {
       for (const it of items || []) {
@@ -737,8 +745,8 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
       }
     };
     for (const cat of this.displayCategories) {
-      if (cat.revenues?.items) collect(cat.revenues.items);
-      if (cat.expenses?.items) collect(cat.expenses.items);
+      if ((!type || type === 'REVENUE') && cat.revenues?.items) collect(cat.revenues.items);
+      if ((!type || type === 'EXPENSE') && cat.expenses?.items) collect(cat.expenses.items);
     }
     return codes;
   }
@@ -1113,7 +1121,8 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
       component: BudgetLineModalComponent,
       componentProps: {
         groupCodePrefix: prefix,
-        existingCodes: this.getAllExistingCodes(),
+        existingCodes: this.getAllExistingCodes(defaultType),
+        lineType: defaultType,
         isNew: true,
         isAmending: this.isAmending,
         currentApprovedAmount: 0,
@@ -1148,16 +1157,21 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
   ): Promise<void> {
     const isGrp = isBudgetGroup(targetContainer);
     const prefix = isGrp ? (targetContainer as DynamicBudgetGroup).code || '' : '';
-    const orig = this.amendmentOriginalLinesMap.get(lineItem.code);
+    const lineType = lineItem.type || 'EXPENSE';
+    const orig = this.amendmentOriginalLinesMap.get(`${lineType}:${lineItem.code}`);
     const currentApproved = orig ? orig.plannedAmount : (lineItem.plannedAmount || 0);
-    const existingJustification = this.amendmentJustifications[lineItem.code] || '';
+    const existingJustification =
+      this.amendmentJustifications[`${lineType}:${lineItem.code}`] ||
+      this.amendmentJustifications[lineItem.code] ||
+      '';
 
     const modal = await this.modalCtrl.create({
       component: BudgetLineModalComponent,
       componentProps: {
         lineItem,
         groupCodePrefix: prefix,
-        existingCodes: this.getAllExistingCodes(),
+        existingCodes: this.getAllExistingCodes(lineType).filter((c) => c !== lineItem.code),
+        lineType,
         isNew: false,
         isAmending: this.isAmending,
         currentApprovedAmount: currentApproved,
@@ -1220,9 +1234,14 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
   // AMENDMENT LIFECYCLE METHODS
   // ==========================================
 
-  getLineDiff(code: string): BudgetAmendmentItem | undefined {
+  getLineDiff(code: string, type?: BudgetLineType): BudgetAmendmentItem | undefined {
     if (!this.isAmending) return undefined;
-    return this.amendmentItemsDiff.find((d) => d.budgetCode === code || d.lineCode === code);
+    return this.amendmentItemsDiff.find((d) => {
+      const matchesCode = d.budgetCode === code || d.lineCode === code;
+      if (!matchesCode) return false;
+      if (type && d.type && d.type !== type) return false;
+      return true;
+    });
   }
 
   recalculateWorkingTotals(): void {
@@ -1264,12 +1283,13 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
         const grpName = (this.app.currentLanguage === 'en' ? item.name?.en : item.name?.pl) || item.name?.pl || item.name?.en || item.id;
         this.collectLinesIntoMap(item.items || [], `${currentPath} > ${grpName}`, defaultType, map);
       } else if (isBudgetLine(item)) {
-        map.set(item.code, {
+        const lineType = item.type || defaultType;
+        map.set(`${lineType}:${item.code}`, {
           lineId: item.id || item.code,
           code: item.code,
           plannedAmount: Number(item.plannedAmount ?? item.budgetedAmount) || 0,
           name: { pl: item.name?.pl || '', en: item.name?.en || '' },
-          type: item.type || defaultType,
+          type: lineType,
           categoryPath: currentPath,
           actualAmountAtTime: Number(item.actualAmount) || 0
         });
@@ -1310,12 +1330,14 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
   recomputeAmendmentDiff(): void {
     const workingLines = this.extractAllLinesWithPaths(this.amendmentWorkingCategories);
     const diffItems: BudgetAmendmentItem[] = [];
-    const seenCodes = new Set<string>();
+    const seenKeys = new Set<string>();
 
     for (const w of workingLines) {
-      seenCodes.add(w.line.code);
-      const orig = this.amendmentOriginalLinesMap.get(w.line.code);
-      const justification = this.amendmentJustifications[w.line.code] || '';
+      const lineType = w.line.type || 'EXPENSE';
+      const key = `${lineType}:${w.line.code}`;
+      seenKeys.add(key);
+      const orig = this.amendmentOriginalLinesMap.get(key);
+      const justification = this.amendmentJustifications[key] || this.amendmentJustifications[w.line.code] || '';
 
       if (!orig) {
         // Newly added line
@@ -1326,7 +1348,7 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
           lineCode: w.line.code,
           lineName: { pl: w.line.name?.pl || '', en: w.line.name?.en || '' },
           newLineName: { pl: w.line.name?.pl || '', en: w.line.name?.en || '' },
-          type: w.line.type || 'EXPENSE',
+          type: lineType,
           changeType: 'ADD_LINE',
           currentAmount: 0,
           previousAmount: 0,
@@ -1372,14 +1394,14 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
     }
 
     // Lines removed in draft
-    for (const [code, orig] of this.amendmentOriginalLinesMap.entries()) {
-      if (!seenCodes.has(code)) {
+    for (const [key, orig] of this.amendmentOriginalLinesMap.entries()) {
+      if (!seenKeys.has(key)) {
         const current = Number(orig.plannedAmount) || 0;
-        const justification = this.amendmentJustifications[code] || '';
+        const justification = this.amendmentJustifications[key] || this.amendmentJustifications[orig.code] || '';
         diffItems.push({
-          lineId: orig.lineId || code,
-          budgetCode: code,
-          lineCode: code,
+          lineId: orig.lineId || orig.code,
+          budgetCode: orig.code,
+          lineCode: orig.code,
           lineName: { pl: orig.name.pl, en: orig.name.en },
           oldLineName: { pl: orig.name.pl, en: orig.name.en },
           type: orig.type,
@@ -1412,6 +1434,8 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
       for (const it of this.budget.draftAmendment.itemsDiff || []) {
         const c = it.budgetCode || it.lineCode;
         if (c && (it.explanation || it.justification)) {
+          const key = it.type ? `${it.type}:${c}` : c;
+          this.amendmentJustifications[key] = it.explanation || it.justification || '';
           this.amendmentJustifications[c] = it.explanation || it.justification || '';
         }
       }
@@ -1690,6 +1714,85 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
       subtab: 'TRANSACTIONS',
       code: lineCode,
       year: this.stateService.activeYear
+    });
+  }
+
+  // ==========================================
+  // UNBUDGETED CASH FLOWS
+  // ==========================================
+
+  showUnbudgetedDetails: boolean = false;
+
+  get unbudgetedCashFlows(): {
+    tx: BankTransactionRecord;
+    unallocatedAmount: number;
+    unallocatedAmountPln: number;
+    type: 'REVENUE' | 'EXPENSE';
+  }[] {
+    if (!this.cachedTxs || !this.cachedTxs.length) return [];
+    const eurRate = this.cachedCurrentNbpRate?.rate || this.budget?.openingBalances?.eurExchangeRate || 1;
+    const result: {
+      tx: BankTransactionRecord;
+      unallocatedAmount: number;
+      unallocatedAmountPln: number;
+      type: 'REVENUE' | 'EXPENSE';
+    }[] = [];
+
+    for (const tx of this.cachedTxs) {
+      if (tx.directBudgetLineCode || tx.directBudgetCode) continue;
+      const allocated = (tx.settlements || []).reduce((acc, s) => acc + (Number(s.allocatedAmount) || 0), 0);
+      const absAmount = Math.abs(tx.amount || 0);
+      const remaining = Math.round((absAmount - allocated) * 100) / 100;
+      if (remaining > 0.01) {
+        const isRevenue = (tx.amount || 0) > 0 || tx.direction === 'INFLOW';
+        const rate = (tx.currency || 'PLN').toUpperCase() === 'EUR' ? eurRate : 1;
+        const remainingPln = Math.round(remaining * rate * 100) / 100;
+        result.push({
+          tx,
+          unallocatedAmount: remaining,
+          unallocatedAmountPln: remainingPln,
+          type: isRevenue ? 'REVENUE' : 'EXPENSE'
+        });
+      }
+    }
+
+    return result.sort((a, b) => {
+      const dateA = a.tx.bookingDate || a.tx.operationDate || '';
+      const dateB = b.tx.bookingDate || b.tx.operationDate || '';
+      return dateB.localeCompare(dateA);
+    });
+  }
+
+  get unbudgetedRevenues() {
+    return this.unbudgetedCashFlows.filter((f) => f.type === 'REVENUE');
+  }
+
+  get unbudgetedExpenses() {
+    return this.unbudgetedCashFlows.filter((f) => f.type === 'EXPENSE');
+  }
+
+  get unbudgetedRevenueTotalPln(): number {
+    return Math.round(this.unbudgetedRevenues.reduce((acc, f) => acc + f.unallocatedAmountPln, 0) * 100) / 100;
+  }
+
+  get unbudgetedExpenseTotalPln(): number {
+    return Math.round(this.unbudgetedExpenses.reduce((acc, f) => acc + f.unallocatedAmountPln, 0) * 100) / 100;
+  }
+
+  get unbudgetedNetResultPln(): number {
+    return Math.round((this.unbudgetedRevenueTotalPln - this.unbudgetedExpenseTotalPln) * 100) / 100;
+  }
+
+  toggleUnbudgetedDetails(): void {
+    this.showUnbudgetedDetails = !this.showUnbudgetedDetails;
+  }
+
+  jumpToTransaction(txId: string): void {
+    if (!this.budget) return;
+    this.navService.jumpTo({
+      subtab: 'TRANSACTIONS',
+      targetId: txId,
+      year: this.budget.year
     });
   }
 

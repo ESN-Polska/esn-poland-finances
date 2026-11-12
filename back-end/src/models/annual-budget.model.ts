@@ -115,6 +115,7 @@ export interface OpeningBalances {
 
   // UI convenience aliases
   bankPln?: number;
+  bankEur?: number;
   bankEurInPln?: number;
   termDepositsPln?: number;
   cashDeskPln?: number;
@@ -401,12 +402,13 @@ export class AnnualBudget extends Resource {
 
     this.openingBalances = {
       bankPlnStartingBalance: this.clean(x.openingBalances?.bankPlnStartingBalance || x.openingBalances?.bankPln, Number, 0),
-      bankEurStartingBalance: this.clean(x.openingBalances?.bankEurStartingBalance, Number, 0),
+      bankEurStartingBalance: this.clean(x.openingBalances?.bankEurStartingBalance || x.openingBalances?.bankEur, Number, 0),
       sectionReservesStartingBalance: this.clean(x.openingBalances?.sectionReservesStartingBalance, Number, 0),
       termDepositsStartingBalance: this.clean(x.openingBalances?.termDepositsStartingBalance || x.openingBalances?.termDepositsPln, Number, 0),
       unspentOperatingSurplusCarryover: this.clean(x.openingBalances?.unspentOperatingSurplusCarryover, Number, 0),
       notes: this.clean(x.openingBalances?.notes, String, ''),
       bankPln: this.clean(x.openingBalances?.bankPln || x.openingBalances?.bankPlnStartingBalance, Number, 0),
+      bankEur: this.clean(x.openingBalances?.bankEur || x.openingBalances?.bankEurStartingBalance, Number, 0),
       bankEurInPln: this.clean(x.openingBalances?.bankEurInPln, Number, 0),
       termDepositsPln: this.clean(x.openingBalances?.termDepositsPln || x.openingBalances?.termDepositsStartingBalance, Number, 0),
       cashDeskPln: this.clean(x.openingBalances?.cashDeskPln, Number, 0),
@@ -652,9 +654,10 @@ export class AnnualBudget extends Resource {
   }
 
   /**
-   * Flattened list of all active budget lines across all categories, sections, groups, and sub-groups
+   * Flattened list of all active budget lines across all categories, sections, groups, and sub-groups.
+   * Can optionally filter by BudgetLineType ('REVENUE' | 'EXPENSE').
    */
-  getAllLines(): BudgetLineItem[] {
+  getAllLines(type?: BudgetLineType): BudgetLineItem[] {
     const list: BudgetLineItem[] = [];
 
     const collectLines = (items: (DynamicBudgetGroup | BudgetLineItem)[]) => {
@@ -668,29 +671,34 @@ export class AnnualBudget extends Resource {
     };
 
     for (const cat of this.categories || []) {
-      if (cat.revenues?.items) {
+      if ((!type || type === 'REVENUE') && cat.revenues?.items) {
         collectLines(cat.revenues.items);
       }
-      if (cat.expenses?.items) {
+      if ((!type || type === 'EXPENSE') && cat.expenses?.items) {
         collectLines(cat.expenses.items);
       }
     }
 
     const seen = new Set<string>();
     return list.filter((l) => {
-      if (!l.code || seen.has(l.code)) return false;
-      seen.add(l.code);
+      if (!l.code) return false;
+      const key = `${l.type || 'EXPENSE'}:${l.code.toLowerCase().trim()}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
       return true;
     });
   }
 
   /**
-   * Find a budget line by its immutable budget code (e.g. 'card')
+   * Find a budget line by its budget code (e.g. 'card') and optional section type.
    */
-  findLineByCode(code: string): BudgetLineItem | undefined {
+  findLineByCode(code: string, type?: BudgetLineType): BudgetLineItem | undefined {
     const norm = String(code || '').toLowerCase().trim();
     if (!norm) return undefined;
-    return this.getAllLines().find((ln) => ln.code.toLowerCase().trim() === norm);
+    return this.getAllLines(type).find((ln) => {
+      if (type && ln.type && ln.type !== type) return false;
+      return ln.code.toLowerCase().trim() === norm;
+    });
   }
 
   /**
@@ -810,7 +818,7 @@ export class AnnualBudget extends Resource {
       this.categories = updatedCategories;
     } else {
       for (const item of amendment.items || []) {
-        const line = this.findLineByCode(item.budgetCode || item.lineCode || '');
+        const line = this.findLineByCode(item.budgetCode || item.lineCode || '', item.type);
         if (line) {
           line.amendmentsDelta = (line.amendmentsDelta || 0) + (item.deltaAmount || 0);
           line.plannedAmount = (line.budgetedAmount || 0) + line.amendmentsDelta;
@@ -855,16 +863,25 @@ export class AnnualBudget extends Resource {
       errors.push('Invalid fiscal year');
     }
 
-    // Check duplicate line codes
-    const seenCodes = new Set<string>();
+    // Check duplicate line codes within REVENUE and within EXPENSE
+    const seenRevenueCodes = new Set<string>();
+    const seenExpenseCodes = new Set<string>();
     for (const ln of this.getAllLines()) {
       const code = ln.code.toLowerCase().trim();
       if (!code) {
         errors.push(`Budget line "${ln.name.pl || ln.name.en || ln.id}" must have a non-empty code.`);
-      } else if (seenCodes.has(code)) {
-        errors.push(`Duplicate budget line code found: "${code}". Each budget code must be globally unique.`);
+      } else if (ln.type === 'REVENUE') {
+        if (seenRevenueCodes.has(code)) {
+          errors.push(`Duplicate revenue budget line code found: "${code}". Revenue codes must be unique.`);
+        } else {
+          seenRevenueCodes.add(code);
+        }
       } else {
-        seenCodes.add(code);
+        if (seenExpenseCodes.has(code)) {
+          errors.push(`Duplicate expense budget line code found: "${code}". Expense codes must be unique.`);
+        } else {
+          seenExpenseCodes.add(code);
+        }
       }
     }
 

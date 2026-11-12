@@ -30,7 +30,7 @@ class BudgetsRC extends ResourceController {
   }
 
   private getYearParam(): number {
-    const raw = (this.pathParameters as any)?.year || (this.queryParams as any)?.year;
+    const raw = (this.pathParameters as any)?.year || (this.queryParams as any)?.year || (this.body as any)?.year;
     const yr = parseInt(raw, 10);
     return isNaN(yr) ? new Date().getFullYear() : yr;
   }
@@ -107,6 +107,12 @@ class BudgetsRC extends ResourceController {
   protected async putResource(): Promise<any> {
     const rawPath = (this.event as any)?.rawPath || (this.event as any)?.path || '';
     const year = this.getYearParam();
+
+    const firstYear = this.configurations?.financesConfig?.firstYear;
+    if (firstYear && year < firstYear) {
+      this.returnStatusCode = 400;
+      throw new HandledError(`Year ${year} is prior to the first configured financial year (${firstYear})`);
+    }
 
     if (rawPath.endsWith('/amendment-draft')) {
       const budgetData = await ddb.get({

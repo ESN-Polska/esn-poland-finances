@@ -150,11 +150,25 @@ ion-tabs.desktopTabs {
   ion-tab-bar {
     justify-content: start;
     align-items: center;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    &::-webkit-scrollbar {
+      display: none;
+    }
   }
 
   ion-tab-button {
     flex: none;
-    min-width: 100px;
+    min-width: auto;
+    padding-inline: 10px;
+    --padding-start: 10px;
+    --padding-end: 10px;
+
+    ion-label {
+      white-space: nowrap;
+    }
   }
 
   .desktopBrandWrapper {
@@ -162,10 +176,11 @@ ion-tabs.desktopTabs {
     align-items: center;
     gap: 12px;
     cursor: pointer;
-    padding: 0 20px 0 16px;
+    padding: 0 16px 0 14px;
     user-select: none;
     transition: opacity 0.15s ease;
     text-align: left;
+    flex-shrink: 0;
 
     &:hover {
       opacity: 0.9;
@@ -210,6 +225,7 @@ ion-tabs.desktopTabs {
     align-items: center;
     padding-inline: 12px;
     gap: 12px;
+    flex-shrink: 0;
 
     .themeToggleBtn {
       --color: #ffffff;
@@ -352,6 +368,89 @@ ion-tabs.desktopTabs {
         color: rgba(255, 255, 255, 0.8);
         transition: transform 0.2s ease;
       }
+    }
+  }
+
+  @media (max-width: 1250px) {
+    .desktopBrandWrapper {
+      padding: 0 12px 0 10px;
+      gap: 8px;
+
+      .desktopBrandTexts .desktopAppSubtitle {
+        display: none;
+      }
+    }
+
+    .themeSwitcherDesktop {
+      gap: 8px;
+      padding-inline: 8px;
+
+      .userChip {
+        .userRoleChip {
+          display: none;
+        }
+      }
+    }
+
+    ion-tab-button {
+      padding-inline: 8px;
+      --padding-start: 8px;
+      --padding-end: 8px;
+      font-size: 0.85rem;
+    }
+  }
+
+  @media (max-width: 1050px) {
+    .themeSwitcherDesktop {
+      gap: 6px;
+      padding-inline: 6px;
+
+      .userChip {
+        padding: 2px 6px 2px 4px;
+
+        .userName {
+          max-width: 80px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+      }
+    }
+
+    ion-tab-button {
+      padding-inline: 6px;
+      --padding-start: 6px;
+      --padding-end: 6px;
+      font-size: 0.82rem;
+    }
+  }
+
+  @media (max-width: 900px) {
+    .desktopBrandWrapper {
+      .desktopHeaderLogo {
+        height: 30px;
+        width: 30px;
+        min-width: 30px;
+      }
+
+      .desktopBrandTexts .desktopAppTitle {
+        font-size: 0.85rem;
+      }
+    }
+
+    .themeSwitcherDesktop {
+      .userChip {
+        .userName {
+          display: none;
+        }
+      }
+    }
+
+    ion-tab-button {
+      padding-inline: 5px;
+      --padding-start: 5px;
+      --padding-end: 5px;
+      font-size: 0.8rem;
     }
   }
 }
