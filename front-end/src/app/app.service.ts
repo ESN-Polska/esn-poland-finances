@@ -243,6 +243,11 @@ export class AppService {
       if (current.userId) {
         await this._storage.set(`${DEFAULT_BANK_KEY}_${current.userId}`, current.defaultBankDetails);
       }
+    } else if (!current.defaultBankDetails && this._storage) {
+      await this._storage.remove(DEFAULT_BANK_KEY);
+      if (current.userId) {
+        await this._storage.remove(`${DEFAULT_BANK_KEY}_${current.userId}`);
+      }
     }
     if (this.originalUser) {
       this.originalUser.load(userRecord);
@@ -706,36 +711,41 @@ export class AppService {
     return stored;
   }
 
-  public async saveDefaultBankDetails(details: UserDefaultBankDetails): Promise<void> {
+  public async saveDefaultBankDetails(details: UserDefaultBankDetails | null): Promise<void> {
     if (!this._storage) await this.init();
 
-    // 1. Save to local storage (both global and user-scoped)
-    await this._storage?.set(DEFAULT_BANK_KEY, details);
     const userId = this.currentUser?.userId;
-    if (userId) {
-      await this._storage?.set(`${DEFAULT_BANK_KEY}_${userId}`, details);
-    }
 
-    // 2. Update in-memory user
-    if (this.currentUser) {
-      this.currentUser.defaultBankDetails = details;
-      if (this.originalUser) {
-        this.originalUser.defaultBankDetails = details;
-      }
-      if (this._storage) {
-        await this._storage.set(USER_KEY, JSON.parse(JSON.stringify(this.currentUser)));
-      }
-      this.userSubject.next(this.currentUser);
-    }
-
-    // 3. Persist to backend if user is authenticated
+    // 1. Persist directly to backend first (server-authoritative)
     if (userId && !this.currentUser?.isGuest) {
-      try {
-        await this.api.patchResource(['users', encodeURIComponent(userId.toLowerCase())], {
-          body: { defaultBankDetails: details }
-        });
-      } catch (err) {
-        console.warn('Failed to sync default bank details to backend', err);
+      const updatedRaw = await this.api.patchResource(['users', encodeURIComponent(userId.toLowerCase())], {
+        body: { defaultBankDetails: details }
+      });
+      if (updatedRaw) {
+        await this.updateCurrentUserRecord(updatedRaw);
+        return;
+      }
+    }
+
+    // 2. Fallback for guest or offline mode
+    if (this.currentUser) {
+      this.currentUser.defaultBankDetails = details || undefined;
+      await this.updateCurrentUserRecord(this.currentUser);
+    }
+  }
+
+  public async syncStoredDefaultBankDetails(details: UserDefaultBankDetails | null): Promise<void> {
+    if (!this._storage) await this.init();
+    const userId = this.currentUser?.userId;
+    if (details && (details.pln || details.eur)) {
+      await this._storage?.set(DEFAULT_BANK_KEY, details);
+      if (userId) {
+        await this._storage?.set(`${DEFAULT_BANK_KEY}_${userId}`, details);
+      }
+    } else {
+      await this._storage?.remove(DEFAULT_BANK_KEY);
+      if (userId) {
+        await this._storage?.remove(`${DEFAULT_BANK_KEY}_${userId}`);
       }
     }
   }

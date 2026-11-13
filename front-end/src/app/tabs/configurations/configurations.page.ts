@@ -331,6 +331,14 @@ export class ConfigurationsPage implements OnInit {
         user.hasPermission(AppPermission.CONFIGURATIONS.OPTIONS)
       );
     }
+    if (section === 'REQUESTS') {
+      return (
+        user.hasPermission(AppPermission.CONFIGURATIONS.REQUESTS) ||
+        user.hasPermission(AppPermission.CONFIGURATIONS.OPTIONS) ||
+        user.hasPermission(AppPermission.REQUESTS.PARENT) ||
+        user.isManager
+      );
+    }
     if (section === 'FINANCES') {
       return (
         user.hasPermission(AppPermission.CONFIGURATIONS.FINANCES) ||
@@ -338,6 +346,17 @@ export class ConfigurationsPage implements OnInit {
       );
     }
     return false;
+  }
+
+  canModifyRequestsConfig(): boolean {
+    const user = this.app.currentUser;
+    if (!user) return false;
+    if (user.isAdministrator) return true;
+    if (user.isAuditorOnly) return false;
+    return (
+      user.hasPermission(AppPermission.CONFIGURATIONS.REQUESTS) ||
+      user.hasPermission(AppPermission.CONFIGURATIONS.OPTIONS)
+    );
   }
 
   canModifyFinances(): boolean {

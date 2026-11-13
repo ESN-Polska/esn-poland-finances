@@ -1819,6 +1819,46 @@
       </ion-reorder-group>
     </ion-list>
 
+    <!-- SUBTAB: REQUESTS MODULE SETTINGS -->
+    <div *ngIf="pageSection === 'REQUESTS'">
+      <ion-list class="aList" *ngIf="configurations.requestsConfig">
+        <ion-list-header>
+          <ion-label>
+            <h2>{{ 'CONFIGURATIONS.REQUESTS_MODULE_SETTINGS_TITLE' | translate }}</h2>
+            <p>{{ 'CONFIGURATIONS.REQUESTS_MODULE_SETTINGS_I' | translate }}</p>
+          </ion-label>
+        </ion-list-header>
+
+        <!-- Max Documents Per Request -->
+        <ion-item>
+          <ion-label position="stacked">{{ 'CONFIGURATIONS.MAX_DOCUMENTS_PER_REQUEST' | translate }}</ion-label>
+          <ion-input
+            type="number"
+            min="1"
+            max="100"
+            [readonly]="!canModifyRequestsConfig()"
+            [(ngModel)]="configurations.requestsConfig.maxDocumentsPerRequest"
+            (ionChange)="updateConfigurations()"
+          ></ion-input>
+          <ion-note slot="helper">{{ 'CONFIGURATIONS.MAX_DOCUMENTS_PER_REQUEST_I' | translate }}</ion-note>
+        </ion-item>
+
+        <!-- Max Financial Gross Amount -->
+        <ion-item>
+          <ion-label position="stacked">{{ 'CONFIGURATIONS.MAX_FINANCIAL_AMOUNT' | translate }}</ion-label>
+          <ion-input
+            type="number"
+            min="100"
+            max="100000000"
+            [readonly]="!canModifyRequestsConfig()"
+            [(ngModel)]="configurations.requestsConfig.maxFinancialAmount"
+            (ionChange)="updateConfigurations()"
+          ></ion-input>
+          <ion-note slot="helper">{{ 'CONFIGURATIONS.MAX_FINANCIAL_AMOUNT_I' | translate }}</ion-note>
+        </ion-item>
+      </ion-list>
+    </div>
+
     <!-- SUBTAB: FINANCES -->
     <div *ngIf="pageSection === 'FINANCES'">
       <!-- General Calculation Settings -->

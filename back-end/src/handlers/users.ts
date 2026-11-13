@@ -198,16 +198,27 @@ class UsersRC extends ResourceController {
         const cleanAccount = (acc: any) => {
           if (!acc || typeof acc !== 'object') return undefined;
           const cleaned: any = {};
-          if (acc.accountHolderName !== undefined) cleaned.accountHolderName = String(acc.accountHolderName || '').trim();
-          if (acc.accountHolderAddress !== undefined) cleaned.accountHolderAddress = String(acc.accountHolderAddress || '').trim();
-          if (acc.iban !== undefined) cleaned.iban = String(acc.iban || '').trim();
-          if (acc.swiftBic !== undefined) cleaned.swiftBic = String(acc.swiftBic || '').trim();
+          if (acc.accountHolderName !== undefined && String(acc.accountHolderName || '').trim()) {
+            cleaned.accountHolderName = String(acc.accountHolderName).trim();
+          }
+          if (acc.accountHolderAddress !== undefined && String(acc.accountHolderAddress || '').trim()) {
+            cleaned.accountHolderAddress = String(acc.accountHolderAddress).trim();
+          }
+          if (acc.iban !== undefined && String(acc.iban || '').trim()) {
+            cleaned.iban = String(acc.iban).replace(/\s+/g, '').toUpperCase();
+          }
+          if (acc.swiftBic !== undefined && String(acc.swiftBic || '').trim()) {
+            cleaned.swiftBic = String(acc.swiftBic).trim().toUpperCase();
+          }
           if (acc.accountType === 'DOMESTIC' || acc.accountType === 'INTERNATIONAL') {
             cleaned.accountType = acc.accountType;
           } else if (cleaned.iban) {
-            cleaned.accountType = (cleaned.swiftBic || (/^[A-Za-z]{2}/.test(cleaned.iban) && !cleaned.iban.toUpperCase().startsWith('PL')))
+            cleaned.accountType = (cleaned.swiftBic || (/^[A-Za-z]{2}/.test(cleaned.iban) && !cleaned.iban.startsWith('PL')))
               ? 'INTERNATIONAL'
               : 'DOMESTIC';
+          }
+          if (cleaned.accountType === 'DOMESTIC') {
+            delete cleaned.swiftBic;
           }
           return (cleaned.accountHolderName || cleaned.accountHolderAddress || cleaned.iban || cleaned.swiftBic) ? cleaned : undefined;
         };
@@ -225,13 +236,14 @@ class UsersRC extends ResourceController {
       }
     }
 
+    const itemToSave = JSON.parse(JSON.stringify(userRecord));
     await ddb.put({
       TableName: DDB_TABLES.users,
-      Item: userRecord
+      Item: itemToSave
     });
 
-    this.targetUser = userRecord;
-    return userRecord;
+    this.targetUser = itemToSave;
+    return itemToSave;
   }
 
   protected async getResources(): Promise<any[]> {

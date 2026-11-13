@@ -12,12 +12,25 @@
  * - Standard decimal: 12454.32 or 12.50
  * - Standard integer: 12454
  */
-export function parseLocaleNumber(raw: string | number | null | undefined): number | undefined {
+export function parseLocaleNumber(
+  raw: string | number | null | undefined,
+  allowNegative: boolean = false
+): number | undefined {
   if (raw === null || raw === undefined || raw === '') return undefined;
-  if (typeof raw === 'number') return isNaN(raw) ? undefined : raw;
+  if (typeof raw === 'number') {
+    if (isNaN(raw) || !isFinite(raw)) return undefined;
+    if (!allowNegative && raw < 0) return undefined;
+    return raw;
+  }
 
   let str = String(raw).trim().replace(/[\s\u00a0]/g, '');
   if (!str) return undefined;
+
+  // Disallow negative values if not explicitly allowed
+  if (!allowNegative && str.includes('-')) return undefined;
+
+  // Disallow scientific notation
+  if (/[eE]/.test(str)) return undefined;
 
   const hasComma = str.includes(',');
   const hasDot = str.includes('.');
@@ -37,8 +50,15 @@ export function parseLocaleNumber(raw: string | number | null | undefined): numb
     str = str.replace(',', '.');
   }
 
+  // Strict regex check: allows optional leading minus (only if allowNegative),
+  // integer digits, and optional decimal dot with 1 or 2 digits.
+  const regex = allowNegative ? /^-?\d+(\.\d{1,2})?$/ : /^\d+(\.\d{1,2})?$/;
+  if (!regex.test(str)) {
+    return undefined;
+  }
+
   const num = parseFloat(str);
-  return isNaN(num) ? undefined : num;
+  return isNaN(num) || !isFinite(num) ? undefined : num;
 }
 
 /**

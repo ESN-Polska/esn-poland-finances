@@ -94,6 +94,19 @@
       </div>
     </div>
 
+    <!-- Info Banner: SUBMITTED (Locked notice) -->
+    <div class="alert-box alert-submitted-info" *ngIf="request.status === 'SUBMITTED'">
+      <div class="alert-icon">
+        <ion-icon name="information-circle-outline"></ion-icon>
+      </div>
+      <div class="alert-body">
+        <h3 class="alert-title">{{ 'REQUESTS.STATUSES.SUBMITTED' | translate }}</h3>
+        <p class="alert-message">
+          {{ 'REQUESTS.SUBMITTED_LOCKED_NOTICE' | translate }}
+        </p>
+      </div>
+    </div>
+
     <!-- Header Card -->
     <div class="header-card">
       <div class="header-top">
@@ -321,7 +334,7 @@
                 <!-- Removed bulky Exchange Rate cell -->
                 <div class="info-cell full-width" *ngIf="doc.bankAccountDetails">
                   <span class="cell-lbl">{{ 'REQUESTS.DOC_BANK_ACCOUNT' | translate }}</span>
-                  <span class="cell-val font-mono">{{ doc.bankAccountDetails }}</span>
+                  <span class="cell-val font-mono">{{ formatIbanDisplay(doc.bankAccountDetails) }}</span>
                 </div>
                 <div class="info-cell full-width" *ngIf="doc.explanation">
                   <span class="cell-lbl">{{ 'REQUESTS.DOC_EXPLANATION' | translate }}</span>
@@ -460,7 +473,7 @@
             </div>
             <div class="info-cell">
               <span class="cell-lbl">{{ (request.swiftBic ? 'REQUESTS.IBAN' : 'REQUESTS.BANK_ACCOUNT_NUMBER') | translate }}</span>
-              <span class="cell-val font-mono">{{ request.iban }}</span>
+              <span class="cell-val font-mono">{{ formatIbanDisplay(request.iban, !request.swiftBic) }}</span>
             </div>
             <div class="info-cell" *ngIf="request.swiftBic">
               <span class="cell-lbl">{{ 'REQUESTS.SWIFT_BIC' | translate }}</span>
@@ -485,7 +498,7 @@
             </div>
             <div class="info-cell" *ngIf="request.ibanEUR">
               <span class="cell-lbl">{{ 'REQUESTS.IBAN' | translate }}</span>
-              <span class="cell-val font-mono">{{ request.ibanEUR }}</span>
+              <span class="cell-val font-mono">{{ formatIbanDisplay(request.ibanEUR, !request.swiftBicEUR) }}</span>
             </div>
             <div class="info-cell" *ngIf="request.swiftBicEUR">
               <span class="cell-lbl">{{ 'REQUESTS.SWIFT_BIC' | translate }}</span>

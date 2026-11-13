@@ -1398,6 +1398,7 @@ export class RequestsService {
     };
 
     let savedReq: FinancialRequest | null = null;
+    let apiError: any = null;
 
     // 1. Try persisting via backend API
     if (payload.requestId) {
@@ -1426,15 +1427,18 @@ export class RequestsService {
         }
       } catch (err: any) {
         console.warn('Failed to patch request on backend API', err);
+        apiError = err;
         // If request was not found on backend (e.g. was a purely local draft), fallback to POST
         if (err?.status === 404 || err?.statusCode === 404 || err?.message?.includes('not found')) {
           try {
             const createdRaw = await this.api.postResource('requests', { body: requestBody });
             if (createdRaw) {
               savedReq = new FinancialRequest(createdRaw);
+              apiError = null;
             }
           } catch (postErr) {
             console.error('Failed to post request as fallback', postErr);
+            apiError = postErr;
           }
         }
       }
@@ -1446,6 +1450,7 @@ export class RequestsService {
         }
       } catch (err) {
         console.warn('Failed to post new request to backend API', err);
+        apiError = err;
       }
     }
 
@@ -1462,6 +1467,17 @@ export class RequestsService {
       return savedReq;
     }
 
+    // If targetStatus is SUBMITTED, do not silently swallow backend errors into local storage!
+    if (targetStatus === 'SUBMITTED') {
+      const errMsg =
+        apiError?.error?.message ||
+        apiError?.error?.error ||
+        apiError?.message ||
+        apiError?.statusText ||
+        (typeof apiError === 'string' ? apiError : 'Błąd połączenia z serwerem');
+      throw new Error(errMsg);
+    }
+
     // 3. Fallback to local storage if API was unreachable or failed completely
     let existingIndex = -1;
     if (payload.requestId) {
@@ -1474,16 +1490,9 @@ export class RequestsService {
         throw new Error('This request is locked and cannot be modified');
       }
 
-      let targetRequestId = existing.requestId;
-      let targetYear = existing.year || new Date().getFullYear();
-      let targetSeqNumber = existing.sequenceNumber;
-
-      if (existing.status === 'DRAFT' && targetStatus === 'SUBMITTED') {
-        const nextId = await this.generateNextRequestId(targetYear);
-        targetRequestId = nextId.requestId;
-        targetSeqNumber = nextId.sequenceNumber;
-        targetYear = nextId.year;
-      }
+      const targetRequestId = existing.requestId;
+      const targetYear = existing.year || new Date().getFullYear();
+      const targetSeqNumber = existing.sequenceNumber;
 
       const updatedData = {
         ...rawList[existingIndex],
@@ -1497,10 +1506,6 @@ export class RequestsService {
         updatedAt: now
       };
 
-      if (targetStatus === 'SUBMITTED' && !updatedData.submittedAt) {
-        updatedData.submittedAt = now;
-      }
-
       if (existing.status !== targetStatus) {
         updatedData.statusHistory = [
           ...(updatedData.statusHistory || []),
@@ -1508,7 +1513,7 @@ export class RequestsService {
             status: targetStatus,
             timestamp: now,
             updatedBy: user.getDisplayName(),
-            comment: targetStatus === 'SUBMITTED' ? 'REQUESTS.HISTORY_COMMENTS.SUBMITTED_BY_APPLICANT' : 'REQUESTS.HISTORY_COMMENTS.DRAFT_SAVED'
+            comment: 'REQUESTS.HISTORY_COMMENTS.DRAFT_SAVED'
           }
         ];
       }
@@ -1519,23 +1524,14 @@ export class RequestsService {
       return new FinancialRequest(updatedData);
     } else {
       const year = new Date().getFullYear();
-      let sequenceNumber: number | undefined;
-      let requestId: string;
-
-      if (targetStatus === 'SUBMITTED') {
-        const nextId = await this.generateNextRequestId(year);
-        sequenceNumber = nextId.sequenceNumber;
-        requestId = nextId.requestId;
-      } else {
-        const rand = Math.random().toString(36).substring(2, 8);
-        requestId = `draft_${Date.now()}_${rand}`;
-      }
+      const rand = Math.random().toString(36).substring(2, 8);
+      const requestId = `draft_${Date.now()}_${rand}`;
 
       const newRequestData: any = {
         ...payload,
         requestId,
         year,
-        sequenceNumber,
+        sequenceNumber: undefined,
         userId: user.userId,
         userDisplayName: user.getDisplayName(),
         userEmail: user.email,
@@ -1548,13 +1544,13 @@ export class RequestsService {
         currency: payload.currency || 'PLN',
         createdAt: now,
         updatedAt: now,
-        submittedAt: targetStatus === 'SUBMITTED' ? now : undefined,
+        submittedAt: undefined,
         statusHistory: [
           {
             status: targetStatus,
             timestamp: now,
             updatedBy: user.getDisplayName(),
-            comment: targetStatus === 'SUBMITTED' ? 'REQUESTS.HISTORY_COMMENTS.SUBMITTED_BY_APPLICANT' : 'REQUESTS.HISTORY_COMMENTS.DRAFT_CREATED'
+            comment: 'REQUESTS.HISTORY_COMMENTS.DRAFT_CREATED'
           }
         ]
       };

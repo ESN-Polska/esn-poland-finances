@@ -5,6 +5,15 @@ import { EmailTemplateTypes } from '@models/configurations.model';
 import { User } from '@models/user.model';
 import { AppService } from '../../app.service';
 import { UsersService } from '../../common/users.service';
+import {
+  formatDomesticAccount,
+  formatInternationalIban,
+  formatIban,
+  formatSwift,
+  isValidDomesticAccount,
+  isValidInternationalIban,
+  isValidSwift
+} from '../../utils/bank-utils';
 
 @Component({
   selector: 'app-profile-tab',
@@ -159,38 +168,43 @@ export class ProfilePage implements OnInit {
   private populateBankDetails(saved: any): void {
     if (!saved) return;
     if (saved.pln) {
-      this.plnBankDetails = {
-        accountHolderName: saved.pln.accountHolderName || '',
-        accountHolderAddress: saved.pln.accountHolderAddress || '',
-        iban: saved.pln.iban || '',
-        swiftBic: saved.pln.swiftBic || ''
-      };
       this.plnBankAccountType =
         saved.pln.accountType ||
         (saved.pln.swiftBic || (saved.pln.iban && /^[A-Za-z]{2}/.test(saved.pln.iban.trim()) && !saved.pln.iban.trim().toUpperCase().startsWith('PL'))
           ? 'INTERNATIONAL'
           : 'DOMESTIC');
+      this.plnBankDetails = {
+        accountHolderName: saved.pln.accountHolderName || '',
+        accountHolderAddress: saved.pln.accountHolderAddress || '',
+        iban: this.formatIban(saved.pln.iban || '', this.plnBankAccountType),
+        swiftBic: saved.pln.swiftBic || ''
+      };
     }
     if (saved.eur) {
-      this.eurBankDetails = {
-        accountHolderName: saved.eur.accountHolderName || '',
-        accountHolderAddress: saved.eur.accountHolderAddress || '',
-        iban: saved.eur.iban || '',
-        swiftBic: saved.eur.swiftBic || ''
-      };
       this.eurBankAccountType =
         saved.eur.accountType ||
         (saved.eur.swiftBic || (saved.eur.iban && /^[A-Za-z]{2}/.test(saved.eur.iban.trim()) && !saved.eur.iban.trim().toUpperCase().startsWith('PL'))
           ? 'INTERNATIONAL'
           : 'DOMESTIC');
+      this.eurBankDetails = {
+        accountHolderName: saved.eur.accountHolderName || '',
+        accountHolderAddress: saved.eur.accountHolderAddress || '',
+        iban: this.formatIban(saved.eur.iban || '', this.eurBankAccountType),
+        swiftBic: saved.eur.swiftBic || ''
+      };
     }
   }
 
   public async ngOnInit(): Promise<void> {
-    const saved = await this.app.getDefaultBankDetails();
-    if (saved) {
-      this.populateBankDetails(saved);
+    if (this.user?.defaultBankDetails) {
+      this.populateBankDetails(this.user.defaultBankDetails);
+    } else {
+      const saved = await this.app.getDefaultBankDetails();
+      if (saved) {
+        this.populateBankDetails(saved);
+      }
     }
+
     if (this.user) {
       if (this.user.disabledEmailNotifications) {
         this.disabledEmailNotifications = [...this.user.disabledEmailNotifications];
@@ -209,10 +223,10 @@ export class ProfilePage implements OnInit {
         }).catch(() => {});
       }
 
-      if (!saved?.pln && !this.plnBankDetails.accountHolderName) {
+      if (!this.plnBankDetails.accountHolderName) {
         this.plnBankDetails.accountHolderName = this.user.getDisplayName();
       }
-      if (!saved?.eur && !this.eurBankDetails.accountHolderName) {
+      if (!this.eurBankDetails.accountHolderName) {
         this.eurBankDetails.accountHolderName = this.user.getDisplayName();
       }
     }
@@ -298,32 +312,19 @@ export class ProfilePage implements OnInit {
   }
 
   public formatDomesticAccount(value: string): string {
-    if (!value) return '';
-    const digits = value.replace(/\D/g, '').slice(0, 26);
-    if (digits.length <= 2) return digits;
-    const firstTwo = digits.slice(0, 2);
-    const rest = digits.slice(2);
-    const restGroups = rest.match(/.{1,4}/g);
-    return restGroups ? `${firstTwo} ${restGroups.join(' ')}` : firstTwo;
+    return formatDomesticAccount(value);
   }
 
   public formatInternationalIban(value: string): string {
-    if (!value) return '';
-    const cleaned = value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 34);
-    return cleaned.match(/.{1,4}/g)?.join(' ') || cleaned;
+    return formatInternationalIban(value);
   }
 
   public formatSwift(value: string): string {
-    if (!value) return '';
-    return value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 11);
+    return formatSwift(value);
   }
 
   public formatIban(value: string, forceType?: 'DOMESTIC' | 'INTERNATIONAL'): string {
-    const type = forceType || this.plnBankAccountType;
-    if (type === 'DOMESTIC') {
-      return this.formatDomesticAccount(value);
-    }
-    return this.formatInternationalIban(value);
+    return formatIban(value, forceType || this.plnBankAccountType);
   }
 
   public onPlnIbanInput(event: any): void {
@@ -351,18 +352,15 @@ export class ProfilePage implements OnInit {
   }
 
   public isValidDomesticAccount(val: string | undefined): boolean {
-    const clean = (val || '').replace(/\D/g, '');
-    return clean.length === 26;
+    return isValidDomesticAccount(val);
   }
 
   public isValidInternationalIban(val: string | undefined): boolean {
-    const clean = (val || '').replace(/\s+/g, '').toUpperCase();
-    return /^[A-Z]{2}[A-Z0-9]{13,32}$/.test(clean);
+    return isValidInternationalIban(val);
   }
 
   public isValidSwift(val: string | undefined): boolean {
-    const clean = (val || '').replace(/\s+/g, '').toUpperCase();
-    return /^[A-Z0-9]{8}$|^[A-Z0-9]{11}$/.test(clean);
+    return isValidSwift(val);
   }
 
   public isPlnFieldInvalid(field: string): boolean {
@@ -451,23 +449,39 @@ export class ProfilePage implements OnInit {
       !!this.eurBankDetails.swiftBic?.trim() ||
       this.eurBankAccountType === 'INTERNATIONAL';
 
+    const bankPayload: any = (hasAnyPlnField || hasAnyEurField) ? {
+      pln: hasAnyPlnField ? {
+        accountHolderName: this.plnBankDetails.accountHolderName?.trim() || '',
+        accountHolderAddress: this.plnBankDetails.accountHolderAddress?.trim() || '',
+        iban: (this.plnBankDetails.iban || '').replace(/\s+/g, '').toUpperCase(),
+        swiftBic: this.plnBankAccountType === 'INTERNATIONAL' ? (this.plnBankDetails.swiftBic?.trim().toUpperCase() || '') : '',
+        accountType: this.plnBankAccountType
+      } : undefined,
+      eur: hasAnyEurField ? {
+        accountHolderName: this.eurBankDetails.accountHolderName?.trim() || '',
+        accountHolderAddress: this.eurBankDetails.accountHolderAddress?.trim() || '',
+        iban: (this.eurBankDetails.iban || '').replace(/\s+/g, '').toUpperCase(),
+        swiftBic: this.eurBankAccountType === 'INTERNATIONAL' ? (this.eurBankDetails.swiftBic?.trim().toUpperCase() || '') : '',
+        accountType: this.eurBankAccountType
+      } : undefined
+    } : null;
+
+    const userId = this.user?.userId;
+    if (!userId) return;
+
     this.isSaving = true;
     try {
-      await this.app.saveDefaultBankDetails({
-        pln: hasAnyPlnField ? {
-          ...this.plnBankDetails,
-          accountType: this.plnBankAccountType
-        } : undefined,
-        eur: hasAnyEurField ? {
-          ...this.eurBankDetails,
-          accountType: this.eurBankAccountType
-        } : undefined
-      });
+      const updatedUser = await this.usersService.updateDefaultBankDetails(userId, bankPayload);
+      if (updatedUser) {
+        await this.app.updateCurrentUserRecord(updatedUser);
+      } else {
+        await this.app.saveDefaultBankDetails(bankPayload);
+      }
       this.hasAttemptedSubmit = false;
       await this.showToast('PROFILE.BANK_SAVED_SUCCESS', 'success');
-    } catch (err) {
-      console.error('Failed to save bank details', err);
-      await this.showToast('Error saving bank details', 'danger');
+    } catch (err: any) {
+      console.error('Failed to save bank details on server', err);
+      await this.showToast('PROFILE.BANK_SAVE_FAILED', 'danger');
     } finally {
       this.isSaving = false;
     }

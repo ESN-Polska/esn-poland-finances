@@ -17,6 +17,15 @@ import { AppService } from '../../../app.service';
 import { RequestsService } from '../../../services/requests.service';
 import { MediaService } from '../../../common/media.service';
 import { parseLocaleNumber } from '../../../utils/number-utils';
+import {
+  formatDomesticAccount,
+  formatInternationalIban,
+  formatIban,
+  formatSwift,
+  isValidDomesticAccount,
+  isValidInternationalIban,
+  isValidSwift
+} from '../../../utils/bank-utils';
 
 @Component({
   selector: 'app-request-form',
@@ -239,6 +248,13 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy, ViewWi
         ? 'INTERNATIONAL'
         : 'DOMESTIC';
 
+    if (this.request.iban) {
+      this.request.iban = this.formatIban(this.request.iban, this.bankAccountType);
+    }
+    if (this.request.ibanEUR) {
+      this.request.ibanEUR = this.formatIban(this.request.ibanEUR, this.eurBankAccountType);
+    }
+
     if (this.request.requestType === 'ADVANCE_PAYMENT') {
       if (this.request.requestedAmountPLN === undefined || this.request.requestedAmountPLN === null) {
         this.request.requestedAmountPLN = this.request.totalGrossAmount;
@@ -268,12 +284,14 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy, ViewWi
         this.request.accountHolderAddress = primaryBank.accountHolderAddress || '';
       }
       if (overrideExisting || !this.request.iban?.trim()) {
-        this.request.iban = primaryBank.iban || '';
         this.bankAccountType =
           primaryBank.accountType ||
           (primaryBank.swiftBic || (primaryBank.iban && /^[A-Za-z]{2}/.test(primaryBank.iban.trim()) && !primaryBank.iban.trim().toUpperCase().startsWith('PL'))
             ? 'INTERNATIONAL'
             : 'DOMESTIC');
+        this.request.iban = this.formatIban(primaryBank.iban || '', this.bankAccountType);
+      } else if (this.request.iban) {
+        this.request.iban = this.formatIban(this.request.iban, this.bankAccountType);
       }
       if (overrideExisting || !this.request.swiftBic?.trim()) {
         this.request.swiftBic = primaryBank.swiftBic || '';
@@ -290,12 +308,14 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy, ViewWi
         this.request.accountHolderAddressEUR = eurBank.accountHolderAddress || plnBank?.accountHolderAddress || '';
       }
       if (overrideExisting || !this.request.ibanEUR?.trim()) {
-        this.request.ibanEUR = eurBank.iban || '';
         this.eurBankAccountType =
           eurBank.accountType ||
           (eurBank.swiftBic || (eurBank.iban && /^[A-Za-z]{2}/.test(eurBank.iban.trim()) && !eurBank.iban.trim().toUpperCase().startsWith('PL'))
             ? 'INTERNATIONAL'
             : 'DOMESTIC');
+        this.request.ibanEUR = this.formatIban(eurBank.iban || '', this.eurBankAccountType);
+      } else if (this.request.ibanEUR) {
+        this.request.ibanEUR = this.formatIban(this.request.ibanEUR, this.eurBankAccountType);
       }
       if (overrideExisting || !this.request.swiftBicEUR?.trim()) {
         this.request.swiftBicEUR = eurBank.swiftBic || '';
@@ -340,9 +360,9 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy, ViewWi
     if (!isMixed) {
       if (newCurrency === 'EUR') {
         if (defaultBank.eur?.iban && (!currentIban || currentIban === plnIban)) {
-          this.request.iban = defaultBank.eur.iban;
-          this.request.swiftBic = defaultBank.eur.swiftBic || '';
           this.bankAccountType = defaultBank.eur.accountType || (defaultBank.eur.swiftBic ? 'INTERNATIONAL' : 'DOMESTIC');
+          this.request.iban = this.formatIban(defaultBank.eur.iban, this.bankAccountType);
+          this.request.swiftBic = defaultBank.eur.swiftBic || '';
           if (defaultBank.eur.accountHolderName) {
             this.request.accountHolderName = defaultBank.eur.accountHolderName;
           }
@@ -352,9 +372,9 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy, ViewWi
         }
       } else if (newCurrency === 'PLN') {
         if (defaultBank.pln?.iban && (!currentIban || currentIban === eurIban)) {
-          this.request.iban = defaultBank.pln.iban;
-          this.request.swiftBic = defaultBank.pln.swiftBic || '';
           this.bankAccountType = defaultBank.pln.accountType || (defaultBank.pln.swiftBic ? 'INTERNATIONAL' : 'DOMESTIC');
+          this.request.iban = this.formatIban(defaultBank.pln.iban, this.bankAccountType);
+          this.request.swiftBic = defaultBank.pln.swiftBic || '';
           if (defaultBank.pln.accountHolderName) {
             this.request.accountHolderName = defaultBank.pln.accountHolderName;
           }
@@ -365,14 +385,14 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy, ViewWi
       }
     } else {
       if (defaultBank.pln?.iban && (!currentIban || currentIban === eurIban)) {
-        this.request.iban = defaultBank.pln.iban;
-        this.request.swiftBic = defaultBank.pln.swiftBic || '';
         this.bankAccountType = defaultBank.pln.accountType || (defaultBank.pln.swiftBic ? 'INTERNATIONAL' : 'DOMESTIC');
+        this.request.iban = this.formatIban(defaultBank.pln.iban, this.bankAccountType);
+        this.request.swiftBic = defaultBank.pln.swiftBic || '';
       }
       if (defaultBank.eur?.iban && !this.request.ibanEUR?.trim()) {
-        this.request.ibanEUR = defaultBank.eur.iban;
-        this.request.swiftBicEUR = defaultBank.eur.swiftBic || '';
         this.eurBankAccountType = defaultBank.eur.accountType || (defaultBank.eur.swiftBic ? 'INTERNATIONAL' : 'DOMESTIC');
+        this.request.ibanEUR = this.formatIban(defaultBank.eur.iban, this.eurBankAccountType);
+        this.request.swiftBicEUR = defaultBank.eur.swiftBic || '';
         this.request.accountHolderNameEUR = defaultBank.eur.accountHolderName || defaultBank.pln?.accountHolderName || this.appService.currentUser?.getDisplayName() || '';
         this.request.accountHolderAddressEUR = defaultBank.eur.accountHolderAddress || defaultBank.pln?.accountHolderAddress || '';
       }
@@ -432,6 +452,12 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy, ViewWi
             this.request.swiftBicEUR || (this.request.ibanEUR && /^[A-Za-z]{2}/.test(this.request.ibanEUR.trim()) && !this.request.ibanEUR.trim().toUpperCase().startsWith('PL'))
               ? 'INTERNATIONAL'
               : 'DOMESTIC';
+          if (this.request.iban) {
+            this.request.iban = this.formatIban(this.request.iban, this.bankAccountType);
+          }
+          if (this.request.ibanEUR) {
+            this.request.ibanEUR = this.formatIban(this.request.ibanEUR, this.eurBankAccountType);
+          }
           return;
         }
       } catch (e) {
@@ -568,6 +594,11 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy, ViewWi
   public addDocumentItem(): void {
     if (!this.request.documents) this.request.documents = [];
 
+    if (this.request.documents.length >= this.maxDocuments) {
+      this.showToast('REQUESTS.MAX_DOCUMENTS_REACHED', 'warning', { max: this.maxDocuments });
+      return;
+    }
+
     const lastDoc = this.request.documents[this.request.documents.length - 1];
     const defaultCurrency = lastDoc?.currency || this.request.currency || 'PLN';
     const today = new Date().toISOString().split('T')[0];
@@ -693,20 +724,17 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy, ViewWi
   }
 
   public getDocNet(doc: InvoiceDocumentItem): number {
-    if (doc.originalCurrency) {
-      const gross = parseLocaleNumber(doc.originalAmount) || 0;
-      const vat = parseLocaleNumber(doc.originalVatAmount) || 0;
-      return Math.max(0, Math.round((gross - vat) * 100) / 100);
-    }
-    const gross = parseLocaleNumber(doc.grossAmount) || 0;
-    const vat = parseLocaleNumber(doc.vatAmount) || 0;
-    return Math.max(0, Math.round((gross - vat) * 100) / 100);
+    const gross = Math.max(0, parseLocaleNumber(doc.originalCurrency ? doc.originalAmount : doc.grossAmount) || 0);
+    const rawVat = parseLocaleNumber(doc.originalCurrency ? doc.originalVatAmount : doc.vatAmount) || 0;
+    const vat = Math.max(0, rawVat);
+    return Math.min(gross, Math.max(0, Math.round((gross - vat) * 100) / 100));
   }
 
   public getDocNetPLN(doc: InvoiceDocumentItem): number {
-    const gross = parseLocaleNumber(doc.grossAmount) || 0;
-    const vat = parseLocaleNumber(doc.vatAmount) || 0;
-    return Math.max(0, Math.round((gross - vat) * 100) / 100);
+    const gross = Math.max(0, parseLocaleNumber(doc.grossAmount) || 0);
+    const rawVat = parseLocaleNumber(doc.vatAmount) || 0;
+    const vat = Math.max(0, rawVat);
+    return Math.min(gross, Math.max(0, Math.round((gross - vat) * 100) / 100));
   }
 
   public onCurrencyChange(doc?: InvoiceDocumentItem): void {
@@ -839,32 +867,19 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy, ViewWi
   }
 
   public formatDomesticAccount(value: string): string {
-    if (!value) return '';
-    const digits = value.replace(/\D/g, '').slice(0, 26);
-    if (digits.length <= 2) return digits;
-    const firstTwo = digits.slice(0, 2);
-    const rest = digits.slice(2);
-    const restGroups = rest.match(/.{1,4}/g);
-    return restGroups ? `${firstTwo} ${restGroups.join(' ')}` : firstTwo;
+    return formatDomesticAccount(value);
   }
 
   public formatInternationalIban(value: string): string {
-    if (!value) return '';
-    const cleaned = value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 34);
-    return cleaned.match(/.{1,4}/g)?.join(' ') || cleaned;
+    return formatInternationalIban(value);
   }
 
   public formatSwift(value: string): string {
-    if (!value) return '';
-    return value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 11);
+    return formatSwift(value);
   }
 
   public formatIban(value: string, forceType?: 'DOMESTIC' | 'INTERNATIONAL'): string {
-    const type = forceType || this.bankAccountType;
-    if (type === 'DOMESTIC') {
-      return this.formatDomesticAccount(value);
-    }
-    return this.formatInternationalIban(value);
+    return formatIban(value, forceType || this.bankAccountType);
   }
 
   public setEurBankAccountType(type: 'DOMESTIC' | 'INTERNATIONAL'): void {
@@ -913,18 +928,40 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy, ViewWi
   }
 
   public isValidDomesticAccount(val: string | undefined): boolean {
-    const clean = (val || '').replace(/\D/g, '');
-    return clean.length === 26;
+    return isValidDomesticAccount(val);
   }
 
   public isValidInternationalIban(val: string | undefined): boolean {
-    const clean = (val || '').replace(/\s+/g, '').toUpperCase();
-    return /^[A-Z]{2}[A-Z0-9]{13,32}$/.test(clean);
+    return isValidInternationalIban(val);
   }
 
   public isValidSwift(val: string | undefined): boolean {
-    const clean = (val || '').replace(/\s+/g, '').toUpperCase();
-    return /^[A-Z0-9]{8}$|^[A-Z0-9]{11}$/.test(clean);
+    return isValidSwift(val);
+  }
+
+  public get maxDocuments(): number {
+    return this.appService.configurations?.requestsConfig?.maxDocumentsPerRequest || 30;
+  }
+
+  public get maxFinancialAmount(): number {
+    return this.appService.configurations?.requestsConfig?.maxFinancialAmount || 10000000;
+  }
+
+  public getVatValidationMessage(doc: InvoiceDocumentItem): string {
+    const rawGross = doc.originalCurrency ? doc.originalAmount : doc.grossAmount;
+    const rawVat = doc.originalCurrency ? doc.originalVatAmount : doc.vatAmount;
+    if (rawVat !== undefined && rawVat !== null && String(rawVat).includes('-')) {
+      return 'REQUESTS.VALIDATION.VAT_NEGATIVE';
+    }
+    const gross = parseLocaleNumber(rawGross) ?? 0;
+    const vat = parseLocaleNumber(rawVat);
+    if (vat !== undefined && vat > gross) {
+      return 'REQUESTS.VALIDATION.VAT_EXCEEDS_GROSS';
+    }
+    if (rawVat !== undefined && rawVat !== null && String(rawVat).trim() !== '' && vat === undefined) {
+      return 'REQUESTS.VALIDATION.MAX_DECIMALS';
+    }
+    return 'REQUESTS.VALIDATION.VAT_EXCEEDS_GROSS';
   }
 
   public isValidSellerBank(val: string | undefined): boolean {
@@ -939,7 +976,12 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy, ViewWi
       case 'sourceOfFunding':
         return !this.request.sourceOfFunding?.trim();
       case 'accountHolderName':
-        return this.request.requestType !== 'INVOICE_TO_PAY' && !this.request.accountHolderName?.trim();
+        return (
+          this.request.requestType !== 'INVOICE_TO_PAY' &&
+          (!this.request.accountHolderName?.trim() ||
+            !/[a-zA-ZąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/.test(this.request.accountHolderName) ||
+            this.request.accountHolderName.trim().length < 2)
+        );
       case 'accountHolderAddress':
         return this.request.requestType !== 'INVOICE_TO_PAY' && !this.request.accountHolderAddress?.trim();
       case 'iban':
@@ -952,9 +994,13 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy, ViewWi
           this.bankAccountType === 'INTERNATIONAL' &&
           !this.isValidSwift(this.request.swiftBic);
       case 'accountHolderNameEUR':
-        return this.request.requestType !== 'INVOICE_TO_PAY' &&
+        return (
+          this.request.requestType !== 'INVOICE_TO_PAY' &&
           this.isMixedCurrency &&
-          !this.request.accountHolderNameEUR?.trim();
+          (!this.request.accountHolderNameEUR?.trim() ||
+            !/[a-zA-ZąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/.test(this.request.accountHolderNameEUR) ||
+            this.request.accountHolderNameEUR.trim().length < 2)
+        );
       case 'accountHolderAddressEUR':
         return this.request.requestType !== 'INVOICE_TO_PAY' &&
           this.isMixedCurrency &&
@@ -969,9 +1015,15 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy, ViewWi
           this.isMixedCurrency &&
           this.eurBankAccountType === 'INTERNATIONAL' &&
           !this.isValidSwift(this.request.swiftBicEUR);
-      case 'requestedAmountPLN':
-        return this.request.requestType === 'ADVANCE_PAYMENT' &&
-          (!this.request.requestedAmountPLN || Number(this.request.requestedAmountPLN) <= 0);
+      case 'requestedAmountPLN': {
+        if (this.request.requestType !== 'ADVANCE_PAYMENT') return false;
+        const raw = this.request.requestedAmountPLN;
+        if (raw === undefined || raw === null || String(raw).trim() === '') return true;
+        if (String(raw).includes('-')) return true;
+        const amt = parseLocaleNumber(raw);
+        if (amt === undefined) return true;
+        return amt < 0 || (amt > 0 && amt < 0.01) || amt > this.maxFinancialAmount;
+      }
       case 'explanationAndBudget':
         return this.request.requestType === 'ADVANCE_PAYMENT' && !this.request.explanationAndBudget?.trim();
       case 'delegationFormAttachment':
@@ -979,9 +1031,15 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy, ViewWi
       case 'ticketAttachments':
         return this.request.requestType === 'DELEGATION_SETTLEMENT' &&
           (!this.request.ticketAttachments || this.request.ticketAttachments.length === 0);
-      case 'delegationTotalAmount':
-        return this.request.requestType === 'DELEGATION_SETTLEMENT' &&
-          (!this.request.delegationTotalAmount || Number(this.request.delegationTotalAmount) <= 0);
+      case 'delegationTotalAmount': {
+        if (this.request.requestType !== 'DELEGATION_SETTLEMENT') return false;
+        const raw = this.request.delegationTotalAmount;
+        if (raw === undefined || raw === null || String(raw).trim() === '') return true;
+        if (String(raw).includes('-')) return true;
+        const amt = parseLocaleNumber(raw);
+        if (amt === undefined) return true;
+        return amt < 0 || (amt > 0 && amt < 0.01) || amt > this.maxFinancialAmount;
+      }
       default:
         return false;
     }
@@ -1004,22 +1062,24 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy, ViewWi
         return this.request.requestType === 'INVOICE_REIMBURSEMENT' && !doc.paidOn;
       case 'bankAccountDetails':
         return this.request.requestType === 'INVOICE_TO_PAY' && !this.isValidSellerBank(doc.bankAccountDetails);
-      case 'grossAmount':
-        if (doc.originalCurrency) {
-          const orig = parseLocaleNumber(doc.originalAmount);
-          return orig === undefined || orig <= 0;
-        }
-        const g = parseLocaleNumber(doc.grossAmount);
-        return g === undefined || g <= 0;
-      case 'vatAmount':
-        if (doc.originalCurrency) {
-          const origG = parseLocaleNumber(doc.originalAmount) || 0;
-          const origV = parseLocaleNumber(doc.originalVatAmount);
-          return origV === undefined || origV < 0 || origV > origG;
-        }
-        const docG = parseLocaleNumber(doc.grossAmount) || 0;
-        const docV = parseLocaleNumber(doc.vatAmount);
-        return docV === undefined || docV < 0 || docV > docG;
+      case 'grossAmount': {
+        const raw = doc.originalCurrency ? doc.originalAmount : doc.grossAmount;
+        if (raw === undefined || raw === null || String(raw).trim() === '') return true;
+        if (String(raw).includes('-')) return true;
+        const g = parseLocaleNumber(raw);
+        if (g === undefined) return true;
+        return g < 0 || (g > 0 && g < 0.01) || g > this.maxFinancialAmount;
+      }
+      case 'vatAmount': {
+        const rawGross = doc.originalCurrency ? doc.originalAmount : doc.grossAmount;
+        const rawVat = doc.originalCurrency ? doc.originalVatAmount : doc.vatAmount;
+        if (rawVat === undefined || rawVat === null || String(rawVat).trim() === '') return true;
+        if (String(rawVat).includes('-')) return true;
+        const g = parseLocaleNumber(rawGross) ?? 0;
+        const v = parseLocaleNumber(rawVat);
+        if (v === undefined) return true;
+        return v < 0 || (v > 0 && v < 0.01) || v > g;
+      }
       case 'attachment':
         return !doc.attachment;
       default:
@@ -1174,6 +1234,11 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy, ViewWi
         }, 100);
         return;
       }
+
+      const confirmed = await this.confirmSubmissionModal();
+      if (!confirmed) {
+        return;
+      }
     }
 
     this.isSubmitting = true;
@@ -1238,10 +1303,34 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy, ViewWi
       this.router.navigate(['/t/requests'], { replaceUrl: true });
     } catch (err: any) {
       console.error('Failed to save request', err);
-      await this.showToast(err.message || 'Error saving request', 'danger');
+      const detail = err?.error?.message || err?.message || err;
+      const prefix = this.translate.instant('REQUESTS.SAVE_FAILED');
+      await this.showToast(`${prefix}: ${detail}`, 'danger');
     } finally {
       this.isSubmitting = false;
     }
+  }
+
+  private async confirmSubmissionModal(): Promise<boolean> {
+    return new Promise(async (resolve) => {
+      const alert = await this.alertCtrl.create({
+        header: this.translate.instant('REQUESTS.CONFIRM_SUBMIT_TITLE'),
+        message: this.translate.instant('REQUESTS.CONFIRM_SUBMIT_MESSAGE'),
+        buttons: [
+          {
+            text: this.translate.instant('COMMON.CANCEL'),
+            role: 'cancel',
+            handler: () => resolve(false)
+          },
+          {
+            text: this.translate.instant('REQUESTS.SUBMIT_REQUEST'),
+            role: 'confirm',
+            handler: () => resolve(true)
+          }
+        ]
+      });
+      await alert.present();
+    });
   }
 
   private validateForSubmission(): boolean {
@@ -1267,7 +1356,13 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy, ViewWi
 
     // Only require personal payout bank account when federation pays the applicant directly
     if (this.request.requestType !== 'INVOICE_TO_PAY') {
-      if (!this.request.accountHolderName?.trim()) return false;
+      if (
+        !this.request.accountHolderName?.trim() ||
+        !/[a-zA-ZąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/.test(this.request.accountHolderName) ||
+        this.request.accountHolderName.trim().length < 2
+      ) {
+        return false;
+      }
       if (!this.request.accountHolderAddress?.trim()) return false;
       if (!this.request.iban?.trim()) return false;
       if (this.bankAccountType === 'DOMESTIC') {
@@ -1278,7 +1373,13 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy, ViewWi
       }
 
       if (this.isMixedCurrency) {
-        if (!this.request.accountHolderNameEUR?.trim()) return false;
+        if (
+          !this.request.accountHolderNameEUR?.trim() ||
+          !/[a-zA-ZąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/.test(this.request.accountHolderNameEUR) ||
+          this.request.accountHolderNameEUR.trim().length < 2
+        ) {
+          return false;
+        }
         if (!this.request.accountHolderAddressEUR?.trim()) return false;
         if (!this.request.ibanEUR?.trim()) return false;
         if (this.eurBankAccountType === 'DOMESTIC') {
@@ -1295,6 +1396,9 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy, ViewWi
       this.request.requestType === 'INVOICE_REIMBURSEMENT'
     ) {
       if (!this.request.documents || this.request.documents.length === 0) {
+        return false;
+      }
+      if (this.request.documents.length > this.maxDocuments) {
         return false;
       }
 
@@ -1316,38 +1420,40 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy, ViewWi
           if (doc.hasDifferentSaleDate && !doc.saleDate) return false;
         }
 
-        if (doc.originalCurrency) {
-          const orig = parseLocaleNumber(doc.originalAmount);
-          if (orig === undefined || orig <= 0) {
-            return false;
-          }
-          const origVat = parseLocaleNumber(doc.originalVatAmount);
-          if (origVat === undefined || origVat < 0 || origVat > orig) {
-            return false;
-          }
-        } else {
-          const gross = parseLocaleNumber(doc.grossAmount);
-          if (gross === undefined || gross <= 0) {
-            return false;
-          }
-          const vat = parseLocaleNumber(doc.vatAmount);
-          if (vat === undefined || vat < 0 || vat > gross) {
-            return false;
-          }
+        const rawGross = doc.originalCurrency ? doc.originalAmount : doc.grossAmount;
+        const rawVat = doc.originalCurrency ? doc.originalVatAmount : doc.vatAmount;
+
+        if (rawGross === undefined || rawGross === null || String(rawGross).trim() === '') return false;
+        if (rawVat === undefined || rawVat === null || String(rawVat).trim() === '') return false;
+        if (String(rawGross).includes('-') || String(rawVat).includes('-')) return false;
+
+        const gross = parseLocaleNumber(rawGross);
+        if (gross === undefined || gross < 0 || (gross > 0 && gross < 0.01) || gross > this.maxFinancialAmount) {
+          return false;
+        }
+        const vat = parseLocaleNumber(rawVat);
+        if (vat === undefined || vat < 0 || (vat > 0 && vat < 0.01) || vat > gross) {
+          return false;
         }
         if (!doc.attachment) return false;
       }
     } else if (this.request.requestType === 'ADVANCE_PAYMENT') {
-      const advAmt = parseLocaleNumber(this.request.requestedAmountPLN);
-      if (advAmt === undefined || advAmt <= 0) {
+      const rawAdv = this.request.requestedAmountPLN;
+      if (rawAdv === undefined || rawAdv === null || String(rawAdv).trim() === '') return false;
+      if (String(rawAdv).includes('-')) return false;
+      const advAmt = parseLocaleNumber(rawAdv);
+      if (advAmt === undefined || advAmt < 0 || (advAmt > 0 && advAmt < 0.01) || advAmt > this.maxFinancialAmount) {
         return false;
       }
       if (!this.request.explanationAndBudget?.trim()) {
         return false;
       }
     } else if (this.request.requestType === 'DELEGATION_SETTLEMENT') {
-      const amt = parseLocaleNumber(this.request.delegationTotalAmount ?? this.request.totalGrossAmount);
-      if (amt === undefined || amt <= 0) {
+      const rawDel = this.request.delegationTotalAmount ?? this.request.totalGrossAmount;
+      if (rawDel === undefined || rawDel === null || String(rawDel).trim() === '') return false;
+      if (String(rawDel).includes('-')) return false;
+      const amt = parseLocaleNumber(rawDel);
+      if (amt === undefined || amt < 0 || (amt > 0 && amt < 0.01) || amt > this.maxFinancialAmount) {
         return false;
       }
       if (!this.request.delegationFormAttachment) {

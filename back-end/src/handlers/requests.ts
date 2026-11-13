@@ -173,6 +173,7 @@ class RequestsHandler extends ResourceController {
   protected async postResource(): Promise<any> {
     const user = await this.getFreshAuthenticatedUser();
     const body = this.body || {};
+    await this.validateRequestPayload(body);
     const status = body.status === 'SUBMITTED' ? 'SUBMITTED' : 'DRAFT';
     delete body.adminRemarks;
     const year = new Date().getFullYear();
@@ -303,6 +304,7 @@ class RequestsHandler extends ResourceController {
       user.hasPermission(AppPermission.REQUESTS.PAYOUTS);
 
     const updates = this.body || {};
+    await this.validateRequestPayload(updates);
     const updatedStatus = updates.status || existing.status;
 
     // Permission check: either owner modifying an editable request, a manager, or payout officer marking as paid / partial payout
@@ -779,6 +781,73 @@ class RequestsHandler extends ResourceController {
         return 'notify-request-rejected-en';
       default:
         throw new HandledError("Template doesn't exist");
+    }
+  }
+
+  private async validateRequestPayload(body: any): Promise<void> {
+    if (!body) return;
+    const configs = await this.getConfigurations();
+    const maxDocs = configs.requestsConfig?.maxDocumentsPerRequest ?? 30;
+    const maxFinancialAmount = configs.requestsConfig?.maxFinancialAmount ?? 10000000;
+
+    if (Array.isArray(body.documents)) {
+      if (body.documents.length > maxDocs) {
+        throw new HandledError(`Maximum number of documents (${maxDocs}) exceeded`);
+      }
+      for (const doc of body.documents) {
+        const gross = doc.grossAmount !== undefined && doc.grossAmount !== null && doc.grossAmount !== '' ? Number(doc.grossAmount) : undefined;
+        const vat = doc.vatAmount !== undefined && doc.vatAmount !== null && doc.vatAmount !== '' ? Number(doc.vatAmount) : undefined;
+        const origGross = doc.originalAmount !== undefined && doc.originalAmount !== null && doc.originalAmount !== '' ? Number(doc.originalAmount) : undefined;
+        const origVat = doc.originalVatAmount !== undefined && doc.originalVatAmount !== null && doc.originalVatAmount !== '' ? Number(doc.originalVatAmount) : undefined;
+
+        if (
+          (gross !== undefined && !isNaN(gross) && gross < 0) ||
+          (vat !== undefined && !isNaN(vat) && vat < 0) ||
+          (origGross !== undefined && !isNaN(origGross) && origGross < 0) ||
+          (origVat !== undefined && !isNaN(origVat) && origVat < 0)
+        ) {
+          throw new HandledError('Financial amounts cannot be negative');
+        }
+
+        if (
+          (gross !== undefined && !isNaN(gross) && gross > maxFinancialAmount) ||
+          (origGross !== undefined && !isNaN(origGross) && origGross > maxFinancialAmount)
+        ) {
+          throw new HandledError(`Document gross amount exceeds maximum allowed limit (${maxFinancialAmount})`);
+        }
+
+        if (
+          gross !== undefined && !isNaN(gross) &&
+          vat !== undefined && !isNaN(vat) &&
+          vat > gross
+        ) {
+          throw new HandledError('VAT amount cannot exceed gross amount');
+        }
+      }
+    }
+
+    const totalGross = body.totalGrossAmount !== undefined && body.totalGrossAmount !== null && body.totalGrossAmount !== '' ? Number(body.totalGrossAmount) : undefined;
+    const totalVat = body.totalVatAmount !== undefined && body.totalVatAmount !== null && body.totalVatAmount !== '' ? Number(body.totalVatAmount) : undefined;
+    const reqPLN = body.requestedAmountPLN !== undefined && body.requestedAmountPLN !== null && body.requestedAmountPLN !== '' ? Number(body.requestedAmountPLN) : undefined;
+    const delAmount = body.delegationTotalAmount !== undefined && body.delegationTotalAmount !== null && body.delegationTotalAmount !== '' ? Number(body.delegationTotalAmount) : undefined;
+
+    if (
+      (totalGross !== undefined && !isNaN(totalGross) && totalGross < 0) ||
+      (totalVat !== undefined && !isNaN(totalVat) && totalVat < 0) ||
+      (reqPLN !== undefined && !isNaN(reqPLN) && reqPLN < 0) ||
+      (delAmount !== undefined && !isNaN(delAmount) && delAmount < 0)
+    ) {
+      throw new HandledError('Financial amounts cannot be negative');
+    }
+
+    if (totalGross !== undefined && !isNaN(totalGross) && totalGross > maxFinancialAmount) {
+      throw new HandledError(`Total gross amount exceeds maximum allowed limit (${maxFinancialAmount})`);
+    }
+    if (reqPLN !== undefined && !isNaN(reqPLN) && reqPLN > maxFinancialAmount) {
+      throw new HandledError(`Requested amount exceeds maximum allowed limit (${maxFinancialAmount})`);
+    }
+    if (delAmount !== undefined && !isNaN(delAmount) && delAmount > maxFinancialAmount) {
+      throw new HandledError(`Delegation total amount exceeds maximum allowed limit (${maxFinancialAmount})`);
     }
   }
 

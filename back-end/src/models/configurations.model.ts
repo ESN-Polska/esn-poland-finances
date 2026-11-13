@@ -21,6 +21,7 @@ export const DEFAULT_CONFIGURATION_PAGE_SECTIONS_ORDER = [
   'RESOURCES',
   'TEMPLATES',
   'EXPORTS',
+  'REQUESTS',
   'FINANCES',
   'OPTIONS'
 ] as const;
@@ -81,6 +82,16 @@ export const DEFAULT_FINANCES_CONFIGURATIONS: FinancialModuleConfigurations = {
     en: 'ESN Poland',
     pl: 'ESN Polska'
   }
+};
+
+export interface RequestsModuleConfigurations {
+  maxDocumentsPerRequest: number;
+  maxFinancialAmount: number;
+}
+
+export const DEFAULT_REQUESTS_CONFIGURATIONS: RequestsModuleConfigurations = {
+  maxDocumentsPerRequest: 30,
+  maxFinancialAmount: 10000000
 };
 
 export type CsvDelimiter = ';' | ',' | '\t';
@@ -201,6 +212,7 @@ export const AppPermission = {
     RESOURCES: 'configurations.resources',
     TEMPLATES: 'configurations.templates',
     EXPORTS: 'configurations.exports',
+    REQUESTS: 'configurations.requests',
     FINANCES: 'configurations.finances',
     OPTIONS: 'configurations.options'
   }
@@ -567,6 +579,7 @@ export const DEFAULT_CONFIGURATIONS = {
   csvExportSettings: DEFAULT_CSV_EXPORT_SETTINGS,
   bankExportSettings: DEFAULT_BANK_EXPORT_SETTINGS,
   financesPageSectionsOrder: [...DEFAULT_FINANCES_PAGE_SECTIONS_ORDER],
+  requestsConfig: DEFAULT_REQUESTS_CONFIGURATIONS,
   financesConfig: DEFAULT_FINANCES_CONFIGURATIONS
 };
 
@@ -618,6 +631,8 @@ export class Configurations extends Resource {
   configurationPageSectionsOrder: ConfigurationPageSection[];
   /** Order of finances subtabs in /t/finances. */
   financesPageSectionsOrder: FinancesPageSection[];
+  /** Dedicated settings for requests module. */
+  requestsConfig: RequestsModuleConfigurations;
   /** Dedicated settings for finances module. */
   financesConfig: FinancialModuleConfigurations;
   /** Last update timestamp (ISO string), used for optimistic concurrency control. */
@@ -800,6 +815,17 @@ export class Configurations extends Resource {
         resolvedSections.push('EXPORTS');
       }
     }
+    if (resolvedSections.length > 0 && !resolvedSections.includes('REQUESTS')) {
+      const financesIdx = resolvedSections.indexOf('FINANCES');
+      const exportsIdx = resolvedSections.indexOf('EXPORTS');
+      if (financesIdx !== -1) {
+        resolvedSections.splice(financesIdx, 0, 'REQUESTS');
+      } else if (exportsIdx !== -1) {
+        resolvedSections.splice(exportsIdx + 1, 0, 'REQUESTS');
+      } else {
+        resolvedSections.push('REQUESTS');
+      }
+    }
     for (const section of DEFAULT_CONFIGURATION_PAGE_SECTIONS_ORDER) {
       if (!resolvedSections.includes(section)) {
         resolvedSections.push(section);
@@ -819,6 +845,19 @@ export class Configurations extends Resource {
       }
     }
     this.financesPageSectionsOrder = resolvedFinances.length ? resolvedFinances : [...DEFAULT_FINANCES_PAGE_SECTIONS_ORDER];
+
+    this.requestsConfig = {
+      maxDocumentsPerRequest: this.clean(
+        x.requestsConfig?.maxDocumentsPerRequest,
+        Number,
+        DEFAULT_REQUESTS_CONFIGURATIONS.maxDocumentsPerRequest
+      ),
+      maxFinancialAmount: this.clean(
+        x.requestsConfig?.maxFinancialAmount,
+        Number,
+        DEFAULT_REQUESTS_CONFIGURATIONS.maxFinancialAmount
+      )
+    };
 
     this.financesConfig = {
       budgetExecutionCalculationMode: x.financesConfig?.budgetExecutionCalculationMode === 'GROSS' ? 'GROSS' : 'NET',
@@ -1126,6 +1165,7 @@ export class Configurations extends Resource {
       this.threadRequestEmailsSubject = defaultThreadSubject;
     }
     this.csvExportSettings = cleanCsvExportSettings(safeData.csvExportSettings);
+    this.requestsConfig = safeData.requestsConfig || DEFAULT_REQUESTS_CONFIGURATIONS;
   }
 
   hasAdminGroup(): boolean {
@@ -1203,6 +1243,23 @@ export class Configurations extends Resource {
       }
       if (!Array.isArray(this.csvExportSettings.columns) || this.csvExportSettings.columns.length === 0) {
         errors.push('csvExportSettings.columns');
+      }
+    }
+
+    if (this.requestsConfig) {
+      if (
+        isNaN(this.requestsConfig.maxDocumentsPerRequest) ||
+        this.requestsConfig.maxDocumentsPerRequest < 1 ||
+        this.requestsConfig.maxDocumentsPerRequest > 100
+      ) {
+        errors.push('requestsConfig.maxDocumentsPerRequest');
+      }
+      if (
+        isNaN(this.requestsConfig.maxFinancialAmount) ||
+        this.requestsConfig.maxFinancialAmount < 100 ||
+        this.requestsConfig.maxFinancialAmount > 100000000
+      ) {
+        errors.push('requestsConfig.maxFinancialAmount');
       }
     }
 

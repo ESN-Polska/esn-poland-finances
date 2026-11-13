@@ -409,6 +409,39 @@ paths:
                   type: boolean
                   description: Flag indicating if the user has explicitly chosen/confirmed their primary section
                   example: true
+                defaultBankDetails:
+                  type: object
+                  nullable: true
+                  description: User default payout bank accounts for PLN and EUR
+                  properties:
+                    pln:
+                      type: object
+                      properties:
+                        accountHolderName:
+                          type: string
+                        accountHolderAddress:
+                          type: string
+                        iban:
+                          type: string
+                        swiftBic:
+                          type: string
+                        accountType:
+                          type: string
+                          enum: [DOMESTIC, INTERNATIONAL]
+                    eur:
+                      type: object
+                      properties:
+                        accountHolderName:
+                          type: string
+                        accountHolderAddress:
+                          type: string
+                        iban:
+                          type: string
+                        swiftBic:
+                          type: string
+                        accountType:
+                          type: string
+                          enum: [DOMESTIC, INTERNATIONAL]
       responses:
         200:
           $ref: '#/components/responses/User'
@@ -775,6 +808,39 @@ components:
           items:
             type: string
           example: ["REQUEST_SUBMITTED"]
+        defaultBankDetails:
+          type: object
+          nullable: true
+          description: User default payout bank accounts for PLN and EUR
+          properties:
+            pln:
+              type: object
+              properties:
+                accountHolderName:
+                  type: string
+                accountHolderAddress:
+                  type: string
+                iban:
+                  type: string
+                swiftBic:
+                  type: string
+                accountType:
+                  type: string
+                  enum: [DOMESTIC, INTERNATIONAL]
+            eur:
+              type: object
+              properties:
+                accountHolderName:
+                  type: string
+                accountHolderAddress:
+                  type: string
+                iban:
+                  type: string
+                swiftBic:
+                  type: string
+                accountType:
+                  type: string
+                  enum: [DOMESTIC, INTERNATIONAL]
 
     AttachmentFile:
       type: object

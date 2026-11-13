@@ -162,23 +162,38 @@ export class FinancialRequest extends Resource {
     this.guestInvitationId = this.clean(x.guestInvitationId, String);
     this.guestPurpose = this.clean(x.guestPurpose, String);
 
-    this.position = this.clean(x.position, String);
-    this.sourceOfFunding = this.clean(x.sourceOfFunding, String);
+    this.position = this.clean(x.position, String)?.slice(0, 150);
+    this.sourceOfFunding = this.clean(x.sourceOfFunding, String)?.slice(0, 150);
     this.requestType = this.clean(x.requestType, String, 'INVOICE_TO_PAY');
     this.status = this.clean(x.status, String, 'DRAFT');
 
     this.currency = this.clean(x.currency, String, 'PLN');
-    this.totalGrossAmount = this.clean(x.totalGrossAmount, Number, 0);
-    this.totalVatAmount = this.clean(x.totalVatAmount, Number, 0);
+    this.totalGrossAmount = Math.max(0, this.clean(x.totalGrossAmount, Number, 0));
+    this.totalVatAmount = Math.max(0, this.clean(x.totalVatAmount, Number, 0));
 
-    this.documents = Array.isArray(x.documents) ? x.documents : [];
-    this.requestedAmountPLN = this.clean(x.requestedAmountPLN, Number);
-    this.delegationTotalAmount = this.clean(x.delegationTotalAmount, Number);
-    this.explanationAndBudget = this.clean(x.explanationAndBudget, String);
+    this.documents = Array.isArray(x.documents)
+      ? x.documents.map((doc: any) => ({
+          ...doc,
+          invoiceNumber: typeof doc?.invoiceNumber === 'string' ? doc.invoiceNumber.slice(0, 150) : doc?.invoiceNumber,
+          ksefNumber: typeof doc?.ksefNumber === 'string' ? doc.ksefNumber.slice(0, 150) : doc?.ksefNumber,
+          issuedBy: typeof doc?.issuedBy === 'string' ? doc.issuedBy.slice(0, 150) : doc?.issuedBy,
+          bankAccountDetails: typeof doc?.bankAccountDetails === 'string' ? doc.bankAccountDetails.slice(0, 34) : doc?.bankAccountDetails,
+          explanation: typeof doc?.explanation === 'string' ? doc.explanation.slice(0, 500) : doc?.explanation,
+          grossAmount: typeof doc?.grossAmount === 'number' ? Math.max(0, doc.grossAmount) : doc?.grossAmount,
+          vatAmount: typeof doc?.vatAmount === 'number' ? Math.max(0, doc.vatAmount) : doc?.vatAmount,
+          originalAmount: typeof doc?.originalAmount === 'number' ? Math.max(0, doc.originalAmount) : doc?.originalAmount,
+          originalVatAmount: typeof doc?.originalVatAmount === 'number' ? Math.max(0, doc.originalVatAmount) : doc?.originalVatAmount
+        }))
+      : [];
+    const rawReqPLN = this.clean(x.requestedAmountPLN, Number);
+    this.requestedAmountPLN = rawReqPLN !== undefined ? Math.max(0, rawReqPLN) : undefined;
+    const rawDelAmount = this.clean(x.delegationTotalAmount, Number);
+    this.delegationTotalAmount = rawDelAmount !== undefined ? Math.max(0, rawDelAmount) : undefined;
+    this.explanationAndBudget = this.clean(x.explanationAndBudget, String)?.slice(0, 2000);
 
     if (this.requestType === 'ADVANCE_PAYMENT') {
       if (this.requestedAmountPLN !== undefined && this.requestedAmountPLN !== null) {
-        this.totalGrossAmount = Number(this.requestedAmountPLN) || 0;
+        this.totalGrossAmount = Math.max(0, Number(this.requestedAmountPLN) || 0);
       } else if (this.totalGrossAmount) {
         this.requestedAmountPLN = this.totalGrossAmount;
       }
@@ -186,7 +201,7 @@ export class FinancialRequest extends Resource {
       this.currency = (this.clean(x.currency, String) as Currency) || 'PLN';
     } else if (this.requestType === 'DELEGATION_SETTLEMENT') {
       if (this.delegationTotalAmount !== undefined && this.delegationTotalAmount !== null) {
-        this.totalGrossAmount = Number(this.delegationTotalAmount) || 0;
+        this.totalGrossAmount = Math.max(0, Number(this.delegationTotalAmount) || 0);
       } else if (this.totalGrossAmount) {
         this.delegationTotalAmount = this.totalGrossAmount;
       }
@@ -208,20 +223,20 @@ export class FinancialRequest extends Resource {
       this.paymentConfirmationAttachment = undefined;
     }
 
-    this.generalExplanation = this.clean(x.generalExplanation, String);
+    this.generalExplanation = this.clean(x.generalExplanation, String)?.slice(0, 2000);
 
-    this.accountHolderName = this.clean(x.accountHolderName, String);
-    this.accountHolderAddress = this.clean(x.accountHolderAddress, String);
-    this.iban = this.clean(x.iban, String);
-    this.swiftBic = this.clean(x.swiftBic, String);
+    this.accountHolderName = this.clean(x.accountHolderName, String)?.slice(0, 150);
+    this.accountHolderAddress = this.clean(x.accountHolderAddress, String)?.slice(0, 250);
+    this.iban = this.clean(x.iban, String)?.slice(0, 50);
+    this.swiftBic = this.clean(x.swiftBic, String)?.slice(0, 11);
 
-    this.accountHolderNameEUR = this.clean(x.accountHolderNameEUR, String);
-    this.accountHolderAddressEUR = this.clean(x.accountHolderAddressEUR, String);
-    this.ibanEUR = this.clean(x.ibanEUR, String);
-    this.swiftBicEUR = this.clean(x.swiftBicEUR, String);
+    this.accountHolderNameEUR = this.clean(x.accountHolderNameEUR, String)?.slice(0, 150);
+    this.accountHolderAddressEUR = this.clean(x.accountHolderAddressEUR, String)?.slice(0, 250);
+    this.ibanEUR = this.clean(x.ibanEUR, String)?.slice(0, 50);
+    this.swiftBicEUR = this.clean(x.swiftBicEUR, String)?.slice(0, 11);
 
-    this.additionalRemarks = this.clean(x.additionalRemarks, String);
-    this.adminRemarks = this.clean(x.adminRemarks, String);
+    this.additionalRemarks = this.clean(x.additionalRemarks, String)?.slice(0, 2000);
+    this.adminRemarks = this.clean(x.adminRemarks, String)?.slice(0, 2000);
     this.statusHistory = Array.isArray(x.statusHistory) ? x.statusHistory : [];
 
     this.submittedAt = this.clean(x.submittedAt, String);

@@ -7,6 +7,7 @@ import { AppPermission, UsersOriginDisplayOptions } from '@models/configurations
 import { RequestsService } from '../../../services/requests.service';
 import { AppService } from '../../../app.service';
 import { NavigationHistoryService } from '../../../services/navigation-history.service';
+import { formatIbanDisplay } from '../../../utils/bank-utils';
 
 @Component({
   selector: 'app-request-view',
@@ -70,6 +71,8 @@ export class RequestViewPage implements OnInit {
     const user = this.appService.currentUser;
     return !!user && !!this.request && this.request.isOwnedBy(user);
   }
+
+  public formatIbanDisplay = formatIbanDisplay;
 
   constructor(
     private route: ActivatedRoute,

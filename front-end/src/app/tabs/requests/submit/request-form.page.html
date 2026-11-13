@@ -62,6 +62,7 @@
               [readonly]="isPositionLocked"
               [(ngModel)]="request.position"
               name="position"
+              maxlength="100"
               required
               [placeholder]="'REQUESTS.PLACEHOLDERS.POSITION' | translate"
             />
@@ -80,6 +81,7 @@
               [readonly]="isSourceOfFundingLocked"
               [(ngModel)]="request.sourceOfFunding"
               name="sourceOfFunding"
+              maxlength="100"
               required
               [placeholder]="'REQUESTS.PLACEHOLDERS.FUNDING_SOURCE' | translate"
             />
@@ -160,9 +162,15 @@
             <p class="sectionHelp">{{ 'REQUESTS.MULTI_DOC_HELP' | translate }}</p>
           </div>
 
-          <ion-button fill="outline" size="small" class="addDocBtn" (click)="addDocumentItem()">
+          <ion-button
+            fill="outline"
+            size="small"
+            class="addDocBtn"
+            (click)="addDocumentItem()"
+            [disabled]="(request.documents?.length || 0) >= maxDocuments"
+          >
             <ion-icon slot="start" name="add-outline"></ion-icon>
-            {{ 'REQUESTS.ADD_ANOTHER_DOCUMENT' | translate }}
+            {{ 'REQUESTS.ADD_ANOTHER_DOCUMENT' | translate }} ({{ request.documents?.length || 0 }}/{{ maxDocuments }})
           </ion-button>
         </div>
 
@@ -170,7 +178,7 @@
         <div class="documentsList">
           <div class="documentItemCard" *ngFor="let doc of request.documents; let i = index">
             <div class="docCardHeader">
-              <span class="docIndex">{{ 'REQUESTS.DOCUMENT' | translate }} #{{ i + 1 }}</span>
+              <span class="docIndex">{{ 'REQUESTS.DOCUMENT' | translate }} #{{ i + 1 }} ({{ i + 1 }}/{{ maxDocuments }})</span>
               <button
                 *ngIf="request.documents.length > 1"
                 type="button"
@@ -195,6 +203,7 @@
                       [class.is-invalid]="isDocFieldInvalid(doc, 'invoiceNumber')"
                       [(ngModel)]="doc.invoiceNumber"
                       [name]="'invoiceNumber_' + i"
+                      maxlength="100"
                       required
                       placeholder="FV/2026/01"
                     />
@@ -214,6 +223,7 @@
                       class="formInput font-mono"
                       [(ngModel)]="doc.ksefNumber"
                       [name]="'ksefNumber_' + i"
+                      maxlength="100"
                       placeholder="1234567890-20260101-XXXXXXXXXXXX-XX"
                     />
                   </div>
@@ -227,6 +237,7 @@
                       [class.is-invalid]="isDocFieldInvalid(doc, 'issuedBy')"
                       [(ngModel)]="doc.issuedBy"
                       [name]="'issuedBy_' + i"
+                      maxlength="100"
                       required
                       [placeholder]="'REQUESTS.PLACEHOLDERS.ISSUED_BY' | translate"
                     />
@@ -357,6 +368,7 @@
                         [(ngModel)]="doc.grossAmount"
                         [name]="'grossAmount_' + i"
                         (input)="recalculateTotals()"
+                        maxlength="15"
                         required
                         placeholder="0,00"
                       />
@@ -371,6 +383,7 @@
                         [(ngModel)]="doc.originalAmount"
                         [name]="'originalAmount_' + i"
                         (input)="onForeignAmountChange(doc)"
+                        maxlength="15"
                         required
                         placeholder="0,00"
                       />
@@ -401,6 +414,7 @@
                         [(ngModel)]="doc.vatAmount"
                         [name]="'vatAmount_' + i"
                         (input)="recalculateTotals()"
+                        maxlength="15"
                         required
                         placeholder="0,00"
                       />
@@ -415,6 +429,7 @@
                         [(ngModel)]="doc.originalVatAmount"
                         [name]="'originalVatAmount_' + i"
                         (input)="onForeignAmountChange(doc)"
+                        maxlength="15"
                         required
                         placeholder="0,00"
                       />
@@ -422,7 +437,7 @@
                     </div>
 
                     <span class="errorText" *ngIf="isDocFieldInvalid(doc, 'vatAmount')">
-                      {{ 'REQUESTS.VALIDATION.VAT_EXCEEDS_GROSS' | translate }}
+                      {{ getVatValidationMessage(doc) | translate }}
                     </span>
 
                     <!-- Conversion UI Helper Text for VAT -->
@@ -463,6 +478,7 @@
                   [(ngModel)]="doc.bankAccountDetails"
                   (input)="onSellerIbanInput($event, doc)"
                   [name]="'bankAccountDetails_' + i"
+                  maxlength="34"
                   required
                   placeholder="00 0000 0000 0000 0000 0000 0000 (lub PL...)"
                 />
@@ -479,6 +495,7 @@
                   rows="2"
                   [(ngModel)]="doc.explanation"
                   [name]="'explanation_' + i"
+                  maxlength="500"
                   [placeholder]="'REQUESTS.PLACEHOLDERS.EXPLANATION' | translate"
                 ></textarea>
               </div>
@@ -641,6 +658,7 @@
                 name="requestedAmountPLN"
                 (input)="onAdvanceAmountChange()"
                 (change)="onAdvanceAmountChange()"
+                maxlength="15"
                 required
                 placeholder="0,00"
               />
@@ -660,6 +678,7 @@
             [class.is-invalid]="isFieldInvalid('explanationAndBudget')"
             [(ngModel)]="request.explanationAndBudget"
             name="explanationAndBudget"
+            maxlength="1500"
             required
             [placeholder]="'REQUESTS.PLACEHOLDERS.EXPLANATION_BUDGET' | translate"
           ></textarea>
@@ -776,6 +795,7 @@
               name="delegationTotalAmount"
               (input)="onDelegationAmountChange()"
               (change)="onDelegationAmountChange()"
+              maxlength="15"
               required
               placeholder="0,00"
             />
@@ -861,10 +881,11 @@
               [(ngModel)]="request.accountHolderName"
               name="accountHolderName"
               required
+              maxlength="100"
               [placeholder]="'REQUESTS.FIELDS.ACCOUNT_HOLDER_NAME' | translate"
             />
             <span class="errorText" *ngIf="isFieldInvalid('accountHolderName')">
-              {{ 'REQUESTS.VALIDATION.ACCOUNT_HOLDER_REQUIRED' | translate }}
+              {{ (!request.accountHolderName || !request.accountHolderName.trim() ? 'REQUESTS.VALIDATION.ACCOUNT_HOLDER_REQUIRED' : 'REQUESTS.VALIDATION.INVALID_ACCOUNT_HOLDER') | translate }}
             </span>
           </div>
 
@@ -877,6 +898,7 @@
               [(ngModel)]="request.accountHolderAddress"
               name="accountHolderAddress"
               required
+              maxlength="150"
               [placeholder]="'REQUESTS.FIELDS.ACCOUNT_HOLDER_ADDRESS' | translate"
             />
             <span class="errorText" *ngIf="isFieldInvalid('accountHolderAddress')">
@@ -897,6 +919,7 @@
                 (input)="onPayoutIbanInput($event)"
                 name="iban"
                 required
+                maxlength="42"
                 [placeholder]="bankAccountType === 'DOMESTIC' ? '00 0000 0000 0000 0000 0000 0000' : 'DE00 0000 0000 0000 0000 00'"
               />
               <span class="errorText" *ngIf="isFieldInvalid('iban')">
@@ -914,6 +937,7 @@
                 (input)="onPayoutSwiftInput($event)"
                 name="swiftBic"
                 required
+                maxlength="11"
                 placeholder="PKOPPLPW"
               />
               <span class="errorText" *ngIf="isFieldInvalid('swiftBic')">
@@ -963,10 +987,11 @@
               [(ngModel)]="request.accountHolderNameEUR"
               name="accountHolderNameEUR"
               required
+              maxlength="100"
               [placeholder]="'REQUESTS.FIELDS.ACCOUNT_HOLDER_NAME' | translate"
             />
             <span class="errorText" *ngIf="isFieldInvalid('accountHolderNameEUR')">
-              {{ 'REQUESTS.VALIDATION.ACCOUNT_HOLDER_REQUIRED' | translate }}
+              {{ (!request.accountHolderNameEUR || !request.accountHolderNameEUR.trim() ? 'REQUESTS.VALIDATION.ACCOUNT_HOLDER_REQUIRED' : 'REQUESTS.VALIDATION.INVALID_ACCOUNT_HOLDER') | translate }}
             </span>
           </div>
 
@@ -979,6 +1004,7 @@
               [(ngModel)]="request.accountHolderAddressEUR"
               name="accountHolderAddressEUR"
               required
+              maxlength="150"
               [placeholder]="'REQUESTS.FIELDS.ACCOUNT_HOLDER_ADDRESS' | translate"
             />
             <span class="errorText" *ngIf="isFieldInvalid('accountHolderAddressEUR')">
@@ -999,6 +1025,7 @@
                 (input)="onEurPayoutIbanInput($event)"
                 name="ibanEUR"
                 required
+                maxlength="42"
                 [placeholder]="eurBankAccountType === 'DOMESTIC' ? '00 0000 0000 0000 0000 0000 0000' : 'DE00 0000 0000 0000 0000 00'"
               />
               <span class="errorText" *ngIf="isFieldInvalid('ibanEUR')">
@@ -1016,6 +1043,7 @@
                 (input)="onEurPayoutSwiftInput($event)"
                 name="swiftBicEUR"
                 required
+                maxlength="11"
                 placeholder="PKOPPLPW"
               />
               <span class="errorText" *ngIf="isFieldInvalid('swiftBicEUR')">
@@ -1039,6 +1067,7 @@
             rows="3"
             [(ngModel)]="request.additionalRemarks"
             name="additionalRemarks"
+            maxlength="1500"
             [placeholder]="'REQUESTS.PLACEHOLDERS.ADDITIONAL_REMARKS' | translate"
           ></textarea>
         </div>

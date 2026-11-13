@@ -372,6 +372,9 @@ export class User extends Resource {
             ? 'INTERNATIONAL'
             : 'DOMESTIC';
         }
+        if (cleaned.accountType === 'DOMESTIC') {
+          delete cleaned.swiftBic;
+        }
         return (cleaned.accountHolderName || cleaned.accountHolderAddress || cleaned.iban || cleaned.swiftBic) ? cleaned : undefined;
       };
 

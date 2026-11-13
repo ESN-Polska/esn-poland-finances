@@ -18,6 +18,7 @@ import {
   InvoiceDocumentItem
 } from '@models/financial-request.model';
 import { AppPermission } from '@models/configurations.model';
+import { formatIbanDisplay } from '@app/utils/bank-utils';
 import { MarkPaidModalComponent } from '../markPaidModal.component';
 import { BankExportModalComponent } from './bank-export-modal/bank-export-modal.component';
 
@@ -287,9 +288,7 @@ export class PayoutsPage implements OnInit, OnDestroy {
   }
 
   public formatIbanDisplay(val: string | null | undefined): string {
-    if (!val) return '—';
-    const clean = val.replace(/\s+/g, '');
-    return clean.replace(/(.{4})/g, '$1 ').trim();
+    return formatIbanDisplay(val);
   }
 
   // --- Actions ---
