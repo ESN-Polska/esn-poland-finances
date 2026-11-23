@@ -17,9 +17,26 @@ export class AuthPage implements OnInit {
   public isProcessing = false;
   public isGuestLogin = false;
   public guestErrorKey: string | null = null;
+  public pendingGuestToken: string | null = null;
+
+  public get isGuestInvitation(): boolean {
+    return !!this.pendingGuestToken && !this.guestErrorKey && !this.isAppLocked;
+  }
 
   public get isAppLocked(): boolean {
     return !!this.appService.configurations?.appLocked;
+  }
+
+  public get hasTermsOfService(): boolean {
+    return !!this.appService.configurations?.hasTermsOfService();
+  }
+
+  public get hasPrivacyPolicy(): boolean {
+    return !!this.appService.configurations?.hasPrivacyPolicy();
+  }
+
+  public get hasAnyLegalDocument(): boolean {
+    return this.hasTermsOfService || this.hasPrivacyPolicy;
   }
 
   public get appLockMessage(): string {
@@ -45,6 +62,20 @@ export class AuthPage implements OnInit {
     private toastCtrl: ToastController,
     private translate: TranslateService
   ) {}
+
+  public openTermsOfService(): void {
+    const url = this.appService.configurations?.termsOfServiceURL;
+    if (url) {
+      window.open(url, '_blank');
+    }
+  }
+
+  public openPrivacyPolicy(): void {
+    const url = this.appService.configurations?.privacyPolicyURL;
+    if (url) {
+      window.open(url, '_blank');
+    }
+  }
 
   public async openSupportContact(): Promise<void> {
     const email = this.supportEmail;
@@ -218,50 +249,7 @@ export class AuthPage implements OnInit {
         await toast.present();
       }
     } else if (guestToken) {
-      if (this.isAppLocked) {
-        return;
-      }
-      this.isGuestLogin = true;
-      this.isProcessing = true;
-      try {
-        await this.appService.loginWithGuestToken(guestToken);
-        const fromState = this.appService.getReturnUrlFromState(this.route.snapshot.queryParamMap.get('state'));
-        const fromInput = this.appService.getValidReturnUrl(this.returnUrl);
-        const fromQuery = this.appService.getValidReturnUrl(this.route.snapshot.queryParamMap.get('returnUrl'));
-        const fromStorage = this.appService.getReturnUrl();
-        const resolvedReturnUrl = fromState || fromInput || fromQuery || fromStorage;
-        this.appService.clearReturnUrl();
-        if (resolvedReturnUrl) {
-          try {
-            const navigated = await this.router.navigateByUrl(resolvedReturnUrl, { replaceUrl: true });
-            if (navigated) return;
-          } catch {}
-        }
-        await this.router.navigate(['/t/requests/submit'], { replaceUrl: true });
-        return;
-      } catch (err: any) {
-        console.error('Failed to process guest authentication', err);
-        this.isProcessing = false;
-        const rawErr =
-          err?.error?.message ||
-          err?.error?.error ||
-          (typeof err?.error === 'string' ? err.error : '') ||
-          err?.message ||
-          '';
-        const msg = String(rawErr).toLowerCase();
-
-        if (msg.includes('revoked')) {
-          this.guestErrorKey = 'AUTH.GUEST_ERROR_REVOKED';
-        } else if (msg.includes('expired')) {
-          this.guestErrorKey = 'AUTH.GUEST_ERROR_EXPIRED';
-        } else if (msg.includes('used') || msg.includes('already')) {
-          this.guestErrorKey = 'AUTH.GUEST_ERROR_USED';
-        } else if (msg.includes('disabled')) {
-          this.guestErrorKey = 'AUTH.GUEST_ERROR_DISABLED';
-        } else {
-          this.guestErrorKey = 'AUTH.GUEST_ERROR_INVALID';
-        }
-      }
+      this.pendingGuestToken = guestToken;
     } else if (queryToken) {
       this.isProcessing = true;
       try {
@@ -288,6 +276,53 @@ export class AuthPage implements OnInit {
 
   public setLang(lang: string): void {
     this.appService.setLanguage(lang);
+  }
+
+  public async continueGuestLogin(): Promise<void> {
+    if (!this.pendingGuestToken || this.isProcessing) return;
+    if (this.isAppLocked) return;
+
+    this.isGuestLogin = true;
+    this.isProcessing = true;
+    try {
+      await this.appService.loginWithGuestToken(this.pendingGuestToken);
+      const fromState = this.appService.getReturnUrlFromState(this.route.snapshot.queryParamMap.get('state'));
+      const fromInput = this.appService.getValidReturnUrl(this.returnUrl);
+      const fromQuery = this.appService.getValidReturnUrl(this.route.snapshot.queryParamMap.get('returnUrl'));
+      const fromStorage = this.appService.getReturnUrl();
+      const resolvedReturnUrl = fromState || fromInput || fromQuery || fromStorage;
+      this.appService.clearReturnUrl();
+      if (resolvedReturnUrl) {
+        try {
+          const navigated = await this.router.navigateByUrl(resolvedReturnUrl, { replaceUrl: true });
+          if (navigated) return;
+        } catch {}
+      }
+      await this.router.navigate(['/t/requests/submit'], { replaceUrl: true });
+      return;
+    } catch (err: any) {
+      console.error('Failed to process guest authentication', err);
+      this.isProcessing = false;
+      const rawErr =
+        err?.error?.message ||
+        err?.error?.error ||
+        (typeof err?.error === 'string' ? err.error : '') ||
+        err?.message ||
+        '';
+      const msg = String(rawErr).toLowerCase();
+
+      if (msg.includes('revoked')) {
+        this.guestErrorKey = 'AUTH.GUEST_ERROR_REVOKED';
+      } else if (msg.includes('expired')) {
+        this.guestErrorKey = 'AUTH.GUEST_ERROR_EXPIRED';
+      } else if (msg.includes('used') || msg.includes('already')) {
+        this.guestErrorKey = 'AUTH.GUEST_ERROR_USED';
+      } else if (msg.includes('disabled')) {
+        this.guestErrorKey = 'AUTH.GUEST_ERROR_DISABLED';
+      } else {
+        this.guestErrorKey = 'AUTH.GUEST_ERROR_INVALID';
+      }
+    }
   }
 
   public login(): void {

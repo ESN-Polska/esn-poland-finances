@@ -192,6 +192,78 @@ p.version {
   }
 }
 
+.guestWelcomeCard {
+  background: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.05);
+  border: 1px solid rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.2);
+  border-radius: 12px;
+  padding: 24px 20px;
+  text-align: center;
+  margin: 16px 0 8px 0;
+
+  .guestWelcomeIcon {
+    font-size: 2.6rem;
+    color: var(--ion-color-primary, #00aeef);
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: center;
+  }
+
+  .guestWelcomeTitle {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--text-dark, #222428);
+    margin: 0 0 8px 0;
+    letter-spacing: -0.01em;
+  }
+
+  .guestWelcomeDesc {
+    font-size: 0.9rem;
+    color: var(--text-medium, #64748b);
+    margin: 0 0 16px 0;
+    line-height: 1.5;
+  }
+
+  .guest-continue-btn {
+    margin-top: 8px;
+  }
+}
+
+.legal-notice-container {
+  margin-bottom: 16px;
+  padding: 0 4px;
+
+  .legal-notice-text {
+    font-size: 0.82rem;
+    line-height: 1.5;
+    color: var(--text-medium, #64748b);
+    margin: 0;
+    text-align: center;
+
+    .legal-link {
+      background: transparent;
+      border: none;
+      padding: 0;
+      font-size: inherit;
+      font-family: inherit;
+      font-weight: 600;
+      color: var(--ion-color-primary, #00aeef);
+      cursor: pointer;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      transition: color 0.2s ease, opacity 0.2s ease;
+
+      &:hover {
+        opacity: 0.8;
+      }
+
+      &:focus,
+      &:focus-visible {
+        outline: 1px dotted var(--ion-color-primary, #00aeef);
+      }
+    }
+  }
+}
+
 .guestErrorCard {
   background: rgba(var(--ion-color-danger-rgb, 235, 68, 90), 0.08);
   border: 1px solid rgba(var(--ion-color-danger-rgb, 235, 68, 90), 0.25);
@@ -366,6 +438,25 @@ body.dark {
       .support-btn-email {
         color: var(--text-medium, #94a3b8);
       }
+    }
+  }
+
+  .guestWelcomeCard {
+    background: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.1);
+    border-color: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.28);
+
+    .guestWelcomeTitle {
+      color: var(--text-dark, #f8fafc);
+    }
+
+    .guestWelcomeDesc {
+      color: var(--text-medium, #94a3b8);
+    }
+  }
+
+  .legal-notice-container {
+    .legal-notice-text {
+      color: var(--text-medium, #94a3b8);
     }
   }
 

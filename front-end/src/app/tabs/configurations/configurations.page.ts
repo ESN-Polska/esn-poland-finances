@@ -1583,6 +1583,188 @@ export class ConfigurationsPage implements OnInit {
     }
   }
 
+  testTermsOfServiceURL(): void {
+    if (this.configurations?.termsOfServiceURL) {
+      window.open(this.configurations.termsOfServiceURL, '_blank');
+    }
+  }
+
+  async changeTermsOfServiceURL(): Promise<void> {
+    const alert = await this.alertCtrl.create({
+      header: this.translate.instant('CONFIGURATIONS.EDIT_TERMS_OF_SERVICE_URL'),
+      inputs: [
+        {
+          name: 'url',
+          type: 'url',
+          placeholder: this.translate.instant('CONFIGURATIONS.TERMS_OF_SERVICE_URL_PLACEHOLDER'),
+          value: this.configurations.termsOfServiceURL || ''
+        }
+      ],
+      buttons: [
+        { text: this.translate.instant('COMMON.CANCEL'), role: 'cancel' },
+        {
+          text: this.translate.instant('COMMON.SAVE'),
+          handler: async (data: { url?: string }) => {
+            const trimmed = (data?.url || '').trim();
+            if (trimmed && !/^https?:\/\//i.test(trimmed)) {
+              const toast = await this.toastCtrl.create({
+                message: this.translate.instant('CONFIGURATIONS.ENTER_VALID_URL'),
+                duration: 3000,
+                color: 'warning'
+              });
+              await toast.present();
+              return false;
+            }
+            const updated = new Configurations(this.configurations);
+            updated.termsOfServiceURL = trimmed;
+            await this.updateConfigurations(updated);
+            return true;
+          }
+        }
+      ]
+    });
+    await alert.present();
+  }
+
+  async uploadTermsOfServiceFile(event: any): Promise<void> {
+    const file = event.target?.files?.[0];
+    if (!file) return;
+
+    const loading = await this.loadingCtrl.create({
+      message: this.translate.instant('COMMON.UPLOADING')
+    });
+    await loading.present();
+
+    try {
+      const { url } = await this.mediaService.uploadDocument(file);
+      const updated = new Configurations(this.configurations);
+      updated.termsOfServiceURL = url;
+      await this.updateConfigurations(updated);
+    } catch (err: any) {
+      console.error(err);
+      const toast = await this.toastCtrl.create({
+        message: err?.error?.message || err?.message || this.translate.instant('COMMON.OPERATION_FAILED'),
+        duration: 3500,
+        color: 'danger'
+      });
+      await toast.present();
+    } finally {
+      await loading.dismiss();
+      if (event.target) event.target.value = '';
+    }
+  }
+
+  async clearTermsOfServiceURL(): Promise<void> {
+    const alert = await this.alertCtrl.create({
+      header: this.translate.instant('COMMON.CONFIRM'),
+      message: this.translate.instant('CONFIGURATIONS.CLEAR_TERMS_OF_SERVICE_URL_CONFIRM'),
+      buttons: [
+        { text: this.translate.instant('COMMON.CANCEL'), role: 'cancel' },
+        {
+          text: this.translate.instant('COMMON.CONFIRM'),
+          role: 'destructive',
+          handler: async () => {
+            const updated = new Configurations(this.configurations);
+            updated.termsOfServiceURL = '';
+            await this.updateConfigurations(updated);
+          }
+        }
+      ]
+    });
+    await alert.present();
+  }
+
+  testPrivacyPolicyURL(): void {
+    if (this.configurations?.privacyPolicyURL) {
+      window.open(this.configurations.privacyPolicyURL, '_blank');
+    }
+  }
+
+  async changePrivacyPolicyURL(): Promise<void> {
+    const alert = await this.alertCtrl.create({
+      header: this.translate.instant('CONFIGURATIONS.EDIT_PRIVACY_POLICY_URL'),
+      inputs: [
+        {
+          name: 'url',
+          type: 'url',
+          placeholder: this.translate.instant('CONFIGURATIONS.PRIVACY_POLICY_URL_PLACEHOLDER'),
+          value: this.configurations.privacyPolicyURL || ''
+        }
+      ],
+      buttons: [
+        { text: this.translate.instant('COMMON.CANCEL'), role: 'cancel' },
+        {
+          text: this.translate.instant('COMMON.SAVE'),
+          handler: async (data: { url?: string }) => {
+            const trimmed = (data?.url || '').trim();
+            if (trimmed && !/^https?:\/\//i.test(trimmed)) {
+              const toast = await this.toastCtrl.create({
+                message: this.translate.instant('CONFIGURATIONS.ENTER_VALID_URL'),
+                duration: 3000,
+                color: 'warning'
+              });
+              await toast.present();
+              return false;
+            }
+            const updated = new Configurations(this.configurations);
+            updated.privacyPolicyURL = trimmed;
+            await this.updateConfigurations(updated);
+            return true;
+          }
+        }
+      ]
+    });
+    await alert.present();
+  }
+
+  async uploadPrivacyPolicyFile(event: any): Promise<void> {
+    const file = event.target?.files?.[0];
+    if (!file) return;
+
+    const loading = await this.loadingCtrl.create({
+      message: this.translate.instant('COMMON.UPLOADING')
+    });
+    await loading.present();
+
+    try {
+      const { url } = await this.mediaService.uploadDocument(file);
+      const updated = new Configurations(this.configurations);
+      updated.privacyPolicyURL = url;
+      await this.updateConfigurations(updated);
+    } catch (err: any) {
+      console.error(err);
+      const toast = await this.toastCtrl.create({
+        message: err?.error?.message || err?.message || this.translate.instant('COMMON.OPERATION_FAILED'),
+        duration: 3500,
+        color: 'danger'
+      });
+      await toast.present();
+    } finally {
+      await loading.dismiss();
+      if (event.target) event.target.value = '';
+    }
+  }
+
+  async clearPrivacyPolicyURL(): Promise<void> {
+    const alert = await this.alertCtrl.create({
+      header: this.translate.instant('COMMON.CONFIRM'),
+      message: this.translate.instant('CONFIGURATIONS.CLEAR_PRIVACY_POLICY_URL_CONFIRM'),
+      buttons: [
+        { text: this.translate.instant('COMMON.CANCEL'), role: 'cancel' },
+        {
+          text: this.translate.instant('COMMON.CONFIRM'),
+          role: 'destructive',
+          handler: async () => {
+            const updated = new Configurations(this.configurations);
+            updated.privacyPolicyURL = '';
+            await this.updateConfigurations(updated);
+          }
+        }
+      ]
+    });
+    await alert.present();
+  }
+
   async uploadAppLogo(event: any, darkMode = false): Promise<void> {
     const file = event.target?.files?.[0];
     if (!file) return;

@@ -155,6 +155,12 @@ class ConfigurationsRC extends ResourceController {
       if (this.configurations?.delegationInstructionsURL && newConfigurations.delegationInstructionsURL !== this.configurations.delegationInstructionsURL) {
         await this.deleteOldS3File(this.configurations.delegationInstructionsURL);
       }
+      if (this.configurations?.termsOfServiceURL && newConfigurations.termsOfServiceURL !== this.configurations.termsOfServiceURL) {
+        await this.deleteOldS3File(this.configurations.termsOfServiceURL);
+      }
+      if (this.configurations?.privacyPolicyURL && newConfigurations.privacyPolicyURL !== this.configurations.privacyPolicyURL) {
+        await this.deleteOldS3File(this.configurations.privacyPolicyURL);
+      }
       if (this.configurations?.appLogoURL && newConfigurations.appLogoURL !== this.configurations.appLogoURL) {
         await this.deleteOldS3File(this.configurations.appLogoURL);
       }
@@ -551,6 +557,8 @@ class ConfigurationsRC extends ResourceController {
       'appLockMessage',
       'threadRequestEmails',
       'threadRequestEmailsSubject',
+      'termsOfServiceURL',
+      'privacyPolicyURL',
       'bankExportSettings'
     ].filter(field => JSON.stringify(this.body[field]) !== JSON.stringify((this.configurations as any)[field]));
 
@@ -610,7 +618,9 @@ class ConfigurationsRC extends ResourceController {
 
     const resourceFields = [
       'delegationSettlementSheetURL',
-      'delegationInstructionsURL'
+      'delegationInstructionsURL',
+      'termsOfServiceURL',
+      'privacyPolicyURL'
     ];
 
     const roleFields = [

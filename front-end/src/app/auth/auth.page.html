@@ -102,8 +102,82 @@
           </div>
         </div>
 
-        <!-- Standard Login Button (hidden if guest link error notice is displayed or app is locked) -->
-        <div *ngIf="!isProcessing && !guestErrorKey && !isAppLocked" class="action-section">
+        <!-- Guest Welcome Card (when guestToken is present) -->
+        <div *ngIf="!isProcessing && !guestErrorKey && !isAppLocked && isGuestInvitation" class="guestWelcomeCard">
+          <div class="guestWelcomeIcon">
+            <ion-icon name="ticket-outline"></ion-icon>
+          </div>
+          <h3 class="guestWelcomeTitle">{{ 'AUTH.GUEST_WELCOME_TITLE' | translate }}</h3>
+          <p class="guestWelcomeDesc">{{ 'AUTH.GUEST_WELCOME_DESC' | translate }}</p>
+
+          <!-- Legal Notice (Guest) -->
+          <div *ngIf="hasAnyLegalDocument" class="legal-notice-container">
+            <p class="legal-notice-text">
+              <ng-container *ngIf="hasTermsOfService && hasPrivacyPolicy">
+                {{ 'AUTH.LEGAL_AGREEMENT_GUEST_BOTH_PREFIX' | translate }}
+                <button type="button" class="legal-link" (click)="openTermsOfService()">
+                  {{ 'AUTH.TERMS_OF_SERVICE' | translate }}
+                </button>
+                {{ 'AUTH.LEGAL_AGREEMENT_AND' | translate }}
+                <button type="button" class="legal-link" (click)="openPrivacyPolicy()">
+                  {{ 'AUTH.PRIVACY_POLICY' | translate }}
+                </button>.
+              </ng-container>
+              <ng-container *ngIf="hasTermsOfService && !hasPrivacyPolicy">
+                {{ 'AUTH.LEGAL_AGREEMENT_GUEST_SINGLE_PREFIX' | translate }}
+                <button type="button" class="legal-link" (click)="openTermsOfService()">
+                  {{ 'AUTH.TERMS_OF_SERVICE' | translate }}
+                </button>.
+              </ng-container>
+              <ng-container *ngIf="!hasTermsOfService && hasPrivacyPolicy">
+                {{ 'AUTH.LEGAL_AGREEMENT_GUEST_SINGLE_PREFIX' | translate }}
+                <button type="button" class="legal-link" (click)="openPrivacyPolicy()">
+                  {{ 'AUTH.PRIVACY_POLICY' | translate }}
+                </button>.
+              </ng-container>
+            </p>
+          </div>
+
+          <ion-button
+            expand="block"
+            class="login-button guest-continue-btn"
+            (click)="continueGuestLogin()"
+          >
+            <ion-icon slot="start" name="arrow-forward-outline"></ion-icon>
+            {{ 'AUTH.GUEST_CONTINUE_BUTTON' | translate }}
+          </ion-button>
+        </div>
+
+        <!-- Standard Login Button (hidden if guest link error notice is displayed, guest welcome card is shown, or app is locked) -->
+        <div *ngIf="!isProcessing && !guestErrorKey && !isAppLocked && !isGuestInvitation" class="action-section">
+          <!-- Legal Notice (Standard Users) -->
+          <div *ngIf="hasAnyLegalDocument" class="legal-notice-container">
+            <p class="legal-notice-text">
+              <ng-container *ngIf="hasTermsOfService && hasPrivacyPolicy">
+                {{ 'AUTH.LEGAL_AGREEMENT_BOTH_PREFIX' | translate }}
+                <button type="button" class="legal-link" (click)="openTermsOfService()">
+                  {{ 'AUTH.TERMS_OF_SERVICE' | translate }}
+                </button>
+                {{ 'AUTH.LEGAL_AGREEMENT_AND' | translate }}
+                <button type="button" class="legal-link" (click)="openPrivacyPolicy()">
+                  {{ 'AUTH.PRIVACY_POLICY' | translate }}
+                </button>.
+              </ng-container>
+              <ng-container *ngIf="hasTermsOfService && !hasPrivacyPolicy">
+                {{ 'AUTH.LEGAL_AGREEMENT_SINGLE_PREFIX' | translate }}
+                <button type="button" class="legal-link" (click)="openTermsOfService()">
+                  {{ 'AUTH.TERMS_OF_SERVICE' | translate }}
+                </button>.
+              </ng-container>
+              <ng-container *ngIf="!hasTermsOfService && hasPrivacyPolicy">
+                {{ 'AUTH.LEGAL_AGREEMENT_SINGLE_PREFIX' | translate }}
+                <button type="button" class="legal-link" (click)="openPrivacyPolicy()">
+                  {{ 'AUTH.PRIVACY_POLICY' | translate }}
+                </button>.
+              </ng-container>
+            </p>
+          </div>
+
           <ion-button
             expand="block"
             class="login-button"

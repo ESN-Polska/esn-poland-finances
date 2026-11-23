@@ -583,6 +583,8 @@ export const DEFAULT_CONFIGURATIONS = {
     en: 'Financial request {{requestId}}',
     pl: 'Wniosek finansowy {{requestId}}'
   },
+  termsOfServiceURL: '',
+  privacyPolicyURL: '',
   csvExportSettings: DEFAULT_CSV_EXPORT_SETTINGS,
   bankExportSettings: DEFAULT_BANK_EXPORT_SETTINGS,
   financesPageSectionsOrder: [...DEFAULT_FINANCES_PAGE_SECTIONS_ORDER],
@@ -690,6 +692,10 @@ export class Configurations extends Resource {
   threadRequestEmails: boolean;
   /** Configured unified email subject for financial requests in supported languages. */
   threadRequestEmailsSubject: LocalizedText;
+  /** Terms of Service document PDF / web URL. */
+  termsOfServiceURL: string;
+  /** Privacy Policy document PDF / web URL. */
+  privacyPolicyURL: string;
   /** Configured CSV export settings including delimiter, encoding BOM, date format, and column customizations. */
   csvExportSettings: CsvExportSettings;
   /** Configured bank transfer export settings (.txt / Erste Bank Polska format). */
@@ -1025,8 +1031,38 @@ export class Configurations extends Resource {
         pl: this.clean(x.threadRequestEmailsSubject?.pl, String, defaultThreadSubject.pl)
       };
     }
+    this.termsOfServiceURL = this.clean(
+      x.termsOfServiceURL,
+      String,
+      DEFAULT_CONFIGURATIONS.termsOfServiceURL
+    );
+    this.privacyPolicyURL = this.clean(
+      x.privacyPolicyURL,
+      String,
+      DEFAULT_CONFIGURATIONS.privacyPolicyURL
+    );
     this.csvExportSettings = cleanCsvExportSettings(x.csvExportSettings);
     this.bankExportSettings = cleanBankExportSettings(x.bankExportSettings);
+  }
+
+  getTermsOfServiceURL(): string {
+    return this.termsOfServiceURL || '';
+  }
+
+  getPrivacyPolicyURL(): string {
+    return this.privacyPolicyURL || '';
+  }
+
+  hasTermsOfService(): boolean {
+    return !!(this.termsOfServiceURL && this.termsOfServiceURL.trim().length > 0);
+  }
+
+  hasPrivacyPolicy(): boolean {
+    return !!(this.privacyPolicyURL && this.privacyPolicyURL.trim().length > 0);
+  }
+
+  hasAnyLegalDocument(): boolean {
+    return this.hasTermsOfService() || this.hasPrivacyPolicy();
   }
 
   getThreadRequestEmailsSubject(lang: string = 'en'): string {
@@ -1171,6 +1207,16 @@ export class Configurations extends Resource {
     } else {
       this.threadRequestEmailsSubject = defaultThreadSubject;
     }
+    this.termsOfServiceURL = this.clean(
+      safeData.termsOfServiceURL,
+      String,
+      DEFAULT_CONFIGURATIONS.termsOfServiceURL
+    );
+    this.privacyPolicyURL = this.clean(
+      safeData.privacyPolicyURL,
+      String,
+      DEFAULT_CONFIGURATIONS.privacyPolicyURL
+    );
     this.csvExportSettings = cleanCsvExportSettings(safeData.csvExportSettings);
     this.requestsConfig = safeData.requestsConfig || DEFAULT_REQUESTS_CONFIGURATIONS;
   }

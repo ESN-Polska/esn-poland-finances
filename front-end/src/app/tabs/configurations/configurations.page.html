@@ -839,6 +839,126 @@
           (change)="uploadDelegationInstructionsFile($event)"
         />
       </ion-item>
+
+      <!-- Terms of Service PDF URL -->
+      <ion-item>
+        <ion-label position="stacked">
+          {{ 'CONFIGURATIONS.TERMS_OF_SERVICE_URL' | translate }}
+        </ion-label>
+        <ion-input
+          readonly
+          [placeholder]="'CONFIGURATIONS.TERMS_OF_SERVICE_URL_PLACEHOLDER' | translate"
+          [value]="configurations.termsOfServiceURL || ''"
+        ></ion-input>
+        <ion-note slot="helper">{{ 'CONFIGURATIONS.TERMS_OF_SERVICE_URL_I' | translate }}</ion-note>
+
+        <ion-buttons slot="end" class="ion-margin-top">
+          <ion-button
+            fill="clear"
+            color="primary"
+            *ngIf="configurations.termsOfServiceURL"
+            (click)="testTermsOfServiceURL()"
+            [title]="'COMMON.OPEN' | translate"
+          >
+            <ion-icon name="open-outline" slot="icon-only"></ion-icon>
+          </ion-button>
+          <ion-button
+            fill="clear"
+            color="medium"
+            *ngIf="canModifyResources()"
+            (click)="changeTermsOfServiceURL()"
+            [title]="'COMMON.EDIT' | translate"
+          >
+            <ion-icon name="pencil" slot="icon-only"></ion-icon>
+          </ion-button>
+          <ion-button
+            fill="clear"
+            color="primary"
+            *ngIf="canModifyResources()"
+            (click)="termsFileInput.click()"
+            [title]="'COMMON.UPLOAD' | translate"
+          >
+            <ion-icon name="cloud-upload-outline" slot="icon-only"></ion-icon>
+          </ion-button>
+          <ion-button
+            fill="clear"
+            color="danger"
+            *ngIf="canModifyResources() && configurations.termsOfServiceURL"
+            (click)="clearTermsOfServiceURL()"
+            [title]="'COMMON.DELETE' | translate"
+          >
+            <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
+          </ion-button>
+        </ion-buttons>
+
+        <input
+          type="file"
+          #termsFileInput
+          hidden
+          accept=".pdf"
+          (change)="uploadTermsOfServiceFile($event)"
+        />
+      </ion-item>
+
+      <!-- Privacy Policy PDF URL -->
+      <ion-item>
+        <ion-label position="stacked">
+          {{ 'CONFIGURATIONS.PRIVACY_POLICY_URL' | translate }}
+        </ion-label>
+        <ion-input
+          readonly
+          [placeholder]="'CONFIGURATIONS.PRIVACY_POLICY_URL_PLACEHOLDER' | translate"
+          [value]="configurations.privacyPolicyURL || ''"
+        ></ion-input>
+        <ion-note slot="helper">{{ 'CONFIGURATIONS.PRIVACY_POLICY_URL_I' | translate }}</ion-note>
+
+        <ion-buttons slot="end" class="ion-margin-top">
+          <ion-button
+            fill="clear"
+            color="primary"
+            *ngIf="configurations.privacyPolicyURL"
+            (click)="testPrivacyPolicyURL()"
+            [title]="'COMMON.OPEN' | translate"
+          >
+            <ion-icon name="open-outline" slot="icon-only"></ion-icon>
+          </ion-button>
+          <ion-button
+            fill="clear"
+            color="medium"
+            *ngIf="canModifyResources()"
+            (click)="changePrivacyPolicyURL()"
+            [title]="'COMMON.EDIT' | translate"
+          >
+            <ion-icon name="pencil" slot="icon-only"></ion-icon>
+          </ion-button>
+          <ion-button
+            fill="clear"
+            color="primary"
+            *ngIf="canModifyResources()"
+            (click)="privacyFileInput.click()"
+            [title]="'COMMON.UPLOAD' | translate"
+          >
+            <ion-icon name="cloud-upload-outline" slot="icon-only"></ion-icon>
+          </ion-button>
+          <ion-button
+            fill="clear"
+            color="danger"
+            *ngIf="canModifyResources() && configurations.privacyPolicyURL"
+            (click)="clearPrivacyPolicyURL()"
+            [title]="'COMMON.DELETE' | translate"
+          >
+            <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
+          </ion-button>
+        </ion-buttons>
+
+        <input
+          type="file"
+          #privacyFileInput
+          hidden
+          accept=".pdf"
+          (change)="uploadPrivacyPolicyFile($event)"
+        />
+      </ion-item>
     </ion-list>
 
     <!-- SUBTAB: SES TEMPLATES -->
