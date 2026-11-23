@@ -409,6 +409,13 @@
     flex-direction: column;
     gap: 10px;
 
+    .notificationsDivider {
+      height: 1px;
+      width: 100%;
+      background: var(--border-color);
+      margin: 4px 0;
+    }
+
     .notificationRow {
       display: flex;
       align-items: center;

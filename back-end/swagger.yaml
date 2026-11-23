@@ -393,6 +393,11 @@ paths:
                   items:
                     type: string
                   example: ["REQUEST_SUBMITTED", "REQUEST_APPROVED"]
+                enabledEmailNotifications:
+                  type: array
+                  items:
+                    type: string
+                  example: ["REQUEST_SUBMITTED_REVIEWER"]
                 sectionCode:
                   type: string
                   description: Chosen primary section code (must be from user's available sections)
@@ -808,6 +813,11 @@ components:
           items:
             type: string
           example: ["REQUEST_SUBMITTED"]
+        enabledEmailNotifications:
+          type: array
+          items:
+            type: string
+          example: ["REQUEST_SUBMITTED_REVIEWER"]
         defaultBankDetails:
           type: object
           nullable: true

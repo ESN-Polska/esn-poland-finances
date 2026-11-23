@@ -362,27 +362,29 @@
       </div>
 
       <div class="notificationsList">
-        <div
-          class="notificationRow"
-          *ngFor="let item of notificationTypes"
-          [class.disabledRow]="!isNotificationEnabled(item.type)"
-        >
-          <div class="notificationIconWrapper" [ngClass]="item.colorClass">
-            <ion-icon [name]="item.icon"></ion-icon>
+        <ng-container *ngFor="let item of notificationTypes">
+          <div class="notificationsDivider" *ngIf="item.dividerBefore"></div>
+          <div
+            class="notificationRow"
+            [class.disabledRow]="!isNotificationEnabled(item.type)"
+          >
+            <div class="notificationIconWrapper" [ngClass]="item.colorClass">
+              <ion-icon [name]="item.icon"></ion-icon>
+            </div>
+            <div class="notificationDetails">
+              <span class="notificationName">{{ item.titleKey | translate }}</span>
+              <span class="notificationHint">{{ item.descKey | translate }}</span>
+            </div>
+            <div class="notificationToggleWrapper">
+              <ion-toggle
+                [checked]="isNotificationEnabled(item.type)"
+                (ionChange)="onNotificationToggle(item.type, $event.detail.checked)"
+                [disabled]="isSavingNotifications"
+                color="primary"
+              ></ion-toggle>
+            </div>
           </div>
-          <div class="notificationDetails">
-            <span class="notificationName">{{ item.titleKey | translate }}</span>
-            <span class="notificationHint">{{ item.descKey | translate }}</span>
-          </div>
-          <div class="notificationToggleWrapper">
-            <ion-toggle
-              [checked]="isNotificationEnabled(item.type)"
-              (ionChange)="onNotificationToggle(item.type, $event.detail.checked)"
-              [disabled]="isSavingNotifications"
-              color="primary"
-            ></ion-toggle>
-          </div>
-        </div>
+        </ng-container>
       </div>
     </div>
 

@@ -35,12 +35,23 @@ export class UsersService {
   }
 
   /**
-   * Update disabled automatic email notifications preferences for user.
+   * Update automatic email notifications preferences for user.
    */
-  async updateNotificationPreferences(userId: string, disabledEmailNotifications: string[]): Promise<User | null> {
+  async updateNotificationPreferences(
+    userId: string,
+    disabledEmailNotifications?: string[],
+    enabledEmailNotifications?: string[]
+  ): Promise<User | null> {
     try {
+      const body: any = {};
+      if (disabledEmailNotifications !== undefined) {
+        body.disabledEmailNotifications = disabledEmailNotifications;
+      }
+      if (enabledEmailNotifications !== undefined) {
+        body.enabledEmailNotifications = enabledEmailNotifications;
+      }
       const raw = await this.api.patchResource(['users', encodeURIComponent(userId.toLowerCase())], {
-        body: { disabledEmailNotifications }
+        body
       });
       return raw ? new User(raw) : null;
     } catch (err) {

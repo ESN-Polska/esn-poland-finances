@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
-import { ActionSheetController, ModalController, ToastController } from '@ionic/angular';
+import { ActionSheetController, ModalController, ToastController, ViewWillEnter } from '@ionic/angular';
 import { TranslateService } from '@ngx-translate/core';
-import { EmailTemplateTypes } from '@models/configurations.model';
+import { AppPermission, EmailTemplateTypes } from '@models/configurations.model';
 import { User } from '@models/user.model';
 import { AppService } from '../../app.service';
 import { UsersService } from '../../common/users.service';
@@ -20,7 +20,7 @@ import {
   templateUrl: './profile.page.html',
   styleUrls: ['./profile.page.scss']
 })
-export class ProfilePage implements OnInit {
+export class ProfilePage implements OnInit, ViewWillEnter {
   public get user(): User | null {
     return this.app.currentUser;
   }
@@ -52,14 +52,18 @@ export class ProfilePage implements OnInit {
   public hasAttemptedSubmit = false;
 
   public disabledEmailNotifications: string[] = [];
+  public enabledEmailNotifications: string[] = [];
   public isSavingNotifications = false;
 
-  public readonly notificationTypes: Array<{
+  public readonly allNotificationTypes: Array<{
     type: EmailTemplateTypes;
     titleKey: string;
     descKey: string;
     icon: string;
     colorClass: string;
+    requiredPermission?: string;
+    defaultDisabled?: boolean;
+    dividerBefore?: boolean;
   }> = [
     {
       type: EmailTemplateTypes.REQUEST_SUBMITTED,
@@ -95,8 +99,34 @@ export class ProfilePage implements OnInit {
       descKey: 'CONFIGURATIONS.EMAIL_TEMPLATES_TYPES.REQUEST_REJECTED_I',
       icon: 'close-circle-outline',
       colorClass: 'icon-danger'
+    },
+    {
+      type: EmailTemplateTypes.REQUEST_SUBMITTED_REVIEWER,
+      titleKey: 'CONFIGURATIONS.EMAIL_TEMPLATES_TYPES.REQUEST_SUBMITTED_REVIEWER',
+      descKey: 'CONFIGURATIONS.EMAIL_TEMPLATES_TYPES.REQUEST_SUBMITTED_REVIEWER_I',
+      icon: 'clipboard-outline',
+      colorClass: 'icon-primary',
+      requiredPermission: AppPermission.REQUESTS.MANAGE,
+      defaultDisabled: true,
+      dividerBefore: true
     }
   ];
+
+  public get notificationTypes(): Array<{
+    type: EmailTemplateTypes;
+    titleKey: string;
+    descKey: string;
+    icon: string;
+    colorClass: string;
+    requiredPermission?: string;
+    defaultDisabled?: boolean;
+    dividerBefore?: boolean;
+  }> {
+    return this.allNotificationTypes.filter(item => {
+      if (!item.requiredPermission) return true;
+      return this.user?.hasPermission(item.requiredPermission) ?? false;
+    });
+  }
 
   constructor(
     public app: AppService,
@@ -196,6 +226,29 @@ export class ProfilePage implements OnInit {
   }
 
   public async ngOnInit(): Promise<void> {
+    await this.loadProfileData();
+  }
+
+  public async ionViewWillEnter(): Promise<void> {
+    await this.loadProfileData();
+  }
+
+  public async loadProfileData(): Promise<void> {
+    this.plnBankDetails = {
+      accountHolderName: '',
+      accountHolderAddress: '',
+      iban: '',
+      swiftBic: ''
+    };
+    this.eurBankDetails = {
+      accountHolderName: '',
+      accountHolderAddress: '',
+      iban: '',
+      swiftBic: ''
+    };
+    this.disabledEmailNotifications = [];
+    this.enabledEmailNotifications = [];
+
     if (this.user?.defaultBankDetails) {
       this.populateBankDetails(this.user.defaultBankDetails);
     } else {
@@ -209,11 +262,17 @@ export class ProfilePage implements OnInit {
       if (this.user.disabledEmailNotifications) {
         this.disabledEmailNotifications = [...this.user.disabledEmailNotifications];
       }
+      if (this.user.enabledEmailNotifications) {
+        this.enabledEmailNotifications = [...this.user.enabledEmailNotifications];
+      }
       if (this.user.userId) {
         this.usersService.getById(this.user.userId).then(freshUser => {
           if (freshUser) {
             if (freshUser.disabledEmailNotifications) {
               this.disabledEmailNotifications = [...freshUser.disabledEmailNotifications];
+            }
+            if (freshUser.enabledEmailNotifications) {
+              this.enabledEmailNotifications = [...freshUser.enabledEmailNotifications];
             }
             if (freshUser.defaultBankDetails) {
               this.populateBankDetails(freshUser.defaultBankDetails);
@@ -233,58 +292,97 @@ export class ProfilePage implements OnInit {
   }
 
   public isNotificationEnabled(type: EmailTemplateTypes): boolean {
+    const item = this.allNotificationTypes.find(n => n.type === type);
+    if (item?.defaultDisabled) {
+      return this.enabledEmailNotifications.includes(type);
+    }
     return !this.disabledEmailNotifications.includes(type);
   }
 
   public async onNotificationToggle(type: EmailTemplateTypes, enabled: boolean): Promise<void> {
-    const currentlyDisabled = [...this.disabledEmailNotifications];
-    let nextDisabled: string[];
-    if (enabled) {
-      nextDisabled = currentlyDisabled.filter(t => t !== type);
-    } else {
-      if (!currentlyDisabled.includes(type)) {
-        nextDisabled = [...currentlyDisabled, type];
+    const item = this.allNotificationTypes.find(n => n.type === type);
+    if (item?.defaultDisabled) {
+      let nextEnabled: string[];
+      if (enabled) {
+        nextEnabled = Array.from(new Set([...this.enabledEmailNotifications, type]));
       } else {
-        nextDisabled = currentlyDisabled;
+        nextEnabled = this.enabledEmailNotifications.filter(t => t !== type);
       }
-    }
 
-    if (JSON.stringify(nextDisabled.slice().sort()) === JSON.stringify(currentlyDisabled.slice().sort())) {
-      return;
-    }
+      if (JSON.stringify(nextEnabled.slice().sort()) === JSON.stringify(this.enabledEmailNotifications.slice().sort())) {
+        return;
+      }
 
-    await this.persistNotificationPreferences(nextDisabled);
+      await this.persistNotificationPreferences(this.disabledEmailNotifications, nextEnabled);
+    } else {
+      const currentlyDisabled = [...this.disabledEmailNotifications];
+      let nextDisabled: string[];
+      if (enabled) {
+        nextDisabled = currentlyDisabled.filter(t => t !== type);
+      } else {
+        if (!currentlyDisabled.includes(type)) {
+          nextDisabled = [...currentlyDisabled, type];
+        } else {
+          nextDisabled = currentlyDisabled;
+        }
+      }
+
+      if (JSON.stringify(nextDisabled.slice().sort()) === JSON.stringify(currentlyDisabled.slice().sort())) {
+        return;
+      }
+
+      await this.persistNotificationPreferences(nextDisabled, this.enabledEmailNotifications);
+    }
   }
 
   public async setAllNotifications(enabled: boolean): Promise<void> {
     if (this.isSavingNotifications) return;
-    const allTypes = this.notificationTypes.map(n => n.type);
-    const nextDisabled = enabled ? [] : allTypes;
+    const visibleTypes = this.notificationTypes;
+    const visibleDefaultEnabled = visibleTypes.filter(n => !n.defaultDisabled).map(n => n.type);
+    const visibleDefaultDisabled = visibleTypes.filter(n => n.defaultDisabled).map(n => n.type);
 
-    if (JSON.stringify(nextDisabled.slice().sort()) === JSON.stringify(this.disabledEmailNotifications.slice().sort())) {
+    let nextDisabled: string[];
+    let nextEnabled: string[];
+
+    if (enabled) {
+      nextDisabled = this.disabledEmailNotifications.filter(t => !visibleDefaultEnabled.includes(t as any));
+      nextEnabled = Array.from(new Set([...this.enabledEmailNotifications, ...visibleDefaultDisabled]));
+    } else {
+      nextDisabled = Array.from(new Set([...this.disabledEmailNotifications, ...visibleDefaultEnabled]));
+      nextEnabled = this.enabledEmailNotifications.filter(t => !visibleDefaultDisabled.includes(t as any));
+    }
+
+    if (
+      JSON.stringify(nextDisabled.slice().sort()) === JSON.stringify(this.disabledEmailNotifications.slice().sort()) &&
+      JSON.stringify(nextEnabled.slice().sort()) === JSON.stringify(this.enabledEmailNotifications.slice().sort())
+    ) {
       return;
     }
 
-    await this.persistNotificationPreferences(nextDisabled);
+    await this.persistNotificationPreferences(nextDisabled, nextEnabled);
   }
 
-  private async persistNotificationPreferences(nextDisabled: string[]): Promise<void> {
+  private async persistNotificationPreferences(nextDisabled: string[], nextEnabled: string[]): Promise<void> {
     const userId = this.user?.userId;
     if (!userId) return;
 
     const previousDisabled = [...this.disabledEmailNotifications];
+    const previousEnabled = [...this.enabledEmailNotifications];
     this.disabledEmailNotifications = nextDisabled;
+    this.enabledEmailNotifications = nextEnabled;
     this.isSavingNotifications = true;
 
     try {
-      await this.usersService.updateNotificationPreferences(userId, nextDisabled);
+      await this.usersService.updateNotificationPreferences(userId, nextDisabled, nextEnabled);
       if (this.user) {
         this.user.disabledEmailNotifications = nextDisabled;
+        this.user.enabledEmailNotifications = nextEnabled;
       }
       await this.showToast('PROFILE.NOTIFICATIONS_SAVED', 'success');
     } catch (err) {
       console.error('Failed to update email notification preferences', err);
       this.disabledEmailNotifications = previousDisabled;
+      this.enabledEmailNotifications = previousEnabled;
       await this.showToast('PROFILE.NOTIFICATIONS_SAVE_FAILED', 'danger');
     } finally {
       this.isSavingNotifications = false;

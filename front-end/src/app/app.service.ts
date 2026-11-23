@@ -226,6 +226,15 @@ export class AppService {
         this.refreshUserProfile(user.userId).catch(() => {});
       }
     }
+
+    // Clean up legacy global bank details & legacy draft on login
+    if (this._storage) {
+      await this._storage.remove(DEFAULT_BANK_KEY);
+    }
+    try {
+      localStorage.removeItem('esn_finances_request_draft');
+    } catch (_) {}
+
     this.tokenSubject.next(token);
     return user;
   }
@@ -238,16 +247,19 @@ export class AppService {
       current.primarySectionChosen = Boolean(userRecord.primarySectionChosen);
     }
     User.applyConfigurationPermissions(current, this.configurations);
+    const userId = current.userId?.toLowerCase();
     if (current.defaultBankDetails && this._storage) {
-      await this._storage.set(DEFAULT_BANK_KEY, current.defaultBankDetails);
-      if (current.userId) {
-        await this._storage.set(`${DEFAULT_BANK_KEY}_${current.userId}`, current.defaultBankDetails);
+      if (userId) {
+        await this._storage.set(`${DEFAULT_BANK_KEY}_${userId}`, current.defaultBankDetails);
+        await this._storage.remove(DEFAULT_BANK_KEY);
+      } else {
+        await this._storage.set(DEFAULT_BANK_KEY, current.defaultBankDetails);
       }
     } else if (!current.defaultBankDetails && this._storage) {
-      await this._storage.remove(DEFAULT_BANK_KEY);
-      if (current.userId) {
-        await this._storage.remove(`${DEFAULT_BANK_KEY}_${current.userId}`);
+      if (userId) {
+        await this._storage.remove(`${DEFAULT_BANK_KEY}_${userId}`);
       }
+      await this._storage.remove(DEFAULT_BANK_KEY);
     }
     if (this.originalUser) {
       this.originalUser.load(userRecord);
@@ -684,11 +696,12 @@ export class AppService {
 
     // 2. Try user-scoped storage key
     if (userId) {
-      stored = await this._storage?.get(`${DEFAULT_BANK_KEY}_${userId}`);
-    }
-
-    // 3. Fallback to global storage key
-    if (!stored) {
+      stored = await this._storage?.get(`${DEFAULT_BANK_KEY}_${userId.toLowerCase()}`);
+      if (!stored) {
+        stored = await this._storage?.get(`${DEFAULT_BANK_KEY}_${userId}`);
+      }
+    } else {
+      // 3. Fallback to global storage key ONLY for non-authenticated / guest users
       stored = await this._storage?.get(DEFAULT_BANK_KEY);
     }
 
@@ -736,26 +749,36 @@ export class AppService {
 
   public async syncStoredDefaultBankDetails(details: UserDefaultBankDetails | null): Promise<void> {
     if (!this._storage) await this.init();
-    const userId = this.currentUser?.userId;
+    const userId = this.currentUser?.userId?.toLowerCase();
     if (details && (details.pln || details.eur)) {
-      await this._storage?.set(DEFAULT_BANK_KEY, details);
       if (userId) {
         await this._storage?.set(`${DEFAULT_BANK_KEY}_${userId}`, details);
+        await this._storage?.remove(DEFAULT_BANK_KEY);
+      } else {
+        await this._storage?.set(DEFAULT_BANK_KEY, details);
       }
     } else {
-      await this._storage?.remove(DEFAULT_BANK_KEY);
       if (userId) {
         await this._storage?.remove(`${DEFAULT_BANK_KEY}_${userId}`);
       }
+      await this._storage?.remove(DEFAULT_BANK_KEY);
     }
   }
 
   public async clearAuth(): Promise<void> {
     this.api.authToken = null as any;
+    const userId = this.currentUser?.userId?.toLowerCase();
     if (this._storage) {
       await this._storage.remove(TOKEN_KEY);
       await this._storage.remove(USER_KEY);
+      await this._storage.remove(DEFAULT_BANK_KEY);
     }
+    try {
+      localStorage.removeItem('esn_finances_request_draft');
+      if (userId) {
+        localStorage.removeItem(`esn_finances_request_draft_${userId}`);
+      }
+    } catch (_) {}
     this.tokenSubject.next(null);
     this.userSubject.next(null);
   }

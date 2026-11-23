@@ -919,6 +919,8 @@
       "GUEST_INVITATION_I": "Wysyłane do gości zewnętrznych po wygenerowaniu linku zaproszenia.",
       "REQUEST_SUBMITTED": "Złożenie wniosku",
       "REQUEST_SUBMITTED_I": "Wysyłane do wnioskodawcy z potwierdzeniem złożenia wniosku finansowego.",
+      "REQUEST_SUBMITTED_REVIEWER": "Nowy wniosek do weryfikacji",
+      "REQUEST_SUBMITTED_REVIEWER_I": "Wysyłane do osób weryfikujących, gdy wpłynie nowy lub poprawiony wniosek do sprawdzenia.",
       "REQUEST_CHANGES_REQUESTED": "Wymagane poprawki wniosku",
       "REQUEST_CHANGES_REQUESTED_I": "Wysyłane, gdy weryfikujący prosi o naniesienie poprawek lub wyjaśnień.",
       "REQUEST_APPROVED": "Wniosek zatwierdzony",

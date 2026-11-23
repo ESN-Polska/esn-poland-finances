@@ -35,7 +35,13 @@ import {
 export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy, ViewWillEnter {
   @ViewChild('requestForm') requestForm?: NgForm;
   private formSub?: Subscription;
-  private readonly DRAFT_KEY = 'esn_finances_request_draft';
+  private readonly LEGACY_DRAFT_KEY = 'esn_finances_request_draft';
+  private currentFormUserId: string | null = null;
+
+  private get draftKey(): string {
+    const userId = this.appService.currentUser?.userId?.toLowerCase();
+    return userId ? `esn_finances_request_draft_${userId}` : this.LEGACY_DRAFT_KEY;
+  }
 
   public editId: string | null = null;
   public isEditMode = false;
@@ -144,8 +150,38 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy, ViewWi
   }
 
   public async ionViewWillEnter(): Promise<void> {
-    if (!this.isEditMode) {
-      await this.syncProfileBankDetailsIfNeeded();
+    const year = this.route.snapshot.paramMap.get('year');
+    const id = this.route.snapshot.paramMap.get('id');
+    let editId: string | null = null;
+
+    if (year && id) {
+      if (/^\d{4}$/.test(id) && !/^\d{4}$/.test(year)) {
+        editId = `${year}/${id}`;
+      } else {
+        editId = `${id}/${year}`;
+      }
+    } else if (id) {
+      editId = decodeURIComponent(id);
+    }
+
+    const currentUserId = this.appService.currentUser?.userId?.toLowerCase() || null;
+    const userChanged = this.currentFormUserId !== currentUserId;
+
+    if (editId) {
+      if (editId !== this.editId || userChanged) {
+        this.editId = editId;
+        this.isEditMode = true;
+        this.currentFormUserId = currentUserId;
+        await this.loadExistingRequest(editId);
+      }
+    } else {
+      if (this.isEditMode || userChanged || !this.request || Object.keys(this.request).length <= 2) {
+        this.editId = null;
+        this.isEditMode = false;
+        await this.initNewRequest();
+      } else {
+        await this.syncProfileBankDetailsIfNeeded();
+      }
     }
   }
 
@@ -179,6 +215,7 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy, ViewWi
 
     const draft = {
       ...this.request,
+      _draftUserId: user?.userId?.toLowerCase() || '',
       ticketAttachments: [] // Do not serialize files
     };
 
@@ -189,7 +226,11 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy, ViewWi
       });
     }
 
-    localStorage.setItem(this.DRAFT_KEY, JSON.stringify(draft));
+    try {
+      localStorage.setItem(this.draftKey, JSON.stringify(draft));
+    } catch (e) {
+      console.warn('Failed to save draft to localStorage', e);
+    }
   }
 
   private async loadExistingRequest(requestId: string): Promise<void> {
@@ -269,8 +310,17 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy, ViewWi
   }
 
   public applyProfileBankDefaults(defaultBank: UserDefaultBankDetails | null, overrideExisting = false): void {
-    if (!defaultBank) return;
     const user = this.appService.currentUser;
+    if (!defaultBank) {
+      if (overrideExisting || !this.request.accountHolderName?.trim()) {
+        this.request.accountHolderName = user?.getDisplayName() || '';
+      }
+      if (overrideExisting || !this.request.accountHolderNameEUR?.trim()) {
+        this.request.accountHolderNameEUR = user?.getDisplayName() || '';
+      }
+      return;
+    }
+
     const plnBank = defaultBank.pln;
     const eurBank = defaultBank.eur;
     const isEur = this.request.currency === 'EUR' && !this.isMixedCurrency;
@@ -320,6 +370,8 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy, ViewWi
       if (overrideExisting || !this.request.swiftBicEUR?.trim()) {
         this.request.swiftBicEUR = eurBank.swiftBic || '';
       }
+    } else if (overrideExisting || !this.request.accountHolderNameEUR?.trim()) {
+      this.request.accountHolderNameEUR = user?.getDisplayName() || '';
     }
   }
 
@@ -402,6 +454,9 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy, ViewWi
 
   private async initNewRequest(): Promise<void> {
     const user = this.appService.currentUser;
+    const currentUserId = user?.userId?.toLowerCase() || null;
+    this.currentFormUserId = currentUserId;
+
     const defaultBank = await this.appService.getDefaultBankDetails();
 
     const allowed = this.allowedRequestTypes;
@@ -419,11 +474,17 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy, ViewWi
       }
     }
 
-    const savedDraft = localStorage.getItem(this.DRAFT_KEY);
+    // Always clear legacy unscoped draft to prevent cross-account leaks
+    try {
+      localStorage.removeItem(this.LEGACY_DRAFT_KEY);
+    } catch (_) {}
+
+    const savedDraft = localStorage.getItem(this.draftKey);
     if (savedDraft) {
       try {
         const parsed = JSON.parse(savedDraft);
-        if (parsed && Object.keys(parsed).length > 0) {
+        const isDraftOwner = currentUserId && parsed._draftUserId && parsed._draftUserId === currentUserId;
+        if (parsed && Object.keys(parsed).length > 0 && isDraftOwner) {
           this.request = parsed;
           this.request.section = initialSection;
           this.request.country = user?.country || '';
@@ -459,9 +520,17 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy, ViewWi
             this.request.ibanEUR = this.formatIban(this.request.ibanEUR, this.eurBankAccountType);
           }
           return;
+        } else {
+          // If draft does not match current user, remove it
+          try {
+            localStorage.removeItem(this.draftKey);
+          } catch (_) {}
         }
       } catch (e) {
         console.error('Failed to parse draft', e);
+        try {
+          localStorage.removeItem(this.draftKey);
+        } catch (_) {}
       }
     }
 
@@ -475,11 +544,11 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy, ViewWi
       totalGrossAmount: undefined,
       totalVatAmount: undefined,
       documents: [],
-      accountHolderName: '',
+      accountHolderName: user?.getDisplayName() || '',
       accountHolderAddress: '',
       iban: '',
       swiftBic: '',
-      accountHolderNameEUR: '',
+      accountHolderNameEUR: user?.getDisplayName() || '',
       accountHolderAddressEUR: '',
       ibanEUR: '',
       swiftBicEUR: '',
@@ -1289,7 +1358,10 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy, ViewWi
       const saved = await this.requestsService.saveRequest(requestToSave, effectiveStatus);
 
       if (!this.isEditMode) {
-        localStorage.removeItem(this.DRAFT_KEY);
+        try {
+          localStorage.removeItem(this.draftKey);
+          localStorage.removeItem(this.LEGACY_DRAFT_KEY);
+        } catch (_) {}
       }
 
       const msgKey =
@@ -1506,7 +1578,10 @@ export class RequestFormPage implements OnInit, AfterViewInit, OnDestroy, ViewWi
                 await loading.dismiss();
               }
             } else if (!this.isEditMode) {
-              localStorage.removeItem(this.DRAFT_KEY);
+              try {
+                localStorage.removeItem(this.draftKey);
+                localStorage.removeItem(this.LEGACY_DRAFT_KEY);
+              } catch (_) {}
               await this.initNewRequest();
               this.requestForm?.form.markAsPristine();
               this.requestForm?.form.markAsUntouched();

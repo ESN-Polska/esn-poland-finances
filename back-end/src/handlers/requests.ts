@@ -270,6 +270,7 @@ class RequestsHandler extends ResourceController {
         await this.markGuestInvitationUsed(user.guestInvitationId, request.requestId);
       }
       await this.sendRequestNotificationEmail(request, 'SUBMITTED', 'Initial submission');
+      await this.sendManagerNewRequestNotifications(request);
     }
 
     return request;
@@ -525,6 +526,9 @@ class RequestsHandler extends ResourceController {
         finalStatus,
         emailComment
       );
+      if (finalStatus === 'SUBMITTED') {
+        await this.sendManagerNewRequestNotifications(updated);
+      }
     }
 
     return updated;
@@ -1191,12 +1195,164 @@ class RequestsHandler extends ResourceController {
     }
   }
 
+  private async sendManagerNewRequestNotifications(request: FinancialRequest): Promise<void> {
+    if (!DDB_TABLES.users) return;
+
+    try {
+      const configurations = await this.getConfigurations();
+      const rawUsers: any[] = (await ddb.scan({ TableName: DDB_TABLES.users })) || [];
+      if (!rawUsers || rawUsers.length === 0) return;
+
+      const requestUserEmail = (request.userEmail || '').trim().toLowerCase();
+      const requestUserId = (request.userId || '').trim().toLowerCase();
+
+      const eligibleReviewers: Array<{ user: User; email: string; lang: 'pl' | 'en' }> = [];
+
+      for (const rawUser of rawUsers) {
+        const user = new User(rawUser);
+        User.applyConfigurationPermissions(user, configurations);
+
+        if (!user.hasPermission(AppPermission.REQUESTS.MANAGE)) {
+          continue;
+        }
+
+        if (!user.isEmailNotificationEnabled(EmailTemplateTypes.REQUEST_SUBMITTED_REVIEWER)) {
+          continue;
+        }
+
+        const userEmail = (user.email || rawUser.email || '').trim();
+        if (!userEmail || !userEmail.includes('@')) {
+          continue;
+        }
+
+        // Exclude submitter from reviewer notification
+        if (
+          (user.userId && user.userId.toLowerCase() === requestUserId) ||
+          (userEmail.toLowerCase() === requestUserEmail)
+        ) {
+          continue;
+        }
+
+        if (await isEmailInBlockList(userEmail)) {
+          this.logger.warn('Skipping reviewer notification, recipient in blocklist', { email: userEmail });
+          continue;
+        }
+
+        const userLang = ((rawUser as any).language || (rawUser as any).preferredLanguage || '').toLowerCase();
+        let lang: 'pl' | 'en' = userLang === 'en' || (rawUser.country && rawUser.country.toLowerCase() !== 'poland') ? 'en' : 'pl';
+        if (configurations?.forcedLanguage && configurations.forcedLanguage !== 'ALL') {
+          lang = configurations.forcedLanguage === 'pl' ? 'pl' : 'en';
+        }
+
+        eligibleReviewers.push({ user, email: userEmail, lang });
+      }
+
+      if (eligibleReviewers.length === 0) {
+        this.logger.info('No reviewers with requests.manage opted in for new request notification', { requestId: request.requestId });
+        return;
+      }
+
+      const totalAmount = `${Number(request.totalGrossAmount || 0).toFixed(2)} ${request.currency || 'PLN'}`;
+      let formattedPath = encodeURIComponent(request.requestId);
+      if (request.requestId.includes('/')) {
+        const parts = request.requestId.split('/');
+        if (parts.length === 2) {
+          const [first, second] = parts;
+          if (/^\d{4}$/.test(first)) {
+            formattedPath = `${encodeURIComponent(first)}/${encodeURIComponent(second)}`;
+          } else {
+            formattedPath = `${encodeURIComponent(second)}/${encodeURIComponent(first)}`;
+          }
+        } else {
+          formattedPath = parts.map(p => encodeURIComponent(p)).join('/');
+        }
+      }
+      const reviewUrl = `${BASE_URL}/t/requests/review/${formattedPath}`;
+      const defaultLogoUrl = `https://${APP_DOMAIN}/assets/icons/icon.png`;
+      const appLogo =
+        configurations.appLogoURLEmail ||
+        (!configurations.appLogoURL?.toLowerCase().endsWith('.svg') && configurations.appLogoURL) ||
+        defaultLogoUrl;
+      const replyTo = configurations.supportEmail?.trim() ? [configurations.supportEmail.trim()] : undefined;
+
+      for (const reviewer of eligibleReviewers) {
+        const lang = reviewer.lang;
+        const appTitle = configurations.getAppTitle(lang) || 'ESN Poland Finances';
+        const appOrganisation = configurations.getAppOrganisation(lang) || 'ESN Poland';
+        const senderName = formatSenderName(appTitle);
+        const templateName = lang === 'pl'
+          ? 'notify-request-submitted-reviewer-pl'
+          : 'notify-request-submitted-reviewer-en';
+
+        const templateData = {
+          user: reviewer.user.getDisplayName() || reviewer.user.userId,
+          submitterName: request.userDisplayName || request.userId,
+          submitterEmail: request.userEmail,
+          requestId: request.requestId,
+          title: this.resolveRequestTypeTitle(request.requestType, lang),
+          detail: totalAmount,
+          section: request.section || '',
+          url: reviewUrl,
+          portalUrl: BASE_URL,
+          message: '',
+          status: 'SUBMITTED',
+          appTitle,
+          appOrganisation,
+          appLogo
+        };
+
+        try {
+          await ses.sendTemplatedEmail({
+            toAddresses: [reviewer.email],
+            replyToAddresses: replyTo,
+            template: `${templateName}-${STAGE}`,
+            templateData
+          }, {
+            ...SES_CONFIG,
+            sourceName: senderName
+          });
+          this.logger.info('Sent new request reviewer notification', {
+            requestId: request.requestId,
+            reviewerEmail: reviewer.email,
+            templateName
+          });
+        } catch (err: any) {
+          if (err?.name === 'NotFoundException' || err?.message?.includes('does not exist')) {
+            this.logger.warn(`Template ${templateName}-${STAGE} not found in SES, initializing from S3`, { templateName });
+            await this.ensureSESTemplateExists(templateName);
+            await ses.sendTemplatedEmail({
+              toAddresses: [reviewer.email],
+              replyToAddresses: replyTo,
+              template: `${templateName}-${STAGE}`,
+              templateData
+            }, {
+              ...SES_CONFIG,
+              sourceName: senderName
+            });
+            this.logger.info(`Successfully initialized ${templateName}-${STAGE} from S3 and sent email`);
+          } else {
+            this.logger.error('Failed to send reviewer email to user', err, {
+              reviewerEmail: reviewer.email,
+              requestId: request.requestId
+            });
+          }
+        }
+      }
+    } catch (err) {
+      this.logger.error('Failed to dispatch manager new request notifications', err, {
+        requestId: request.requestId
+      });
+    }
+  }
+
   private getDefaultSubject(templateName: string): string {
     const defaultSubjects: { [key: string]: string } = {
       'notify-guest-invitation-pl': 'Zaproszenie do złożenia wniosku finansowego',
       'notify-guest-invitation-en': 'Invitation to submit financial request',
       'notify-request-submitted-pl': 'Potwierdzenie złożenia wniosku finansowego {{requestId}}',
       'notify-request-submitted-en': 'Financial request submitted {{requestId}}',
+      'notify-request-submitted-reviewer-pl': 'Nowy wniosek finansowy do weryfikacji {{requestId}}',
+      'notify-request-submitted-reviewer-en': 'New financial request awaiting review {{requestId}}',
       'notify-request-changes-requested-pl': 'Wymagane poprawki do wniosku finansowego {{requestId}}',
       'notify-request-changes-requested-en': 'Changes requested for financial request {{requestId}}',
       'notify-request-approved-pl': 'Wniosek finansowy {{requestId}} został zatwierdzony',

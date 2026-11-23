@@ -236,6 +236,10 @@ class ConfigurationsRC extends ResourceController {
         return 'notify-request-submitted-pl';
       case EmailTemplates.REQUEST_SUBMITTED_EN:
         return 'notify-request-submitted-en';
+      case EmailTemplates.REQUEST_SUBMITTED_REVIEWER_PL:
+        return 'notify-request-submitted-reviewer-pl';
+      case EmailTemplates.REQUEST_SUBMITTED_REVIEWER_EN:
+        return 'notify-request-submitted-reviewer-en';
       case EmailTemplates.REQUEST_CHANGES_REQUESTED_PL:
         return 'notify-request-changes-requested-pl';
       case EmailTemplates.REQUEST_CHANGES_REQUESTED_EN:
@@ -312,11 +316,19 @@ class ConfigurationsRC extends ResourceController {
     const senderName = formatSenderName(appTitle);
 
     const isGuest = emailTemplate.startsWith('GUEST_INVITATION');
+    const isReviewer = emailTemplate.startsWith('REQUEST_SUBMITTED_REVIEWER');
     const templateData = {
       user: this.user ? this.user.getDisplayName() : 'User',
+      submitterName: isReviewer ? 'Anna Nowak' : undefined,
+      submitterEmail: isReviewer ? 'anna.nowak@esn.pl' : undefined,
       title: isGuest ? (isEnglish ? 'National Assembly 2026' : 'Zjazd Krajowy 2026') : (isEnglish ? 'Travel Reimbursement' : 'Zwrot kosztów podróży'),
       detail: isGuest ? '31.12.2026' : '250.00 PLN',
-      url: isGuest ? `${BASE_URL}/auth?guestToken=sample-token` : `${BASE_URL}/t/requests/view/2026/1`,
+      section: isReviewer ? 'ESN SGH Warsaw' : undefined,
+      url: isGuest
+        ? `${BASE_URL}/auth?guestToken=sample-token`
+        : isReviewer
+        ? `${BASE_URL}/t/requests/review/2026/1`
+        : `${BASE_URL}/t/requests/view/2026/1`,
       portalUrl: BASE_URL,
       message: isEnglish ? 'This is an example notification message or reviewer comment.' : 'To jest przykładowa treść wiadomości lub uwagi weryfikującego.',
       requestId: '1/2026',
@@ -356,6 +368,8 @@ class ConfigurationsRC extends ResourceController {
       [EmailTemplates.GUEST_INVITATION_EN]: 'Invitation to submit financial request',
       [EmailTemplates.REQUEST_SUBMITTED_PL]: 'Potwierdzenie złożenia wniosku finansowego {{requestId}}',
       [EmailTemplates.REQUEST_SUBMITTED_EN]: 'Financial request {{requestId}} submitted',
+      [EmailTemplates.REQUEST_SUBMITTED_REVIEWER_PL]: 'Nowy wniosek finansowy do weryfikacji {{requestId}}',
+      [EmailTemplates.REQUEST_SUBMITTED_REVIEWER_EN]: 'New financial request awaiting review {{requestId}}',
       [EmailTemplates.REQUEST_CHANGES_REQUESTED_PL]: 'Wymagane poprawki do wniosku finansowego {{requestId}}',
       [EmailTemplates.REQUEST_CHANGES_REQUESTED_EN]: 'Changes requested for financial request {{requestId}}',
       [EmailTemplates.REQUEST_APPROVED_PL]: 'Wniosek finansowy {{requestId}} został zatwierdzony',

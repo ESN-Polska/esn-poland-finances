@@ -336,6 +336,7 @@ class Login extends ResourceController {
       lastLoginAt: new Date().toISOString(),
       isAdministrator: false,
       disabledEmailNotifications: existingUserRecord?.disabledEmailNotifications || [],
+      enabledEmailNotifications: existingUserRecord?.enabledEmailNotifications || [],
       primarySectionChosen: isChosenSectionStillValid
         ? (existingUserRecord?.primarySectionChosen ?? (uniqueSections.length <= 1))
         : (uniqueSections.length <= 1),
@@ -406,6 +407,7 @@ class Login extends ResourceController {
             canManageFinances: user.canManageFinances,
             lastLoginAt: user.lastLoginAt,
             disabledEmailNotifications: user.disabledEmailNotifications || [],
+            enabledEmailNotifications: user.enabledEmailNotifications || [],
             primarySectionChosen: user.primarySectionChosen,
             ...(user.defaultBankDetails ? { defaultBankDetails: user.defaultBankDetails } : {})
           }
@@ -495,6 +497,7 @@ class Login extends ResourceController {
       guestInstructions: invitation.instructions,
       lastLoginAt: now,
       disabledEmailNotifications: existingGuestRecord?.disabledEmailNotifications || [],
+      enabledEmailNotifications: existingGuestRecord?.enabledEmailNotifications || [],
       defaultBankDetails: existingGuestRecord?.defaultBankDetails
     });
 
@@ -527,6 +530,7 @@ class Login extends ResourceController {
             guestDefaultSourceOfFunding: guestUser.guestDefaultSourceOfFunding,
             lastLoginAt: guestUser.lastLoginAt,
             disabledEmailNotifications: guestUser.disabledEmailNotifications || [],
+            enabledEmailNotifications: guestUser.enabledEmailNotifications || [],
             ...(guestUser.defaultBankDetails ? { defaultBankDetails: guestUser.defaultBankDetails } : {})
           }
         });

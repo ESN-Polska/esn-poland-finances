@@ -3,6 +3,7 @@ import {
   ALL_APP_PERMISSIONS,
   AppPermission,
   Configurations,
+  DEFAULT_DISABLED_EMAIL_NOTIFICATIONS,
   LocalizedText,
   UsersOriginDisplayOptions
 } from './configurations.model';
@@ -96,6 +97,8 @@ export class User extends Resource {
   guestInstructions?: LocalizedText;
   /** Types of automatic email notifications disabled by user */
   disabledEmailNotifications?: string[];
+  /** Types of automatic email notifications enabled by user (for default-disabled items) */
+  enabledEmailNotifications?: string[];
   /** Whether the user has explicitly selected/confirmed their primary section */
   primarySectionChosen?: boolean;
   /** Default payout bank account details for PLN and EUR */
@@ -350,6 +353,7 @@ export class User extends Resource {
       };
     }
     this.disabledEmailNotifications = this.cleanArray(x.disabledEmailNotifications, String);
+    this.enabledEmailNotifications = this.cleanArray(x.enabledEmailNotifications, String);
     const hasMultipleSections = (this.availableSections?.length || 0) > 1;
     this.primarySectionChosen = this.clean(
       x.primarySectionChosen !== undefined ? x.primarySectionChosen : !hasMultipleSections,
@@ -394,6 +398,9 @@ export class User extends Resource {
   }
 
   isEmailNotificationEnabled(templateType: string): boolean {
+    if (DEFAULT_DISABLED_EMAIL_NOTIFICATIONS.includes(templateType as any)) {
+      return (this.enabledEmailNotifications || []).includes(templateType);
+    }
     return !(this.disabledEmailNotifications || []).includes(templateType);
   }
 

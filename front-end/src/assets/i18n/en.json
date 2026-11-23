@@ -919,6 +919,8 @@
       "GUEST_INVITATION_I": "Sent to external guests when generating an invitation link.",
       "REQUEST_SUBMITTED": "Request Submitted",
       "REQUEST_SUBMITTED_I": "Sent to the applicant confirming their financial request submission.",
+      "REQUEST_SUBMITTED_REVIEWER": "New Request Awaiting Review",
+      "REQUEST_SUBMITTED_REVIEWER_I": "Sent to reviewers when a new or resubmitted financial request is awaiting verification.",
       "REQUEST_CHANGES_REQUESTED": "Changes Requested",
       "REQUEST_CHANGES_REQUESTED_I": "Sent when reviewer requests changes or clarification from the applicant.",
       "REQUEST_APPROVED": "Request Approved",

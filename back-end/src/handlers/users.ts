@@ -112,6 +112,21 @@ class UsersRC extends ResourceController {
       userRecord.disabledEmailNotifications = sanitized;
     }
 
+    if (this.body?.enabledEmailNotifications !== undefined) {
+      if (!Array.isArray(this.body.enabledEmailNotifications)) {
+        throw new HandledError('enabledEmailNotifications must be an array of strings');
+      }
+      const rawList = this.body.enabledEmailNotifications;
+      const sanitized = Array.from(
+        new Set(
+          rawList
+            .filter((item: any) => typeof item === 'string' && item.trim().length > 0)
+            .map((item: string) => item.trim())
+        )
+      );
+      userRecord.enabledEmailNotifications = sanitized;
+    }
+
     // Update primary section
     if (this.body?.sectionCode !== undefined || this.body?.section !== undefined) {
       userRecord.primarySectionChosen = true;
