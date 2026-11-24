@@ -110,6 +110,15 @@
           <h3 class="guestWelcomeTitle">{{ 'AUTH.GUEST_WELCOME_TITLE' | translate }}</h3>
           <p class="guestWelcomeDesc">{{ 'AUTH.GUEST_WELCOME_DESC' | translate }}</p>
 
+          <ion-button
+            expand="block"
+            class="login-button guest-continue-btn"
+            (click)="continueGuestLogin()"
+          >
+            <ion-icon slot="start" name="arrow-forward-outline"></ion-icon>
+            {{ 'AUTH.GUEST_CONTINUE_BUTTON' | translate }}
+          </ion-button>
+
           <!-- Legal Notice (Guest) -->
           <div *ngIf="hasAnyLegalDocument" class="legal-notice-container">
             <p class="legal-notice-text">
@@ -137,19 +146,19 @@
               </ng-container>
             </p>
           </div>
-
-          <ion-button
-            expand="block"
-            class="login-button guest-continue-btn"
-            (click)="continueGuestLogin()"
-          >
-            <ion-icon slot="start" name="arrow-forward-outline"></ion-icon>
-            {{ 'AUTH.GUEST_CONTINUE_BUTTON' | translate }}
-          </ion-button>
         </div>
 
         <!-- Standard Login Button (hidden if guest link error notice is displayed, guest welcome card is shown, or app is locked) -->
         <div *ngIf="!isProcessing && !guestErrorKey && !isAppLocked && !isGuestInvitation" class="action-section">
+          <ion-button
+            expand="block"
+            class="login-button"
+            (click)="login()"
+          >
+            <ion-icon slot="start" name="log-in-outline"></ion-icon>
+            {{ 'AUTH.LOGIN_BUTTON' | translate }}
+          </ion-button>
+
           <!-- Legal Notice (Standard Users) -->
           <div *ngIf="hasAnyLegalDocument" class="legal-notice-container">
             <p class="legal-notice-text">
@@ -177,15 +186,6 @@
               </ng-container>
             </p>
           </div>
-
-          <ion-button
-            expand="block"
-            class="login-button"
-            (click)="login()"
-          >
-            <ion-icon slot="start" name="log-in-outline"></ion-icon>
-            {{ 'AUTH.LOGIN_BUTTON' | translate }}
-          </ion-button>
         </div>
 
         <p class="version">v{{ version }}</p>
