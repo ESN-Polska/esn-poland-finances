@@ -477,8 +477,8 @@
       "ADDITIONAL_REMARKS": "Dodatkowe uwagi"
     },
     "PLACEHOLDERS": {
-      "POSITION": "np. Członek Zarządu Krajowego, Przewodniczący Komisji",
-      "FUNDING_SOURCE": "np. Budżet statutowy, Grant partnerski",
+      "POSITION": "np. Członek Zarządu Lokalnego",
+      "FUNDING_SOURCE": "np. Subkonto, Grant",
       "ISSUED_BY": "Nazwa wystawcy",
       "EXPLANATION": "Opisz cel zakupu i powód wydatku...",
       "EXPLANATION_BUDGET": "Podaj cel zaliczki i preliminarz kosztów...",

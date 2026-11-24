@@ -477,8 +477,8 @@
       "ADDITIONAL_REMARKS": "Additional remarks / notes"
     },
     "PLACEHOLDERS": {
-      "POSITION": "e.g. National Board Member, Committee Chair",
-      "FUNDING_SOURCE": "e.g. Statutory Budget, Partner Grant",
+      "POSITION": "e.g. Local Board Member",
+      "FUNDING_SOURCE": "e.g. Subaccount, Grant",
       "ISSUED_BY": "Company or vendor name",
       "EXPLANATION": "Describe what was purchased and why...",
       "EXPLANATION_BUDGET": "Provide purpose of the advance and cost breakdown...",
