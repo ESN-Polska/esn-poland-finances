@@ -72,7 +72,7 @@
     "LOGOUT": "Log out",
     "SESSION_EXPIRED": "Your session has expired. Please log in again.",
     "LOGIN_FAILED": "Authentication with ESN Accounts failed. Please try again.",
-    "GUEST_WELCOME_TITLE": "Guest Reimbursement Access",
+    "GUEST_WELCOME_TITLE": "Guest Access",
     "GUEST_WELCOME_DESC": "You have been invited to submit a financial request.",
     "GUEST_CONTINUE_BUTTON": "Continue to Form",
     "LEGAL_AGREEMENT_BOTH_PREFIX": "By signing in, you agree to our",

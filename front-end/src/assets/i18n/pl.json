@@ -72,7 +72,7 @@
     "LOGOUT": "Wyloguj się",
     "SESSION_EXPIRED": "Twoja sesja wygasła. Zaloguj się ponownie.",
     "LOGIN_FAILED": "Logowanie przez ESN Accounts nie powiodło się. Spróbuj ponownie.",
-    "GUEST_WELCOME_TITLE": "Dostęp gościnny do wniosków",
+    "GUEST_WELCOME_TITLE": "Dostęp gościnny",
     "GUEST_WELCOME_DESC": "Zostałeś zaproszony do złożenia wniosku finansowego.",
     "GUEST_CONTINUE_BUTTON": "Przejdź do formularza",
     "LEGAL_AGREEMENT_BOTH_PREFIX": "Logując się, akceptujesz",
