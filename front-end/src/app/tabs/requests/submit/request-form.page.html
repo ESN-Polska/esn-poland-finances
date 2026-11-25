@@ -180,7 +180,7 @@
             <div class="docCardHeader">
               <span class="docIndex">{{ 'REQUESTS.DOCUMENT' | translate }} #{{ i + 1 }}</span>
               <button
-                *ngIf="request.documents.length > 1"
+                *ngIf="(request.documents?.length || 0) > 1"
                 type="button"
                 class="removeDocBtn"
                 (click)="removeDocumentItem(i)"

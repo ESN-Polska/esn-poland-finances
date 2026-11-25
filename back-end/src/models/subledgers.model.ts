@@ -228,7 +228,6 @@ export class AdvanceRecord extends Resource {
   id: string;
   year: number;
   advanceNumber: string; // e.g. "01/2026"
-  originRequestId?: string;
   recipientName: string;
   recipientAddress?: string;
   recipientUserId?: string;
@@ -292,7 +291,6 @@ export class AdvanceRecord extends Resource {
     this.id = this.clean(x.id, String);
     this.year = this.clean(x.year, Number, new Date().getFullYear());
     this.advanceNumber = this.clean(x.advanceNumber, String, '');
-    this.originRequestId = this.clean(x.originRequestId, String, '');
     this.recipientName = this.clean(x.recipientName, String, '');
     this.recipientAddress = this.clean(x.recipientAddress, String, '');
     this.recipientUserId = this.clean(x.recipientUserId, String, '');
@@ -319,7 +317,6 @@ export class AdvanceRecord extends Resource {
 export class DelegationRecord extends Resource {
   id: string;
   year: number;
-  originRequestId?: string;
   sequenceNumber: string; // e.g. "01/03/2026"
   recipientName: string;
   recipientAddress?: string;
@@ -393,7 +390,6 @@ export class DelegationRecord extends Resource {
     super.load(x);
     this.id = this.clean(x.id, String);
     this.year = this.clean(x.year, Number, new Date().getFullYear());
-    this.originRequestId = this.clean(x.originRequestId, String, '');
     this.sequenceNumber = this.clean(x.sequenceNumber, String, '');
     this.recipientName = this.clean(x.recipientName || x.attendeeName, String, '');
     this.recipientAddress = this.clean(x.recipientAddress, String, '');

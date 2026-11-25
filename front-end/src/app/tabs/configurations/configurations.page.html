@@ -2233,55 +2233,6 @@
       </ion-list>
 
 
-      <!-- Auto Creation On Paid Settings -->
-      <ion-list class="aList">
-        <ion-list-header>
-          <ion-label>
-            <h2>{{ 'CONFIGURATIONS.FINANCES_AUTOCREATION_TITLE' | translate }}</h2>
-            <p>{{ 'CONFIGURATIONS.FINANCES_AUTOCREATION_I' | translate }}</p>
-          </ion-label>
-        </ion-list-header>
-
-        <ion-item>
-          <ion-label class="ion-text-wrap">
-            <h3>{{ 'CONFIGURATIONS.FINANCES_AUTO_DOCS' | translate }}</h3>
-            <p>{{ 'CONFIGURATIONS.FINANCES_AUTO_DOCS_I' | translate }}</p>
-          </ion-label>
-          <ion-toggle
-            slot="end"
-            [disabled]="!canModifyFinances()"
-            [(ngModel)]="configurations.financesConfig.autoCreationOnPaid.documentsEnabled"
-            (ionChange)="updateConfigurations()"
-          ></ion-toggle>
-        </ion-item>
-
-        <ion-item>
-          <ion-label class="ion-text-wrap">
-            <h3>{{ 'CONFIGURATIONS.FINANCES_AUTO_ADVANCES' | translate }}</h3>
-            <p>{{ 'CONFIGURATIONS.FINANCES_AUTO_ADVANCES_I' | translate }}</p>
-          </ion-label>
-          <ion-toggle
-            slot="end"
-            [disabled]="!canModifyFinances()"
-            [(ngModel)]="configurations.financesConfig.autoCreationOnPaid.advancesEnabled"
-            (ionChange)="updateConfigurations()"
-          ></ion-toggle>
-        </ion-item>
-
-        <ion-item>
-          <ion-label class="ion-text-wrap">
-            <h3>{{ 'CONFIGURATIONS.FINANCES_AUTO_DELEGATIONS' | translate }}</h3>
-            <p>{{ 'CONFIGURATIONS.FINANCES_AUTO_DELEGATIONS_I' | translate }}</p>
-          </ion-label>
-          <ion-toggle
-            slot="end"
-            [disabled]="!canModifyFinances()"
-            [(ngModel)]="configurations.financesConfig.autoCreationOnPaid.delegationsEnabled"
-            (ionChange)="updateConfigurations()"
-          ></ion-toggle>
-        </ion-item>
-      </ion-list>
-
       <!-- Finances Subtabs Reordering -->
       <ion-list class="aList">
         <ion-list-header>

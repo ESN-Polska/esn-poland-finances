@@ -51,8 +51,6 @@ export class DocumentRecord extends Resource {
   paymentOrigin: DocumentPaymentOrigin;
   /** Linked advance record ID if settled from an advance */
   advanceId?: string;
-  /** Backlink to FinancialRequest if auto-created from PAID status */
-  originRequestId?: string;
 
   /** Multi-code splits across budget lines, meetings, and sections */
   codeAllocations: DocumentCodeAllocation[];
@@ -92,7 +90,6 @@ export class DocumentRecord extends Resource {
 
     this.paymentOrigin = this.clean(x.paymentOrigin, String, 'TRANSACTIONS') as DocumentPaymentOrigin;
     this.advanceId = this.clean(x.advanceId, String, '');
-    this.originRequestId = this.clean(x.originRequestId, String, '');
 
     this.codeAllocations = Array.isArray(x.codeAllocations)
       ? x.codeAllocations.map((ca: any, idx: number) => {

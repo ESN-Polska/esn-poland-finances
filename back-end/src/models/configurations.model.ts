@@ -59,11 +59,6 @@ export interface FinancialModuleConfigurations {
     primaryEurIban?: string;
     swiftBic?: string;
   };
-  autoCreationOnPaid: {
-    documentsEnabled: boolean;
-    advancesEnabled: boolean;
-    delegationsEnabled: boolean;
-  };
   budgetOrganisationName?: LocalizedText;
 }
 
@@ -73,11 +68,6 @@ export const DEFAULT_FINANCES_CONFIGURATIONS: FinancialModuleConfigurations = {
   defaultDiemsBudgetLineCode: undefined,
   firstYear: new Date().getFullYear(),
   csvImportScheme: 'ERSTE_BANK_POLSKA',
-  autoCreationOnPaid: {
-    documentsEnabled: true,
-    advancesEnabled: true,
-    delegationsEnabled: true
-  },
   budgetOrganisationName: {
     en: 'ESN Poland',
     pl: 'ESN Polska'
@@ -883,11 +873,6 @@ export class Configurations extends Resource {
         primaryEurIban: this.clean(x.financesConfig.bankAccounts.primaryEurIban, String, ''),
         swiftBic: this.clean(x.financesConfig.bankAccounts.swiftBic, String, '')
       } : undefined,
-      autoCreationOnPaid: {
-        documentsEnabled: x.financesConfig?.autoCreationOnPaid?.documentsEnabled !== false,
-        advancesEnabled: x.financesConfig?.autoCreationOnPaid?.advancesEnabled !== false,
-        delegationsEnabled: x.financesConfig?.autoCreationOnPaid?.delegationsEnabled !== false
-      },
       budgetOrganisationName: {
         en: this.clean(x.financesConfig?.budgetOrganisationName?.en, String, 'ESN Poland'),
         pl: this.clean(x.financesConfig?.budgetOrganisationName?.pl, String, 'ESN Polska')
