@@ -170,7 +170,7 @@
             [disabled]="(request.documents?.length || 0) >= maxDocuments"
           >
             <ion-icon slot="start" name="add-outline"></ion-icon>
-            {{ 'REQUESTS.ADD_ANOTHER_DOCUMENT' | translate }} ({{ request.documents?.length || 0 }}/{{ maxDocuments }})
+            {{ 'REQUESTS.ADD_ANOTHER_DOCUMENT' | translate }}
           </ion-button>
         </div>
 
@@ -178,7 +178,7 @@
         <div class="documentsList">
           <div class="documentItemCard" *ngFor="let doc of request.documents; let i = index">
             <div class="docCardHeader">
-              <span class="docIndex">{{ 'REQUESTS.DOCUMENT' | translate }} #{{ i + 1 }} ({{ i + 1 }}/{{ maxDocuments }})</span>
+              <span class="docIndex">{{ 'REQUESTS.DOCUMENT' | translate }} #{{ i + 1 }}</span>
               <button
                 *ngIf="request.documents.length > 1"
                 type="button"
