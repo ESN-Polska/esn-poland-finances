@@ -219,6 +219,13 @@ export interface BudgetAmendmentDraft {
 
 export type AnnualBudgetStatus = 'DRAFT' | 'ADOPTED' | 'AMENDED' | 'ARCHIVED';
 
+export interface OutOfBudgetCode {
+  code: string;
+  name: string;
+  description?: string;
+  isActive?: boolean;
+}
+
 export class AnnualBudget extends Resource {
   year: number;
   title: {
@@ -236,6 +243,13 @@ export class AnnualBudget extends Resource {
   versionHistory: BudgetVersionSnapshot[];
   draftAmendment?: BudgetAmendmentDraft | null;
   currency: 'PLN';
+
+  /** Technical and out-of-budget codes (e.g. VAT, PCC, CIT, delegacje-techniczne) */
+  outOfBudgetCodes?: OutOfBudgetCode[];
+  /** Central annual mapping: Budget line code for volunteer diems (e.g. 'del-statutowe') */
+  diemsBudgetLineCode?: string;
+  /** Central annual mapping: Budget line code for term deposits interest revenues (e.g. 'odsetki-bankowe') */
+  depositsInterestBudgetLineCode?: string;
 
   // Calculated high-level totals
   totalBudgetedRevenue: number;
@@ -525,6 +539,20 @@ export class AnnualBudget extends Resource {
         this.adoptedDate = latestAm.adoptedDate || latestAm.date || this.adoptedDate;
       }
     }
+
+    this.outOfBudgetCodes = Array.isArray(x.outOfBudgetCodes)
+      ? x.outOfBudgetCodes
+          .map((c: any) => ({
+            code: this.clean(c.code, String, '').trim(),
+            name: this.clean(c.name, String, ''),
+            description: this.clean(c.description, String, ''),
+            isActive: c.isActive !== false
+          }))
+          .filter((c: OutOfBudgetCode) => !!c.code)
+      : [];
+
+    this.diemsBudgetLineCode = this.clean(x.diemsBudgetLineCode, String, '').trim();
+    this.depositsInterestBudgetLineCode = this.clean(x.depositsInterestBudgetLineCode, String, '').trim();
 
     this.recalculateTotals();
   }

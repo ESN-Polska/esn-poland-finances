@@ -2382,17 +2382,19 @@ body.dark {
 
         ion-icon {
           font-size: 1.15rem;
-          opacity: 0.7;
         }
       }
 
       .ubItemCount {
         position: absolute;
         bottom: 12px;
-        right: 16px;
-        font-size: 0.78rem;
-        color: var(--ion-color-step-400, #94a3b8);
-        font-weight: 500;
+        right: 14px;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        background: var(--ion-color-step-150, #e2e8f0);
+        color: var(--ion-color-step-700, #334155);
         line-height: 1.2;
         white-space: nowrap;
       }
@@ -2583,6 +2585,271 @@ body.dark {
   }
 }
 
+/* ========================================== */
+/* SYSTEM MAPPINGS & OUT-OF-BUDGET CODES CARD */
+/* ========================================== */
+.systemMappingsCard {
+  margin: 16px 0 24px;
+  background: var(--ion-card-background, #ffffff);
+  border: 1px solid var(--ion-color-step-150, #e2e8f0);
+  border-radius: 14px;
+  padding: 20px 24px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
+
+  .smHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+
+    .smTitleGroup {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+
+      .smIconBadge {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(99, 102, 241, 0.1);
+        color: #6366f1;
+        font-size: 1.4rem;
+        flex-shrink: 0;
+      }
+
+      .smTitleRow {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+
+        .smTitle {
+          margin: 0;
+          font-size: 1.12rem;
+          font-weight: 700;
+          color: var(--ion-color-step-900, #0f172a);
+          letter-spacing: -0.01em;
+        }
+      }
+
+      .smSubtitle {
+        margin: 4px 0 0;
+        font-size: 0.85rem;
+        color: var(--ion-color-step-500, #64748b);
+      }
+    }
+
+    .smHeaderActions {
+      .smToggleBtn {
+        --border-radius: 8px;
+        font-size: 0.82rem;
+        text-transform: none;
+        font-weight: 600;
+      }
+    }
+  }
+
+  .smBody {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid var(--ion-color-step-150, #e2e8f0);
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+
+    .smSection {
+      .smSectionHeader {
+        margin-bottom: 14px;
+
+        &.smBetween {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          flex-wrap: wrap;
+          gap: 10px;
+        }
+
+        .smSectionTitle {
+          margin: 0;
+          font-size: 0.98rem;
+          font-weight: 700;
+          color: var(--ion-color-step-800, #1e293b);
+        }
+
+        .smSectionDesc {
+          margin: 4px 0 0;
+          font-size: 0.82rem;
+          color: var(--ion-color-step-500, #64748b);
+        }
+
+        .addOobBtn {
+          --border-radius: 8px;
+          font-size: 0.82rem;
+          font-weight: 600;
+          text-transform: none;
+        }
+      }
+
+      .smMappingsGrid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 16px;
+
+        .smSelectCard {
+          background: var(--ion-color-step-50, #f8fafc);
+          border: 1px solid var(--ion-color-step-150, #e2e8f0);
+          border-radius: 10px;
+          padding: 14px 16px;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+
+          .smSelectHeader {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+
+            ion-icon {
+              font-size: 1.2rem;
+
+              &.diemsIcon {
+                color: #e74c3c;
+              }
+              &.interestIcon {
+                color: #27ae60;
+              }
+            }
+
+            .smSelectLabel {
+              font-size: 0.82rem;
+              font-weight: 600;
+              color: var(--ion-color-step-700, #334155);
+            }
+          }
+
+          .smIonSelect {
+            --padding-start: 10px;
+            --padding-end: 10px;
+            --padding-top: 8px;
+            --padding-bottom: 8px;
+            background: var(--ion-card-background, #ffffff);
+            border: 1px solid var(--ion-color-step-200, #cbd5e1);
+            border-radius: 8px;
+            font-size: 0.88rem;
+            width: 100%;
+          }
+        }
+      }
+
+      .smTableResponsive {
+        overflow-x: auto;
+        border: 1px solid var(--ion-color-step-150, #e2e8f0);
+        border-radius: 10px;
+
+        .smTable {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 0.86rem;
+
+          thead tr {
+            background: var(--ion-color-step-50, #f8fafc);
+            border-bottom: 1px solid var(--ion-color-step-150, #e2e8f0);
+
+            th {
+              text-align: left;
+              padding: 10px 14px;
+              font-weight: 600;
+              color: var(--ion-color-step-600, #475569);
+              font-size: 0.78rem;
+              text-transform: uppercase;
+              letter-spacing: 0.03em;
+            }
+
+            .colActionHead {
+              text-align: right;
+            }
+          }
+
+          tbody tr {
+            border-bottom: 1px solid var(--ion-color-step-100, #f1f5f9);
+            transition: background 0.15s ease;
+
+            &:last-child {
+              border-bottom: none;
+            }
+
+            &:hover {
+              background: var(--ion-color-step-50, #f8fafc);
+            }
+
+            &.inactiveRow {
+              opacity: 0.55;
+            }
+
+            td {
+              padding: 10px 14px;
+              color: var(--ion-color-step-800, #1e293b);
+
+              &.colOobCode {
+                .oobCodeBadge {
+                  font-family: monospace;
+                  font-weight: 600;
+                  background: rgba(99, 102, 241, 0.12);
+                  color: #4f46e5;
+                  padding: 3px 8px;
+                  border-radius: 6px;
+                  font-size: 0.82rem;
+                }
+              }
+
+              &.colOobName {
+                font-weight: 600;
+              }
+
+              &.colOobDesc {
+                color: var(--ion-color-step-500, #64748b);
+              }
+
+              .statusBadge {
+                display: inline-block;
+                padding: 2px 8px;
+                border-radius: 10px;
+                font-size: 0.75rem;
+                font-weight: 600;
+
+                &.statusActive {
+                  background: rgba(34, 197, 94, 0.12);
+                  color: #16a34a;
+                }
+
+                &.statusInactive {
+                  background: rgba(100, 116, 139, 0.12);
+                  color: #64748b;
+                }
+              }
+
+              &.colActionCell {
+                text-align: right;
+                white-space: nowrap;
+
+                ion-button {
+                  margin: 0 2px;
+                  --padding-start: 6px;
+                  --padding-end: 6px;
+                  font-size: 1.1rem;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
 body.dark {
   .unbudgetedCashflowsCard {
     background: #1e1e1e;
@@ -2621,8 +2888,20 @@ body.dark {
             color: #94a3b8;
           }
         }
+
+        &.revCard .ubMetricHeader ion-icon {
+          color: #4ade80;
+        }
+        &.expCard .ubMetricHeader ion-icon {
+          color: #f87171;
+        }
+        &.netCard .ubMetricHeader ion-icon {
+          color: #38bdf8;
+        }
+
         .ubItemCount {
-          color: #64748b;
+          background: rgba(255, 255, 255, 0.08);
+          color: #cbd5e1;
         }
 
         .ubMetricValue {
@@ -2704,6 +2983,98 @@ body.dark {
                 }
 
                 .ubPlnEquiv {
+                  color: #94a3b8;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  .systemMappingsCard {
+    background: #1e1e1e;
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+
+    .smHeader {
+      .smTitleGroup {
+        .smIconBadge {
+          background: rgba(99, 102, 241, 0.2);
+        }
+
+        .smTitleRow {
+          .smTitle {
+            color: #f1f5f9;
+          }
+        }
+
+        .smSubtitle {
+          color: #94a3b8;
+        }
+      }
+    }
+
+    .smBody {
+      border-top-color: rgba(255, 255, 255, 0.1);
+
+      .smSection {
+        .smSectionHeader {
+          .smSectionTitle {
+            color: #f1f5f9;
+          }
+          .smSectionDesc {
+            color: #94a3b8;
+          }
+        }
+
+        .smMappingsGrid {
+          .smSelectCard {
+            background: #252525;
+            border-color: rgba(255, 255, 255, 0.08);
+
+            .smSelectHeader .smSelectLabel {
+              color: #e2e8f0;
+            }
+
+            .smIonSelect {
+              background: #1e1e1e;
+              border-color: rgba(255, 255, 255, 0.15);
+              color: #f1f5f9;
+            }
+          }
+        }
+
+        .smTableResponsive {
+          border-color: rgba(255, 255, 255, 0.1);
+
+          .smTable {
+            thead tr {
+              background: #252525;
+              border-bottom-color: rgba(255, 255, 255, 0.1);
+
+              th {
+                color: #94a3b8;
+              }
+            }
+
+            tbody tr {
+              border-bottom-color: rgba(255, 255, 255, 0.06);
+
+              &:hover {
+                background: #252525;
+              }
+
+              td {
+                color: #e2e8f0;
+
+                &.colOobCode .oobCodeBadge {
+                  background: rgba(99, 102, 241, 0.25);
+                  color: #818cf8;
+                }
+
+                &.colOobDesc {
                   color: #94a3b8;
                 }
               }

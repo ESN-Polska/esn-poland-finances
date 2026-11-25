@@ -1,0 +1,425 @@
+.modalContent {
+  --background: var(--ion-background-color, #f8fafc);
+}
+
+.optionsContainer {
+  padding: 16px 20px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.txSummaryCard {
+  background: var(--ion-card-background, #ffffff);
+  border: 1px solid var(--ion-color-step-150, #e2e8f0);
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+
+  .txSummaryLeft {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+
+    .txDate {
+      font-size: 0.78rem;
+      color: var(--ion-color-step-500, #64748b);
+      font-weight: 500;
+    }
+
+    .txParty {
+      margin: 0;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--ion-color-step-900, #0f172a);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .txTitle {
+      margin: 0;
+      font-size: 0.84rem;
+      color: var(--ion-color-step-600, #475569);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+
+  .txSummaryRight {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    flex-shrink: 0;
+
+    .txAmount {
+      font-size: 1.35rem;
+      font-weight: 700;
+      font-feature-settings: 'tnum';
+
+      &.positive { color: #16a34a; }
+      &.negative { color: #dc2626; }
+    }
+
+    .txTargetLabel {
+      font-size: 0.76rem;
+      color: var(--ion-color-step-500, #64748b);
+      font-weight: 600;
+    }
+  }
+}
+
+.segmentWrapper {
+  .optionsSegment {
+    border-radius: 8px;
+  }
+}
+
+.tabContent {
+  background: var(--ion-card-background, #ffffff);
+  border: 1px solid var(--ion-color-step-150, #e2e8f0);
+  border-radius: 12px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+
+  .sectionHeaderRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+
+    .sectionTitle {
+      margin: 0;
+      font-size: 0.98rem;
+      font-weight: 700;
+      color: var(--ion-color-step-850, #1e293b);
+    }
+
+    .sectionDesc {
+      margin: 3px 0 0;
+      font-size: 0.8rem;
+      color: var(--ion-color-step-500, #64748b);
+    }
+  }
+}
+
+.deltaBadge {
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 6px;
+
+  &.valid {
+    background: rgba(34, 197, 94, 0.12);
+    color: #16a34a;
+  }
+  &.invalid {
+    background: rgba(239, 68, 68, 0.12);
+    color: #dc2626;
+  }
+}
+
+.pickersGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+
+  @media (max-width: 700px) {
+    grid-template-columns: 1fr;
+  }
+
+  .pickerBox {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 12px;
+    background: var(--ion-color-step-50, #f8fafc);
+    border: 1px solid var(--ion-color-step-150, #e2e8f0);
+    border-radius: 8px;
+
+    .pickerLabel {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--ion-color-step-700, #334155);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .pickerActionRow {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+
+      .stdSelect {
+        flex: 1;
+        background: var(--ion-card-background, #ffffff);
+      }
+    }
+  }
+}
+
+.stdInput, .stdSelect {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--ion-color-step-200, #cbd5e1);
+  border-radius: 8px;
+  background: var(--ion-card-background, #ffffff);
+  color: var(--ion-color-step-900, #0f172a);
+  font-size: 0.88rem;
+  outline: none;
+
+  &:focus {
+    border-color: var(--ion-color-primary, #00aeef);
+  }
+}
+
+.settlementsList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  .settlementItem {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 10px 14px;
+    background: var(--ion-color-step-50, #f8fafc);
+    border: 1px solid var(--ion-color-step-150, #e2e8f0);
+    border-radius: 8px;
+
+    .sInfo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+
+      .sTypeBadge {
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        padding: 2px 7px;
+        border-radius: 4px;
+        flex-shrink: 0;
+
+        &.document {
+          background: rgba(0, 174, 239, 0.12);
+          color: #00aeef;
+        }
+        &.fiscal_daily_report {
+          background: rgba(142, 68, 173, 0.12);
+          color: #8e44ad;
+        }
+      }
+
+      .sLabels {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+
+        .sTargetLabel {
+          font-size: 0.88rem;
+          color: var(--ion-color-step-900, #0f172a);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .sNotes {
+          font-size: 0.74rem;
+          color: var(--ion-color-step-500, #64748b);
+        }
+      }
+    }
+
+    .sAmountBox {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+
+      label {
+        font-size: 0.76rem;
+        color: var(--ion-color-step-500, #64748b);
+      }
+
+      .allocInput {
+        width: 100px;
+        padding: 4px 8px;
+        text-align: right;
+        font-weight: 600;
+      }
+
+      .currencyTag {
+        font-size: 0.76rem;
+        color: var(--ion-color-step-500, #64748b);
+      }
+    }
+  }
+}
+
+.quickFillBtn {
+  background: var(--ion-color-step-100, #e2e8f0);
+  border: 1px solid var(--ion-color-step-200, #cbd5e1);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--ion-color-step-700, #334155);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--ion-color-primary, #00aeef);
+    color: #ffffff;
+  }
+}
+
+.removeBtn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--ion-color-step-400, #94a3b8);
+  font-size: 1.15rem;
+  display: flex;
+  align-items: center;
+  padding: 3px;
+
+  &:hover {
+    color: var(--ion-color-danger, #ef4444);
+  }
+}
+
+.splitsList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  .splitRowItem {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+
+    .splitCodeCol {
+      flex: 1.2;
+      min-width: 200px;
+    }
+
+    .splitAmountCol {
+      width: 180px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+
+      .amountInput {
+        text-align: right;
+        font-weight: 600;
+      }
+
+      .currencyTag {
+        font-size: 0.76rem;
+        color: var(--ion-color-step-500, #64748b);
+      }
+    }
+
+    .splitDescCol {
+      flex: 1;
+      min-width: 150px;
+    }
+
+    .splitActionCol {
+      width: 32px;
+    }
+  }
+}
+
+.emptySettlements {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 32px 16px;
+  color: var(--ion-color-step-400, #94a3b8);
+
+  ion-icon {
+    font-size: 2.2rem;
+  }
+  p {
+    margin: 0;
+    font-size: 0.88rem;
+  }
+}
+
+.modalFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0 16px;
+
+  .footerRight {
+    display: flex;
+    gap: 10px;
+  }
+}
+
+body.dark {
+  .modalContent {
+    --background: #141414;
+  }
+
+  .txSummaryCard {
+    background: #1e1e1e;
+    border-color: rgba(255, 255, 255, 0.1);
+
+    .txSummaryLeft {
+      .txParty { color: #f1f5f9; }
+      .txTitle { color: #94a3b8; }
+    }
+  }
+
+  .tabContent {
+    background: #1e1e1e;
+    border-color: rgba(255, 255, 255, 0.1);
+
+    .sectionHeaderRow .sectionTitle {
+      color: #f1f5f9;
+    }
+  }
+
+  .pickersGrid .pickerBox {
+    background: #252525;
+    border-color: rgba(255, 255, 255, 0.08);
+
+    .pickerLabel { color: #cbd5e1; }
+    .stdSelect { background: #1e1e1e; }
+  }
+
+  .stdInput, .stdSelect {
+    background: #252525;
+    border-color: rgba(255, 255, 255, 0.15);
+    color: #f1f5f9;
+  }
+
+  .settlementsList .settlementItem {
+    background: #252525;
+    border-color: rgba(255, 255, 255, 0.08);
+
+    .sInfo .sLabels .sTargetLabel {
+      color: #f1f5f9;
+    }
+  }
+}

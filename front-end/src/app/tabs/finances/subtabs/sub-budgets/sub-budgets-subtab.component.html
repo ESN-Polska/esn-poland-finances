@@ -1,0 +1,145 @@
+<div class="meetingsSubtabContainer">
+  <div class="loadingWrapper" *ngIf="loading">
+    <ion-spinner name="crescent" color="primary"></ion-spinner>
+    <p>{{ 'FINANCES.MEETINGS.LOADING' | translate }}</p>
+  </div>
+
+  <div *ngIf="!loading" class="meetingsContent">
+    <!-- Header Toolbar: Search & Add -->
+    <div class="toolbarCard">
+      <div class="searchWrapper">
+        <ion-icon name="search-outline" class="searchIcon"></ion-icon>
+        <input
+          type="text"
+          class="searchInput"
+          [(ngModel)]="searchQuery"
+          [placeholder]="'COMMON.SEARCH' | translate"
+        />
+        <button *ngIf="searchQuery" class="clearBtn" (click)="searchQuery = ''">
+          <ion-icon name="close-circle"></ion-icon>
+        </button>
+      </div>
+
+      <ion-button
+        *ngIf="canEdit && !isArchived"
+        fill="solid"
+        color="primary"
+        size="small"
+        class="addSubBudgetBtn"
+        (click)="openAddSubBudgetAlert()"
+      >
+        <ion-icon slot="start" name="add-circle-outline"></ion-icon>
+        {{ 'FINANCES.MEETINGS.ADD_SUB_BUDGET' | translate }}
+      </ion-button>
+    </div>
+
+    <!-- Table Card -->
+    <div class="tableCard">
+      <div class="tableWrapper" *ngIf="filteredMeetings.length > 0">
+        <table class="modernTable">
+          <thead>
+            <tr>
+              <th>{{ 'FINANCES.MEETINGS.COL_NAME' | translate }}</th>
+              <th>{{ 'FINANCES.MEETINGS.COL_CODE' | translate }}</th>
+              <th style="text-align: right">{{ 'FINANCES.MEETINGS.COL_REVENUE' | translate }}</th>
+              <th style="text-align: right">{{ 'FINANCES.MEETINGS.COL_COST' | translate }}</th>
+              <th style="text-align: right">{{ 'FINANCES.MEETINGS.COL_RESULT' | translate }}</th>
+              <th style="text-align: center">{{ 'FINANCES.MEETINGS.COL_LINK' | translate }}</th>
+              <th>{{ 'FINANCES.MEETINGS.COL_BUDGET_LINE' | translate }}</th>
+              <th style="text-align: center">{{ 'FINANCES.MEETINGS.COL_STATUS' | translate }}</th>
+              <th *ngIf="canEdit && !isArchived" style="text-align: right">{{ 'FINANCES.MEETINGS.COL_ACTIONS' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let m of filteredMeetings" [class.settledRow]="m.status === 'SETTLED'">
+              <td class="colName">
+                <span class="subBudgetName">{{ m.name }}</span>
+                <span class="subBudgetMeta" *ngIf="m.city || m.startDate">
+                  <span *ngIf="m.startDate">{{ m.startDate | appDate }} </span>
+                  <span *ngIf="m.city">({{ m.city }})</span>
+                </span>
+              </td>
+              <td>
+                <span class="codeBadge">{{ m.code }}</span>
+              </td>
+              <td style="text-align: right; color: #16a34a; font-weight: 600">
+                {{ m.totalRevenue | financeNumber:{ currency: 'PLN' } }}
+              </td>
+              <td style="text-align: right; color: #dc2626; font-weight: 600">
+                {{ m.totalCost | financeNumber:{ currency: 'PLN' } }}
+              </td>
+              <td
+                style="text-align: right; font-weight: 800"
+                [class.negative]="m.actualResult < 0"
+                [class.positive]="m.actualResult >= 0"
+              >
+                {{ m.actualResult | financeNumber:{ currency: 'PLN', forceSign: true } }}
+              </td>
+              <td style="text-align: center">
+                <a
+                  *ngIf="m.budgetUrl"
+                  [href]="m.budgetUrl"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="spreadsheetLinkBtn"
+                  [title]="'FINANCES.MEETINGS.OPEN_SPREADSHEET' | translate"
+                >
+                  <ion-icon name="open-outline"></ion-icon>
+                  <span>Link</span>
+                </a>
+                <span *ngIf="!m.budgetUrl" class="mutedDash">—</span>
+              </td>
+              <td>
+                <button
+                  *ngIf="m.budgetCode"
+                  type="button"
+                  class="budgetLineBtn"
+                  (click)="jumpToBudgetLine(m.budgetCode)"
+                  [title]="'FINANCES.BUDGET.LINE_LABEL' | translate"
+                >
+                  {{ m.budgetCode }}
+                </button>
+                <span *ngIf="!m.budgetCode" class="mutedDash">—</span>
+              </td>
+              <td style="text-align: center">
+                <button
+                  type="button"
+                  class="statusBadgeBtn"
+                  [class.statusSettled]="m.status === 'SETTLED'"
+                  [class.statusOpen]="m.status !== 'SETTLED'"
+                  [disabled]="!canEdit || isArchived"
+                  (click)="toggleStatus(m)"
+                >
+                  {{ (m.status === 'SETTLED' ? 'FINANCES.MEETINGS.STATUS_SETTLED' : 'FINANCES.MEETINGS.STATUS_OPEN') | translate }}
+                </button>
+              </td>
+              <td *ngIf="canEdit && !isArchived" class="colActions">
+                <ion-button fill="clear" size="small" color="medium" (click)="openEditSubBudgetAlert(m)" [title]="'COMMON.EDIT' | translate">
+                  <ion-icon slot="icon-only" name="create-outline"></ion-icon>
+                </ion-button>
+                <ion-button fill="clear" size="small" color="danger" (click)="deleteSubBudget(m)" [title]="'COMMON.DELETE' | translate">
+                  <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
+                </ion-button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="emptyState" *ngIf="filteredMeetings.length === 0">
+        <ion-icon name="folder-open-outline" class="emptyIcon"></ion-icon>
+        <p>{{ 'FINANCES.MEETINGS.EMPTY_STATE' | translate:{ year: stateService.activeYear } }}</p>
+        <ion-button
+          *ngIf="canEdit && !isArchived"
+          fill="outline"
+          size="small"
+          color="primary"
+          (click)="openAddSubBudgetAlert()"
+        >
+          <ion-icon slot="start" name="add-circle-outline"></ion-icon>
+          {{ 'FINANCES.MEETINGS.ADD_SUB_BUDGET' | translate }}
+        </ion-button>
+      </div>
+    </div>
+  </div>
+</div>

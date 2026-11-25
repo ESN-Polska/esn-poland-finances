@@ -18,6 +18,7 @@ import {
   BudgetAmendment,
   BudgetAmendmentDraft,
   BudgetAmendmentItem,
+  OutOfBudgetCode,
   isBudgetGroup,
   isBudgetLine
 } from '@models/annual-budget.model';
@@ -770,6 +771,200 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
       if (cat.expenses?.items) collect(cat.expenses.items);
     }
     return codes;
+  }
+
+  // ==========================================
+  // SYSTEM MAPPINGS & OUT-OF-BUDGET CODES
+  // ==========================================
+  showSystemMappings = false;
+
+  get allExpenseBudgetLines(): BudgetLineItem[] {
+    const lines: BudgetLineItem[] = [];
+    const collect = (items: (DynamicBudgetGroup | BudgetLineItem)[]) => {
+      for (const it of items || []) {
+        if (isBudgetLine(it)) {
+          lines.push(it);
+        } else if (isBudgetGroup(it)) {
+          collect(it.items || []);
+        }
+      }
+    };
+    for (const cat of this.displayCategories) {
+      if (cat.expenses?.items) collect(cat.expenses.items);
+    }
+    return lines;
+  }
+
+  get allRevenueBudgetLines(): BudgetLineItem[] {
+    const lines: BudgetLineItem[] = [];
+    const collect = (items: (DynamicBudgetGroup | BudgetLineItem)[]) => {
+      for (const it of items || []) {
+        if (isBudgetLine(it)) {
+          lines.push(it);
+        } else if (isBudgetGroup(it)) {
+          collect(it.items || []);
+        }
+      }
+    };
+    for (const cat of this.displayCategories) {
+      if (cat.revenues?.items) collect(cat.revenues.items);
+    }
+    return lines;
+  }
+
+  get outOfBudgetCodes(): OutOfBudgetCode[] {
+    if (!this.budget) return [];
+    if (!this.budget.outOfBudgetCodes || this.budget.outOfBudgetCodes.length === 0) {
+      this.budget.outOfBudgetCodes = [
+        { code: 'delegacje-techniczne', name: 'Wypłata delegacji (konto techniczne)', description: 'Rozliczenia techniczne wypłat delegacji', isActive: true },
+        { code: 'vat', name: 'Rozliczenia podatku VAT', description: 'Naliczenia i zwroty VAT', isActive: true },
+        { code: 'przekaz-srodkow', name: 'Przekaz środków', description: 'Zasilenia kont i transfery techniczne', isActive: true },
+        { code: 'zwrot-nadplaty', name: 'Zwrot nadpłaty', description: 'Zwroty błędnych wpłat i nadpłat', isActive: true },
+        { code: 'inne', name: 'Inne przepływy pozabudżetowe', description: 'Pozostałe operacje poza budżetem', isActive: true }
+      ];
+    }
+    return this.budget.outOfBudgetCodes;
+  }
+
+  toggleSystemMappings(): void {
+    this.showSystemMappings = !this.showSystemMappings;
+  }
+
+  async onDiemsBudgetLineChange(code: string | null): Promise<void> {
+    if (!this.budget) return;
+    this.budget.diemsBudgetLineCode = code || undefined;
+    await this.saveBudgetChanges();
+  }
+
+  async onDepositsInterestBudgetLineChange(code: string | null): Promise<void> {
+    if (!this.budget) return;
+    this.budget.depositsInterestBudgetLineCode = code || undefined;
+    await this.saveBudgetChanges();
+  }
+
+  async openAddOutOfBudgetCodeAlert(): Promise<void> {
+    if (!this.budget) return;
+    const alert = await this.alertCtrl.create({
+      header: this.translate.instant('FINANCES.BUDGET.OOB_CODE_ADD_TITLE'),
+      inputs: [
+        {
+          name: 'code',
+          type: 'text',
+          placeholder: this.translate.instant('FINANCES.BUDGET.OOB_CODE_FIELD_CODE')
+        },
+        {
+          name: 'name',
+          type: 'text',
+          placeholder: this.translate.instant('FINANCES.BUDGET.OOB_CODE_FIELD_NAME')
+        },
+        {
+          name: 'description',
+          type: 'text',
+          placeholder: this.translate.instant('FINANCES.BUDGET.OOB_CODE_FIELD_DESC')
+        }
+      ],
+      buttons: [
+        { text: this.translate.instant('COMMON.CANCEL'), role: 'cancel' },
+        {
+          text: this.translate.instant('COMMON.SAVE'),
+          handler: async (data) => {
+            const code = (data.code || '').trim().toLowerCase().replace(/\s+/g, '-');
+            const name = (data.name || '').trim();
+            const description = (data.description || '').trim();
+            if (!code || !name) return false;
+
+            const existing = this.outOfBudgetCodes.some((c) => c.code === code);
+            if (existing) {
+              const toast = await this.toastCtrl.create({
+                message: this.translate.instant('FINANCES.BUDGET.OOB_CODE_EXISTS_ERROR'),
+                duration: 3000,
+                color: 'warning'
+              });
+              await toast.present();
+              return false;
+            }
+
+            this.budget!.outOfBudgetCodes = [
+              ...this.outOfBudgetCodes,
+              { code, name, description, isActive: true }
+            ];
+            await this.saveBudgetChanges();
+            return true;
+          }
+        }
+      ]
+    });
+    await alert.present();
+  }
+
+  async openEditOutOfBudgetCodeAlert(item: OutOfBudgetCode): Promise<void> {
+    if (!this.budget) return;
+    const alert = await this.alertCtrl.create({
+      header: this.translate.instant('FINANCES.BUDGET.OOB_CODE_EDIT_TITLE'),
+      inputs: [
+        {
+          name: 'code',
+          type: 'text',
+          value: item.code,
+          disabled: true
+        },
+        {
+          name: 'name',
+          type: 'text',
+          value: item.name,
+          placeholder: this.translate.instant('FINANCES.BUDGET.OOB_CODE_FIELD_NAME')
+        },
+        {
+          name: 'description',
+          type: 'text',
+          value: item.description || '',
+          placeholder: this.translate.instant('FINANCES.BUDGET.OOB_CODE_FIELD_DESC')
+        }
+      ],
+      buttons: [
+        { text: this.translate.instant('COMMON.CANCEL'), role: 'cancel' },
+        {
+          text: this.translate.instant('COMMON.SAVE'),
+          handler: async (data) => {
+            const name = (data.name || '').trim();
+            const description = (data.description || '').trim();
+            if (!name) return false;
+
+            item.name = name;
+            item.description = description;
+            await this.saveBudgetChanges();
+            return true;
+          }
+        }
+      ]
+    });
+    await alert.present();
+  }
+
+  async toggleOutOfBudgetCodeActive(item: OutOfBudgetCode): Promise<void> {
+    if (!this.budget) return;
+    item.isActive = !item.isActive;
+    await this.saveBudgetChanges();
+  }
+
+  async deleteOutOfBudgetCode(item: OutOfBudgetCode): Promise<void> {
+    if (!this.budget) return;
+    const alert = await this.alertCtrl.create({
+      header: this.translate.instant('COMMON.CONFIRM'),
+      message: this.translate.instant('FINANCES.BUDGET.OOB_CODE_DELETE_CONFIRM', { code: item.code }),
+      buttons: [
+        { text: this.translate.instant('COMMON.CANCEL'), role: 'cancel' },
+        {
+          text: this.translate.instant('COMMON.DELETE'),
+          role: 'destructive',
+          handler: async () => {
+            this.budget!.outOfBudgetCodes = this.outOfBudgetCodes.filter((c) => c.code !== item.code);
+            await this.saveBudgetChanges();
+          }
+        }
+      ]
+    });
+    await alert.present();
   }
 
   // ==========================================

@@ -1,0 +1,385 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-title>{{ (isNew ? 'FINANCES.DOCUMENTS.MODAL_ADD_TITLE' : 'FINANCES.DOCUMENTS.MODAL_EDIT_TITLE') | translate }}</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="dismiss()">
+        <ion-icon slot="icon-only" name="close"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="modalContent">
+  <div class="formContainer">
+    <!-- 1. Document Type & Numbers -->
+    <div class="formSection">
+      <div class="typeSegmentWrapper">
+        <ion-segment [(ngModel)]="docType" [disabled]="!canEdit" class="typeSegment">
+          <ion-segment-button value="COST">
+            <ion-icon name="trending-down-outline"></ion-icon>
+            <ion-label>{{ 'FINANCES.DOCUMENTS.TYPE_COST' | translate }}</ion-label>
+          </ion-segment-button>
+          <ion-segment-button value="REVENUE">
+            <ion-icon name="trending-up-outline"></ion-icon>
+            <ion-label>{{ 'FINANCES.DOCUMENTS.TYPE_REVENUE' | translate }}</ion-label>
+          </ion-segment-button>
+        </ion-segment>
+      </div>
+
+      <div class="inputGrid2">
+        <div class="inputField">
+          <label class="fieldLabel">{{ 'FINANCES.DOCUMENTS.FIELD_INVOICE_NUM' | translate }} *</label>
+          <input
+            type="text"
+            class="stdInput"
+            [(ngModel)]="invoiceNumber"
+            [disabled]="!canEdit"
+            [placeholder]="'FINANCES.DOCUMENTS.FIELD_INVOICE_NUM_PH' | translate"
+          />
+        </div>
+
+        <div class="inputField">
+          <label class="fieldLabel">{{ 'FINANCES.DOCUMENTS.FIELD_KSEF_NUM' | translate }}</label>
+          <input
+            type="text"
+            class="stdInput"
+            [(ngModel)]="ksefNumber"
+            [disabled]="!canEdit"
+            placeholder="np. 1234567890-20261125-..."
+          />
+        </div>
+      </div>
+
+      <div class="inputGrid2">
+        <div class="inputField">
+          <label class="fieldLabel">{{ 'FINANCES.DOCUMENTS.FIELD_ISSUED_BY' | translate }}</label>
+          <input
+            type="text"
+            class="stdInput"
+            [(ngModel)]="issuedBy"
+            [disabled]="!canEdit"
+            [placeholder]="'FINANCES.DOCUMENTS.FIELD_ISSUED_BY_PH' | translate"
+          />
+        </div>
+
+        <div class="inputField">
+          <label class="fieldLabel">{{ 'FINANCES.DOCUMENTS.FIELD_NIP' | translate }}</label>
+          <input
+            type="text"
+            class="stdInput"
+            [(ngModel)]="issuedByTaxId"
+            [disabled]="!canEdit"
+            placeholder="NIP kontrahenta..."
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. Dates -->
+    <div class="formSection">
+      <h4 class="sectionHeading">{{ 'FINANCES.DOCUMENTS.SECTION_DATES' | translate }}</h4>
+      <div class="inputGrid3">
+        <div class="inputField">
+          <label class="fieldLabel">{{ 'FINANCES.DOCUMENTS.FIELD_ISSUE_DATE' | translate }} *</label>
+          <input
+            type="date"
+            class="stdInput"
+            [(ngModel)]="issuedOn"
+            [disabled]="!canEdit"
+          />
+        </div>
+
+        <div class="inputField">
+          <label class="fieldLabel">{{ 'FINANCES.DOCUMENTS.FIELD_SALE_DATE' | translate }}</label>
+          <input
+            type="date"
+            class="stdInput"
+            [(ngModel)]="saleDate"
+            [disabled]="!canEdit"
+          />
+        </div>
+
+        <div class="inputField">
+          <label class="fieldLabel">{{ 'FINANCES.DOCUMENTS.FIELD_DUE_DATE' | translate }}</label>
+          <input
+            type="date"
+            class="stdInput"
+            [(ngModel)]="paymentDeadline"
+            [disabled]="!canEdit"
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Amounts -->
+    <div class="formSection">
+      <h4 class="sectionHeading">{{ 'FINANCES.DOCUMENTS.SECTION_AMOUNTS' | translate }}</h4>
+      <div class="inputGrid4">
+        <div class="inputField">
+          <label class="fieldLabel">{{ 'FINANCES.DOCUMENTS.COL_GROSS' | translate }} (PLN) *</label>
+          <input
+            type="number"
+            step="0.01"
+            class="stdInput boldInput"
+            [(ngModel)]="grossAmount"
+            (ngModelChange)="onGrossAmountChange()"
+            [disabled]="!canEdit"
+            placeholder="0.00"
+          />
+        </div>
+
+        <div class="inputField">
+          <label class="fieldLabel">{{ 'FINANCES.DOCUMENTS.COL_NET' | translate }} (PLN)</label>
+          <input
+            type="number"
+            step="0.01"
+            class="stdInput"
+            [(ngModel)]="netAmount"
+            (ngModelChange)="onNetAmountChange()"
+            [disabled]="!canEdit"
+            placeholder="0.00"
+          />
+        </div>
+
+        <div class="inputField">
+          <label class="fieldLabel">{{ 'FINANCES.DOCUMENTS.COL_VAT' | translate }} (PLN)</label>
+          <input
+            type="number"
+            step="0.01"
+            class="stdInput"
+            [(ngModel)]="vatAmount"
+            [disabled]="!canEdit"
+            placeholder="0.00"
+          />
+        </div>
+
+        <div class="inputField">
+          <label class="fieldLabel">{{ 'FINANCES.DOCUMENTS.FIELD_CURRENCY' | translate }}</label>
+          <select class="stdSelect" [(ngModel)]="currency" [disabled]="!canEdit">
+            <option value="PLN">PLN</option>
+            <option value="EUR">EUR</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. Payment Settlement & Advances -->
+    <div class="formSection paymentSection">
+      <div class="sectionHeaderRow">
+        <h4 class="sectionHeading">{{ 'FINANCES.DOCUMENTS.SECTION_PAYMENT' | translate }}</h4>
+        <div class="paymentStatusChip" [class]="calculatedStatus.toLowerCase()">
+          <span class="statusDot"></span>
+          {{
+            calculatedStatus === 'PAID' ? ('FINANCES.DOCUMENTS.STATUS_SETTLED' | translate) :
+            calculatedStatus === 'PARTIALLY_PAID' ? ('FINANCES.DOCUMENTS.STATUS_PARTIALLY_PAID' | translate:{ paid: (totalPaidAmount | number:'1.2-2'), gross: (grossAmount | number:'1.2-2') }) :
+            ('FINANCES.DOCUMENTS.STATUS_UNPAID' | translate)
+          }}
+        </div>
+      </div>
+
+      <div class="originSelector">
+        <label class="originRadio" [class.selected]="paymentOrigin === 'TRANSACTIONS'">
+          <input
+            type="radio"
+            name="paymentOrigin"
+            value="TRANSACTIONS"
+            [(ngModel)]="paymentOrigin"
+            [disabled]="!canEdit"
+          />
+          <div class="radioContent">
+            <strong>{{ 'FINANCES.DOCUMENTS.PAYMENT_TRANSACTION' | translate }}</strong>
+            <span>{{ 'FINANCES.DOCUMENTS.PAYMENT_TRANSACTION_DESC' | translate }}</span>
+          </div>
+        </label>
+
+        <label class="originRadio" [class.selected]="paymentOrigin === 'ADVANCE'">
+          <input
+            type="radio"
+            name="paymentOrigin"
+            value="ADVANCE"
+            [(ngModel)]="paymentOrigin"
+            [disabled]="!canEdit"
+          />
+          <div class="radioContent">
+            <strong>{{ 'FINANCES.DOCUMENTS.PAYMENT_ADVANCE' | translate }}</strong>
+            <span>{{ 'FINANCES.DOCUMENTS.PAYMENT_ADVANCE_DESC' | translate }}</span>
+          </div>
+        </label>
+      </div>
+
+      <!-- Advance Picker if ADVANCE -->
+      <div class="advancePickerBlock" *ngIf="paymentOrigin === 'ADVANCE'">
+        <label class="fieldLabel">{{ 'FINANCES.DOCUMENTS.SELECT_ADVANCE_LABEL' | translate }}</label>
+        <select class="stdSelect advanceSelect" [(ngModel)]="linkedAdvanceId" [disabled]="!canEdit">
+          <option [ngValue]="undefined">{{ 'FINANCES.DOCUMENTS.SELECT_ADVANCE_PH' | translate }}</option>
+          <option *ngFor="let adv of availableAdvances" [value]="adv.id">
+            Zaliczka {{ adv.advanceNumber }} — {{ adv.recipientName }} (Pozostało: {{ adv.remainingBalance | number:'1.2-2' }} PLN z {{ adv.payoutGrossAmount | number:'1.2-2' }} PLN)
+          </option>
+        </select>
+        <p class="fieldHint" *ngIf="availableAdvances.length === 0">
+          {{ 'FINANCES.DOCUMENTS.NO_UNSETTLED_ADVANCES' | translate }}
+        </p>
+      </div>
+
+      <!-- Bank Transactions Allocation if TRANSACTIONS -->
+      <div class="transactionsPickerBlock" *ngIf="paymentOrigin === 'TRANSACTIONS'">
+        <div class="addTxRow" *ngIf="canEdit">
+          <select class="stdSelect txSelect" [(ngModel)]="selectedTxIdToAdd">
+            <option value="">{{ 'FINANCES.DOCUMENTS.SELECT_TX_PH' | translate }}</option>
+            <option *ngFor="let tx of availableTransactions" [value]="tx.id">
+              {{ (tx.bookingDate || tx.operationDate) | appDate }} • {{ tx.partyName || tx.transferTitle }} • {{ tx.amount | number:'1.2-2' }} PLN
+            </option>
+          </select>
+          <ion-button
+            fill="solid"
+            size="small"
+            color="primary"
+            [disabled]="!selectedTxIdToAdd"
+            (click)="addLinkedTransaction()"
+          >
+            <ion-icon slot="start" name="link-outline"></ion-icon>
+            {{ 'FINANCES.DOCUMENTS.LINK_TX_BTN' | translate }}
+          </ion-button>
+        </div>
+
+        <div class="linkedTxList" *ngIf="linkedTransactions.length > 0">
+          <div class="linkedTxItem" *ngFor="let lt of linkedTransactions; let i = index">
+            <div class="ltInfo">
+              <span class="ltDate">{{ lt.date | appDate }}</span>
+              <span class="ltParty">{{ lt.counterparty || lt.transferTitle }}</span>
+            </div>
+            <div class="ltAmountBox">
+              <label>{{ 'FINANCES.DOCUMENTS.ALLOCATED_TX_AMOUNT' | translate }}:</label>
+              <input
+                type="number"
+                step="0.01"
+                class="stdInput allocInput"
+                [(ngModel)]="lt.amount"
+                [disabled]="!canEdit"
+              />
+              <span class="currencyTag">PLN</span>
+              <button
+                *ngIf="canEdit"
+                type="button"
+                class="removeBtn"
+                (click)="removeLinkedTransaction(i)"
+              >
+                <ion-icon name="trash-outline"></ion-icon>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="unpaidNotice" *ngIf="linkedTransactions.length === 0">
+          <ion-icon name="information-circle-outline"></ion-icon>
+          <span>{{ 'FINANCES.DOCUMENTS.UNPAID_NOTICE' | translate }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. Code Allocations (Budget lines, sub-budgets, sections, out-of-budget) -->
+    <div class="formSection">
+      <div class="sectionHeaderRow">
+        <h4 class="sectionHeading">{{ 'FINANCES.DOCUMENTS.SECTION_ALLOCATIONS' | translate }}</h4>
+        <div class="deltaBadge" [class.valid]="allocationDelta === 0" [class.invalid]="allocationDelta !== 0">
+          {{ 'FINANCES.DOCUMENTS.ALLOCATION_DELTA' | translate }}: {{ allocationDelta | number:'1.2-2' }} PLN
+        </div>
+      </div>
+
+      <div class="allocationRowsList">
+        <div class="allocationRow" *ngFor="let alloc of codeAllocations; let i = index">
+          <div class="allocCodeCol">
+            <app-code-select
+              [year]="year"
+              [disabled]="!canEdit"
+              [(ngModel)]="alloc.code"
+              [placeholder]="'FINANCES.DOCUMENTS.SELECT_CODE_PH' | translate"
+            ></app-code-select>
+          </div>
+
+          <div class="allocAmountCol">
+            <input
+              type="number"
+              step="0.01"
+              class="stdInput"
+              [(ngModel)]="alloc.allocatedGrossAmount"
+              [disabled]="!canEdit"
+              placeholder="Kwota..."
+            />
+            <span class="currencyTag">PLN</span>
+          </div>
+
+          <div class="allocActionCol" *ngIf="canEdit && codeAllocations.length > 1">
+            <button type="button" class="removeBtn" (click)="removeAllocationRow(i)">
+              <ion-icon name="trash-outline"></ion-icon>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="allocActionsRow" *ngIf="canEdit">
+        <ion-button fill="outline" size="small" color="primary" (click)="addAllocationRow()">
+          <ion-icon slot="start" name="add-circle-outline"></ion-icon>
+          {{ 'FINANCES.DOCUMENTS.ADD_ALLOCATION_ROW' | translate }}
+        </ion-button>
+      </div>
+    </div>
+
+    <!-- 6. File Attachments & Notes -->
+    <div class="formSection">
+      <h4 class="sectionHeading">{{ 'FINANCES.DOCUMENTS.SECTION_ATTACHMENTS' | translate }}</h4>
+      <div class="attachmentsBlock">
+        <div class="uploadTriggerRow" *ngIf="canEdit">
+          <label class="uploadBtn">
+            <input
+              type="file"
+              accept=".pdf,image/*"
+              (change)="onFileSelected($event)"
+              [disabled]="isUploading"
+              style="display: none;"
+            />
+            <ion-icon name="cloud-upload-outline"></ion-icon>
+            <span>{{ isUploading ? ('FINANCES.DOCUMENTS.UPLOADING' | translate) : ('FINANCES.DOCUMENTS.UPLOAD_FILE_BTN' | translate) }}</span>
+          </label>
+        </div>
+
+        <div class="attachmentsList" *ngIf="attachments.length > 0">
+          <div class="attachmentItem" *ngFor="let att of attachments; let i = index">
+            <ion-icon name="document-attach-outline" class="attIcon"></ion-icon>
+            <div class="attInfo">
+              <a [href]="att.url" target="_blank" class="attLink">{{ att.fileName || att.name || 'Dokument' }}</a>
+              <span class="attSize" *ngIf="att.fileSize">{{ (att.fileSize / 1024) | number:'1.0-1' }} KB</span>
+            </div>
+            <button *ngIf="canEdit" type="button" class="removeBtn" (click)="removeAttachment(i)">
+              <ion-icon name="close-circle-outline"></ion-icon>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="inputField notesField">
+        <label class="fieldLabel">{{ 'FINANCES.DOCUMENTS.FIELD_NOTES' | translate }}</label>
+        <textarea
+          class="stdTextarea"
+          rows="2"
+          [(ngModel)]="notes"
+          [disabled]="!canEdit"
+          [placeholder]="'FINANCES.DOCUMENTS.FIELD_NOTES_PH' | translate"
+        ></textarea>
+      </div>
+    </div>
+  </div>
+</ion-content>
+
+<ion-footer>
+  <ion-toolbar>
+    <div class="modalFooterActions">
+      <ion-button fill="clear" color="medium" (click)="dismiss()">
+        {{ 'COMMON.CANCEL' | translate }}
+      </ion-button>
+      <ion-button fill="solid" color="primary" [disabled]="!canEdit || grossAmount <= 0" (click)="save()">
+        {{ (isNew ? 'COMMON.CREATE' : 'COMMON.SAVE') | translate }}
+      </ion-button>
+    </div>
+  </ion-toolbar>
+</ion-footer>

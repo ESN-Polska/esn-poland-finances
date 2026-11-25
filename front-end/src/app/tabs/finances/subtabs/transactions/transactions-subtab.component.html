@@ -73,7 +73,7 @@
               <th class="colParty">{{ 'FINANCES.TRANSACTIONS.COL_PARTY' | translate }}</th>
               <th class="colTitle">{{ 'FINANCES.TRANSACTIONS.COL_TITLE' | translate }}</th>
               <th class="colAmount">{{ 'FINANCES.TRANSACTIONS.COL_AMOUNT' | translate }}</th>
-              <th class="colCode">{{ 'FINANCES.TRANSACTIONS.COL_CODE' | translate }}</th>
+              <th class="colCode">{{ 'FINANCES.TRANSACTIONS.COL_BUDGET_LINE' | translate }}</th>
               <th class="colStatus">{{ 'FINANCES.TRANSACTIONS.COL_STATUS' | translate }}</th>
               <th class="colActions" *ngIf="canEdit && !isArchived">{{ 'FINANCES.TRANSACTIONS.COL_ACTIONS' | translate }}</th>
             </tr>
@@ -83,6 +83,8 @@
               *ngFor="let tx of filteredTransactions"
               [id]="'tx-' + tx.id"
               [class.highlightedRow]="highlightedTxId === tx.id"
+              (click)="openTransactionOptionsModal(tx)"
+              class="clickableRow"
             >
               <!-- Date -->
               <td class="colDate">
@@ -106,22 +108,45 @@
                 {{ tx.amount | financeNumber:{ currency: tx.currency, forceSign: true } }}
               </td>
 
-              <!-- Code / Settlement info -->
+              <!-- Budget line / Split / Settlements info -->
               <td class="colCode">
-                <div class="codeWrapper" *ngIf="tx.directBudgetLineCode">
+                <!-- Case 1: Direct multi-code split -->
+                <div *ngIf="tx.directCodeSplits?.length && tx.directCodeSplits.length > 1" class="splitBadgeGroup">
+                  <span class="splitBadge" [title]="getSplitTooltip(tx)">
+                    <ion-icon name="git-branch-outline"></ion-icon>
+                    {{ 'FINANCES.TRANSACTIONS.SPLIT_BADGE' | translate:{ count: tx.directCodeSplits.length } }}
+                  </span>
+                </div>
+
+                <!-- Case 2: Single direct code or directBudgetCode -->
+                <div *ngIf="tx.directBudgetCode || (tx.directCodeSplits?.length === 1)" class="codeWrapper">
                   <button
                     type="button"
                     class="codeBadgeBtn"
-                    (click)="jumpToBudgetLine(tx.directBudgetLineCode)"
+                    (click)="jumpToBudgetLine(tx.directBudgetCode || tx.directCodeSplits![0].code); $event.stopPropagation()"
                     [title]="'FINANCES.BUDGET.LINE_LABEL' | translate"
                   >
-                    {{ tx.directBudgetLineCode }} ({{ 'FINANCES.TRANSACTIONS.BANK_FEE' | translate }})
+                    <ion-icon name="pricetag-outline"></ion-icon>
+                    {{ tx.directBudgetLineCode || tx.directCodeSplits![0].code }}
                   </button>
                 </div>
-                <div class="settlementCount" *ngIf="tx.settlements?.length">
-                  {{ 'FINANCES.TRANSACTIONS.SETTLED_COUNT' | translate:{ count: tx.settlements.length } }}
+
+                <!-- Case 3: Linked settlements (documents / fiscal reports) -->
+                <div *ngIf="tx.settlements?.length && !tx.directBudgetCode && !tx.directCodeSplits?.length" class="settlementsBadgeGroup">
+                  <span class="settledDocBadge" *ngIf="hasDocumentSettlement(tx)">
+                    <ion-icon name="document-text-outline"></ion-icon>
+                    {{ 'FINANCES.TRANSACTIONS.DOCS_BADGE' | translate:{ count: getDocumentSettlementsCount(tx) } }}
+                  </span>
+                  <span class="settledFiscalBadge" *ngIf="hasFiscalSettlement(tx)">
+                    <ion-icon name="receipt-outline"></ion-icon>
+                    {{ 'FINANCES.TRANSACTIONS.FISCAL_BADGE' | translate }}
+                  </span>
                 </div>
-                <span class="noCodeText" *ngIf="!tx.directBudgetLineCode && !tx.settlements?.length">-</span>
+
+                <!-- Case 4: Unassigned -->
+                <span class="unassignedBadge" *ngIf="!tx.directBudgetLineCode && !tx.directCodeSplits?.length && !tx.settlements?.length">
+                  {{ 'FINANCES.TRANSACTIONS.UNASSIGNED' | translate }}
+                </span>
               </td>
 
               <!-- Status -->
@@ -138,15 +163,14 @@
               <!-- Actions -->
               <td class="colActions" *ngIf="canEdit && !isArchived">
                 <ion-button
-                  fill="clear"
+                  fill="outline"
                   size="small"
                   color="primary"
-                  *ngIf="tx.amount < 0 && !tx.directBudgetLineCode"
-                  (click)="directCodeBankFee(tx)"
-                  [title]="'FINANCES.TRANSACTIONS.DIRECT_FEE_TITLE' | translate"
+                  class="optionsBtn"
+                  (click)="openTransactionOptionsModal(tx); $event.stopPropagation()"
                 >
-                  <ion-icon slot="start" name="pricetag-outline"></ion-icon>
-                  {{ 'FINANCES.TRANSACTIONS.DIRECT_FEE_BTN' | translate }}
+                  <ion-icon slot="start" name="options-outline"></ion-icon>
+                  {{ 'FINANCES.TRANSACTIONS.OPTIONS_BTN' | translate }}
                 </ion-button>
               </td>
             </tr>

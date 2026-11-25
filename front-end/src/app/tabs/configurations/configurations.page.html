@@ -2093,17 +2093,6 @@
         </ion-item>
 
         <ion-item>
-          <ion-label position="stacked">{{ 'CONFIGURATIONS.FINANCES_DEFAULT_DIEMS_CODE' | translate }}</ion-label>
-          <ion-input
-            type="text"
-            [placeholder]="'CONFIGURATIONS.FINANCES_DEFAULT_DIEMS_CODE_PH' | translate"
-            [disabled]="!canModifyFinances()"
-            [(ngModel)]="configurations.financesConfig.defaultDiemsBudgetLineCode"
-            (ionBlur)="updateConfigurations()"
-          ></ion-input>
-        </ion-item>
-
-        <ion-item>
           <ion-label position="stacked">{{ 'CONFIGURATIONS.FINANCES_CSV_IMPORT_SCHEME' | translate }}</ion-label>
           <ion-select
             interface="popover"

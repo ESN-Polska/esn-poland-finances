@@ -3,7 +3,15 @@ import { Currency } from './financial-request.model';
 
 export type BankTransactionDirection = 'INFLOW' | 'OUTFLOW';
 export type TransactionReconciliationStatus = 'UNLINKED' | 'MATCHED' | 'DISCREPANCY' | 'DIRECT_CODED';
-export type TransactionSettlementTargetType = 'DOCUMENT' | 'FISCAL_DAILY_REPORT' | 'ADVANCE' | 'DIRECT_BUDGET_LINE';
+export type TransactionSettlementTargetType = 'DOCUMENT' | 'FISCAL_DAILY_REPORT' | 'ADVANCE' | 'DELEGATION' | 'DIRECT_BUDGET_LINE';
+
+export interface DirectCodeSplitItem {
+  id: string;
+  code: string;
+  codeType: 'BUDGET_CODE' | 'MEETING_CODE' | 'SECTION_CODE' | 'OUT_OF_BUDGET_CODE';
+  amount: number;
+  description?: string;
+}
 
 export interface TransactionSettlement {
   settlementId: string;
@@ -40,6 +48,8 @@ export class BankTransactionRecord extends Resource {
 
   /** Direct budget line code for uninvoiced movements (e.g. 'admin-bank', 'przychody-finansowe') */
   directBudgetCode?: string;
+  /** Direct multi-code split allocations for un-invoiced transactions */
+  directCodeSplits?: DirectCodeSplitItem[];
 
   /** Batch reference of the CSV file import */
   importBatchId: string;
@@ -84,7 +94,27 @@ export class BankTransactionRecord extends Resource {
 
     this.directBudgetCode = this.clean(x.directBudgetCode, String, '');
 
-    if (this.directBudgetCode) {
+    this.directCodeSplits = Array.isArray(x.directCodeSplits)
+      ? x.directCodeSplits.map((sp: any, idx: number) => ({
+          id: this.clean(sp.id, String, `sp_${idx + 1}`),
+          code: this.clean(sp.code, String, '').trim(),
+          codeType: (sp.codeType === 'MEETING_CODE'
+            ? 'MEETING_CODE'
+            : sp.codeType === 'SECTION_CODE'
+            ? 'SECTION_CODE'
+            : sp.codeType === 'OUT_OF_BUDGET_CODE'
+            ? 'OUT_OF_BUDGET_CODE'
+            : 'BUDGET_CODE') as any,
+          amount: this.clean(sp.amount, Number, 0),
+          description: this.clean(sp.description, String, '')
+        }))
+      : [];
+
+    if (this.directCodeSplits && this.directCodeSplits.length > 0) {
+      const totalSplit = this.directCodeSplits.reduce((acc, sp) => acc + (Number(sp.amount) || 0), 0);
+      const absAmount = Math.abs(this.amount);
+      this.reconciliationStatus = Math.abs(totalSplit - absAmount) < 0.05 ? 'MATCHED' : 'DISCREPANCY';
+    } else if (this.directBudgetCode) {
       this.reconciliationStatus = 'DIRECT_CODED';
     } else if (this.settlements && this.settlements.length > 0) {
       const totalAllocated = this.settlements.reduce((acc, s) => acc + (Number(s.allocatedAmount) || 0), 0);

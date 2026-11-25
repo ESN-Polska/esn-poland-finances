@@ -5,47 +5,243 @@
   </div>
 
   <div *ngIf="!loading" class="sectionsContent">
-    <!-- Notice Banner -->
-    <div class="trustNoticeBanner">
-      <ion-icon name="shield-checkmark-outline"></ion-icon>
-      <div class="noticeTexts">
-        <strong>{{ 'FINANCES.SECTIONS.NOTICE_TITLE' | translate }}</strong>
-        <span>{{ 'FINANCES.SECTIONS.NOTICE_DESC' | translate }}</span>
+    <!-- Toolbar Card -->
+    <div class="toolbarCard">
+      <div class="searchWrapper">
+        <ion-icon name="search-outline" class="searchIcon"></ion-icon>
+        <input
+          type="text"
+          class="searchInput"
+          [(ngModel)]="searchQuery"
+          [placeholder]="'FINANCES.SECTIONS.SEARCH_PLACEHOLDER' | translate"
+        />
+        <button *ngIf="searchQuery" class="clearBtn" (click)="searchQuery = ''">
+          <ion-icon name="close-circle"></ion-icon>
+        </button>
       </div>
-      <div class="totalHeldBadge">
-        <span>{{ 'FINANCES.SECTIONS.TOTAL_HELD' | translate }}</span>
-        <strong>{{ totalTrustHeld | financeNumber:{ currency: 'PLN' } }}</strong>
+
+      <div class="toolbarRight">
+        <div class="totalSaldoBadge">
+          <span class="totalLabel">{{ 'FINANCES.SECTIONS.TOTAL_SALDO' | translate }}</span>
+          <strong class="totalVal">{{ totalSectionsSaldo | financeNumber:{ currency: 'PLN' } }}</strong>
+        </div>
+
+        <ion-button
+          *ngIf="canEdit && !isArchived"
+          fill="solid"
+          color="primary"
+          class="addSecBtn"
+          (click)="openAddSectionAlert()"
+        >
+          <ion-icon slot="start" name="add-circle-outline"></ion-icon>
+          {{ 'FINANCES.SECTIONS.ADD_SECTION_BTN' | translate }}
+        </ion-button>
       </div>
     </div>
 
-    <!-- Table -->
+    <!-- Sections Table Card -->
     <div class="tableCard">
       <div class="tableWrapper" *ngIf="filteredSections.length > 0">
         <table class="modernTable">
           <thead>
             <tr>
-              <th>{{ 'FINANCES.SECTIONS.COL_CODE' | translate }}</th>
-              <th>{{ 'FINANCES.SECTIONS.COL_NAME' | translate }}</th>
-              <th style="text-align: right">{{ 'FINANCES.SECTIONS.COL_STARTING' | translate }}</th>
-              <th style="text-align: right">{{ 'FINANCES.SECTIONS.COL_INFLOWS' | translate }}</th>
-              <th style="text-align: right">{{ 'FINANCES.SECTIONS.COL_OUTFLOWS' | translate }}</th>
-              <th style="text-align: right">{{ 'FINANCES.SECTIONS.COL_BALANCE' | translate }}</th>
+              <th class="colSecName">{{ 'FINANCES.SECTIONS.COL_SECTION' | translate }}</th>
+              <th class="colSecCode">{{ 'FINANCES.SECTIONS.COL_CODE' | translate }}</th>
+              <th class="colNumHead">{{ 'FINANCES.SECTIONS.COL_STARTING' | translate }}</th>
+              <th class="colNumHead">{{ 'FINANCES.SECTIONS.COL_REVENUE' | translate }}</th>
+              <th class="colNumHead">{{ 'FINANCES.SECTIONS.COL_COSTS' | translate }}</th>
+              <th class="colNumHead">{{ 'FINANCES.SECTIONS.COL_TX_BALANCE' | translate }}</th>
+              <th class="colNumHead">{{ 'FINANCES.SECTIONS.COL_INTERNAL_TRANSFERS' | translate }}</th>
+              <th class="colNumHead">{{ 'FINANCES.SECTIONS.COL_DELEGATIONS' | translate }}</th>
+              <th class="colNumHead colSaldoHead">{{ 'FINANCES.SECTIONS.COL_SALDO' | translate }}</th>
+              <th class="colStatusHead">{{ 'FINANCES.SECTIONS.COL_STATUS' | translate }}</th>
+              <th class="colActionsHead"></th>
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let s of filteredSections">
-              <td style="font-weight: 700; font-family: monospace">{{ s.sectionCode }}</td>
-              <td style="font-weight: 600">{{ s.sectionName }}</td>
-              <td style="text-align: right">{{ s.startingBalance | financeNumber:{ currency: 'PLN' } }}</td>
-              <td style="text-align: right; color: #27ae60">{{ s.inflows | financeNumber:{ currency: 'PLN' } }}</td>
-              <td style="text-align: right; color: #c0392b">{{ s.outflows | financeNumber:{ currency: 'PLN' } }}</td>
-              <td style="text-align: right; font-weight: 800; font-size: 1rem">{{ s.currentBalance | financeNumber:{ currency: 'PLN' } }}</td>
-            </tr>
+            <ng-container *ngFor="let s of filteredSections">
+              <tr
+                class="secRow"
+                [class.inactiveRow]="!s.isActive"
+                [class.expandedRow]="expandedSectionId === s.id"
+                (click)="toggleDrilldown(s.id)"
+              >
+                <!-- Name -->
+                <td class="colSecName">
+                  <div class="nameWrapper">
+                    <ion-icon
+                      class="expandIcon"
+                      [name]="expandedSectionId === s.id ? 'chevron-down' : 'chevron-forward'"
+                    ></ion-icon>
+                    <span class="secNameText">{{ s.sectionName }}</span>
+                  </div>
+                </td>
+
+                <!-- Code -->
+                <td class="colSecCode">
+                  <span class="codeBadge">{{ s.sectionCode }}</span>
+                </td>
+
+                <!-- Stan początkowy -->
+                <td class="colNumVal startingVal">
+                  {{ s.startingBalance | financeNumber:{ currency: 'PLN' } }}
+                </td>
+
+                <!-- Przychody -->
+                <td class="colNumVal revVal">
+                  {{ s.txRevenues | financeNumber:{ currency: 'PLN' } }}
+                </td>
+
+                <!-- Koszty -->
+                <td class="colNumVal costVal">
+                  {{ s.txCosts | financeNumber:{ currency: 'PLN' } }}
+                </td>
+
+                <!-- Bilans transakcji -->
+                <td
+                  class="colNumVal txBalanceVal"
+                  [class.positive]="s.txBalance > 0"
+                  [class.negative]="s.txBalance < 0"
+                >
+                  {{ s.txBalance | financeNumber:{ currency: 'PLN', forceSign: true } }}
+                </td>
+
+                <!-- Przepływy wewnętrzne -->
+                <td
+                  class="colNumVal transfersVal"
+                  [class.positive]="s.internalTransfersNet > 0"
+                  [class.negative]="s.internalTransfersNet < 0"
+                >
+                  {{ s.internalTransfersNet | financeNumber:{ currency: 'PLN', forceSign: true } }}
+                </td>
+
+                <!-- Delegacje -->
+                <td class="colNumVal delegationsVal">
+                  {{ s.delegationsTotal | financeNumber:{ currency: 'PLN' } }}
+                </td>
+
+                <!-- SALDO -->
+                <td
+                  class="colNumVal saldoVal"
+                  [class.positive]="s.saldo >= 0"
+                  [class.negative]="s.saldo < 0"
+                >
+                  {{ s.saldo | financeNumber:{ currency: 'PLN' } }}
+                </td>
+
+                <!-- Status -->
+                <td class="colStatusCell">
+                  <span class="statusBadge" [class.active]="s.isActive" [class.inactive]="!s.isActive">
+                    {{ (s.isActive ? 'FINANCES.SECTIONS.STATUS_ACTIVE' : 'FINANCES.SECTIONS.STATUS_INACTIVE') | translate }}
+                  </span>
+                </td>
+
+                <!-- Actions -->
+                <td class="colActionsCell" (click)="$event.stopPropagation()">
+                  <button
+                    *ngIf="canEdit && !isArchived"
+                    type="button"
+                    class="actionToggleBtn"
+                    [class.btnActive]="s.isActive"
+                    (click)="toggleSectionActive(s, $event)"
+                    [title]="(s.isActive ? 'FINANCES.SECTIONS.DEACTIVATE_BTN' : 'FINANCES.SECTIONS.ACTIVATE_BTN') | translate"
+                  >
+                    <ion-icon [name]="s.isActive ? 'pause-circle-outline' : 'play-circle-outline'"></ion-icon>
+                  </button>
+                </td>
+              </tr>
+
+              <!-- Expandable Drilldown Drawer -->
+              <tr class="drilldownRow" *ngIf="expandedSectionId === s.id">
+                <td colspan="11">
+                  <div class="drilldownContainer">
+                    <h5 class="drilldownHeading">
+                      <ion-icon name="analytics-outline"></ion-icon>
+                      {{ 'FINANCES.SECTIONS.DRILLDOWN_TITLE' | translate }}: {{ s.sectionName }} ({{ s.sectionCode }})
+                    </h5>
+
+                    <div class="drilldownGrid3">
+                      <!-- 1. Bank Transactions -->
+                      <div class="ddCard">
+                        <div class="ddCardHeader">
+                          <ion-icon name="receipt-outline" class="txIcon"></ion-icon>
+                          <span>{{ 'FINANCES.SECTIONS.DRILLDOWN_TX_TITLE' | translate }} ({{ getSectionTransactions(s.sectionCode).length }})</span>
+                        </div>
+                        <div class="ddItemsList" *ngIf="getSectionTransactions(s.sectionCode).length > 0; else noTx">
+                          <div class="ddItem" *ngFor="let t of getSectionTransactions(s.sectionCode)">
+                            <div class="ddItemLeft">
+                              <span class="ddDate">{{ t.bookingDate | appDate }}</span>
+                              <span class="ddTitle">{{ t.title }}</span>
+                            </div>
+                            <span class="ddAmount" [class.positive]="t.amount > 0" [class.negative]="t.amount < 0">
+                              {{ t.amount | financeNumber:{ currency: t.currency, forceSign: true } }}
+                            </span>
+                          </div>
+                        </div>
+                        <ng-template #noTx>
+                          <div class="ddEmpty">{{ 'FINANCES.SECTIONS.NO_DRILLDOWN_OPERATIONS' | translate:{ year: stateService.activeYear } }}</div>
+                        </ng-template>
+                      </div>
+
+                      <!-- 2. Internal Transfers -->
+                      <div class="ddCard">
+                        <div class="ddCardHeader">
+                          <ion-icon name="swap-horizontal-outline" class="trIcon"></ion-icon>
+                          <span>{{ 'FINANCES.SECTIONS.DRILLDOWN_TRANSFERS_TITLE' | translate }} ({{ getSectionTransfers(s.sectionCode).length }})</span>
+                        </div>
+                        <div class="ddItemsList" *ngIf="getSectionTransfers(s.sectionCode).length > 0; else noTr">
+                          <div class="ddItem" *ngFor="let tr of getSectionTransfers(s.sectionCode)">
+                            <div class="ddItemLeft">
+                              <span class="ddDate">{{ tr.transferDate | appDate }}</span>
+                              <span class="ddTitle">
+                                <span class="directionTag" [class.inflow]="tr.toCode === s.sectionCode" [class.outflow]="tr.fromCode === s.sectionCode">
+                                  {{ tr.toCode === s.sectionCode ? '← ' + tr.fromCode : '→ ' + tr.toCode }}
+                                </span>
+                                {{ tr.justification || tr.title }}
+                              </span>
+                            </div>
+                            <span class="ddAmount" [class.positive]="tr.toCode === s.sectionCode" [class.negative]="tr.fromCode === s.sectionCode">
+                              {{ (tr.toCode === s.sectionCode ? tr.amount : -tr.amount) | financeNumber:{ currency: 'PLN', forceSign: true } }}
+                            </span>
+                          </div>
+                        </div>
+                        <ng-template #noTr>
+                          <div class="ddEmpty">{{ 'FINANCES.SECTIONS.NO_DRILLDOWN_OPERATIONS' | translate:{ year: stateService.activeYear } }}</div>
+                        </ng-template>
+                      </div>
+
+                      <!-- 3. Delegations -->
+                      <div class="ddCard">
+                        <div class="ddCardHeader">
+                          <ion-icon name="airplane-outline" class="delIcon"></ion-icon>
+                          <span>{{ 'FINANCES.SECTIONS.DRILLDOWN_DELEGATIONS_TITLE' | translate }} ({{ getSectionDelegations(s.sectionCode).length }})</span>
+                        </div>
+                        <div class="ddItemsList" *ngIf="getSectionDelegations(s.sectionCode).length > 0; else noDel">
+                          <div class="ddItem" *ngFor="let d of getSectionDelegations(s.sectionCode)">
+                            <div class="ddItemLeft">
+                              <span class="ddDate">{{ (d.receivedDate || d.startDate) | appDate }}</span>
+                              <span class="ddTitle">{{ d.sequenceNumber }} • {{ d.recipientName }}</span>
+                            </div>
+                            <span class="ddAmount negative">
+                              -{{ (d.costsAmount ?? d.ticketsAmount ?? 0) | financeNumber:{ currency: 'PLN' } }}
+                            </span>
+                          </div>
+                        </div>
+                        <ng-template #noDel>
+                          <div class="ddEmpty">{{ 'FINANCES.SECTIONS.NO_DRILLDOWN_OPERATIONS' | translate:{ year: stateService.activeYear } }}</div>
+                        </ng-template>
+                      </div>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </ng-container>
           </tbody>
         </table>
       </div>
 
       <div class="emptyState" *ngIf="filteredSections.length === 0">
+        <ion-icon name="business-outline"></ion-icon>
         <p>{{ 'FINANCES.SECTIONS.EMPTY_STATE' | translate:{ year: stateService.activeYear } }}</p>
       </div>
     </div>

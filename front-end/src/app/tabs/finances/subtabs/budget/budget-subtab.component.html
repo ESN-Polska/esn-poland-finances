@@ -944,6 +944,148 @@
     </div>
 
     <!-- ========================================== -->
+    <!-- SYSTEM MAPPINGS & OUT-OF-BUDGET CODES CARD -->
+    <!-- ========================================== -->
+    <div class="systemMappingsCard" *ngIf="budget && !isAmending">
+      <div class="smHeader">
+        <div class="smTitleGroup">
+          <div class="smIconBadge">
+            <ion-icon name="git-network-outline"></ion-icon>
+          </div>
+          <div>
+            <div class="smTitleRow">
+              <h3 class="smTitle">
+                {{ 'FINANCES.BUDGET.SYSTEM_MAPPINGS_AND_OOB_TITLE' | translate }}
+              </h3>
+            </div>
+            <p class="smSubtitle">{{ 'FINANCES.BUDGET.SYSTEM_MAPPINGS_AND_OOB_DESC' | translate }}</p>
+          </div>
+        </div>
+
+        <div class="smHeaderActions">
+          <ion-button
+            fill="outline"
+            size="small"
+            class="smToggleBtn"
+            (click)="toggleSystemMappings()"
+          >
+            <ion-icon
+              slot="start"
+              [name]="showSystemMappings ? 'chevron-up-outline' : 'chevron-down-outline'"
+            ></ion-icon>
+            {{ (showSystemMappings ? 'FINANCES.BUDGET.HIDE_SYSTEM_MAPPINGS' : 'FINANCES.BUDGET.SHOW_SYSTEM_MAPPINGS') | translate }}
+          </ion-button>
+        </div>
+      </div>
+
+      <div class="smBody" *ngIf="showSystemMappings">
+        <!-- Annual System Mappings Subsection -->
+        <div class="smSection">
+          <div class="smSectionHeader">
+            <h4 class="smSectionTitle">{{ 'FINANCES.BUDGET.MAPPINGS_SUBSECTION_TITLE' | translate }}</h4>
+            <p class="smSectionDesc">{{ 'FINANCES.BUDGET.MAPPINGS_SUBSECTION_DESC' | translate }}</p>
+          </div>
+          <div class="smMappingsGrid">
+            <!-- Diems Budget Line -->
+            <div class="smSelectCard">
+              <div class="smSelectHeader">
+                <ion-icon name="airplane-outline" class="diemsIcon"></ion-icon>
+                <span class="smSelectLabel">{{ 'FINANCES.BUDGET.DIEMS_BUDGET_LINE_LABEL' | translate }}</span>
+              </div>
+              <ion-select
+                interface="popover"
+                class="smIonSelect"
+                [disabled]="!canEdit"
+                [placeholder]="'FINANCES.BUDGET.DIEMS_BUDGET_LINE_PLACEHOLDER' | translate"
+                [ngModel]="budget.diemsBudgetLineCode || ''"
+                (ngModelChange)="onDiemsBudgetLineChange($event)"
+              >
+                <ion-select-option value="">{{ 'FINANCES.BUDGET.NONE_SELECTED' | translate }}</ion-select-option>
+                <ion-select-option *ngFor="let line of allExpenseBudgetLines" [value]="line.code">
+                  {{ line.code }} — {{ line.name }}
+                </ion-select-option>
+              </ion-select>
+            </div>
+
+            <!-- Term Deposits Interest Budget Line -->
+            <div class="smSelectCard">
+              <div class="smSelectHeader">
+                <ion-icon name="trending-up-outline" class="interestIcon"></ion-icon>
+                <span class="smSelectLabel">{{ 'FINANCES.BUDGET.DEPOSITS_INTEREST_BUDGET_LINE_LABEL' | translate }}</span>
+              </div>
+              <ion-select
+                interface="popover"
+                class="smIonSelect"
+                [disabled]="!canEdit"
+                [placeholder]="'FINANCES.BUDGET.DEPOSITS_INTEREST_BUDGET_LINE_PLACEHOLDER' | translate"
+                [ngModel]="budget.depositsInterestBudgetLineCode || ''"
+                (ngModelChange)="onDepositsInterestBudgetLineChange($event)"
+              >
+                <ion-select-option value="">{{ 'FINANCES.BUDGET.NONE_SELECTED' | translate }}</ion-select-option>
+                <ion-select-option *ngFor="let line of allRevenueBudgetLines" [value]="line.code">
+                  {{ line.code }} — {{ line.name }}
+                </ion-select-option>
+              </ion-select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Technical & Out-of-Budget Codes Subsection -->
+        <div class="smSection oobSection">
+          <div class="smSectionHeader smBetween">
+            <div>
+              <h4 class="smSectionTitle">{{ 'FINANCES.BUDGET.OOB_CODES_SUBSECTION_TITLE' | translate }}</h4>
+              <p class="smSectionDesc">{{ 'FINANCES.BUDGET.OOB_CODES_SUBSECTION_DESC' | translate }}</p>
+            </div>
+            <ion-button *ngIf="canEdit" size="small" fill="outline" color="primary" class="addOobBtn" (click)="openAddOutOfBudgetCodeAlert()">
+              <ion-icon slot="start" name="add-circle-outline"></ion-icon>
+              {{ 'FINANCES.BUDGET.ADD_OOB_CODE_BTN' | translate }}
+            </ion-button>
+          </div>
+
+          <div class="smTableResponsive">
+            <table class="smTable">
+              <thead>
+                <tr>
+                  <th>{{ 'FINANCES.BUDGET.OOB_COL_CODE' | translate }}</th>
+                  <th>{{ 'FINANCES.BUDGET.OOB_COL_NAME' | translate }}</th>
+                  <th>{{ 'FINANCES.BUDGET.OOB_COL_DESC' | translate }}</th>
+                  <th>{{ 'FINANCES.BUDGET.OOB_COL_STATUS' | translate }}</th>
+                  <th *ngIf="canEdit" class="colActionHead">{{ 'FINANCES.BUDGET.OOB_COL_ACTIONS' | translate }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let item of outOfBudgetCodes" [class.inactiveRow]="!item.isActive">
+                  <td class="colOobCode">
+                    <span class="oobCodeBadge">{{ item.code }}</span>
+                  </td>
+                  <td class="colOobName">{{ item.name }}</td>
+                  <td class="colOobDesc">{{ item.description || '—' }}</td>
+                  <td>
+                    <span class="statusBadge" [class.statusActive]="item.isActive" [class.statusInactive]="!item.isActive">
+                      {{ (item.isActive ? 'FINANCES.BUDGET.OOB_STATUS_ACTIVE' : 'FINANCES.BUDGET.OOB_STATUS_INACTIVE') | translate }}
+                    </span>
+                  </td>
+                  <td *ngIf="canEdit" class="colActionCell">
+                    <ion-button fill="clear" size="small" color="medium" (click)="openEditOutOfBudgetCodeAlert(item)" [title]="'COMMON.EDIT' | translate">
+                      <ion-icon slot="icon-only" name="create-outline"></ion-icon>
+                    </ion-button>
+                    <ion-button fill="clear" size="small" [color]="item.isActive ? 'warning' : 'success'" (click)="toggleOutOfBudgetCodeActive(item)" [title]="item.isActive ? ('COMMON.DEACTIVATE' | translate) : ('COMMON.ACTIVATE' | translate)">
+                      <ion-icon slot="icon-only" [name]="item.isActive ? 'pause-circle-outline' : 'play-circle-outline'"></ion-icon>
+                    </ion-button>
+                    <ion-button fill="clear" size="small" color="danger" (click)="deleteOutOfBudgetCode(item)" [title]="'COMMON.DELETE' | translate">
+                      <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
+                    </ion-button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
     <!-- REUSABLE TEMPLATE: RECURSIVE GROUP NODE    -->
     <!-- ========================================== -->
     <ng-template

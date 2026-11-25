@@ -21,56 +21,112 @@
   gap: 16px;
 }
 
-.trustNoticeBanner {
-  background: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.08);
-  border: 1px solid rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.25);
+/* Toolbar Card */
+.toolbarCard {
+  background: var(--ion-card-background, #ffffff);
+  border: 1px solid var(--ion-color-step-150, #e2e8f0);
   border-radius: 12px;
-  padding: 14px 18px;
+  padding: 16px 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 14px;
+  gap: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
 
-  ion-icon {
-    font-size: 2rem;
-    color: var(--ion-color-primary, #00aeef);
-  }
-
-  .noticeTexts {
+  .searchWrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
     flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    font-size: 0.85rem;
-    color: var(--ion-color-step-700, #334155);
+    min-width: 280px;
+
+    .searchIcon {
+      position: absolute;
+      left: 14px;
+      font-size: 1.15rem;
+      color: var(--ion-color-step-400, #94a3b8);
+      pointer-events: none;
+    }
+
+    .searchInput {
+      width: 100%;
+      height: 42px;
+      background: var(--ion-color-step-50, #f8fafc);
+      border: 1px solid var(--ion-color-step-200, #cbd5e1);
+      border-radius: 8px;
+      padding: 0 38px;
+      font-size: 0.92rem;
+      color: var(--ion-color-step-900, #0f172a);
+      outline: none;
+
+      &:focus {
+        border-color: var(--ion-color-primary, #00aeef);
+      }
+    }
+
+    .clearBtn {
+      position: absolute;
+      right: 12px;
+      background: transparent;
+      border: none;
+      color: var(--ion-color-step-400, #94a3b8);
+      font-size: 1.1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+    }
   }
 
-  .totalHeldBadge {
+  .toolbarRight {
     display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 2px;
-    font-size: 0.8rem;
-    color: var(--ion-color-step-600, #64748b);
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
 
-    strong {
-      font-size: 1.2rem;
-      color: var(--ion-color-primary, #00aeef);
+    .totalSaldoBadge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--ion-color-step-50, #f8fafc);
+      border: 1px solid var(--ion-color-step-200, #cbd5e1);
+      padding: 8px 14px;
+      border-radius: 8px;
+
+      .totalLabel {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--ion-color-step-600, #475569);
+      }
+
+      .totalVal {
+        font-size: 1.05rem;
+        font-weight: 800;
+        color: var(--ion-color-primary, #00aeef);
+        font-feature-settings: 'tnum';
+      }
+    }
+
+    .addSecBtn {
+      --border-radius: 8px;
+      font-size: 0.86rem;
+      font-weight: 600;
+      text-transform: none;
     }
   }
 }
 
+/* Table Card */
 .tableCard {
   background: var(--ion-card-background, #ffffff);
   border: 1px solid var(--ion-color-step-150, #e2e8f0);
   border-radius: 14px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
   overflow: hidden;
-}
 
-.tableWrapper {
-  overflow-x: auto;
+  .tableWrapper {
+    overflow-x: auto;
+  }
 }
 
 .modernTable {
@@ -83,33 +139,383 @@
     border-bottom: 2px solid var(--ion-color-step-200, #e2e8f0);
 
     th {
-      padding: 10px 12px;
+      padding: 12px 14px;
       text-align: left;
       font-size: 0.74rem;
       font-weight: 700;
       color: var(--ion-color-step-500, #64748b);
       text-transform: uppercase;
-      letter-spacing: 0.4px;
+      letter-spacing: 0.3px;
+      white-space: nowrap;
+
+      &.colNumHead {
+        text-align: right;
+      }
+      &.colSaldoHead {
+        color: var(--ion-color-step-900, #0f172a);
+      }
+      &.colStatusHead {
+        text-align: center;
+      }
     }
   }
 
-  tbody tr {
+  tbody tr.secRow {
     border-bottom: 1px solid var(--ion-color-step-150, #edf2f7);
+    cursor: pointer;
     transition: background 0.15s ease;
 
     &:hover {
       background: var(--ion-color-step-50, #f8fafc);
     }
 
+    &.inactiveRow {
+      opacity: 0.55;
+      background: var(--ion-color-step-50, #f8fafc);
+    }
+
+    &.expandedRow {
+      background: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.04);
+      border-bottom-color: transparent;
+    }
+
     td {
+      padding: 12px 14px;
+      white-space: nowrap;
+
+      &.colSecName {
+        .nameWrapper {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+
+          .expandIcon {
+            font-size: 1rem;
+            color: var(--ion-color-step-400, #94a3b8);
+            transition: transform 0.15s ease;
+          }
+
+          .secNameText {
+            font-weight: 700;
+            color: var(--ion-color-step-900, #0f172a);
+          }
+        }
+      }
+
+      &.colSecCode {
+        .codeBadge {
+          font-family: monospace;
+          font-weight: 700;
+          font-size: 0.82rem;
+          background: rgba(0, 174, 239, 0.1);
+          color: #00aeef;
+          padding: 2px 7px;
+          border-radius: 6px;
+        }
+      }
+
+      &.colNumVal {
+        text-align: right;
+        font-family: inherit;
+        font-feature-settings: 'tnum';
+        font-size: 0.86rem;
+
+        &.startingVal {
+          color: var(--ion-color-step-700, #334155);
+        }
+        &.revVal {
+          color: #16a34a;
+          font-weight: 600;
+        }
+        &.costVal {
+          color: #dc2626;
+          font-weight: 600;
+        }
+
+        &.positive { color: #16a34a; }
+        &.negative { color: #dc2626; }
+
+        &.saldoVal {
+          font-size: 1rem;
+          font-weight: 800;
+        }
+      }
+
+      &.colStatusCell {
+        text-align: center;
+
+        .statusBadge {
+          display: inline-block;
+          font-size: 0.72rem;
+          font-weight: 700;
+          padding: 2px 8px;
+          border-radius: 10px;
+
+          &.active {
+            background: rgba(34, 197, 94, 0.12);
+            color: #16a34a;
+          }
+          &.inactive {
+            background: rgba(100, 116, 139, 0.12);
+            color: #64748b;
+          }
+        }
+      }
+
+      &.colActionsCell {
+        text-align: right;
+        padding-right: 16px;
+
+        .actionToggleBtn {
+          background: transparent;
+          border: none;
+          cursor: pointer;
+          font-size: 1.25rem;
+          color: var(--ion-color-step-500, #64748b);
+          padding: 3px;
+          display: inline-flex;
+          align-items: center;
+
+          &:hover {
+            color: var(--ion-color-primary, #00aeef);
+          }
+        }
+      }
+    }
+  }
+
+  tbody tr.drilldownRow {
+    background: var(--ion-color-step-50, #f8fafc);
+    border-bottom: 2px solid var(--ion-color-step-200, #cbd5e1);
+
+    td {
+      padding: 0 16px 20px 16px;
+    }
+  }
+}
+
+.drilldownContainer {
+  padding: 16px;
+  background: var(--ion-card-background, #ffffff);
+  border: 1px solid var(--ion-color-step-200, #cbd5e1);
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+
+  .drilldownHeading {
+    margin: 0 0 14px;
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--ion-color-step-850, #1e293b);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    ion-icon {
+      font-size: 1.15rem;
+      color: var(--ion-color-primary, #00aeef);
+    }
+  }
+
+  .drilldownGrid3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 14px;
+
+    @media (max-width: 900px) {
+      grid-template-columns: 1fr;
+    }
+
+    .ddCard {
+      background: var(--ion-color-step-50, #f8fafc);
+      border: 1px solid var(--ion-color-step-150, #e2e8f0);
+      border-radius: 8px;
       padding: 12px;
-      vertical-align: middle;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+
+      .ddCardHeader {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: var(--ion-color-step-700, #334155);
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        padding-bottom: 6px;
+        border-bottom: 1px solid var(--ion-color-step-150, #e2e8f0);
+
+        ion-icon {
+          font-size: 1.1rem;
+
+          &.txIcon { color: #00aeef; }
+          &.trIcon { color: #f59e0b; }
+          &.delIcon { color: #8e44ad; }
+        }
+      }
+
+      .ddItemsList {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        max-height: 200px;
+        overflow-y: auto;
+
+        .ddItem {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          padding: 6px 8px;
+          background: var(--ion-card-background, #ffffff);
+          border: 1px solid var(--ion-color-step-150, #e2e8f0);
+          border-radius: 6px;
+          font-size: 0.78rem;
+
+          .ddItemLeft {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            min-width: 0;
+
+            .ddDate {
+              font-size: 0.7rem;
+              color: var(--ion-color-step-400, #94a3b8);
+            }
+
+            .ddTitle {
+              color: var(--ion-color-step-800, #1e293b);
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
+
+              .directionTag {
+                display: inline-block;
+                padding: 1px 4px;
+                border-radius: 4px;
+                font-family: monospace;
+                font-weight: 700;
+                font-size: 0.7rem;
+                margin-right: 4px;
+
+                &.inflow {
+                  background: rgba(34, 197, 94, 0.12);
+                  color: #16a34a;
+                }
+                &.outflow {
+                  background: rgba(239, 68, 68, 0.12);
+                  color: #dc2626;
+                }
+              }
+            }
+          }
+
+          .ddAmount {
+            font-weight: 700;
+            flex-shrink: 0;
+
+            &.positive { color: #16a34a; }
+            &.negative { color: #dc2626; }
+          }
+        }
+      }
+
+      .ddEmpty {
+        font-size: 0.78rem;
+        color: var(--ion-color-step-400, #94a3b8);
+        padding: 12px 8px;
+        text-align: center;
+      }
     }
   }
 }
 
 .emptyState {
-  padding: 40px;
+  padding: 48px 20px;
   text-align: center;
   color: var(--ion-color-step-500, #64748b);
+
+  ion-icon {
+    font-size: 3rem;
+    color: var(--ion-color-step-300, #cbd5e1);
+    margin-bottom: 8px;
+  }
+
+  p {
+    margin: 0;
+    font-size: 0.95rem;
+  }
+}
+
+body.dark {
+  .toolbarCard {
+    background: #1e1e1e;
+    border-color: rgba(255, 255, 255, 0.1);
+
+    .searchWrapper .searchInput {
+      background: #252525;
+      border-color: rgba(255, 255, 255, 0.15);
+      color: #f1f5f9;
+    }
+
+    .toolbarRight .totalSaldoBadge {
+      background: #252525;
+      border-color: rgba(255, 255, 255, 0.15);
+      .totalLabel { color: #94a3b8; }
+    }
+  }
+
+  .tableCard {
+    background: #1e1e1e;
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .modernTable {
+    thead tr {
+      background: #252525;
+      border-bottom-color: rgba(255, 255, 255, 0.1);
+      th { color: #94a3b8; }
+    }
+
+    tbody tr.secRow {
+      border-bottom-color: rgba(255, 255, 255, 0.08);
+
+      &:hover { background: #252525; }
+      &.inactiveRow { background: #181818; }
+      &.expandedRow { background: rgba(0, 174, 239, 0.08); }
+
+      td.colSecName .nameWrapper .secNameText { color: #f1f5f9; }
+      td.colNumVal.startingVal { color: #94a3b8; }
+    }
+
+    tbody tr.drilldownRow {
+      background: #181818;
+      border-bottom-color: rgba(255, 255, 255, 0.15);
+    }
+  }
+
+  .drilldownContainer {
+    background: #202020;
+    border-color: rgba(255, 255, 255, 0.15);
+
+    .drilldownHeading { color: #f1f5f9; }
+
+    .drilldownGrid3 .ddCard {
+      background: #252525;
+      border-color: rgba(255, 255, 255, 0.08);
+
+      .ddCardHeader {
+        border-bottom-color: rgba(255, 255, 255, 0.08);
+        color: #cbd5e1;
+      }
+
+      .ddItemsList .ddItem {
+        background: #1e1e1e;
+        border-color: rgba(255, 255, 255, 0.08);
+
+        .ddItemLeft .ddTitle { color: #e2e8f0; }
+      }
+    }
+  }
 }

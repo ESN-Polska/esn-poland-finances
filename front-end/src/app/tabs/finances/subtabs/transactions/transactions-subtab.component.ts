@@ -9,6 +9,7 @@ import { AppService } from '../../../../app.service';
 import { BankTransactionRecord } from '@models/cashflow-transaction.model';
 import { AppPermission } from '@models/configurations.model';
 import { CsvImportModalComponent } from '../../modals/csv-import-modal/csv-import-modal.component';
+import { TransactionOptionsModalComponent } from '../../modals/transaction-options-modal/transaction-options-modal.component';
 
 @Component({
   selector: 'app-transactions-subtab',
@@ -145,47 +146,41 @@ export class TransactionsSubtabComponent implements OnInit, OnDestroy {
     this.navService.jumpToBudgetLine(code, this.stateService.activeYear);
   }
 
-  async directCodeBankFee(tx: BankTransactionRecord): Promise<void> {
-    if (!this.canEdit || this.isArchived) return;
+  hasDocumentSettlement(tx: BankTransactionRecord): boolean {
+    return !!tx.settlements?.some((s) => s.targetType === 'DOCUMENT');
+  }
 
-    const alert = await this.alertCtrl.create({
-      header: this.translate.instant('FINANCES.TRANSACTIONS.DIRECT_FEE_ALERT_TITLE'),
-      subHeader: `${tx.title} (${tx.amount} ${tx.currency})`,
-      inputs: [
-        {
-          name: 'code',
-          type: 'text',
-          placeholder: this.translate.instant('FINANCES.TRANSACTIONS.DIRECT_FEE_CODE_PH'),
-          value: tx.directBudgetLineCode || ''
-        },
-        {
-          name: 'notes',
-          type: 'text',
-          placeholder: this.translate.instant('FINANCES.TRANSACTIONS.DIRECT_FEE_NOTES_PH'),
-          value: tx.notes || ''
-        }
-      ],
-      buttons: [
-        { text: this.translate.instant('COMMON.CANCEL'), role: 'cancel' },
-        {
-          text: this.translate.instant('FINANCES.TRANSACTIONS.DIRECT_FEE_ASSIGN_BTN'),
-          handler: async (data) => {
-            if (!data.code?.trim()) return;
-            tx.directBudgetLineCode = data.code.trim();
-            tx.isBankFeeOrInterest = true;
-            tx.settlementStatus = 'SETTLED';
-            tx.notes = data.notes;
-            await this.financesService.saveTransaction(tx);
-            const toast = await this.toastCtrl.create({
-              message: this.translate.instant('FINANCES.TRANSACTIONS.DIRECT_FEE_SUCCESS'),
-              duration: 2500,
-              color: 'success'
-            });
-            await toast.present();
-          }
-        }
-      ]
+  getDocumentSettlementsCount(tx: BankTransactionRecord): number {
+    return tx.settlements?.filter((s) => s.targetType === 'DOCUMENT').length || 0;
+  }
+
+  hasFiscalSettlement(tx: BankTransactionRecord): boolean {
+    return !!tx.settlements?.some((s) => s.targetType === 'FISCAL_DAILY_REPORT');
+  }
+
+  getSplitTooltip(tx: BankTransactionRecord): string {
+    if (!tx.directCodeSplits?.length) return '';
+    return tx.directCodeSplits.map((s) => `${s.code}: ${s.amount} ${tx.currency}`).join(', ');
+  }
+
+  async openTransactionOptionsModal(tx: BankTransactionRecord): Promise<void> {
+    const modal = await this.modalCtrl.create({
+      component: TransactionOptionsModalComponent,
+      componentProps: {
+        transaction: tx,
+        year: this.stateService.activeYear,
+        canEdit: this.canEdit && !this.isArchived
+      },
+      cssClass: 'modal-large'
     });
-    await alert.present();
+    await modal.present();
+    const { data, role } = await modal.onWillDismiss();
+    if (role === 'saved' || data?.savedTransaction) {
+      await this.loadTransactions(this.stateService.activeYear);
+    }
+  }
+
+  async directCodeBankFee(tx: BankTransactionRecord): Promise<void> {
+    await this.openTransactionOptionsModal(tx);
   }
 }

@@ -1,0 +1,320 @@
+.meetingsSubtabContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 4px 0 32px 0;
+}
+
+.loadingWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  gap: 12px;
+  color: var(--ion-color-step-600, #64748b);
+}
+
+.toolbarCard {
+  background: var(--ion-card-background, #ffffff);
+  border: 1px solid var(--ion-color-step-150, #e2e8f0);
+  border-radius: 12px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+
+  .searchWrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    flex: 1;
+    min-width: 240px;
+
+    .searchIcon {
+      position: absolute;
+      left: 12px;
+      font-size: 1.15rem;
+      color: var(--ion-color-step-500, #64748b);
+      pointer-events: none;
+    }
+
+    .searchInput {
+      width: 100%;
+      height: 38px;
+      background: var(--ion-color-step-50, #f8fafc);
+      border: 1px solid var(--ion-color-step-200, #cbd5e1);
+      border-radius: 8px;
+      padding: 0 34px;
+      font-size: 0.9rem;
+      color: var(--ion-color-step-900, #0f172a);
+      outline: none;
+      transition: border-color 0.15s ease;
+
+      &:focus {
+        border-color: var(--ion-color-primary, #00aeef);
+      }
+    }
+
+    .clearBtn {
+      position: absolute;
+      right: 10px;
+      background: transparent;
+      border: none;
+      color: var(--ion-color-step-500, #64748b);
+      font-size: 1.1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      padding: 0;
+    }
+  }
+
+  .addSubBudgetBtn {
+    --border-radius: 8px;
+    font-size: 0.84rem;
+    font-weight: 600;
+    text-transform: none;
+  }
+}
+
+.tableCard {
+  background: var(--ion-card-background, #ffffff);
+  border: 1px solid var(--ion-color-step-150, #e2e8f0);
+  border-radius: 14px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+}
+
+.tableWrapper {
+  overflow-x: auto;
+}
+
+.modernTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+
+  thead tr {
+    background: var(--ion-color-step-50, #f8fafc);
+    border-bottom: 2px solid var(--ion-color-step-200, #e2e8f0);
+
+    th {
+      padding: 10px 14px;
+      text-align: left;
+      font-size: 0.74rem;
+      font-weight: 700;
+      color: var(--ion-color-step-500, #64748b);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      white-space: nowrap;
+    }
+  }
+
+  tbody tr {
+    border-bottom: 1px solid var(--ion-color-step-150, #edf2f7);
+    transition: background 0.15s ease;
+
+    &:hover {
+      background: var(--ion-color-step-50, #f8fafc);
+    }
+
+    &.settledRow {
+      opacity: 0.85;
+    }
+
+    td {
+      padding: 12px 14px;
+      vertical-align: middle;
+
+      &.positive {
+        color: #16a34a;
+      }
+      &.negative {
+        color: #dc2626;
+      }
+
+      &.colName {
+        .subBudgetName {
+          display: block;
+          font-weight: 700;
+          color: var(--ion-color-step-900, #0f172a);
+        }
+
+        .subBudgetMeta {
+          display: block;
+          font-size: 0.76rem;
+          color: var(--ion-color-step-500, #64748b);
+          margin-top: 2px;
+        }
+      }
+
+      .codeBadge {
+        display: inline-block;
+        font-family: monospace;
+        font-weight: 700;
+        font-size: 0.84rem;
+        background: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.12);
+        color: var(--ion-color-primary, #00aeef);
+        padding: 3px 8px;
+        border-radius: 6px;
+      }
+
+      .spreadsheetLinkBtn {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--ion-color-primary, #00aeef);
+        text-decoration: none;
+        padding: 4px 8px;
+        border-radius: 6px;
+        background: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.08);
+        transition: background 0.12s ease;
+
+        &:hover {
+          background: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.18);
+        }
+
+        ion-icon {
+          font-size: 0.95rem;
+        }
+      }
+
+      .budgetLineBtn {
+        background: var(--ion-color-step-100, #f1f5f9);
+        border: 1px solid var(--ion-color-step-200, #cbd5e1);
+        border-radius: 6px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        font-family: monospace;
+        padding: 3px 8px;
+        cursor: pointer;
+        color: var(--ion-color-step-800, #1e293b);
+        transition: all 0.12s ease;
+
+        &:hover {
+          background: var(--ion-color-step-200, #e2e8f0);
+          color: var(--ion-color-primary, #00aeef);
+        }
+      }
+
+      .statusBadgeBtn {
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        padding: 3px 9px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        transition: opacity 0.12s ease;
+
+        &.statusOpen {
+          background: rgba(16, 185, 129, 0.14);
+          color: #10b981;
+        }
+
+        &.statusSettled {
+          background: rgba(100, 116, 139, 0.14);
+          color: #64748b;
+        }
+
+        &:disabled {
+          cursor: default;
+        }
+      }
+
+      .mutedDash {
+        color: var(--ion-color-step-400, #94a3b8);
+      }
+
+      &.colActions {
+        text-align: right;
+        white-space: nowrap;
+
+        ion-button {
+          margin: 0;
+          --padding-start: 4px;
+          --padding-end: 4px;
+        }
+      }
+    }
+  }
+}
+
+.emptyState {
+  padding: 48px 20px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+
+  .emptyIcon {
+    font-size: 2.8rem;
+    color: var(--ion-color-step-400, #94a3b8);
+  }
+
+  p {
+    font-size: 0.94rem;
+    color: var(--ion-color-step-600, #475569);
+    margin: 0;
+  }
+}
+
+body.dark {
+  .toolbarCard,
+  .tableCard {
+    background: #1e1e1e;
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+
+  .toolbarCard .searchWrapper .searchInput {
+    background: #252525;
+    border-color: rgba(255, 255, 255, 0.12);
+    color: #f1f5f9;
+  }
+
+  .modernTable {
+    thead tr {
+      background: #252525;
+      border-bottom-color: rgba(255, 255, 255, 0.1);
+      th { color: #94a3b8; }
+    }
+
+    tbody tr {
+      border-bottom-color: rgba(255, 255, 255, 0.06);
+
+      &:hover {
+        background: #282828;
+      }
+
+      td {
+        &.colName .subBudgetName {
+          color: #f1f5f9;
+        }
+
+        .codeBadge {
+          background: rgba(0, 174, 239, 0.2);
+          color: #38bdf8;
+        }
+
+        .budgetLineBtn {
+          background: #2a2a2a;
+          border-color: rgba(255, 255, 255, 0.15);
+          color: #cbd5e1;
+
+          &:hover {
+            color: #38bdf8;
+          }
+        }
+      }
+    }
+  }
+}

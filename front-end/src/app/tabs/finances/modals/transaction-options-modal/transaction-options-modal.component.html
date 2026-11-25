@@ -1,0 +1,264 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-title>{{ 'FINANCES.TRANSACTIONS.MODAL_OPTIONS_TITLE' | translate }}</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="dismiss()">
+        <ion-icon slot="icon-only" name="close"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="modalContent">
+  <div class="optionsContainer">
+    <!-- Transaction Summary Banner -->
+    <div class="txSummaryCard">
+      <div class="txSummaryLeft">
+        <span class="txDate">{{ transaction.bookingDate | appDate }}</span>
+        <h4 class="txParty">{{ transaction.partyName || transaction.counterparty || '-' }}</h4>
+        <p class="txTitle">{{ transaction.transferTitle || transaction.title }}</p>
+      </div>
+      <div class="txSummaryRight">
+        <span class="txAmount" [class.negative]="transaction.amount < 0" [class.positive]="transaction.amount > 0">
+          {{ transaction.amount | financeNumber:{ currency: transaction.currency, forceSign: true } }}
+        </span>
+        <span class="txTargetLabel">
+          {{ 'FINANCES.TRANSACTIONS.AMOUNT_TO_SETTLE' | translate }}: {{ targetAmount | number:'1.2-2' }} {{ transaction.currency }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Mode Selector Tabs -->
+    <div class="segmentWrapper">
+      <ion-segment [(ngModel)]="activeTab" class="optionsSegment">
+        <ion-segment-button value="SETTLEMENT">
+          <ion-icon name="document-text-outline"></ion-icon>
+          <ion-label>{{ 'FINANCES.TRANSACTIONS.TAB_SETTLEMENT' | translate }}</ion-label>
+        </ion-segment-button>
+        <ion-segment-button value="DIRECT_SPLIT">
+          <ion-icon name="git-branch-outline"></ion-icon>
+          <ion-label>{{ 'FINANCES.TRANSACTIONS.TAB_DIRECT_SPLIT' | translate }}</ion-label>
+        </ion-segment-button>
+      </ion-segment>
+    </div>
+
+    <!-- TAB 1: Documents & Fiscal Reports Settlement -->
+    <div class="tabContent" *ngIf="activeTab === 'SETTLEMENT'">
+      <div class="sectionHeaderRow">
+        <div>
+          <h4 class="sectionTitle">{{ 'FINANCES.TRANSACTIONS.LINK_DOCS_REPORTS_TITLE' | translate }}</h4>
+          <p class="sectionDesc">{{ 'FINANCES.TRANSACTIONS.LINK_DOCS_REPORTS_DESC' | translate }}</p>
+        </div>
+        <div class="deltaBadge" [class.valid]="settlementDelta === 0" [class.invalid]="settlementDelta !== 0">
+          {{ 'FINANCES.TRANSACTIONS.REMAINING_DELTA' | translate }}: {{ settlementDelta | number:'1.2-2' }} {{ transaction.currency }}
+        </div>
+      </div>
+
+      <!-- Add Document Pickers -->
+      <div class="pickersGrid" *ngIf="canEdit">
+        <!-- Document Picker -->
+        <div class="pickerBox">
+          <label class="pickerLabel">{{ 'FINANCES.TRANSACTIONS.ADD_DOCUMENT_LABEL' | translate }}</label>
+          <div class="pickerActionRow">
+            <select class="stdSelect" [(ngModel)]="selectedDocIdToAdd">
+              <option value="">{{ 'FINANCES.TRANSACTIONS.SELECT_DOC_PH' | translate }}</option>
+              <option *ngFor="let doc of availableDocuments" [value]="doc.id">
+                {{ doc.invoiceNumber || doc.ksefNumber }} • {{ doc.issuedBy }} ({{ doc.grossAmount | number:'1.2-2' }} PLN)
+              </option>
+            </select>
+            <ion-button
+              fill="solid"
+              size="small"
+              color="primary"
+              [disabled]="!selectedDocIdToAdd"
+              (click)="addDocumentSettlement()"
+            >
+              <ion-icon slot="start" name="add"></ion-icon>
+              {{ 'COMMON.ADD' | translate }}
+            </ion-button>
+          </div>
+        </div>
+
+        <!-- Fiscal Report Picker -->
+        <div class="pickerBox">
+          <label class="pickerLabel">{{ 'FINANCES.TRANSACTIONS.ADD_FISCAL_LABEL' | translate }}</label>
+          <div class="pickerActionRow">
+            <select class="stdSelect" [(ngModel)]="selectedFiscalIdToAdd">
+              <option value="">{{ 'FINANCES.TRANSACTIONS.SELECT_FISCAL_PH' | translate }}</option>
+              <option *ngFor="let rep of availableFiscalReports" [value]="rep.id">
+                Raport {{ rep.monthName }} {{ rep.year }} ({{ (rep.totalGross || 0) | number:'1.2-2' }} PLN)
+              </option>
+            </select>
+            <ion-button
+              fill="solid"
+              size="small"
+              color="primary"
+              [disabled]="!selectedFiscalIdToAdd"
+              (click)="addFiscalSettlement()"
+            >
+              <ion-icon slot="start" name="add"></ion-icon>
+              {{ 'COMMON.ADD' | translate }}
+            </ion-button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Active Settlements List -->
+      <div class="settlementsList" *ngIf="settlements.length > 0">
+        <div class="settlementItem" *ngFor="let s of settlements; let i = index">
+          <div class="sInfo">
+            <span class="sTypeBadge" [class]="s.targetType.toLowerCase()">
+              {{ s.targetType === 'DOCUMENT' ? ('FINANCES.TRANSACTIONS.TYPE_DOCUMENT' | translate) : ('FINANCES.TRANSACTIONS.TYPE_FISCAL' | translate) }}
+            </span>
+            <div class="sLabels">
+              <strong class="sTargetLabel">{{ s.targetLabel }}</strong>
+              <span class="sNotes" *ngIf="s.notes">{{ s.notes }}</span>
+            </div>
+          </div>
+
+          <div class="sAmountBox">
+            <label>{{ 'FINANCES.TRANSACTIONS.ALLOCATED_AMOUNT' | translate }}:</label>
+            <input
+              type="number"
+              step="0.01"
+              class="stdInput allocInput"
+              [(ngModel)]="s.allocatedAmount"
+              [disabled]="!canEdit"
+            />
+            <span class="currencyTag">{{ transaction.currency }}</span>
+            <button
+              *ngIf="canEdit"
+              type="button"
+              class="quickFillBtn"
+              (click)="fillSettlementRemainder(s)"
+              [title]="'FINANCES.TRANSACTIONS.FILL_REMAINDER' | translate"
+            >
+              {{ 'FINANCES.TRANSACTIONS.REMAINDER_BTN' | translate }}
+            </button>
+            <button
+              *ngIf="canEdit"
+              type="button"
+              class="removeBtn"
+              (click)="removeSettlement(i)"
+              [title]="'COMMON.DELETE' | translate"
+            >
+              <ion-icon name="trash-outline"></ion-icon>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="emptySettlements" *ngIf="settlements.length === 0">
+        <ion-icon name="link-outline"></ion-icon>
+        <p>{{ 'FINANCES.TRANSACTIONS.NO_SETTLEMENTS_YET' | translate }}</p>
+      </div>
+    </div>
+
+    <!-- TAB 2: Direct Code Splits -->
+    <div class="tabContent" *ngIf="activeTab === 'DIRECT_SPLIT'">
+      <div class="sectionHeaderRow">
+        <div>
+          <h4 class="sectionTitle">{{ 'FINANCES.TRANSACTIONS.DIRECT_SPLIT_TITLE' | translate }}</h4>
+          <p class="sectionDesc">{{ 'FINANCES.TRANSACTIONS.DIRECT_SPLIT_DESC' | translate }}</p>
+        </div>
+        <div class="deltaBadge" [class.valid]="directSplitDelta === 0" [class.invalid]="directSplitDelta !== 0">
+          {{ 'FINANCES.TRANSACTIONS.REMAINING_DELTA' | translate }}: {{ directSplitDelta | number:'1.2-2' }} {{ transaction.currency }}
+        </div>
+      </div>
+
+      <div class="splitsList">
+        <div class="splitRowItem" *ngFor="let split of directSplits; let i = index">
+          <div class="splitCodeCol">
+            <app-code-select
+              [year]="year"
+              [disabled]="!canEdit"
+              [(ngModel)]="split.code"
+              [placeholder]="'FINANCES.TRANSACTIONS.SELECT_CODE_PH' | translate"
+            ></app-code-select>
+          </div>
+
+          <div class="splitAmountCol">
+            <input
+              type="number"
+              step="0.01"
+              class="stdInput amountInput"
+              [(ngModel)]="split.amount"
+              [disabled]="!canEdit"
+              placeholder="0.00"
+            />
+            <span class="currencyTag">{{ transaction.currency }}</span>
+            <button
+              *ngIf="canEdit"
+              type="button"
+              class="quickFillBtn"
+              (click)="fillDirectSplitRemainder(split)"
+              [title]="'FINANCES.TRANSACTIONS.FILL_REMAINDER' | translate"
+            >
+              {{ 'FINANCES.TRANSACTIONS.REMAINDER_BTN' | translate }}
+            </button>
+          </div>
+
+          <div class="splitDescCol">
+            <input
+              type="text"
+              class="stdInput"
+              [(ngModel)]="split.description"
+              [disabled]="!canEdit"
+              [placeholder]="'FINANCES.TRANSACTIONS.SPLIT_DESC_PH' | translate"
+            />
+          </div>
+
+          <div class="splitActionCol" *ngIf="canEdit && directSplits.length > 1">
+            <button
+              type="button"
+              class="removeBtn"
+              (click)="removeDirectSplitRow(i)"
+              [title]="'COMMON.DELETE' | translate"
+            >
+              <ion-icon name="trash-outline"></ion-icon>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="addSplitRow" *ngIf="canEdit">
+        <ion-button fill="outline" size="small" color="primary" (click)="addDirectSplitRow()">
+          <ion-icon slot="start" name="add-circle-outline"></ion-icon>
+          {{ 'FINANCES.TRANSACTIONS.ADD_SPLIT_ROW_BTN' | translate }}
+        </ion-button>
+      </div>
+    </div>
+  </div>
+</ion-content>
+
+<ion-footer>
+  <ion-toolbar>
+    <div class="modalFooter">
+      <div class="footerLeft">
+        <ion-button
+          fill="clear"
+          color="danger"
+          *ngIf="canEdit && (transaction.settlements?.length || transaction.directCodeSplits?.length || transaction.directBudgetCode)"
+          (click)="clearAllAssignments()"
+        >
+          <ion-icon slot="start" name="close-circle-outline"></ion-icon>
+          {{ 'FINANCES.TRANSACTIONS.CLEAR_ASSIGNMENT_BTN' | translate }}
+        </ion-button>
+      </div>
+
+      <div class="footerRight">
+        <ion-button fill="clear" color="medium" (click)="dismiss()">
+          {{ 'COMMON.CANCEL' | translate }}
+        </ion-button>
+        <ion-button
+          fill="solid"
+          color="primary"
+          [disabled]="!canEdit || (activeTab === 'SETTLEMENT' ? settlementDelta !== 0 : directSplitDelta !== 0)"
+          (click)="save()"
+        >
+          {{ 'COMMON.SAVE' | translate }}
+        </ion-button>
+      </div>
+    </div>
+  </ion-toolbar>
+</ion-footer>

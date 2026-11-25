@@ -7,33 +7,92 @@
   <div *ngIf="!loading" class="docsContent">
     <!-- Filters & Search Toolbar -->
     <div class="toolbarCard">
-      <div class="searchWrapper">
-        <ion-icon name="search-outline" class="searchIcon"></ion-icon>
-        <input
-          type="text"
-          class="searchInput"
-          [(ngModel)]="searchQuery"
-          [placeholder]="'FINANCES.DOCUMENTS.SEARCH_PLACEHOLDER' | translate"
-        />
-        <button *ngIf="searchQuery" class="clearBtn" (click)="clearSearch()">
-          <ion-icon name="close-circle"></ion-icon>
-        </button>
+      <div class="searchAndAddRow">
+        <div class="searchWrapper">
+          <ion-icon name="search-outline" class="searchIcon"></ion-icon>
+          <input
+            type="text"
+            class="searchInput"
+            [(ngModel)]="searchQuery"
+            [placeholder]="'FINANCES.DOCUMENTS.SEARCH_PLACEHOLDER' | translate"
+          />
+          <button *ngIf="searchQuery" class="clearBtn" (click)="clearSearch()">
+            <ion-icon name="close-circle"></ion-icon>
+          </button>
+        </div>
+
+        <ion-button
+          *ngIf="canEdit && !isArchived"
+          fill="solid"
+          color="primary"
+          class="addDocBtn"
+          (click)="openAddDocumentModal()"
+        >
+          <ion-icon slot="start" name="add-circle-outline"></ion-icon>
+          {{ 'FINANCES.DOCUMENTS.ADD_DOC' | translate }}
+        </ion-button>
       </div>
 
-      <div class="filterDropdowns">
-        <!-- Status Filter -->
-        <div class="dropdownGroup">
-          <span class="dropdownLabel">{{ 'FINANCES.DOCUMENTS.COL_STATUS' | translate }}:</span>
-          <ion-select
-            interface="popover"
-            class="filterSelect statusSelect"
-            [(ngModel)]="filterStatus"
-          >
-            <ion-select-option value="ALL">{{ 'COMMON.ALL' | translate }}</ion-select-option>
-            <ion-select-option value="SETTLED">{{ 'FINANCES.DOCUMENTS.FILTER_SETTLED' | translate }}</ion-select-option>
-            <ion-select-option value="UNSETTLED">{{ 'FINANCES.DOCUMENTS.FILTER_UNSETTLED' | translate }}</ion-select-option>
-          </ion-select>
-        </div>
+      <!-- Filter chips ribbon -->
+      <div class="filterChipsRibbon">
+        <button
+          type="button"
+          class="filterChip"
+          [class.active]="filterStatus === 'ALL'"
+          (click)="filterStatus = 'ALL'"
+        >
+          {{ 'FINANCES.DOCUMENTS.FILTER_ALL' | translate:{ count: countAll } }}
+        </button>
+
+        <button
+          type="button"
+          class="filterChip unpaidChip"
+          [class.active]="filterStatus === 'UNPAID'"
+          (click)="filterStatus = 'UNPAID'"
+        >
+          <span class="dot"></span>
+          {{ 'FINANCES.DOCUMENTS.FILTER_UNPAID' | translate }} ({{ countUnpaid }})
+        </button>
+
+        <button
+          type="button"
+          class="filterChip partiallyPaidChip"
+          [class.active]="filterStatus === 'PARTIALLY_PAID'"
+          (click)="filterStatus = 'PARTIALLY_PAID'"
+        >
+          <span class="dot"></span>
+          {{ 'FINANCES.DOCUMENTS.FILTER_PARTIALLY_PAID' | translate }} ({{ countPartiallyPaid }})
+        </button>
+
+        <button
+          type="button"
+          class="filterChip paidChip"
+          [class.active]="filterStatus === 'PAID'"
+          (click)="filterStatus = 'PAID'"
+        >
+          <span class="dot"></span>
+          {{ 'FINANCES.DOCUMENTS.FILTER_PAID' | translate }} ({{ countPaid }})
+        </button>
+
+        <button
+          type="button"
+          class="filterChip costChip"
+          [class.active]="filterStatus === 'COST'"
+          (click)="filterStatus = 'COST'"
+        >
+          <ion-icon name="trending-down-outline"></ion-icon>
+          {{ 'FINANCES.DOCUMENTS.FILTER_COST' | translate }} ({{ countCost }})
+        </button>
+
+        <button
+          type="button"
+          class="filterChip revenueChip"
+          [class.active]="filterStatus === 'REVENUE'"
+          (click)="filterStatus = 'REVENUE'"
+        >
+          <ion-icon name="trending-up-outline"></ion-icon>
+          {{ 'FINANCES.DOCUMENTS.FILTER_REVENUE' | translate }} ({{ countRevenue }})
+        </button>
       </div>
     </div>
 
@@ -68,6 +127,8 @@
               *ngFor="let doc of filteredDocuments"
               [id]="'doc-' + doc.id"
               [class.highlightedRow]="highlightedDocId === doc.id"
+              (click)="openEditDocumentModal(doc)"
+              class="clickableRow"
             >
               <!-- Date -->
               <td class="colDate">
@@ -75,9 +136,15 @@
                 <span class="subDate" *ngIf="doc.saleDate && doc.saleDate !== doc.issuedOn">{{ 'FINANCES.DOCUMENTS.SALE_DATE' | translate:{ date: (doc.saleDate | appDate) } }}</span>
               </td>
 
-              <!-- Invoice number / KSeF -->
+              <!-- Invoice number / KSeF & Type -->
               <td class="colDoc">
-                <span class="invNum">{{ doc.invoiceNumber }}</span>
+                <div class="docNumberBlock">
+                  <span class="typeBadge" [class]="(doc.documentType || 'COST').toLowerCase()">
+                    <ion-icon [name]="doc.documentType === 'REVENUE' ? 'trending-up-outline' : 'trending-down-outline'"></ion-icon>
+                    {{ (doc.documentType === 'REVENUE' ? 'FINANCES.DOCUMENTS.TYPE_REVENUE' : 'FINANCES.DOCUMENTS.TYPE_COST') | translate }}
+                  </span>
+                  <span class="invNum">{{ doc.invoiceNumber }}</span>
+                </div>
                 <span class="ksefTag" *ngIf="doc.ksefNumber" [title]="doc.ksefNumber">KSeF: {{ doc.ksefNumber | slice:0:15 }}...</span>
               </td>
 
@@ -94,10 +161,10 @@
                     <button
                       type="button"
                       class="codeBadgeBtn"
-                      (click)="jumpToBudgetLine(a.code || a.linkedCode)"
+                      (click)="jumpToBudgetLine(a.code || a.linkedCode); $event.stopPropagation()"
                       [title]="'FINANCES.DOCUMENTS.JUMP_BUDGET_TITLE' | translate:{ code: a.code || a.linkedCode }"
                     >
-                      <ion-icon name="trending-up-outline"></ion-icon>
+                      <ion-icon name="pricetag-outline"></ion-icon>
                       {{ a.code || a.linkedCode }}
                     </button>
                     <span class="allocAmount">{{ (a.allocatedGrossAmount || a.amount || 0) | financeNumber:{ currency: doc.currency } }}</span>
@@ -120,10 +187,10 @@
                   {{ doc.paymentOrigin === 'ADVANCE' ? ('FINANCES.DOCUMENTS.PAYMENT_ADVANCE' | translate) : ('FINANCES.DOCUMENTS.PAYMENT_TRANSACTION' | translate) }}
                 </span>
                 <button
-                  *ngIf="doc.advanceId"
+                  *ngIf="doc.advanceId || doc.linkedAdvanceId"
                   type="button"
                   class="advanceJumpBtn"
-                  (click)="jumpToAdvance(doc.advanceId)"
+                  (click)="jumpToAdvance(doc.advanceId || doc.linkedAdvanceId!); $event.stopPropagation()"
                   [title]="'FINANCES.ADVANCES.TITLE' | translate"
                 >
                   <ion-icon name="wallet-outline"></ion-icon> {{ 'FINANCES.DOCUMENTS.ADVANCE_LINK' | translate }}
@@ -134,17 +201,21 @@
               <td class="colStatus">
                 <span
                   class="docStatusBadge"
-                  [class.settled]="doc.status === 'SETTLED'"
-                  [class.pending]="doc.status !== 'SETTLED'"
-                  (click)="toggleDocumentSettled(doc)"
+                  [class.paid]="isDocPaid(doc)"
+                  [class.partially_paid]="isDocPartiallyPaid(doc)"
+                  [class.unpaid]="isDocUnpaid(doc)"
                 >
-                  {{ (doc.status === 'SETTLED' ? 'FINANCES.DOCUMENTS.STATUS_SETTLED' : 'FINANCES.DOCUMENTS.STATUS_PENDING') | translate }}
+                  {{
+                    isDocPaid(doc) ? ('FINANCES.DOCUMENTS.STATUS_PAID' | translate) :
+                    isDocPartiallyPaid(doc) ? ('FINANCES.DOCUMENTS.STATUS_PARTIALLY_PAID' | translate:{ paid: (doc.paidAmount | number:'1.2-2'), gross: (doc.grossAmount | number:'1.2-2') }) :
+                    ('FINANCES.DOCUMENTS.STATUS_UNPAID' | translate)
+                  }}
                 </span>
               </td>
 
               <!-- Actions -->
               <td class="colActions" *ngIf="canEdit && !isArchived">
-                <div class="actionsRow">
+                <div class="actionsRow" (click)="$event.stopPropagation()">
                   <a
                     *ngIf="doc.attachments?.length"
                     [href]="doc.attachments[0].url"
@@ -154,6 +225,22 @@
                   >
                     <ion-icon name="attach-outline"></ion-icon>
                   </a>
+                  <button
+                    type="button"
+                    class="actionIconBtn"
+                    (click)="openEditDocumentModal(doc)"
+                    [title]="'COMMON.EDIT' | translate"
+                  >
+                    <ion-icon name="create-outline"></ion-icon>
+                  </button>
+                  <button
+                    type="button"
+                    class="actionIconBtn dangerBtn"
+                    (click)="deleteDocument(doc, $event)"
+                    [title]="'COMMON.DELETE' | translate"
+                  >
+                    <ion-icon name="trash-outline"></ion-icon>
+                  </button>
                 </div>
               </td>
             </tr>

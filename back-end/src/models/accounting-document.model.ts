@@ -1,12 +1,12 @@
 import { Resource } from 'idea-toolbox';
 import { Currency } from './financial-request.model';
 
-export type LinkedCodeType = 'BUDGET_CODE' | 'MEETING_CODE' | 'SECTION_CODE';
+export type LinkedCodeType = 'BUDGET_CODE' | 'MEETING_CODE' | 'SECTION_CODE' | 'OUT_OF_BUDGET_CODE';
 
 export interface DocumentCodeAllocation {
   id: string;
   linkedCodeType: LinkedCodeType;
-  /** Linked code string (e.g. 'card', 'NA1', 'sAGH') */
+  /** Linked code string (e.g. 'card', 'NA1', 'sAGH', 'VAT') */
   linkedCode: string;
   code?: string;
   allocatedGrossAmount: number;
@@ -18,7 +18,15 @@ export interface DocumentCodeAllocation {
 
 export type AccountingDocumentType = 'COST' | 'REVENUE' | 'COMMISSION';
 export type DocumentPaymentOrigin = 'TRANSACTIONS' | 'ADVANCE';
-export type DocumentRecordStatus = 'DRAFT' | 'APPROVED' | 'SETTLED' | 'CANCELLED';
+export type DocumentRecordStatus = 'UNPAID' | 'PARTIALLY_PAID' | 'PAID' | 'DRAFT' | 'APPROVED' | 'SETTLED' | 'CANCELLED';
+
+export interface DocumentLinkedTransaction {
+  txId: string;
+  amount: number;
+  date?: string;
+  transferTitle?: string;
+  counterparty?: string;
+}
 
 export interface DocumentAttachmentItem {
   fileId?: string;
@@ -38,6 +46,7 @@ export class DocumentRecord extends Resource {
   invoiceNumber: string;
   ksefNumber?: string;
   issuedBy: string;
+  issuedByTaxId?: string;
   issuedOn: string; // ISO Date YYYY-MM-DD
   saleDate: string; // ISO Date YYYY-MM-DD
   paymentDeadline?: string;
@@ -51,6 +60,13 @@ export class DocumentRecord extends Resource {
   paymentOrigin: DocumentPaymentOrigin;
   /** Linked advance record ID if settled from an advance */
   advanceId?: string;
+  linkedAdvanceId?: string;
+  linkedAdvanceAmount?: number;
+
+  /** Multi-transaction allocations for partial/installment payments */
+  linkedTransactions: DocumentLinkedTransaction[];
+  paidAmount: number;
+  isPaid: boolean;
 
   /** Multi-code splits across budget lines, meetings, and sections */
   codeAllocations: DocumentCodeAllocation[];
@@ -78,6 +94,7 @@ export class DocumentRecord extends Resource {
     this.invoiceNumber = this.clean(x.invoiceNumber, String, '');
     this.ksefNumber = this.clean(x.ksefNumber, String, '');
     this.issuedBy = this.clean(x.issuedBy, String, '');
+    this.issuedByTaxId = this.clean(x.issuedByTaxId, String, '');
     this.issuedOn = this.clean(x.issuedOn, String, new Date().toISOString().substring(0, 10));
     this.saleDate = this.clean(x.saleDate, String, this.issuedOn);
     this.paymentDeadline = this.clean(x.paymentDeadline, String, '');
@@ -89,7 +106,35 @@ export class DocumentRecord extends Resource {
     this.netAmount = this.clean(x.netAmount, Number, Math.round((this.grossAmount - this.vatAmount) * 100) / 100);
 
     this.paymentOrigin = this.clean(x.paymentOrigin, String, 'TRANSACTIONS') as DocumentPaymentOrigin;
-    this.advanceId = this.clean(x.advanceId, String, '');
+    this.advanceId = this.clean(x.advanceId || x.linkedAdvanceId, String, '');
+    this.linkedAdvanceId = this.advanceId;
+    this.linkedAdvanceAmount = this.clean(x.linkedAdvanceAmount, Number, 0);
+
+    this.linkedTransactions = Array.isArray(x.linkedTransactions)
+      ? x.linkedTransactions.map((lt: any) => ({
+          txId: this.clean(lt.txId, String),
+          amount: this.clean(lt.amount, Number, 0),
+          date: this.clean(lt.date, String, ''),
+          transferTitle: this.clean(lt.transferTitle, String, ''),
+          counterparty: this.clean(lt.counterparty, String, '')
+        }))
+      : [];
+
+    const txPaidSum = this.linkedTransactions.reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
+    const advancePaid = this.linkedAdvanceId ? (this.linkedAdvanceAmount || this.grossAmount) : 0;
+    this.paidAmount = this.clean(x.paidAmount, Number, txPaidSum + advancePaid);
+
+    this.isPaid = (this.linkedTransactions.length > 0 || !!this.linkedAdvanceId) && (this.paidAmount >= this.grossAmount && this.grossAmount > 0);
+
+    if (x.status === 'CANCELLED' || x.status === 'DRAFT') {
+      this.status = x.status;
+    } else if (this.isPaid) {
+      this.status = 'PAID';
+    } else if (this.paidAmount > 0) {
+      this.status = 'PARTIALLY_PAID';
+    } else {
+      this.status = 'UNPAID';
+    }
 
     this.codeAllocations = Array.isArray(x.codeAllocations)
       ? x.codeAllocations.map((ca: any, idx: number) => {
@@ -100,6 +145,8 @@ export class DocumentRecord extends Resource {
               ? 'MEETING_CODE'
               : ca.linkedCodeType === 'SECTION_CODE'
               ? 'SECTION_CODE'
+              : ca.linkedCodeType === 'OUT_OF_BUDGET_CODE'
+              ? 'OUT_OF_BUDGET_CODE'
               : 'BUDGET_CODE') as LinkedCodeType,
             linkedCode: lCode,
             code: lCode,

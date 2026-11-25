@@ -1,0 +1,386 @@
+:host {
+  display: block;
+  width: 100%;
+}
+
+.codeSelectWrapper {
+  position: relative;
+  width: 100%;
+
+  &.disabled {
+    opacity: 0.6;
+    pointer-events: none;
+  }
+
+  .triggerBox {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 40px;
+    padding: 6px 12px;
+    background: var(--ion-card-background, #ffffff);
+    border: 1px solid var(--ion-color-step-200, #cbd5e1);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    &:hover {
+      border-color: var(--ion-color-primary, #00aeef);
+    }
+
+    .placeholderText {
+      color: var(--ion-color-step-400, #94a3b8);
+      font-size: 0.88rem;
+    }
+
+    .selectedBadge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      overflow: hidden;
+
+      .categoryChip {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        padding: 2px 7px;
+        border-radius: 6px;
+        flex-shrink: 0;
+
+        &.budget_line {
+          background: rgba(39, 174, 96, 0.12);
+          color: #27ae60;
+        }
+
+        &.section {
+          background: rgba(0, 174, 239, 0.12);
+          color: #00aeef;
+        }
+
+        &.sub_budget {
+          background: rgba(142, 68, 173, 0.12);
+          color: #8e44ad;
+        }
+
+        &.out_of_budget {
+          background: rgba(230, 126, 34, 0.12);
+          color: #d35400;
+        }
+      }
+
+      .codeText {
+        font-family: monospace;
+        font-weight: 700;
+        font-size: 0.88rem;
+        color: var(--ion-color-step-850, #1e293b);
+      }
+
+      .nameText {
+        font-size: 0.84rem;
+        color: var(--ion-color-step-600, #475569);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+    }
+
+    .triggerActions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-left: 8px;
+      flex-shrink: 0;
+
+      .loadingSpinner {
+        width: 18px;
+        height: 18px;
+      }
+
+      .clearBtn {
+        background: transparent;
+        border: none;
+        padding: 0;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        color: var(--ion-color-step-400, #94a3b8);
+        font-size: 1.1rem;
+
+        &:hover {
+          color: var(--ion-color-danger, #ef4444);
+        }
+      }
+
+      .chevronIcon {
+        color: var(--ion-color-step-500, #64748b);
+        font-size: 1rem;
+      }
+    }
+  }
+
+  &.isOpen .triggerBox {
+    border-color: var(--ion-color-primary, #00aeef);
+    box-shadow: 0 0 0 2px rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.15);
+  }
+
+  .dropdownOverlay {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    width: 100%;
+    min-width: 320px;
+    max-width: 550px;
+    background: var(--ion-card-background, #ffffff);
+    border: 1px solid var(--ion-color-step-200, #cbd5e1);
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+    z-index: 1000;
+    overflow: hidden;
+    animation: fadeInDown 0.15s ease-out;
+
+    .searchBarWrapper {
+      display: flex;
+      align-items: center;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--ion-color-step-150, #e2e8f0);
+      background: var(--ion-color-step-50, #f8fafc);
+      gap: 8px;
+
+      .searchIcon {
+        font-size: 1.15rem;
+        color: var(--ion-color-step-400, #94a3b8);
+      }
+
+      .searchInput {
+        flex: 1;
+        border: none;
+        outline: none;
+        background: transparent;
+        font-size: 0.88rem;
+        color: var(--ion-color-step-900, #0f172a);
+
+        &::placeholder {
+          color: var(--ion-color-step-400, #94a3b8);
+        }
+      }
+
+      .clearSearchBtn {
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        color: var(--ion-color-step-400, #94a3b8);
+        font-size: 1.05rem;
+        display: flex;
+        align-items: center;
+      }
+    }
+
+    .categoryChipsRibbon {
+      display: flex;
+      gap: 6px;
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--ion-color-step-150, #e2e8f0);
+      overflow-x: auto;
+      scrollbar-width: none;
+      &::-webkit-scrollbar { display: none; }
+
+      .chipBtn {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        border: 1px solid var(--ion-color-step-200, #cbd5e1);
+        background: var(--ion-card-background, #ffffff);
+        color: var(--ion-color-step-600, #475569);
+        border-radius: 16px;
+        padding: 4px 10px;
+        font-size: 0.76rem;
+        font-weight: 600;
+        white-space: nowrap;
+        cursor: pointer;
+        transition: all 0.15s ease;
+
+        ion-icon {
+          font-size: 0.85rem;
+        }
+
+        &:hover {
+          border-color: var(--ion-color-primary, #00aeef);
+          color: var(--ion-color-primary, #00aeef);
+        }
+
+        &.active {
+          background: var(--ion-color-primary, #00aeef);
+          border-color: var(--ion-color-primary, #00aeef);
+          color: #ffffff;
+        }
+      }
+    }
+
+    .optionsList {
+      max-height: 280px;
+      overflow-y: auto;
+      padding: 6px;
+
+      .optionItem {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 8px 12px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: background 0.12s ease;
+
+        &:hover {
+          background: var(--ion-color-step-100, #f1f5f9);
+        }
+
+        &.selected {
+          background: rgba(var(--ion-color-primary-rgb, 0, 174, 239), 0.1);
+        }
+
+        .optionBadge {
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          padding: 3px 8px;
+          border-radius: 6px;
+          font-family: monospace;
+          font-size: 0.8rem;
+          font-weight: 700;
+          white-space: nowrap;
+
+          &.budget_line {
+            background: rgba(39, 174, 96, 0.12);
+            color: #27ae60;
+          }
+
+          &.section {
+            background: rgba(0, 174, 239, 0.12);
+            color: #00aeef;
+          }
+
+          &.sub_budget {
+            background: rgba(142, 68, 173, 0.12);
+            color: #8e44ad;
+          }
+
+          &.out_of_budget {
+            background: rgba(230, 126, 34, 0.12);
+            color: #d35400;
+          }
+        }
+
+        .optionInfo {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          min-width: 0;
+
+          .optionName {
+            font-size: 0.86rem;
+            font-weight: 600;
+            color: var(--ion-color-step-850, #1e293b);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+
+          .optionSubtitle {
+            font-size: 0.74rem;
+            color: var(--ion-color-step-500, #64748b);
+            margin-top: 1px;
+          }
+        }
+
+        .selectedCheckIcon {
+          color: var(--ion-color-primary, #00aeef);
+          font-size: 1.15rem;
+          flex-shrink: 0;
+        }
+      }
+
+      .emptyList {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        padding: 24px 16px;
+        color: var(--ion-color-step-400, #94a3b8);
+        font-size: 0.85rem;
+
+        ion-icon {
+          font-size: 1.8rem;
+        }
+      }
+    }
+  }
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+body.dark {
+  .codeSelectWrapper {
+    .triggerBox {
+      background: #1e1e1e;
+      border-color: rgba(255, 255, 255, 0.15);
+
+      .selectedBadge {
+        .codeText { color: #f1f5f9; }
+        .nameText { color: #94a3b8; }
+      }
+    }
+
+    .dropdownOverlay {
+      background: #1e1e1e;
+      border-color: rgba(255, 255, 255, 0.15);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+
+      .searchBarWrapper {
+        background: #252525;
+        border-bottom-color: rgba(255, 255, 255, 0.1);
+
+        .searchInput { color: #f1f5f9; }
+      }
+
+      .categoryChipsRibbon {
+        border-bottom-color: rgba(255, 255, 255, 0.1);
+
+        .chipBtn {
+          background: #252525;
+          border-color: rgba(255, 255, 255, 0.15);
+          color: #94a3b8;
+
+          &.active {
+            background: var(--ion-color-primary, #00aeef);
+            color: #ffffff;
+          }
+        }
+      }
+
+      .optionsList {
+        .optionItem {
+          &:hover {
+            background: #252525;
+          }
+
+          .optionInfo {
+            .optionName { color: #f1f5f9; }
+            .optionSubtitle { color: #94a3b8; }
+          }
+        }
+      }
+    }
+  }
+}

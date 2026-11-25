@@ -1,0 +1,155 @@
+<div class="codeSelectWrapper" [class.disabled]="disabled" [class.isOpen]="isOpen">
+  <!-- Trigger Control -->
+  <div class="triggerBox" (click)="toggleOpen()">
+    <ng-container *ngIf="selectedOption; else placeholderTpl">
+      <div class="selectedBadge">
+        <span class="categoryChip" [class]="selectedOption.category.toLowerCase()">
+          <ion-icon [name]="selectedOption.icon || 'pricetag-outline'"></ion-icon>
+          <span class="catLabel">
+            {{
+              selectedOption.category === 'BUDGET_LINE' ? ('FINANCES.CODE_SELECT.CAT_BUDGET_LINE' | translate) :
+              selectedOption.category === 'SECTION' ? ('FINANCES.CODE_SELECT.CAT_SECTION' | translate) :
+              selectedOption.category === 'SUB_BUDGET' ? ('FINANCES.CODE_SELECT.CAT_SUB_BUDGET' | translate) :
+              ('FINANCES.CODE_SELECT.CAT_OUT_OF_BUDGET' | translate)
+            }}
+          </span>
+        </span>
+        <span class="codeText">{{ selectedOption.code }}</span>
+        <span class="nameText">— {{ selectedOption.name }}</span>
+      </div>
+    </ng-container>
+
+    <ng-template #placeholderTpl>
+      <span class="placeholderText">{{ placeholder || ('FINANCES.CODE_SELECT.DEFAULT_PLACEHOLDER' | translate) }}</span>
+    </ng-template>
+
+    <div class="triggerActions">
+      <ion-spinner *ngIf="loading" name="dots" class="loadingSpinner"></ion-spinner>
+      <button
+        type="button"
+        class="clearBtn"
+        *ngIf="value && allowClear && !disabled"
+        (click)="clearSelection($event)"
+        [title]="'FINANCES.CODE_SELECT.CLEAR' | translate"
+      >
+        <ion-icon name="close-circle"></ion-icon>
+      </button>
+      <ion-icon class="chevronIcon" [name]="isOpen ? 'chevron-up' : 'chevron-down'"></ion-icon>
+    </div>
+  </div>
+
+  <!-- Dropdown Popover Overlay -->
+  <div class="dropdownOverlay" *ngIf="isOpen">
+    <!-- Search Bar -->
+    <div class="searchBarWrapper">
+      <ion-icon name="search-outline" class="searchIcon"></ion-icon>
+      <input
+        type="text"
+        class="searchInput"
+        [placeholder]="'FINANCES.CODE_SELECT.SEARCH_PLACEHOLDER' | translate"
+        [(ngModel)]="searchQuery"
+        (click)="$event.stopPropagation()"
+        autofocus
+      />
+      <button
+        type="button"
+        class="clearSearchBtn"
+        *ngIf="searchQuery"
+        (click)="searchQuery = ''; $event.stopPropagation()"
+      >
+        <ion-icon name="close-circle-outline"></ion-icon>
+      </button>
+    </div>
+
+    <!-- Category Filter Chips -->
+    <div class="categoryChipsRibbon" (click)="$event.stopPropagation()">
+      <button
+        type="button"
+        class="chipBtn"
+        [class.active]="selectedCategory === 'ALL'"
+        (click)="selectedCategory = 'ALL'"
+      >
+        {{ 'FINANCES.CODE_SELECT.CAT_ALL' | translate }} ({{ getCategoryCount('ALL') }})
+      </button>
+
+      <button
+        type="button"
+        class="chipBtn budgetLineChip"
+        *ngIf="isCategoryAllowed('BUDGET_LINE')"
+        [class.active]="selectedCategory === 'BUDGET_LINE'"
+        (click)="selectedCategory = 'BUDGET_LINE'"
+      >
+        <ion-icon name="wallet-outline"></ion-icon>
+        {{ 'FINANCES.CODE_SELECT.CAT_BUDGET_LINE' | translate }} ({{ getCategoryCount('BUDGET_LINE') }})
+      </button>
+
+      <button
+        type="button"
+        class="chipBtn sectionChip"
+        *ngIf="isCategoryAllowed('SECTION')"
+        [class.active]="selectedCategory === 'SECTION'"
+        (click)="selectedCategory = 'SECTION'"
+      >
+        <ion-icon name="business-outline"></ion-icon>
+        {{ 'FINANCES.CODE_SELECT.CAT_SECTION' | translate }} ({{ getCategoryCount('SECTION') }})
+      </button>
+
+      <button
+        type="button"
+        class="chipBtn subBudgetChip"
+        *ngIf="isCategoryAllowed('SUB_BUDGET')"
+        [class.active]="selectedCategory === 'SUB_BUDGET'"
+        (click)="selectedCategory = 'SUB_BUDGET'"
+      >
+        <ion-icon name="people-outline"></ion-icon>
+        {{ 'FINANCES.CODE_SELECT.CAT_SUB_BUDGET' | translate }} ({{ getCategoryCount('SUB_BUDGET') }})
+      </button>
+
+      <button
+        type="button"
+        class="chipBtn oobChip"
+        *ngIf="isCategoryAllowed('OUT_OF_BUDGET')"
+        [class.active]="selectedCategory === 'OUT_OF_BUDGET'"
+        (click)="selectedCategory = 'OUT_OF_BUDGET'"
+      >
+        <ion-icon name="construct-outline"></ion-icon>
+        {{ 'FINANCES.CODE_SELECT.CAT_OUT_OF_BUDGET' | translate }} ({{ getCategoryCount('OUT_OF_BUDGET') }})
+      </button>
+    </div>
+
+    <!-- Results List -->
+    <div class="optionsList" (click)="$event.stopPropagation()">
+      <ng-container *ngIf="filteredOptions.length > 0; else noResultsTpl">
+        <div
+          *ngFor="let opt of filteredOptions"
+          class="optionItem"
+          [class.selected]="opt.code === value"
+          (click)="selectCode(opt)"
+        >
+          <div class="optionBadge" [class]="opt.category.toLowerCase()">
+            <ion-icon [name]="opt.icon || 'pricetag-outline'"></ion-icon>
+            <span>{{ opt.code }}</span>
+          </div>
+
+          <div class="optionInfo">
+            <span class="optionName">{{ opt.name }}</span>
+            <span class="optionSubtitle" *ngIf="opt.subtitle">{{ opt.subtitle }}</span>
+          </div>
+
+          <ion-icon
+            *ngIf="opt.code === value"
+            name="checkmark-circle"
+            class="selectedCheckIcon"
+          ></ion-icon>
+        </div>
+      </ng-container>
+
+      <ng-template #noResultsTpl>
+        <div class="emptyList">
+          <ion-icon name="search"></ion-icon>
+          <span>{{ 'FINANCES.CODE_SELECT.NO_RESULTS' | translate }}</span>
+        </div>
+      </ng-template>
+    </div>
+  </div>
+</div>

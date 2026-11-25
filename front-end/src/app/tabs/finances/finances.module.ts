@@ -16,6 +16,8 @@ import { BudgetCategoryModalComponent } from './modals/budget-category-modal/bud
 import { BudgetGroupModalComponent } from './modals/budget-group-modal/budget-group-modal.component';
 import { CsvImportModalComponent } from './modals/csv-import-modal/csv-import-modal.component';
 import { BudgetHistoryModalComponent } from './modals/budget-history-modal/budget-history-modal.component';
+import { DocumentEditModalComponent } from './modals/document-edit-modal/document-edit-modal.component';
+import { TransactionOptionsModalComponent } from './modals/transaction-options-modal/transaction-options-modal.component';
 
 // Subtabs
 import { SummarySubtabComponent } from './subtabs/summary/summary-subtab.component';
@@ -24,11 +26,14 @@ import { DocumentsSubtabComponent } from './subtabs/documents/documents-subtab.c
 import { FiscalSubtabComponent } from './subtabs/fiscal/fiscal-subtab.component';
 import { TransactionsSubtabComponent } from './subtabs/transactions/transactions-subtab.component';
 import { SectionsSubtabComponent } from './subtabs/sections/sections-subtab.component';
-import { MeetingsSubtabComponent } from './subtabs/meetings/meetings-subtab.component';
+import { SubBudgetsSubtabComponent } from './subtabs/sub-budgets/sub-budgets-subtab.component';
 import { AdvancesSubtabComponent } from './subtabs/advances/advances-subtab.component';
 import { DelegationsSubtabComponent } from './subtabs/delegations/delegations-subtab.component';
 import { TransfersSubtabComponent } from './subtabs/transfers/transfers-subtab.component';
 import { DepositsSubtabComponent } from './subtabs/deposits/deposits-subtab.component';
+
+// Components
+import { CodeSelectComponent } from './components/code-select/code-select.component';
 
 // Pipes
 import { FinanceNumberPipe } from './pipes/finance-number.pipe';
@@ -44,20 +49,24 @@ import { AppDatePipe } from '../../pipes/app-date.pipe';
     BudgetGroupModalComponent,
     CsvImportModalComponent,
     BudgetHistoryModalComponent,
+    DocumentEditModalComponent,
+    TransactionOptionsModalComponent,
     SummarySubtabComponent,
     BudgetSubtabComponent,
     DocumentsSubtabComponent,
     FiscalSubtabComponent,
     TransactionsSubtabComponent,
     SectionsSubtabComponent,
-    MeetingsSubtabComponent,
+    SubBudgetsSubtabComponent,
     AdvancesSubtabComponent,
     DelegationsSubtabComponent,
     TransfersSubtabComponent,
     DepositsSubtabComponent,
+    CodeSelectComponent,
     FinanceNumberPipe
   ],
   exports: [
+    CodeSelectComponent,
     FinanceNumberPipe,
     AppDatePipe
   ],
