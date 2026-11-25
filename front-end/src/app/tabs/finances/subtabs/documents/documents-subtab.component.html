@@ -94,11 +94,11 @@
                     <button
                       type="button"
                       class="codeBadgeBtn"
-                      (click)="jumpToBudgetLine(a.code)"
-                      [title]="'FINANCES.DOCUMENTS.JUMP_BUDGET_TITLE' | translate:{ code: a.code }"
+                      (click)="jumpToBudgetLine(a.code || a.linkedCode)"
+                      [title]="'FINANCES.DOCUMENTS.JUMP_BUDGET_TITLE' | translate:{ code: a.code || a.linkedCode }"
                     >
                       <ion-icon name="trending-up-outline"></ion-icon>
-                      {{ a.code }}
+                      {{ a.code || a.linkedCode }}
                     </button>
                     <span class="allocAmount">{{ (a.allocatedGrossAmount || a.amount || 0) | financeNumber:{ currency: doc.currency } }}</span>
                   </div>

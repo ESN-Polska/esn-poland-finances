@@ -2367,7 +2367,8 @@ body.dark {
 
       .ubMetricHeader {
         display: flex;
-        align-items: flex-start;
+        justify-content: space-between;
+        align-items: center;
         gap: 6px;
 
         .ubMetricLabel {
@@ -2377,25 +2378,30 @@ body.dark {
           letter-spacing: 0.04em;
           color: var(--ion-color-step-500, #64748b);
           line-height: 1.2;
-          padding-right: 48px;
         }
 
-        .ubItemCount {
-          position: absolute;
-          top: 12px;
-          right: 16px;
-          font-size: 0.78rem;
-          color: var(--ion-color-step-400, #94a3b8);
-          font-weight: 500;
-          line-height: 1.2;
-          white-space: nowrap;
+        ion-icon {
+          font-size: 1.15rem;
+          opacity: 0.7;
         }
+      }
+
+      .ubItemCount {
+        position: absolute;
+        bottom: 12px;
+        right: 16px;
+        font-size: 0.78rem;
+        color: var(--ion-color-step-400, #94a3b8);
+        font-weight: 500;
+        line-height: 1.2;
+        white-space: nowrap;
       }
 
       .ubMetricValue {
         font-size: 1.25rem;
         font-weight: 700;
         font-feature-settings: 'tnum';
+        padding-right: 36px;
 
         &.revVal {
           color: #16a34a;
@@ -2405,14 +2411,14 @@ body.dark {
         }
       }
 
-      &.revCard {
-        border-left: 3px solid #16a34a;
+      &.revCard .ubMetricHeader ion-icon {
+        color: #27ae60;
       }
-      &.expCard {
-        border-left: 3px solid #dc2626;
+      &.expCard .ubMetricHeader ion-icon {
+        color: #e74c3c;
       }
-      &.netCard {
-        border-left: 3px solid var(--ion-color-primary, #00aeef);
+      &.netCard .ubMetricHeader ion-icon {
+        color: #2980b9;
       }
     }
   }
@@ -2614,9 +2620,9 @@ body.dark {
           .ubMetricLabel {
             color: #94a3b8;
           }
-          .ubItemCount {
-            color: #64748b;
-          }
+        }
+        .ubItemCount {
+          color: #64748b;
         }
 
         .ubMetricValue {

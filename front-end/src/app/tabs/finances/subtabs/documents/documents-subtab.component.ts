@@ -123,11 +123,14 @@ export class DocumentsSubtabComponent implements OnInit, OnDestroy {
         d.ksefNumber?.toLowerCase().includes(q) ||
         d.issuedBy?.toLowerCase().includes(q) ||
         d.notes?.toLowerCase().includes(q) ||
-        d.codeAllocations?.some((a) => a.code?.toLowerCase().includes(q) || a.description?.toLowerCase().includes(q))
+        d.codeAllocations?.some(
+          (a) => (a.code || a.linkedCode)?.toLowerCase().includes(q) || a.description?.toLowerCase().includes(q)
+        )
     );
   }
 
   jumpToBudgetLine(code: string): void {
+    if (!code) return;
     this.navService.jumpToBudgetLine(code, this.stateService.activeYear);
   }
 

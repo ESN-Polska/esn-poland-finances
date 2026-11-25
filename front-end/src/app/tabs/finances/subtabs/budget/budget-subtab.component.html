@@ -844,28 +844,31 @@
         <div class="ubMetricCard revCard">
           <div class="ubMetricHeader">
             <span class="ubMetricLabel">{{ 'FINANCES.BUDGET.UNBUDGETED_REVENUES' | translate }}</span>
-            <span class="ubItemCount" *ngIf="unbudgetedRevenues.length > 0">({{ unbudgetedRevenues.length }})</span>
+            <ion-icon name="trending-up-outline"></ion-icon>
           </div>
           <div class="ubMetricValue revVal">
             {{ unbudgetedRevenueTotalPln | financeNumber:{ currency: 'PLN' } }}
           </div>
+          <span class="ubItemCount" *ngIf="unbudgetedRevenues.length > 0">({{ unbudgetedRevenues.length }})</span>
         </div>
 
         <!-- Expenses -->
         <div class="ubMetricCard expCard">
           <div class="ubMetricHeader">
             <span class="ubMetricLabel">{{ 'FINANCES.BUDGET.UNBUDGETED_EXPENSES' | translate }}</span>
-            <span class="ubItemCount" *ngIf="unbudgetedExpenses.length > 0">({{ unbudgetedExpenses.length }})</span>
+            <ion-icon name="trending-down-outline"></ion-icon>
           </div>
           <div class="ubMetricValue expVal">
             {{ unbudgetedExpenseTotalPln | financeNumber:{ currency: 'PLN' } }}
           </div>
+          <span class="ubItemCount" *ngIf="unbudgetedExpenses.length > 0">({{ unbudgetedExpenses.length }})</span>
         </div>
 
         <!-- Net result -->
         <div class="ubMetricCard netCard">
           <div class="ubMetricHeader">
             <span class="ubMetricLabel">{{ 'FINANCES.BUDGET.KPI_NET' | translate }}</span>
+            <ion-icon name="calculator-outline"></ion-icon>
           </div>
           <div
             class="ubMetricValue"
