@@ -431,7 +431,7 @@
             placeholder="0.00 EUR"
           ></ion-input>
           <span class="ratePreview" *ngIf="editingOpeningBalances.eurExchangeRate">
-            = {{ editingOpeningBalances.bankEurInPln | number:'1.2-2' }} PLN ({{ 'FINANCES.BUDGET.NBP_RATE_PREFIX' | translate }}: <a [href]="'https://api.nbp.pl/api/exchangerates/rates/A/EUR/' + editingOpeningBalances.eurExchangeDate + '/'" target="_blank" rel="noopener noreferrer" class="nbpLink">{{ editingOpeningBalances.eurExchangeRate }}</a> {{ 'FINANCES.BUDGET.NBP_DATE_PREFIX' | translate:{ date: formatDate(editingOpeningBalances.eurExchangeDate) } }})
+            = {{ editingOpeningBalances.bankEurInPln | financeNumber:{ currency: 'PLN' } }} ({{ 'FINANCES.BUDGET.NBP_RATE_PREFIX' | translate }}: <a [href]="'https://api.nbp.pl/api/exchangerates/rates/A/EUR/' + editingOpeningBalances.eurExchangeDate + '/'" target="_blank" rel="noopener noreferrer" class="nbpLink">{{ editingOpeningBalances.eurExchangeRate }}</a> {{ 'FINANCES.BUDGET.NBP_DATE_PREFIX' | translate:{ date: formatDate(editingOpeningBalances.eurExchangeDate) } }})
           </span>
           <span class="rateLoading" *ngIf="isLoadingNbpRate">
             <ion-spinner name="dots"></ion-spinner> {{ 'FINANCES.BUDGET.FETCHING_NBP_RATE' | translate }}

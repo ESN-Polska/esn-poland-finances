@@ -177,7 +177,7 @@
                     [placeholder]="'FINANCES.MODALS.AMENDMENT.LINE_PH' | translate"
                   >
                     <ion-select-option *ngFor="let opt of allLines" [value]="opt.code">
-                      {{ opt.name }} (Plan: {{ opt.currentAmount | number:'1.2-2' }} PLN)
+                      {{ opt.name }} (Plan: {{ opt.currentAmount | financeNumber:{ currency: 'PLN' } }})
                     </ion-select-option>
                   </ion-select>
                 </ion-item>

@@ -9,7 +9,7 @@
     <div class="depositsRibbon">
       <div class="ribbonCol">
         <span class="lbl">{{ 'FINANCES.DEPOSITS.TOTAL_PRINCIPAL' | translate }}</span>
-        <span class="val">{{ totalPrincipal | number:'1.2-2' }} PLN</span>
+        <span class="val">{{ totalPrincipal | financeNumber:{ currency: 'PLN' } }}</span>
       </div>
       <div class="ribbonCol">
         <span class="lbl">{{ 'FINANCES.DEPOSITS.ACCRUED_INTEREST' | translate }}</span>
@@ -42,7 +42,7 @@
               <td style="font-weight: 700">{{ d.name }}</td>
               <td>{{ d.startDate | appDate }} - {{ d.maturityDate | appDate }}</td>
               <td style="text-align: right; font-weight: 600">{{ d.interestRate }}%</td>
-              <td style="text-align: right; font-weight: 800">{{ d.principalAmount | number:'1.2-2' }} PLN</td>
+              <td style="text-align: right; font-weight: 800">{{ d.principalAmount | financeNumber:{ currency: 'PLN' } }}</td>
               <td style="text-align: right; color: #27ae60; font-weight: 700">{{ d.accruedInterest | financeNumber:{ currency: 'PLN', forceSign: true } }}</td>
               <td>
                 <span class="depBadge" [class]="d.status.toLowerCase()">

@@ -28,13 +28,13 @@
                 <span class="dest">{{ del.destination }}</span>
                 <span class="purp" *ngIf="del.purpose">({{ del.purpose }})</span>
               </td>
-              <td style="text-align: right; font-weight: 700">{{ del.totalAmount | number:'1.2-2' }} PLN</td>
+              <td style="text-align: right; font-weight: 700">{{ del.totalAmount | financeNumber:{ currency: 'PLN' } }}</td>
               <td style="text-align: right">
-                {{ del.travelCost | number:'1.2-2' }} PLN
+                {{ del.travelCost | financeNumber:{ currency: 'PLN' } }}
                 <span class="codeSmall" *ngIf="del.travelBudgetCode">[{{ del.travelBudgetCode }}]</span>
               </td>
               <td style="text-align: right">
-                {{ del.diemAmount | number:'1.2-2' }} PLN
+                {{ del.diemAmount | financeNumber:{ currency: 'PLN' } }}
                 <span class="codeSmall" *ngIf="del.diemBudgetCode">[{{ del.diemBudgetCode }}]</span>
               </td>
               <td>

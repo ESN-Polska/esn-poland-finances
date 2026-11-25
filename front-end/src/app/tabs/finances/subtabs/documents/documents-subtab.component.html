@@ -100,19 +100,19 @@
                       <ion-icon name="trending-up-outline"></ion-icon>
                       {{ a.code }}
                     </button>
-                    <span class="allocAmount">{{ (a.allocatedGrossAmount || a.amount || 0) | number:'1.2-2' }} {{ doc.currency }}</span>
+                    <span class="allocAmount">{{ (a.allocatedGrossAmount || a.amount || 0) | financeNumber:{ currency: doc.currency } }}</span>
                   </div>
                 </div>
               </td>
 
               <!-- Net -->
-              <td class="colAmount netAmount">{{ doc.netAmount | number:'1.2-2' }} {{ doc.currency }}</td>
+              <td class="colAmount netAmount">{{ doc.netAmount | financeNumber:{ currency: doc.currency } }}</td>
 
               <!-- VAT -->
-              <td class="colAmount">{{ doc.vatAmount | number:'1.2-2' }} {{ doc.currency }}</td>
+              <td class="colAmount">{{ doc.vatAmount | financeNumber:{ currency: doc.currency } }}</td>
 
               <!-- Gross -->
-              <td class="colAmount grossAmount">{{ doc.grossAmount | number:'1.2-2' }} {{ doc.currency }}</td>
+              <td class="colAmount grossAmount">{{ doc.grossAmount | financeNumber:{ currency: doc.currency } }}</td>
 
               <!-- Origin & Advance link -->
               <td class="colOrigin">

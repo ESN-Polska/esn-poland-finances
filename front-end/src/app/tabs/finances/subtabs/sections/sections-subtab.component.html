@@ -14,7 +14,7 @@
       </div>
       <div class="totalHeldBadge">
         <span>{{ 'FINANCES.SECTIONS.TOTAL_HELD' | translate }}</span>
-        <strong>{{ totalTrustHeld | number:'1.2-2' }} PLN</strong>
+        <strong>{{ totalTrustHeld | financeNumber:{ currency: 'PLN' } }}</strong>
       </div>
     </div>
 
@@ -36,10 +36,10 @@
             <tr *ngFor="let s of filteredSections">
               <td style="font-weight: 700; font-family: monospace">{{ s.sectionCode }}</td>
               <td style="font-weight: 600">{{ s.sectionName }}</td>
-              <td style="text-align: right">{{ s.startingBalance | number:'1.2-2' }} PLN</td>
-              <td style="text-align: right; color: #27ae60">{{ s.inflows | number:'1.2-2' }} PLN</td>
-              <td style="text-align: right; color: #c0392b">{{ s.outflows | number:'1.2-2' }} PLN</td>
-              <td style="text-align: right; font-weight: 800; font-size: 1rem">{{ s.currentBalance | number:'1.2-2' }} PLN</td>
+              <td style="text-align: right">{{ s.startingBalance | financeNumber:{ currency: 'PLN' } }}</td>
+              <td style="text-align: right; color: #27ae60">{{ s.inflows | financeNumber:{ currency: 'PLN' } }}</td>
+              <td style="text-align: right; color: #c0392b">{{ s.outflows | financeNumber:{ currency: 'PLN' } }}</td>
+              <td style="text-align: right; font-weight: 800; font-size: 1rem">{{ s.currentBalance | financeNumber:{ currency: 'PLN' } }}</td>
             </tr>
           </tbody>
         </table>

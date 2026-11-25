@@ -16,7 +16,7 @@
           (click)="selectMonth(rep)"
         >
           <span class="mName">{{ rep.monthName }}</span>
-          <span class="mTotal">{{ rep.grossTotal | number:'1.0-0' }} PLN</span>
+          <span class="mTotal">{{ rep.grossTotal | financeNumber:{ currency: 'PLN', minDecimals: 0, maxDecimals: 0 } }}</span>
         </button>
       </div>
     </div>
@@ -40,15 +40,15 @@
       <div class="totalsRow">
         <div class="totalCol">
           <span class="lbl">{{ 'FINANCES.FISCAL.GROSS_SALES' | translate }}</span>
-          <span class="val">{{ selectedMonthReport.grossTotal | number:'1.2-2' }} PLN</span>
+          <span class="val">{{ selectedMonthReport.grossTotal | financeNumber:{ currency: 'PLN' } }}</span>
         </div>
         <div class="totalCol">
           <span class="lbl">{{ 'FINANCES.FISCAL.VAT_TAX' | translate }}</span>
-          <span class="val">{{ selectedMonthReport.vatTotal | number:'1.2-2' }} PLN</span>
+          <span class="val">{{ selectedMonthReport.vatTotal | financeNumber:{ currency: 'PLN' } }}</span>
         </div>
         <div class="totalCol">
           <span class="lbl">{{ 'FINANCES.FISCAL.NET_SALES' | translate }}</span>
-          <span class="val">{{ selectedMonthReport.netTotal | number:'1.2-2' }} PLN</span>
+          <span class="val">{{ selectedMonthReport.netTotal | financeNumber:{ currency: 'PLN' } }}</span>
         </div>
       </div>
 
@@ -70,9 +70,9 @@
               <td style="font-weight: 700">{{ d.reportNumber }}</td>
               <td>{{ d.saleDate | appDate }}</td>
               <td>{{ d.printDate | appDate }}</td>
-              <td style="text-align: right; font-weight: 700">{{ d.grossAmount | number:'1.2-2' }}</td>
-              <td style="text-align: right">{{ d.vatAmount | number:'1.2-2' }}</td>
-              <td style="text-align: right">{{ d.netAmount | number:'1.2-2' }}</td>
+              <td style="text-align: right; font-weight: 700">{{ d.grossAmount | financeNumber }}</td>
+              <td style="text-align: right">{{ d.vatAmount | financeNumber }}</td>
+              <td style="text-align: right">{{ d.netAmount | financeNumber }}</td>
             </tr>
           </tbody>
         </table>

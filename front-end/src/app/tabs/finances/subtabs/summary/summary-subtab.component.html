@@ -114,44 +114,44 @@
 
               <!-- PLN Account Columns: Wpływy, Wydatki, Bilans, Przewidywane, Rzeczywiste -->
               <td class="colNum">
-                {{ m.plnInflows | number:'1.2-2' }}
+                {{ m.plnInflows | financeNumber }}
               </td>
               <td class="colNum">
-                {{ m.plnOutflows | number:'1.2-2' }}
+                {{ m.plnOutflows | financeNumber }}
               </td>
               <td class="colNum netCell" [class.negative]="m.plnNetBalance < 0" [class.positive]="m.plnNetBalance > 0">
                 {{ m.plnNetBalance | financeNumber:{ forceSign: true } }}
               </td>
               <td class="colNum expectedCell">
-                {{ m.plnExpectedClosing | number:'1.2-2' }}
+                {{ m.plnExpectedClosing | financeNumber }}
               </td>
               <td
                 class="colNum actualCell"
                 [class.hasDiff]="m.plnStatus === 'DISCREPANCY'"
                 [class.isMatched]="m.plnStatus === 'MATCHED'"
               >
-                {{ m.plnActualClosing !== undefined ? (m.plnActualClosing | number:'1.2-2') : '-' }}
+                {{ m.plnActualClosing !== undefined ? (m.plnActualClosing | financeNumber) : '-' }}
               </td>
 
               <!-- EUR Account Columns: Wpływy, Wydatki, Bilans, Przewidywane, Rzeczywiste -->
               <td class="colNum">
-                {{ m.eurInflows | number:'1.2-2' }}
+                {{ m.eurInflows | financeNumber }}
               </td>
               <td class="colNum">
-                {{ m.eurOutflows | number:'1.2-2' }}
+                {{ m.eurOutflows | financeNumber }}
               </td>
               <td class="colNum netCell" [class.negative]="m.eurNetBalance < 0" [class.positive]="m.eurNetBalance > 0">
                 {{ m.eurNetBalance | financeNumber:{ forceSign: true } }}
               </td>
               <td class="colNum expectedCell">
-                {{ m.eurExpectedClosing | number:'1.2-2' }}
+                {{ m.eurExpectedClosing | financeNumber }}
               </td>
               <td
                 class="colNum actualCell"
                 [class.hasDiff]="m.eurStatus === 'DISCREPANCY'"
                 [class.isMatched]="m.eurStatus === 'MATCHED'"
               >
-                {{ m.eurActualClosing !== undefined ? (m.eurActualClosing | number:'1.2-2') : '-' }}
+                {{ m.eurActualClosing !== undefined ? (m.eurActualClosing | financeNumber) : '-' }}
               </td>
 
               <!-- Notes -->

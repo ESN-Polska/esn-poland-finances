@@ -4,6 +4,7 @@ import { TranslateService } from '@ngx-translate/core';
 import { AnnualBudget, BudgetVersionSnapshot, BudgetAmendment } from '@models/annual-budget.model';
 import { DateFormatOption, DEFAULT_DATE_FORMAT } from '@models/configurations.model';
 import { formatDateOption } from '../../../../utils/date-utils';
+import { formatFinanceAmount } from '../../../../utils/number-utils';
 import {
   generateBudgetCsvContent,
   generateBudgetHtmlReport,
@@ -89,25 +90,17 @@ export class BudgetHistoryModalComponent implements OnInit {
   getDeltaTitle(snap: BudgetVersionSnapshot, kind: 'revenue' | 'expense' | 'net'): string {
     const am = this.getAmendmentForSnapshot(snap);
     if (!am) return '';
+    const numFormat = this.app.configurations?.financesConfig?.numberDisplayFormat || 'STANDARD';
     if (kind === 'revenue' && am.totalRevenueDelta) {
-      const formatted =
-        (am.totalRevenueDelta > 0 ? '+' : '') +
-        am.totalRevenueDelta.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) +
-        ' PLN';
+      const formatted = formatFinanceAmount(am.totalRevenueDelta, numFormat, { currency: 'PLN', forceSign: true });
       return `${this.translate.instant('FINANCES.BUDGET.REVENUE_DELTA')}: ${formatted}`;
     }
     if (kind === 'expense' && am.totalExpenseDelta) {
-      const formatted =
-        (am.totalExpenseDelta > 0 ? '+' : '') +
-        am.totalExpenseDelta.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) +
-        ' PLN';
+      const formatted = formatFinanceAmount(am.totalExpenseDelta, numFormat, { currency: 'PLN', forceSign: true });
       return `${this.translate.instant('FINANCES.BUDGET.EXPENSE_DELTA')}: ${formatted}`;
     }
     if (kind === 'net' && am.netBudgetDelta) {
-      const formatted =
-        (am.netBudgetDelta > 0 ? '+' : '') +
-        am.netBudgetDelta.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) +
-        ' PLN';
+      const formatted = formatFinanceAmount(am.netBudgetDelta, numFormat, { currency: 'PLN', forceSign: true });
       return `${this.translate.instant('FINANCES.BUDGET.NET_DELTA')}: ${formatted}`;
     }
     return '';

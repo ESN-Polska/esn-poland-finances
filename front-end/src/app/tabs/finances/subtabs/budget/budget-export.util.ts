@@ -321,10 +321,7 @@ export function generateBudgetCsvContent(
   const lines: string[] = [];
 
   const formatVar = (val: number | undefined | null) => {
-    if (numberDisplayFormat === 'ACCOUNTING') {
-      return formatFinanceAmount(val || 0, 'ACCOUNTING', { locale: lang === 'en' ? 'en' : 'pl' });
-    }
-    return formatNumber(val);
+    return formatFinanceAmount(val || 0, numberDisplayFormat, { forceSign: true, locale: isEn ? 'en' : 'pl' });
   };
 
   const prefix = '\uFEFF'; // UTF-8 BOM for Microsoft Excel
@@ -2016,12 +2013,7 @@ export function generateAmendmentDraftCsvContent(
   };
 
   const formatVar = (num?: number): string => {
-    if (numberDisplayFormat === 'ACCOUNTING') {
-      return `"${formatFinanceAmount(num || 0, 'ACCOUNTING', { locale: isEn ? 'en' : 'pl' })}"`;
-    }
-    const n = num ?? 0;
-    const sign = n > 0 ? '+' : '';
-    return `"${sign}${n.toFixed(2).replace('.', ',')}"`;
+    return `"${formatFinanceAmount(num || 0, numberDisplayFormat, { forceSign: true, locale: isEn ? 'en' : 'pl' })}"`;
   };
 
   const getChangeTypeLabel = (type?: string): string => {
