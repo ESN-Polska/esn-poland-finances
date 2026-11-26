@@ -814,14 +814,8 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
 
   get outOfBudgetCodes(): OutOfBudgetCode[] {
     if (!this.budget) return [];
-    if (!this.budget.outOfBudgetCodes || this.budget.outOfBudgetCodes.length === 0) {
-      this.budget.outOfBudgetCodes = [
-        { code: 'delegacje-techniczne', name: 'Wypłata delegacji (konto techniczne)', description: 'Rozliczenia techniczne wypłat delegacji', isActive: true },
-        { code: 'vat', name: 'Rozliczenia podatku VAT', description: 'Naliczenia i zwroty VAT', isActive: true },
-        { code: 'przekaz-srodkow', name: 'Przekaz środków', description: 'Zasilenia kont i transfery techniczne', isActive: true },
-        { code: 'zwrot-nadplaty', name: 'Zwrot nadpłaty', description: 'Zwroty błędnych wpłat i nadpłat', isActive: true },
-        { code: 'inne', name: 'Inne przepływy pozabudżetowe', description: 'Pozostałe operacje poza budżetem', isActive: true }
-      ];
+    if (!this.budget.outOfBudgetCodes) {
+      this.budget.outOfBudgetCodes = [];
     }
     return this.budget.outOfBudgetCodes;
   }

@@ -279,17 +279,14 @@
     }
 
     &.revenueCard {
-      border-left: 4px solid #27ae60;
       .kpiHeader ion-icon { color: #27ae60; }
     }
 
     &.expensesCard {
-      border-left: 4px solid #e74c3c;
       .kpiHeader ion-icon { color: #e74c3c; }
     }
 
     &.resultCard {
-      border-left: 4px solid #2980b9;
       .kpiHeader ion-icon { color: #2980b9; }
 
       .kpiValue.positive { color: #27ae60; }
@@ -297,7 +294,6 @@
     }
 
     &.cashCard {
-      border-left: 4px solid #8e44ad;
       .kpiHeader ion-icon { color: #8e44ad; }
     }
   }
@@ -2787,6 +2783,14 @@ body.dark {
 
             &.inactiveRow {
               opacity: 0.55;
+            }
+
+            .emptyOobCell {
+              text-align: center;
+              padding: 24px 16px;
+              color: var(--ion-color-step-500, #64748b);
+              font-style: italic;
+              font-size: 0.85rem;
             }
 
             td {

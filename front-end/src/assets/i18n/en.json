@@ -52,7 +52,9 @@
     "ACTIONS": "Actions",
     "SUBMIT": "Submit",
     "MANAGE": "Manage",
-    "WARNING": "Warning"
+    "WARNING": "Warning",
+    "SHOW": "Show",
+    "HIDE": "Hide"
   },
   "AUTH": {
     "LOGIN_BUTTON": "Sign in with ESN Accounts",
@@ -1262,10 +1264,8 @@
       "SHOW_UNBUDGETED_TRANSACTIONS": "Show transactions list",
       "HIDE_UNBUDGETED_TRANSACTIONS": "Hide transactions list",
       "VIEW_IN_TRANSACTIONS": "View in transactions",
-      "SYSTEM_MAPPINGS_AND_OOB_TITLE": "Technical & Out-of-Budget Codes & System Mappings",
+      "SYSTEM_MAPPINGS_AND_OOB_TITLE": "Additional Settings",
       "SYSTEM_MAPPINGS_AND_OOB_DESC": "Configuration of out-of-budget settlement codes and budget line mappings for diems and term deposits interest",
-      "SHOW_SYSTEM_MAPPINGS": "Show codes & mappings configuration",
-      "HIDE_SYSTEM_MAPPINGS": "Hide codes & mappings configuration",
       "MAPPINGS_SUBSECTION_TITLE": "Annual System Mappings",
       "MAPPINGS_SUBSECTION_DESC": "Specify which budget lines will receive delegation diems costs and interest revenues from term deposit capitalizations.",
       "DIEMS_BUDGET_LINE_LABEL": "Budget line for delegation diems",
@@ -1276,6 +1276,7 @@
       "OOB_CODES_SUBSECTION_TITLE": "Technical & Out-of-Budget Codes",
       "OOB_CODES_SUBSECTION_DESC": "Codes used for VAT settlements, delegation payouts, or technical transfers that do not affect statutory budget execution.",
       "ADD_OOB_CODE_BTN": "Add out-of-budget code",
+      "NO_OOB_CODES": "No out-of-budget codes defined. Use the button above to add a custom code (e.g. VAT).",
       "OOB_COL_CODE": "Code",
       "OOB_COL_NAME": "Name",
       "OOB_COL_DESC": "Description / Purpose",

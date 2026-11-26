@@ -99,19 +99,6 @@
             </ion-button>
 
             <ion-button
-              *ngIf="canEdit"
-              size="small"
-              fill="outline"
-              color="medium"
-              class="actionBtn editBtn"
-              (click)="editSnapshot(snap)"
-              [title]="(snap.type === 'INITIAL_ADOPTION' ? 'FINANCES.BUDGET.EDIT_INITIAL_ADOPTION_TITLE' : 'FINANCES.BUDGET.EDIT_AMENDMENT_TITLE') | translate"
-            >
-              <ion-icon slot="start" name="create-outline"></ion-icon>
-              {{ 'COMMON.EDIT' | translate }}
-            </ion-button>
-
-            <ion-button
               size="small"
               fill="outline"
               color="medium"

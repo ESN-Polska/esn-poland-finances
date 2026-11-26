@@ -52,7 +52,9 @@
     "ACTIONS": "Akcje",
     "SUBMIT": "Złóż",
     "MANAGE": "Zarządzaj",
-    "WARNING": "Ostrzeżenie"
+    "WARNING": "Ostrzeżenie",
+    "SHOW": "Pokaż",
+    "HIDE": "Ukryj"
   },
   "AUTH": {
     "LOGIN_BUTTON": "Zaloguj się przez ESN Accounts",
@@ -1262,10 +1264,8 @@
       "SHOW_UNBUDGETED_TRANSACTIONS": "Pokaż listę transakcji",
       "HIDE_UNBUDGETED_TRANSACTIONS": "Ukryj listę transakcji",
       "VIEW_IN_TRANSACTIONS": "Pokaż w transakcjach",
-      "SYSTEM_MAPPINGS_AND_OOB_TITLE": "Kody techniczne i pozabudżetowe oraz mapowania systemowe",
+      "SYSTEM_MAPPINGS_AND_OOB_TITLE": "Ustawienia dodatkowe",
       "SYSTEM_MAPPINGS_AND_OOB_DESC": "Konfiguracja kodów rozliczeń poza budżetem uchwalonym oraz powiązania linii budżetowych dla diet i kapitalizacji odsetek",
-      "SHOW_SYSTEM_MAPPINGS": "Pokaż konfigurację kodów i mapowań",
-      "HIDE_SYSTEM_MAPPINGS": "Ukryj konfigurację kodów i mapowań",
       "MAPPINGS_SUBSECTION_TITLE": "Roczne mapowania systemowe",
       "MAPPINGS_SUBSECTION_DESC": "Wskaż, do których linii budżetowych w tym roku mają trafiać koszty diet z delegacji oraz przychody z kapitalizacji odsetek lokat terminowych.",
       "DIEMS_BUDGET_LINE_LABEL": "Linia budżetowa dla diet z delegacji",
@@ -1276,6 +1276,7 @@
       "OOB_CODES_SUBSECTION_TITLE": "Kody techniczne i pozabudżetowe",
       "OOB_CODES_SUBSECTION_DESC": "Kody wykorzystywane m.in. do rozliczeń VAT, wypłat delegacji czy transferów technicznych, niewpływające na wykonanie budżetu statutowego.",
       "ADD_OOB_CODE_BTN": "Dodaj kod pozabudżetowy",
+      "NO_OOB_CODES": "Brak zdefiniowanych kodów pozabudżetowych. Użyj przycisku powyżej, aby dodać własny kod (np. VAT).",
       "OOB_COL_CODE": "Kod",
       "OOB_COL_NAME": "Nazwa",
       "OOB_COL_DESC": "Opis / Przeznaczenie",

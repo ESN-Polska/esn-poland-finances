@@ -153,13 +153,7 @@ export class CodeSelectComponent implements OnInit, OnDestroy, OnChanges, Contro
         }
 
         // 2. Out of budget codes
-        const oobList = budget.outOfBudgetCodes || [
-          { code: 'delegacje-techniczne', name: 'Wypłata delegacji (konto techniczne)', isActive: true },
-          { code: 'vat', name: 'Rozliczenia podatku VAT', isActive: true },
-          { code: 'przekaz-srodkow', name: 'Przekaz środków', isActive: true },
-          { code: 'zwrot-nadplaty', name: 'Zwrot nadpłaty', isActive: true },
-          { code: 'inne', name: 'Inne przepływy pozabudżetowe', isActive: true }
-        ];
+        const oobList = budget.outOfBudgetCodes || [];
 
         for (const oob of oobList) {
           if (this.includeInactive || oob.isActive !== false) {

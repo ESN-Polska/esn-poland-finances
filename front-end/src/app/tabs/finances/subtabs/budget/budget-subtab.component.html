@@ -973,7 +973,7 @@
               slot="start"
               [name]="showSystemMappings ? 'chevron-up-outline' : 'chevron-down-outline'"
             ></ion-icon>
-            {{ (showSystemMappings ? 'FINANCES.BUDGET.HIDE_SYSTEM_MAPPINGS' : 'FINANCES.BUDGET.SHOW_SYSTEM_MAPPINGS') | translate }}
+            {{ (showSystemMappings ? 'COMMON.HIDE' : 'COMMON.SHOW') | translate }}
           </ion-button>
         </div>
       </div>
@@ -1055,6 +1055,11 @@
                 </tr>
               </thead>
               <tbody>
+                <tr *ngIf="outOfBudgetCodes.length === 0" class="emptyOobRow">
+                  <td [attr.colspan]="canEdit ? 5 : 4" class="emptyOobCell">
+                    {{ 'FINANCES.BUDGET.NO_OOB_CODES' | translate }}
+                  </td>
+                </tr>
                 <tr *ngFor="let item of outOfBudgetCodes" [class.inactiveRow]="!item.isActive">
                   <td class="colOobCode">
                     <span class="oobCodeBadge">{{ item.code }}</span>
