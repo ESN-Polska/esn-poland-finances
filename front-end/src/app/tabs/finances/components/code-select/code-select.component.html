@@ -62,7 +62,7 @@
     </div>
 
     <!-- Category Filter Chips -->
-    <div class="categoryChipsRibbon" (click)="$event.stopPropagation()">
+    <div class="categoryChipsRibbon" *ngIf="showCategoryChips" (click)="$event.stopPropagation()">
       <button
         type="button"
         class="chipBtn"

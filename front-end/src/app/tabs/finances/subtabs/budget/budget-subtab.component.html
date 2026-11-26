@@ -992,19 +992,15 @@
                 <ion-icon name="airplane-outline" class="diemsIcon"></ion-icon>
                 <span class="smSelectLabel">{{ 'FINANCES.BUDGET.DIEMS_BUDGET_LINE_LABEL' | translate }}</span>
               </div>
-              <ion-select
-                interface="popover"
-                class="smIonSelect"
-                [disabled]="!canEdit"
+              <app-code-select
                 [placeholder]="'FINANCES.BUDGET.DIEMS_BUDGET_LINE_PLACEHOLDER' | translate"
+                [disabled]="!canEdit"
+                [year]="stateService.activeYear"
+                [allowedCategories]="['BUDGET_LINE']"
+                budgetLineType="EXPENSE"
                 [ngModel]="budget.diemsBudgetLineCode || ''"
                 (ngModelChange)="onDiemsBudgetLineChange($event)"
-              >
-                <ion-select-option value="">{{ 'FINANCES.BUDGET.NONE_SELECTED' | translate }}</ion-select-option>
-                <ion-select-option *ngFor="let line of allExpenseBudgetLines" [value]="line.code">
-                  {{ line.code }} — {{ line.name }}
-                </ion-select-option>
-              </ion-select>
+              ></app-code-select>
             </div>
 
             <!-- Term Deposits Interest Budget Line -->
@@ -1013,19 +1009,15 @@
                 <ion-icon name="trending-up-outline" class="interestIcon"></ion-icon>
                 <span class="smSelectLabel">{{ 'FINANCES.BUDGET.DEPOSITS_INTEREST_BUDGET_LINE_LABEL' | translate }}</span>
               </div>
-              <ion-select
-                interface="popover"
-                class="smIonSelect"
-                [disabled]="!canEdit"
+              <app-code-select
                 [placeholder]="'FINANCES.BUDGET.DEPOSITS_INTEREST_BUDGET_LINE_PLACEHOLDER' | translate"
+                [disabled]="!canEdit"
+                [year]="stateService.activeYear"
+                [allowedCategories]="['BUDGET_LINE']"
+                budgetLineType="REVENUE"
                 [ngModel]="budget.depositsInterestBudgetLineCode || ''"
                 (ngModelChange)="onDepositsInterestBudgetLineChange($event)"
-              >
-                <ion-select-option value="">{{ 'FINANCES.BUDGET.NONE_SELECTED' | translate }}</ion-select-option>
-                <ion-select-option *ngFor="let line of allRevenueBudgetLines" [value]="line.code">
-                  {{ line.code }} — {{ line.name }}
-                </ion-select-option>
-              </ion-select>
+              ></app-code-select>
             </div>
           </div>
         </div>

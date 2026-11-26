@@ -292,6 +292,7 @@
             <app-code-select
               [year]="year"
               [disabled]="!canEdit"
+              [budgetLineType]="docType === 'REVENUE' ? 'REVENUE' : 'EXPENSE'"
               [(ngModel)]="alloc.code"
               [placeholder]="'FINANCES.DOCUMENTS.SELECT_CODE_PH' | translate"
             ></app-code-select>

@@ -172,6 +172,7 @@
             <app-code-select
               [year]="year"
               [disabled]="!canEdit"
+              [budgetLineType]="transaction?.amount >= 0 ? 'REVENUE' : 'EXPENSE'"
               [(ngModel)]="split.code"
               [placeholder]="'FINANCES.TRANSACTIONS.SELECT_CODE_PH' | translate"
             ></app-code-select>

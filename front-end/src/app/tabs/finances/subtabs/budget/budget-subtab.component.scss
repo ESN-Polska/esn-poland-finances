@@ -2702,6 +2702,11 @@ body.dark {
           display: flex;
           flex-direction: column;
           gap: 10px;
+          position: relative;
+
+          &:has(.isOpen) {
+            z-index: 100;
+          }
 
           .smSelectHeader {
             display: flex;

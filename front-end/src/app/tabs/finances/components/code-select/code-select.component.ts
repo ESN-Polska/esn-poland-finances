@@ -54,6 +54,7 @@ export class CodeSelectComponent implements OnInit, OnDestroy, OnChanges, Contro
   @Input() allowClear: boolean = true;
   @Input() year?: number;
   @Input() allowedCategories?: ('BUDGET_LINE' | 'SECTION' | 'SUB_BUDGET' | 'OUT_OF_BUDGET')[];
+  @Input() budgetLineType?: 'REVENUE' | 'EXPENSE' | 'COST' | 'ALL' = 'ALL';
   @Input() includeInactive: boolean = false;
 
   @Output() codeSelected = new EventEmitter<UniversalCodeOption | null>();
@@ -85,9 +86,14 @@ export class CodeSelectComponent implements OnInit, OnDestroy, OnChanges, Contro
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['year'] && !changes['year'].firstChange) {
+    if ((changes['year'] && !changes['year'].firstChange) || changes['budgetLineType'] || changes['allowedCategories']) {
       this.loadCodes(this.targetYear);
     }
+  }
+
+  get showCategoryChips(): boolean {
+    if (!this.allowedCategories) return true;
+    return this.allowedCategories.length > 1;
   }
 
   get targetYear(): number {
@@ -114,30 +120,31 @@ export class CodeSelectComponent implements OnInit, OnDestroy, OnChanges, Contro
   public async loadCodes(year: number): Promise<void> {
     this.loading = true;
     try {
+      const needMeetings = !this.allowedCategories || this.allowedCategories.includes('SUB_BUDGET');
+      const needSections = !this.allowedCategories || this.allowedCategories.includes('SECTION');
+
       const [budget, meetings, sections] = await Promise.all([
         this.financesService.getBudget(year).catch(() => null),
-        this.financesService.getMeetings(year).catch(() => []),
-        this.financesService.getSections(year).catch(() => [])
+        needMeetings ? this.financesService.getMeetings(year).catch(() => []) : Promise.resolve([]),
+        needSections ? this.financesService.getSections(year).catch(() => []) : Promise.resolve([])
       ]);
 
       const options: UniversalCodeOption[] = [];
 
       // 1. Budget lines
-      if (budget) {
-        const collectLines = (items: any[], type: string) => {
+      if (budget && (!this.allowedCategories || this.allowedCategories.includes('BUDGET_LINE'))) {
+        const collectLines = (items: any[], type: 'REVENUE' | 'EXPENSE') => {
           for (const item of items || []) {
             if (isBudgetLine(item)) {
               if (item.code) {
                 const localizedName = typeof item.name === 'string'
                   ? item.name
                   : (this.app.currentLanguage === 'en' ? item.name?.en : item.name?.pl) || item.name?.pl || item.name?.en || item.code;
-                const planVal = item.plannedAmount ?? item.budgetedAmount ?? 0;
                 options.push({
                   code: item.code,
                   name: localizedName,
                   category: 'BUDGET_LINE',
-                  subtitle: `${type} • Plan: ${planVal} PLN`,
-                  icon: type === 'Przychód' ? 'trending-up-outline' : 'trending-down-outline',
+                  icon: type === 'REVENUE' ? 'trending-up-outline' : 'trending-down-outline',
                   isActive: true
                 });
               }
@@ -147,24 +154,34 @@ export class CodeSelectComponent implements OnInit, OnDestroy, OnChanges, Contro
           }
         };
 
+        const isExpense = this.budgetLineType === 'EXPENSE' || this.budgetLineType === 'COST';
+        const isRevenue = this.budgetLineType === 'REVENUE';
+        const allowAll = !this.budgetLineType || this.budgetLineType === 'ALL';
+
         for (const cat of budget.categories || []) {
-          if (cat.revenues?.items) collectLines(cat.revenues.items, 'Przychód');
-          if (cat.expenses?.items) collectLines(cat.expenses.items, 'Koszt');
+          if ((allowAll || isRevenue) && cat.revenues?.items) {
+            collectLines(cat.revenues.items, 'REVENUE');
+          }
+          if ((allowAll || isExpense) && cat.expenses?.items) {
+            collectLines(cat.expenses.items, 'EXPENSE');
+          }
         }
 
         // 2. Out of budget codes
-        const oobList = budget.outOfBudgetCodes || [];
+        if (!this.allowedCategories || this.allowedCategories.includes('OUT_OF_BUDGET')) {
+          const oobList = budget.outOfBudgetCodes || [];
 
-        for (const oob of oobList) {
-          if (this.includeInactive || oob.isActive !== false) {
-            options.push({
-              code: oob.code,
-              name: oob.name,
-              category: 'OUT_OF_BUDGET',
-              subtitle: oob.description || 'Rozliczenie pozabudżetowe',
-              icon: 'construct-outline',
-              isActive: oob.isActive !== false
-            });
+          for (const oob of oobList) {
+            if (this.includeInactive || oob.isActive !== false) {
+              options.push({
+                code: oob.code,
+                name: oob.name,
+                category: 'OUT_OF_BUDGET',
+                subtitle: oob.description || 'Rozliczenie pozabudżetowe',
+                icon: 'construct-outline',
+                isActive: oob.isActive !== false
+              });
+            }
           }
         }
       }

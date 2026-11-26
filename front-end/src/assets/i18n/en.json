@@ -54,7 +54,17 @@
     "MANAGE": "Manage",
     "WARNING": "Warning",
     "SHOW": "Show",
-    "HIDE": "Hide"
+    "HIDE": "Hide",
+    "CREATE": "Create",
+    "SAVE_SUCCESS": "Saved successfully",
+    "SAVE_ERROR": "Error while saving",
+    "DELETE_SUCCESS": "Deleted successfully",
+    "DELETE_ERROR": "Error while deleting",
+    "DELETING": "Deleting...",
+    "ACTIVATE": "Activate",
+    "DEACTIVATE": "Deactivate",
+    "SEARCH": "Search...",
+    "CUSTOM": "Custom"
   },
   "AUTH": {
     "LOGIN_BUTTON": "Sign in with ESN Accounts",
@@ -1109,6 +1119,8 @@
     },
     "BUDGET": {
       "LOADING": "Loading annual budget...",
+      "LINE_LABEL": "Budget line",
+      "TYPE_LABEL": "Type",
       "REVENUES": "Revenues",
       "EXPENSES": "Expenses",
       "STATUS_ADOPTED": "Adopted",
@@ -1575,7 +1587,8 @@
       "TYPE_FUNCTIONAL": "Functional",
       "EMPTY_STATE": "No sub-budgets recorded in {{year}}.",
       "DELETE_CONFIRM_TITLE": "Delete sub-budget",
-      "DELETE_CONFIRM_MSG": "Are you sure you want to delete this sub-budget?"
+      "DELETE_CONFIRM_MSG": "Are you sure you want to delete this sub-budget?",
+      "SAVE_SUCCESS": "Sub-budget saved"
     },
     "ADVANCES": {
       "TITLE": "Advance Payments Registry",

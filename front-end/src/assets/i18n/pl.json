@@ -54,7 +54,17 @@
     "MANAGE": "Zarządzaj",
     "WARNING": "Ostrzeżenie",
     "SHOW": "Pokaż",
-    "HIDE": "Ukryj"
+    "HIDE": "Ukryj",
+    "CREATE": "Utwórz",
+    "SAVE_SUCCESS": "Zapisano pomyślnie",
+    "SAVE_ERROR": "Błąd podczas zapisywania",
+    "DELETE_SUCCESS": "Usunięto pomyślnie",
+    "DELETE_ERROR": "Błąd podczas usuwania",
+    "DELETING": "Usuwanie...",
+    "ACTIVATE": "Aktywuj",
+    "DEACTIVATE": "Dezaktywuj",
+    "SEARCH": "Szukaj...",
+    "CUSTOM": "Własny"
   },
   "AUTH": {
     "LOGIN_BUTTON": "Zaloguj się przez ESN Accounts",
@@ -1109,6 +1119,8 @@
     },
     "BUDGET": {
       "LOADING": "Ładowanie budżetu rocznego...",
+      "LINE_LABEL": "Linia budżetowa",
+      "TYPE_LABEL": "Typ",
       "REVENUES": "Przychody",
       "EXPENSES": "Koszty",
       "STATUS_ADOPTED": "Uchwalony",
@@ -1575,7 +1587,8 @@
       "TYPE_FUNCTIONAL": "Funkcyjny",
       "EMPTY_STATE": "Brak sub-budżetów zarejestrowanych w roku {{year}}.",
       "DELETE_CONFIRM_TITLE": "Usuń sub-budżet",
-      "DELETE_CONFIRM_MSG": "Czy na pewno chcesz usunąć ten sub-budżet?"
+      "DELETE_CONFIRM_MSG": "Czy na pewno chcesz usunąć ten sub-budżet?",
+      "SAVE_SUCCESS": "Zapisano sub-budżet"
     },
     "ADVANCES": {
       "TITLE": "Rejestr pobranych zaliczek",
