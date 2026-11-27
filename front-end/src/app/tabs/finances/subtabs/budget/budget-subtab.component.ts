@@ -20,7 +20,8 @@ import {
   BudgetAmendmentItem,
   OutOfBudgetCode,
   isBudgetGroup,
-  isBudgetLine
+  isBudgetLine,
+  assignBudgetHierarchicalNumbers
 } from '@models/annual-budget.model';
 import { BankTransactionRecord } from '@models/cashflow-transaction.model';
 import { TermDeposit } from '@models/subledgers.model';
@@ -91,6 +92,7 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
   amendmentJustifications: Record<string, string> = {};
   amendmentOriginalLinesMap = new Map<string, {
     lineId?: string;
+    lineNumber?: string;
     code: string;
     plannedAmount: number;
     name: { pl: string; en: string };
@@ -697,6 +699,7 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
         for (const it of items || []) {
           if (isBudgetLine(it)) {
             if (
+              it.number?.toLowerCase().includes(q) ||
               it.code?.toLowerCase().includes(q) ||
               it.name?.pl?.toLowerCase().includes(q) ||
               it.name?.en?.toLowerCase().includes(q) ||
@@ -708,6 +711,7 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
             }
           } else if (isBudgetGroup(it)) {
             if (
+              it.number?.toLowerCase().includes(q) ||
               (it.code && it.code.toLowerCase().includes(q)) ||
               it.name?.pl?.toLowerCase().includes(q) ||
               it.name?.en?.toLowerCase().includes(q)
@@ -1099,7 +1103,7 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
     const alert = await this.alertCtrl.create({
       header: this.translate.instant('FINANCES.BUDGET.CONFIRM_DELETE_CAT_TITLE'),
       message: this.translate.instant('FINANCES.BUDGET.CONFIRM_DELETE_CAT_MSG', {
-        name: `${category.number}. ${(this.app.currentLanguage === 'en' ? category.name?.en : category.name?.pl) || category.name?.pl || category.name?.en || category.id}`
+        name: `${category.number} ${(this.app.currentLanguage === 'en' ? category.name?.en : category.name?.pl) || category.name?.pl || category.name?.en || category.id}`
       }),
       buttons: [
         { text: this.translate.instant('COMMON.CANCEL'), role: 'cancel' },
@@ -1214,7 +1218,7 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
     const modal = await this.modalCtrl.create({
       component: BudgetGroupModalComponent,
       componentProps: {
-        categoryName: `${category.number}. ${(this.app.currentLanguage === 'en' ? category.name.en : category.name.pl) || category.name.pl || category.name.en}`,
+        categoryName: `${category.number} ${(this.app.currentLanguage === 'en' ? category.name.en : category.name.pl) || category.name.pl || category.name.en}`,
         isNew: true
       }
     });
@@ -1246,7 +1250,7 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
       component: BudgetGroupModalComponent,
       componentProps: {
         group,
-        categoryName: `${category.number}. ${(this.app.currentLanguage === 'en' ? category.name.en : category.name.pl) || category.name.pl || category.name.en}`,
+        categoryName: `${category.number} ${(this.app.currentLanguage === 'en' ? category.name.en : category.name.pl) || category.name.pl || category.name.en}`,
         isNew: false
       }
     });
@@ -1445,6 +1449,7 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
 
   private buildLinesMap(categories: DynamicBudgetCategory[]): Map<string, {
     lineId?: string;
+    lineNumber?: string;
     code: string;
     plannedAmount: number;
     name: { pl: string; en: string };
@@ -1479,6 +1484,7 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
         const lineType = item.type || defaultType;
         map.set(`${lineType}:${item.code}`, {
           lineId: item.id || item.code,
+          lineNumber: item.number || '',
           code: item.code,
           plannedAmount: Number(item.plannedAmount ?? item.budgetedAmount) || 0,
           name: { pl: item.name?.pl || '', en: item.name?.en || '' },
@@ -1537,6 +1543,7 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
         const proposed = Number(w.line.plannedAmount) || 0;
         diffItems.push({
           lineId: w.line.id || w.line.code,
+          lineNumber: w.line.number || '',
           budgetCode: w.line.code,
           lineCode: w.line.code,
           lineName: { pl: w.line.name?.pl || '', en: w.line.name?.en || '' },
@@ -1564,6 +1571,7 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
         if (amountChanged || nameChanged) {
           diffItems.push({
             lineId: orig.lineId || w.line.code,
+            lineNumber: w.line.number || orig.lineNumber || '',
             budgetCode: w.line.code,
             lineCode: w.line.code,
             lineName: { pl: w.line.name?.pl || '', en: w.line.name?.en || '' },
@@ -1593,6 +1601,7 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
         const justification = this.amendmentJustifications[key] || this.amendmentJustifications[orig.code] || '';
         diffItems.push({
           lineId: orig.lineId || orig.code,
+          lineNumber: orig.lineNumber || '',
           budgetCode: orig.code,
           lineCode: orig.code,
           lineName: { pl: orig.name.pl, en: orig.name.en },
@@ -1840,6 +1849,7 @@ export class BudgetSubtabComponent implements OnInit, OnDestroy {
       this.recomputeCurrentBalances();
     }
     if (data?.action === 'VIEW_SNAPSHOT' && data.snapshot) {
+      assignBudgetHierarchicalNumbers(data.snapshot.categories);
       this.activeSnapshotView = data.snapshot;
     }
   }

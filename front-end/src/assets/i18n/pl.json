@@ -1298,7 +1298,7 @@
       "OOB_STATUS_INACTIVE": "Nieaktywny",
       "OOB_CODE_ADD_TITLE": "Nowy kod techniczny / pozabudżetowy",
       "OOB_CODE_EDIT_TITLE": "Edycja kodu technicznego / pozabudżetowego",
-      "OOB_CODE_FIELD_CODE": "Unikalny kod (np. vat, delegacje-techniczne)",
+      "OOB_CODE_FIELD_CODE": "Unikalny kod (np. KOD-1)",
       "OOB_CODE_FIELD_NAME": "Nazwa",
       "OOB_CODE_FIELD_DESC": "Opis (opcjonalny)",
       "OOB_CODE_DELETE_CONFIRM": "Czy na pewno chcesz usunąć kod {{code}}?",

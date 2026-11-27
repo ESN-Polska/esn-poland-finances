@@ -23,6 +23,7 @@ export type UniversalCodeCategory = 'ALL' | 'BUDGET_LINE' | 'SECTION' | 'SUB_BUD
 
 export interface UniversalCodeOption {
   code: string;
+  lineNumber?: string;
   name: string;
   category: 'BUDGET_LINE' | 'SECTION' | 'SUB_BUDGET' | 'OUT_OF_BUDGET';
   categoryLabel?: string;
@@ -142,6 +143,7 @@ export class CodeSelectComponent implements OnInit, OnDestroy, OnChanges, Contro
                   : (this.app.currentLanguage === 'en' ? item.name?.en : item.name?.pl) || item.name?.pl || item.name?.en || item.code;
                 options.push({
                   code: item.code,
+                  lineNumber: item.number || undefined,
                   name: localizedName,
                   category: 'BUDGET_LINE',
                   icon: type === 'REVENUE' ? 'trending-up-outline' : 'trending-down-outline',
@@ -244,6 +246,7 @@ export class CodeSelectComponent implements OnInit, OnDestroy, OnChanges, Contro
       list = list.filter(
         (o) =>
           o.code.toLowerCase().includes(query) ||
+          (o.lineNumber && o.lineNumber.toLowerCase().includes(query)) ||
           o.name.toLowerCase().includes(query) ||
           (o.subtitle && o.subtitle.toLowerCase().includes(query))
       );

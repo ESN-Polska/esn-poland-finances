@@ -504,7 +504,7 @@
                   >
                     <ion-icon name="reorder-two-outline"></ion-icon>
                   </span>
-                  <span class="categoryNumberBadge">{{ category.number || (cIdx + 1) }}.</span>
+                  <span class="categoryNumberBadge">{{ category.number || (cIdx + 1) }}</span>
                   <span class="categoryName">{{ (app.currentLanguage === 'en' ? category.name.en : category.name.pl) || category.name.pl || category.name.en }}</span>
                 </div>
 
@@ -619,7 +619,7 @@
               >
                 <div class="sectionHeaderBar revHeaderBar">
                   <div class="secTitleGroup">
-                    <span class="secBadge revBadge">{{ 'FINANCES.BUDGET.REVENUES' | translate }}</span>
+                    <span class="secBadge revBadge">{{ category.number || (cIdx + 1) }}.A {{ 'FINANCES.BUDGET.REVENUES' | translate }}</span>
                     <span class="secTotals">
                       {{ 'FINANCES.BUDGET.PLAN_ABBR' | translate }} <strong>{{ category.revenues.totalPlanned | financeNumber:{ currency: 'PLN' } }}</strong>
                       <span class="dividerDot">•</span>
@@ -705,7 +705,7 @@
               >
                 <div class="sectionHeaderBar expHeaderBar">
                   <div class="secTitleGroup">
-                    <span class="secBadge expBadge">{{ 'FINANCES.BUDGET.EXPENSES' | translate }}</span>
+                    <span class="secBadge expBadge">{{ category.number || (cIdx + 1) }}.B {{ 'FINANCES.BUDGET.EXPENSES' | translate }}</span>
                     <span class="secTotals">
                       {{ 'FINANCES.BUDGET.PLAN_ABBR' | translate }} <strong>{{ category.expenses.totalPlanned | financeNumber:{ currency: 'PLN' } }}</strong>
                       <span class="dividerDot">•</span>
@@ -1105,6 +1105,7 @@
             >
               <ion-icon name="reorder-two-outline"></ion-icon>
             </span>
+            <span class="groupNumberBadge" *ngIf="group.number">{{ group.number }}</span>
             <span class="groupName">{{ (app.currentLanguage === 'en' ? group.name.en : group.name.pl) || group.name.pl || group.name.en }}</span>
           </div>
 
@@ -1237,6 +1238,11 @@
           >
             <ion-icon name="reorder-two-outline"></ion-icon>
           </span>
+        </div>
+
+        <!-- Line Number -->
+        <div class="cellLineNum">
+          <span class="lineNumberBadge">{{ line.number || '—' }}</span>
         </div>
 
         <!-- Code -->

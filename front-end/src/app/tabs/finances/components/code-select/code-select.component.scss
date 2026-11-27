@@ -286,6 +286,13 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+
+            .optionLineNum {
+              font-weight: 700;
+              color: var(--ion-color-primary, #00aeef);
+              margin-right: 6px;
+              font-variant-numeric: tabular-nums;
+            }
           }
 
           .optionSubtitle {

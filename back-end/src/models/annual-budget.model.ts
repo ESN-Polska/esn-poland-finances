@@ -4,6 +4,8 @@ export type BudgetLineType = 'REVENUE' | 'EXPENSE';
 
 export interface BudgetLineItem {
   id?: string;
+  /** Hierarchical position number (e.g. '1.A.1', '1.B.2.1') */
+  number?: string;
   /** Immutable budget code (e.g. 'card', 'biuro', 'del-statutowe') */
   code: string;
   name: {
@@ -33,6 +35,8 @@ export interface BudgetLineItem {
 
 export interface DynamicBudgetGroup {
   id: string;
+  /** Hierarchical position number (e.g. '1.A.2', '1.B.1.1') */
+  number?: string;
   code?: string;
   name: {
     pl: string;
@@ -100,6 +104,39 @@ export function isBudgetLine(item: any): item is BudgetLineItem {
   return item && typeof item === 'object' && typeof (item as BudgetLineItem).code === 'string' && !Array.isArray((item as any).items);
 }
 
+/**
+ * Assigns hierarchical position numbers (e.g. '1.A.1', '1.B.2.1') to all categories, groups, and lines.
+ * Revenues use subsection 'A' and expenses use subsection 'B'.
+ */
+export function assignBudgetHierarchicalNumbers(categories: DynamicBudgetCategory[] | undefined | null): void {
+  const assignSectionItems = (
+    items: (DynamicBudgetGroup | BudgetLineItem)[] | undefined,
+    prefix: string
+  ): void => {
+    for (let i = 0; i < (items || []).length; i++) {
+      const node = items![i];
+      const num = `${prefix}.${i + 1}`;
+      node.number = num;
+      node.displayOrder = i;
+      if (isBudgetGroup(node)) {
+        assignSectionItems(node.items || [], num);
+      }
+    }
+  };
+
+  for (let cIdx = 0; cIdx < (categories || []).length; cIdx++) {
+    const cat = categories![cIdx];
+    cat.number = cIdx + 1;
+    cat.displayOrder = cIdx;
+    if (cat.revenues && cat.revenues.enabled !== false) {
+      assignSectionItems(cat.revenues.items, `${cat.number}.A`);
+    }
+    if (cat.expenses && cat.expenses.enabled !== false) {
+      assignSectionItems(cat.expenses.items, `${cat.number}.B`);
+    }
+  }
+}
+
 export interface OpeningBalances {
   /** PLN account balance on 01.01 */
   bankPlnStartingBalance?: number;
@@ -133,6 +170,8 @@ export type BudgetAmendmentType = 'ADD_LINE' | 'MODIFY_LINE' | 'REMOVE_LINE' | '
 
 export interface BudgetAmendmentItem {
   lineId: string;
+  /** Hierarchical line number at the time of amendment (e.g. '1.B.2') */
+  lineNumber?: string;
   /** Code of the budget line - strictly immutable */
   budgetCode: string;
   lineName: {
@@ -447,6 +486,7 @@ export class AnnualBudget extends Resource {
           items: Array.isArray(am.items)
             ? am.items.map((it: any) => ({
                 lineId: this.clean(it.lineId, String),
+                lineNumber: this.clean(it.lineNumber, String, ''),
                 budgetCode: this.clean(it.budgetCode || it.lineCode, String),
                 lineCode: this.clean(it.lineCode || it.budgetCode, String),
                 lineName: {
@@ -490,7 +530,11 @@ export class AnnualBudget extends Resource {
           totalRevenue: this.clean(v.totalRevenue, Number, 0),
           totalExpense: this.clean(v.totalExpense, Number, 0),
           netResult: this.clean(v.netResult, Number, 0),
-          categories: Array.isArray(v.categories) ? v.categories : []
+          categories: (() => {
+            const cats = Array.isArray(v.categories) ? v.categories : [];
+            assignBudgetHierarchicalNumbers(cats);
+            return cats;
+          })()
         }))
       : [];
 
@@ -502,7 +546,11 @@ export class AnnualBudget extends Resource {
           resolutionNumber: this.clean(x.draftAmendment.resolutionNumber, String, ''),
           adoptedDate: this.clean(x.draftAmendment.adoptedDate, String, ''),
           description: this.clean(x.draftAmendment.description, String, ''),
-          draftCategories: Array.isArray(x.draftAmendment.draftCategories) ? x.draftAmendment.draftCategories : [],
+          draftCategories: (() => {
+            const cats = Array.isArray(x.draftAmendment.draftCategories) ? x.draftAmendment.draftCategories : [];
+            assignBudgetHierarchicalNumbers(cats);
+            return cats;
+          })(),
           itemsDiff: Array.isArray(x.draftAmendment.itemsDiff) ? x.draftAmendment.itemsDiff : [],
           totalRevenueDelta: this.clean(x.draftAmendment.totalRevenueDelta, Number, 0),
           totalExpenseDelta: this.clean(x.draftAmendment.totalExpenseDelta, Number, 0),
@@ -602,6 +650,8 @@ export class AnnualBudget extends Resource {
    * Recalculates all section, category, and budget totals, variances, and percentages
    */
   recalculateTotals(): void {
+    assignBudgetHierarchicalNumbers(this.categories);
+
     let revBudget = 0;
     let revActual = 0;
     let expBudget = 0;

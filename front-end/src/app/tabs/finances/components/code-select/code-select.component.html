@@ -132,7 +132,10 @@
           </div>
 
           <div class="optionInfo">
-            <span class="optionName">{{ opt.name }}</span>
+            <span class="optionName">
+              <span class="optionLineNum" *ngIf="opt.lineNumber">{{ opt.lineNumber }}</span>
+              {{ opt.name }}
+            </span>
             <span class="optionSubtitle" *ngIf="opt.subtitle">{{ opt.subtitle }}</span>
           </div>
 

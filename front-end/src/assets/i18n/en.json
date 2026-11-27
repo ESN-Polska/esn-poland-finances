@@ -1298,7 +1298,7 @@
       "OOB_STATUS_INACTIVE": "Inactive",
       "OOB_CODE_ADD_TITLE": "New technical / out-of-budget code",
       "OOB_CODE_EDIT_TITLE": "Edit technical / out-of-budget code",
-      "OOB_CODE_FIELD_CODE": "Unique code (e.g. vat, delegacje-techniczne)",
+      "OOB_CODE_FIELD_CODE": "Unique code (e.g. CODE-1)",
       "OOB_CODE_FIELD_NAME": "Name",
       "OOB_CODE_FIELD_DESC": "Description (optional)",
       "OOB_CODE_DELETE_CONFIRM": "Are you sure you want to delete code {{code}}?",

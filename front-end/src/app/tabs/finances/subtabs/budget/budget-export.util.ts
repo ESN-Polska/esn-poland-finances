@@ -364,6 +364,7 @@ export function generateBudgetCsvContent(
         escapeCsv('Type'),
         escapeCsv('Category'),
         escapeCsv('Group'),
+        escapeCsv('No.'),
         escapeCsv('Code'),
         escapeCsv('Line'),
         escapeCsv('Budgeted amount [PLN]'),
@@ -377,6 +378,7 @@ export function generateBudgetCsvContent(
         escapeCsv('Typ / Type'),
         escapeCsv('Kategoria / Category'),
         escapeCsv('Grupa / Group'),
+        escapeCsv('Nr / No.'),
         escapeCsv('Kod / Code'),
         escapeCsv('Linia / Line'),
         escapeCsv('Kwota zabudżetowana / Budgeted [PLN]'),
@@ -390,6 +392,7 @@ export function generateBudgetCsvContent(
         escapeCsv('Typ'),
         escapeCsv('Kategoria'),
         escapeCsv('Grupa'),
+        escapeCsv('Nr'),
         escapeCsv('Kod'),
         escapeCsv('Linia'),
         escapeCsv('Kwota zabudżetowana [PLN]'),
@@ -401,8 +404,10 @@ export function generateBudgetCsvContent(
     }
 
     const categories = budget.categories || [];
-    const processItems = (items: (DynamicBudgetGroup | BudgetLineItem)[], catNum: number, catName: string, secType: string, groupPath: string) => {
-      for (const it of items || []) {
+    const processItems = (items: (DynamicBudgetGroup | BudgetLineItem)[], catNum: number, catName: string, secType: string, groupPath: string, prefix: string) => {
+      for (let idx = 0; idx < (items || []).length; idx++) {
+        const it = items[idx];
+        const nodeNum = `${prefix}.${idx + 1}`;
         if (isBudgetLine(it)) {
           const budgeted = it.budgetedAmount || 0;
           const actual = it.actualAmount || 0;
@@ -411,8 +416,9 @@ export function generateBudgetCsvContent(
 
           lines.push([
             escapeCsv(secType),
-            escapeCsv(`${catNum}. ${catName}`),
+            escapeCsv(`${catNum} ${catName}`),
             escapeCsv(groupPath),
+            escapeCsv(nodeNum),
             escapeCsv(it.code || ''),
             escapeCsv(getLangText(it.name, lang)),
             formatNumber(budgeted),
@@ -422,9 +428,9 @@ export function generateBudgetCsvContent(
             escapeCsv(getLangText(it.description, lang))
           ].join(delim));
         } else if (isBudgetGroup(it)) {
-          const grpLabel = getLangText(it.name, lang);
+          const grpLabel = `${nodeNum} ${getLangText(it.name, lang)}`;
           const currentPath = groupPath ? `${groupPath} > ${grpLabel}` : grpLabel;
-          processItems(it.items || [], catNum, catName, secType, currentPath);
+          processItems(it.items || [], catNum, catName, secType, currentPath, nodeNum);
         }
       }
     };
@@ -435,10 +441,10 @@ export function generateBudgetCsvContent(
       const catName = getLangText(cat.name, lang);
 
       if (cat.revenues && cat.revenues.enabled !== false && Array.isArray(cat.revenues.items)) {
-        processItems(cat.revenues.items, catNum, catName, typeRev, '');
+        processItems(cat.revenues.items, catNum, catName, typeRev, '', `${catNum}.A`);
       }
       if (cat.expenses && cat.expenses.enabled !== false && Array.isArray(cat.expenses.items)) {
-        processItems(cat.expenses.items, catNum, catName, typeExp, '');
+        processItems(cat.expenses.items, catNum, catName, typeExp, '', `${catNum}.B`);
       }
 
       // Category Net Result row
@@ -447,10 +453,11 @@ export function generateBudgetCsvContent(
       const catNetVar = catNetAct - catNetPlan;
       const catNetPct = catNetPlan !== 0 ? ((catNetAct / catNetPlan) * 100).toFixed(1).replace('.', ',') + '%' : '—';
 
-      const sumLabel = isEn ? `RESULT: ${catNum}. ${catName}` : isBoth ? `WYNIK / RESULT: ${catNum}. ${catName}` : `WYNIK: ${catNum}. ${catName}`;
+      const sumLabel = isEn ? `RESULT: ${catNum} ${catName}` : isBoth ? `WYNIK / RESULT: ${catNum} ${catName}` : `WYNIK: ${catNum} ${catName}`;
       lines.push([
         escapeCsv(sumLabel),
-        escapeCsv(`${catNum}. ${catName}`),
+        escapeCsv(`${catNum} ${catName}`),
+        escapeCsv(''),
         escapeCsv(''),
         escapeCsv(''),
         escapeCsv(''),
@@ -476,7 +483,7 @@ export function generateBudgetCsvContent(
     lines.push(escapeCsv(summaryTitle));
     lines.push([
       escapeCsv(totalRevLabel),
-      '', '', '', '',
+      '', '', '', '', '',
       formatNumber(budget.totalBudgetedRevenue || 0),
       formatNumber(budget.totalActualRevenue || 0),
       formatVar((budget.totalActualRevenue || 0) - (budget.totalBudgetedRevenue || 0)),
@@ -486,7 +493,7 @@ export function generateBudgetCsvContent(
 
     lines.push([
       escapeCsv(totalExpLabel),
-      '', '', '', '',
+      '', '', '', '', '',
       formatNumber(budget.totalBudgetedExpense || 0),
       formatNumber(budget.totalActualExpense || 0),
       formatNumber((budget.totalActualExpense || 0) - (budget.totalBudgetedExpense || 0)),
@@ -496,7 +503,7 @@ export function generateBudgetCsvContent(
 
     lines.push([
       escapeCsv(netResultLabel),
-      '', '', '', '',
+      '', '', '', '', '',
       formatNumber(budget.budgetedNetResult || 0),
       formatNumber(budget.actualNetResult || 0),
       formatNumber((budget.actualNetResult || 0) - (budget.budgetedNetResult || 0)),
@@ -511,8 +518,8 @@ export function generateBudgetCsvContent(
       const obTitle = isEn ? 'OPENING BALANCES' : isBoth ? 'BILANS OTWARCIA / OPENING BALANCES' : 'BILANS OTWARCIA';
       const cbColHeader = isEn ? `As of ${dateStr}` : isBoth ? `Stan na ${dateStr} / As of ${dateStr}` : `Stan na ${dateStr}`;
       const obColHeader = isEn ? 'Opening balance' : isBoth ? 'Bilans otwarcia / Opening' : 'Bilans otwarcia';
-      lines.push([escapeCsv(obTitle), '', '', '', '', escapeCsv(obColHeader), escapeCsv(cbColHeader), '', '', ''].join(delim));
-      lines.push([escapeCsv(isEn ? 'Bank account PLN' : 'Stan konta bankowego PLN'), '', '', '', '', formatNumber(budget.openingBalances.bankPln || 0), formatNumber(actualCurrent.bankPln || 0), '', '', ''].join(delim));
+      lines.push([escapeCsv(obTitle), '', '', '', '', '', escapeCsv(obColHeader), escapeCsv(cbColHeader), '', '', ''].join(delim));
+      lines.push([escapeCsv(isEn ? 'Bank account PLN' : 'Stan konta bankowego PLN'), '', '', '', '', '', formatNumber(budget.openingBalances.bankPln || 0), formatNumber(actualCurrent.bankPln || 0), '', '', ''].join(delim));
       const obEurDetails = budget.openingBalances.bankEurStartingBalance
         ? `${budget.openingBalances.bankEurStartingBalance.toFixed(2)} EUR (${isEn ? 'rate' : 'kurs'} NBP: ${budget.openingBalances.eurExchangeRate}${budget.openingBalances.eurExchangeDate ? (isEn ? ' as of ' : ' z dn. ') + formatDateOption(budget.openingBalances.eurExchangeDate, dateFormat) : ''})`
         : '';
@@ -526,16 +533,16 @@ export function generateBudgetCsvContent(
 
       lines.push([
         escapeCsv(isEn ? 'Bank account EUR (in PLN)' : 'Stan konta bankowego EUR (w PLN)'),
-        '', '', '', '',
+        '', '', '', '', '',
         formatNumber(budget.openingBalances.bankEurInPln || 0),
         formatNumber(actualCurrent.bankEurInPln || 0),
         '', '',
         escapeCsv(eurNotes)
       ].join(delim));
-      lines.push([escapeCsv(isEn ? 'Section sub-account reserves' : 'Środki zarezerwowane na subkonta sekcji'), '', '', '', '', formatNumber(budget.openingBalances.sectionReservesStartingBalance || 0), '', '', '', ''].join(delim));
-      lines.push([escapeCsv(isEn ? 'Term deposits' : 'Lokaty terminowe'), '', '', '', '', formatNumber(budget.openingBalances.termDepositsStartingBalance || 0), formatNumber(actualCurrent.termDepositsPln || 0), '', '', ''].join(delim));
-      lines.push([escapeCsv(isEn ? 'Unspent operational surplus from prior years' : 'Nierozliczona nadwyżka operacyjna z lat ubiegłych'), '', '', '', '', formatNumber(budget.openingBalances.unspentOperatingSurplusCarryover || 0), '', '', '', ''].join(delim));
-      lines.push([escapeCsv(isEn ? 'TOTAL CASH ASSETS / OPENING BALANCE' : 'ŁĄCZNY BILANS OTWARCIA / STAN ŚRODKÓW'), '', '', '', '', formatNumber(budget.openingBalances.totalOpeningBalance || 0), formatNumber(actualCurrent.totalFunds || 0), '', '', ''].join(delim));
+      lines.push([escapeCsv(isEn ? 'Section sub-account reserves' : 'Środki zarezerwowane na subkonta sekcji'), '', '', '', '', '', formatNumber(budget.openingBalances.sectionReservesStartingBalance || 0), '', '', '', ''].join(delim));
+      lines.push([escapeCsv(isEn ? 'Term deposits' : 'Lokaty terminowe'), '', '', '', '', '', formatNumber(budget.openingBalances.termDepositsStartingBalance || 0), formatNumber(actualCurrent.termDepositsPln || 0), '', '', ''].join(delim));
+      lines.push([escapeCsv(isEn ? 'Unspent operational surplus from prior years' : 'Nierozliczona nadwyżka operacyjna z lat ubiegłych'), '', '', '', '', '', formatNumber(budget.openingBalances.unspentOperatingSurplusCarryover || 0), '', '', '', ''].join(delim));
+      lines.push([escapeCsv(isEn ? 'TOTAL CASH ASSETS / OPENING BALANCE' : 'ŁĄCZNY BILANS OTWARCIA / STAN ŚRODKÓW'), '', '', '', '', '', formatNumber(budget.openingBalances.totalOpeningBalance || 0), formatNumber(actualCurrent.totalFunds || 0), '', '', ''].join(delim));
     }
 
     const filename = isEn ? `budget_execution_${yr}_${rawDateStr}.csv` : `budzet_wykonanie_${yr}_${rawDateStr}.csv`;
@@ -589,6 +596,7 @@ export function generateBudgetCsvContent(
         escapeCsv(isEn ? 'Type' : isBoth ? 'Typ / Type' : 'Typ'),
         escapeCsv(isEn ? 'Category' : isBoth ? 'Kategoria / Category' : 'Kategoria'),
         escapeCsv(isEn ? 'Group' : isBoth ? 'Grupa / Group' : 'Grupa'),
+        escapeCsv(isEn ? 'No.' : isBoth ? 'Nr / No.' : 'Nr'),
         escapeCsv(isEn ? 'Code' : isBoth ? 'Kod / Code' : 'Kod'),
         escapeCsv(isEn ? 'Line' : isBoth ? 'Linia / Line' : 'Linia'),
         escapeCsv(colPrevHeader),
@@ -603,6 +611,7 @@ export function generateBudgetCsvContent(
           escapeCsv('Type'),
           escapeCsv('Category'),
           escapeCsv('Group'),
+          escapeCsv('No.'),
           escapeCsv('Code'),
           escapeCsv('Line'),
           escapeCsv('Budgeted amount [PLN]'),
@@ -613,6 +622,7 @@ export function generateBudgetCsvContent(
           escapeCsv('Typ / Type'),
           escapeCsv('Kategoria / Category'),
           escapeCsv('Grupa / Group'),
+          escapeCsv('Nr / No.'),
           escapeCsv('Kod / Code'),
           escapeCsv('Linia / Line'),
           escapeCsv('Kwota zabudżetowana / Budgeted [PLN]'),
@@ -623,6 +633,7 @@ export function generateBudgetCsvContent(
           escapeCsv('Typ'),
           escapeCsv('Kategoria'),
           escapeCsv('Grupa'),
+          escapeCsv('Nr'),
           escapeCsv('Kod'),
           escapeCsv('Linia'),
           escapeCsv('Kwota zabudżetowana [PLN]'),
@@ -631,8 +642,10 @@ export function generateBudgetCsvContent(
       }
     }
 
-    const processPlanItems = (items: (DynamicBudgetGroup | BudgetLineItem)[], catNum: number, catName: string, secType: string, groupPath: string) => {
-      for (const it of items || []) {
+    const processPlanItems = (items: (DynamicBudgetGroup | BudgetLineItem)[], catNum: number, catName: string, secType: string, groupPath: string, prefix: string) => {
+      for (let idx = 0; idx < (items || []).length; idx++) {
+        const it = items[idx];
+        const nodeNum = `${prefix}.${idx + 1}`;
         if (isBudgetLine(it)) {
           const currAmount = it.budgetedAmount || 0;
           if (hasPrevComp) {
@@ -646,8 +659,9 @@ export function generateBudgetCsvContent(
 
             lines.push([
               escapeCsv(secType),
-              escapeCsv(`${catNum}. ${catName}`),
+              escapeCsv(`${catNum} ${catName}`),
               escapeCsv(groupPath),
+              escapeCsv(nodeNum),
               escapeCsv(it.code || ''),
               escapeCsv(getLangText(it.name, lang)),
               hasPrev ? formatNumber(prevAmount) : '',
@@ -659,8 +673,9 @@ export function generateBudgetCsvContent(
           } else {
             lines.push([
               escapeCsv(secType),
-              escapeCsv(`${catNum}. ${catName}`),
+              escapeCsv(`${catNum} ${catName}`),
               escapeCsv(groupPath),
+              escapeCsv(nodeNum),
               escapeCsv(it.code || ''),
               escapeCsv(getLangText(it.name, lang)),
               formatNumber(currAmount),
@@ -668,9 +683,9 @@ export function generateBudgetCsvContent(
             ].join(delim));
           }
         } else if (isBudgetGroup(it)) {
-          const grpLabel = getLangText(it.name, lang);
+          const grpLabel = `${nodeNum} ${getLangText(it.name, lang)}`;
           const currentPath = groupPath ? `${groupPath} > ${grpLabel}` : grpLabel;
-          processPlanItems(it.items || [], catNum, catName, secType, currentPath);
+          processPlanItems(it.items || [], catNum, catName, secType, currentPath, nodeNum);
         }
       }
     };
@@ -681,22 +696,20 @@ export function generateBudgetCsvContent(
       const catName = getLangText(cat.name, lang);
 
       if (cat.revenues && cat.revenues.enabled !== false && Array.isArray(cat.revenues.items)) {
-        processPlanItems(cat.revenues.items, catNum, catName, typeRev, '');
+        processPlanItems(cat.revenues.items, catNum, catName, typeRev, '', `${catNum}.A`);
       }
       if (cat.expenses && cat.expenses.enabled !== false && Array.isArray(cat.expenses.items)) {
-        processPlanItems(cat.expenses.items, catNum, catName, typeExp, '');
+        processPlanItems(cat.expenses.items, catNum, catName, typeExp, '', `${catNum}.B`);
       }
 
       // Subtotal per category
       const catNetPlan = cat.plannedNetResult ?? ((cat.totalPlannedRevenue || 0) - (cat.totalPlannedExpense || 0));
-      const sumLabel = isEn ? `RESULT: ${catNum}. ${catName}` : isBoth ? `WYNIK / RESULT: ${catNum}. ${catName}` : `WYNIK: ${catNum}. ${catName}`;
+      const sumLabel = isEn ? `RESULT: ${catNum} ${catName}` : isBoth ? `WYNIK / RESULT: ${catNum} ${catName}` : `WYNIK: ${catNum} ${catName}`;
       if (hasPrevComp) {
         lines.push([
           escapeCsv(sumLabel),
-          escapeCsv(`${catNum}. ${catName}`),
-          '',
-          '',
-          '',
+          escapeCsv(`${catNum} ${catName}`),
+          '', '', '', '',
           '',
           formatNumber(catNetPlan),
           '',
@@ -706,10 +719,8 @@ export function generateBudgetCsvContent(
       } else {
         lines.push([
           escapeCsv(sumLabel),
-          escapeCsv(`${catNum}. ${catName}`),
-          '',
-          '',
-          '',
+          escapeCsv(`${catNum} ${catName}`),
+          '', '', '', '',
           formatNumber(catNetPlan),
           escapeCsv(getLangText(cat.categoryResultExplanation, lang))
         ].join(delim));
@@ -745,7 +756,7 @@ export function generateBudgetCsvContent(
 
       lines.push([
         escapeCsv(totalRevLabel),
-        '', '', '', '',
+        '', '', '', '', '',
         formatNumber(prevRev),
         formatNumber(currRev),
         formatVar(diffRev),
@@ -755,7 +766,7 @@ export function generateBudgetCsvContent(
 
       lines.push([
         escapeCsv(totalExpLabel),
-        '', '', '', '',
+        '', '', '', '', '',
         formatNumber(prevExp),
         formatNumber(currExp),
         formatVar(diffExp),
@@ -765,7 +776,7 @@ export function generateBudgetCsvContent(
 
       lines.push([
         escapeCsv(netResultLabel),
-        '', '', '', '',
+        '', '', '', '', '',
         formatNumber(prevNet),
         formatNumber(currNet),
         formatVar(diffNet),
@@ -775,21 +786,21 @@ export function generateBudgetCsvContent(
     } else {
       lines.push([
         escapeCsv(totalRevLabel),
-        '', '', '', '',
+        '', '', '', '', '',
         formatNumber(budget.totalBudgetedRevenue || 0),
         ''
       ].join(delim));
 
       lines.push([
         escapeCsv(totalExpLabel),
-        '', '', '', '',
+        '', '', '', '', '',
         formatNumber(budget.totalBudgetedExpense || 0),
         ''
       ].join(delim));
 
       lines.push([
         escapeCsv(netResultLabel),
-        '', '', '', '',
+        '', '', '', '', '',
         formatNumber(budget.budgetedNetResult || 0),
         ''
       ].join(delim));
@@ -799,21 +810,21 @@ export function generateBudgetCsvContent(
       lines.push('');
       const obTitle = isEn ? 'OPENING BALANCES' : isBoth ? 'BILANS OTWARCIA / OPENING BALANCES' : 'BILANS OTWARCIA';
       const obColHeader = isEn ? 'Opening balance' : isBoth ? 'Bilans otwarcia / Opening' : 'Bilans otwarcia';
-      lines.push([escapeCsv(obTitle), '', '', '', '', escapeCsv(obColHeader), ''].join(delim));
-      lines.push([escapeCsv(isEn ? 'Bank account PLN' : 'Stan konta bankowego PLN'), '', '', '', '', formatNumber(budget.openingBalances.bankPln || 0), ''].join(delim));
+      lines.push([escapeCsv(obTitle), '', '', '', '', '', escapeCsv(obColHeader), ''].join(delim));
+      lines.push([escapeCsv(isEn ? 'Bank account PLN' : 'Stan konta bankowego PLN'), '', '', '', '', '', formatNumber(budget.openingBalances.bankPln || 0), ''].join(delim));
       const obEurDetails = budget.openingBalances.bankEurStartingBalance
         ? `${budget.openingBalances.bankEurStartingBalance.toFixed(2)} EUR (${isEn ? 'rate' : 'kurs'} NBP: ${budget.openingBalances.eurExchangeRate}${budget.openingBalances.eurExchangeDate ? (isEn ? ' as of ' : ' z dn. ') + formatDateOption(budget.openingBalances.eurExchangeDate, dateFormat) : ''})`
         : '';
       lines.push([
         escapeCsv(isEn ? 'Bank account EUR (in PLN)' : 'Stan konta bankowego EUR (w PLN)'),
-        '', '', '', '',
+        '', '', '', '', '',
         formatNumber(budget.openingBalances.bankEurInPln || 0),
         escapeCsv(obEurDetails)
       ].join(delim));
-      lines.push([escapeCsv(isEn ? 'Section sub-account reserves' : 'Środki zarezerwowane na subkonta sekcji'), '', '', '', '', formatNumber(budget.openingBalances.sectionReservesStartingBalance || 0), ''].join(delim));
-      lines.push([escapeCsv(isEn ? 'Term deposits' : 'Lokaty terminowe'), '', '', '', '', formatNumber(budget.openingBalances.termDepositsStartingBalance || 0), ''].join(delim));
-      lines.push([escapeCsv(isEn ? 'Unspent operational surplus from prior years' : 'Nierozliczona nadwyżka operacyjna z lat ubiegłych'), '', '', '', '', formatNumber(budget.openingBalances.unspentOperatingSurplusCarryover || 0), ''].join(delim));
-      lines.push([escapeCsv(isEn ? 'TOTAL CASH ASSETS / OPENING BALANCE' : 'ŁĄCZNY BILANS OTWARCIA / STAN ŚRODKÓW'), '', '', '', '', formatNumber(budget.openingBalances.totalOpeningBalance || 0), ''].join(delim));
+      lines.push([escapeCsv(isEn ? 'Section sub-account reserves' : 'Środki zarezerwowane na subkonta sekcji'), '', '', '', '', '', formatNumber(budget.openingBalances.sectionReservesStartingBalance || 0), ''].join(delim));
+      lines.push([escapeCsv(isEn ? 'Term deposits' : 'Lokaty terminowe'), '', '', '', '', '', formatNumber(budget.openingBalances.termDepositsStartingBalance || 0), ''].join(delim));
+      lines.push([escapeCsv(isEn ? 'Unspent operational surplus from prior years' : 'Nierozliczona nadwyżka operacyjna z lat ubiegłych'), '', '', '', '', '', formatNumber(budget.openingBalances.unspentOperatingSurplusCarryover || 0), ''].join(delim));
+      lines.push([escapeCsv(isEn ? 'TOTAL CASH ASSETS / OPENING BALANCE' : 'ŁĄCZNY BILANS OTWARCIA / STAN ŚRODKÓW'), '', '', '', '', '', formatNumber(budget.openingBalances.totalOpeningBalance || 0), ''].join(delim));
     }
 
     const filename = isEn ? `budget_plan_${yr}.csv` : `budzet_plan_${yr}.csv`;
@@ -965,29 +976,31 @@ export function generateBudgetHtmlReport(
 
   if (isExecution) {
     // 1. Execution Table (7 columns)
-    const colCode = isEn ? 'Code' : isBoth ? 'Kod / Code' : 'Kod';
+    const colNum = isEn ? 'No.' : isBoth ? 'Nr / No.' : 'Nr';
     const colItem = isEn ? 'Category / Group / Line' : isBoth ? 'Kategoria / Grupa / Linia (Category / Group / Line)' : 'Kategoria / Grupa / Linia';
     const colBud = isEn ? 'Budgeted' : isBoth ? 'Zabudżetowano / Budgeted' : 'Zabudżetowano';
     const colAct = isEn ? 'Execution' : isBoth ? 'Wykonanie / Execution' : 'Wykonanie';
     const colVar = isEn ? 'Variance' : isBoth ? 'Odchylenie / Variance' : 'Odchylenie';
     const colNotes = isEn ? 'Description' : isBoth ? 'Opis / Description' : 'Opis';
 
-    const renderExecutionItems = (items: (DynamicBudgetGroup | BudgetLineItem)[], depth = 0): string => {
+    const renderExecutionItems = (items: (DynamicBudgetGroup | BudgetLineItem)[], depth = 0, prefix = ''): string => {
       let html = '';
-      for (const item of items || []) {
+      for (let idx = 0; idx < (items || []).length; idx++) {
+        const item = items[idx];
+        const nodeNum = prefix ? `${prefix}.${idx + 1}` : `${idx + 1}`;
         if (isBudgetGroup(item)) {
-          const indent = 20 + depth * 14;
+          const indent = 8 + depth * 16;
           html += `
             <tr class="grp-header-row">
-              <td></td>
+              <td class="num-cell" style="font-weight: 700;">${nodeNum}</td>
               <td colspan="6" style="padding-left: ${indent}px;">
-                <span style="font-weight: 600; color: #475569;">📁 ${getLangText(item.name, lang)}</span>
+                <span style="font-weight: 600; color: #475569;">${getLangText(item.name, lang)}</span>
               </td>
             </tr>
-            ${renderExecutionItems(item.items || [], depth + 1)}
+            ${renderExecutionItems(item.items || [], depth + 1, nodeNum)}
           `;
         } else if (isBudgetLine(item)) {
-          const indent = 20 + (depth > 0 ? (depth + 1) * 14 : 0);
+          const indent = 8 + depth * 16;
           const budgeted = item.budgetedAmount || 0;
           const actual = item.actualAmount || 0;
           const variance = actual - budgeted;
@@ -995,7 +1008,7 @@ export function generateBudgetHtmlReport(
           const lineDesc = getLangText(item.description, lang);
           html += `
             <tr>
-              <td><code>${item.code || '—'}</code></td>
+              <td class="num-cell" style="font-weight: 600;">${nodeNum}</td>
               <td style="padding-left: ${indent}px;">
                 <div>${getLangText(item.name, lang)}</div>
               </td>
@@ -1014,7 +1027,7 @@ export function generateBudgetHtmlReport(
     tableRows = `
       <thead>
         <tr>
-          <th style="width: 100px;">${colCode}</th>
+          <th style="width: 68px;">${colNum}</th>
           <th>${colItem}</th>
           <th style="text-align: right; width: 120px;">${colBud}</th>
           <th style="text-align: right; width: 120px;">${colAct}</th>
@@ -1035,8 +1048,9 @@ export function generateBudgetHtmlReport(
 
           let catHtml = `
             <tr class="cat-header-row">
-              <td colspan="7">
-                <strong>${catNum}. ${catName}</strong>
+              <td class="num-cell" style="font-weight: 700;">${catNum}</td>
+              <td colspan="6">
+                <strong>${catName}</strong>
               </td>
             </tr>
           `;
@@ -1049,7 +1063,8 @@ export function generateBudgetHtmlReport(
             const secPct = secPlan !== 0 ? ((secAct / secPlan) * 100).toFixed(1) + '%' : '0.0%';
             catHtml += `
               <tr class="sec-header-row rev">
-                <td colspan="2" style="padding-left: 14px;">
+                <td class="num-cell" style="font-weight: 700;">${catNum}.A</td>
+                <td>
                   <span class="badge badge-rev">${typeRev}</span>
                 </td>
                 <td style="text-align: right; font-weight: 700;">${formatPln(secPlan)}</td>
@@ -1058,7 +1073,7 @@ export function generateBudgetHtmlReport(
                 <td style="text-align: center; font-weight: 700;">${secPct}</td>
                 <td></td>
               </tr>
-              ${renderExecutionItems(cat.revenues.items, 0)}
+              ${renderExecutionItems(cat.revenues.items, 0, `${catNum}.A`)}
             `;
           }
 
@@ -1070,7 +1085,8 @@ export function generateBudgetHtmlReport(
             const secPct = secPlan !== 0 ? ((secAct / secPlan) * 100).toFixed(1) + '%' : '0.0%';
             catHtml += `
               <tr class="sec-header-row exp">
-                <td colspan="2" style="padding-left: 14px;">
+                <td class="num-cell" style="font-weight: 700;">${catNum}.B</td>
+                <td>
                   <span class="badge badge-exp">${typeExp}</span>
                 </td>
                 <td style="text-align: right; font-weight: 700;">${formatPln(secPlan)}</td>
@@ -1079,7 +1095,7 @@ export function generateBudgetHtmlReport(
                 <td style="text-align: center; font-weight: 700;">${secPct}</td>
                 <td></td>
               </tr>
-              ${renderExecutionItems(cat.expenses.items, 0)}
+              ${renderExecutionItems(cat.expenses.items, 0, `${catNum}.B`)}
             `;
           }
 
@@ -1088,8 +1104,9 @@ export function generateBudgetHtmlReport(
           const catExplanation = getLangText(cat.categoryResultExplanation, lang);
           catHtml += `
             <tr class="cat-result-row">
-              <td colspan="2" style="padding-left: 14px; font-weight: 700; color: #1e293b;">
-                ${resultLabel}: ${catNum}. ${catName}
+              <td></td>
+              <td style="font-weight: 700; color: #1e293b;">
+                ${resultLabel}:
               </td>
               <td style="text-align: right; font-weight: 700;">${formatPlnWithSign(catNetPlan)}</td>
               <td style="text-align: right; font-weight: 700;">${formatPlnWithSign(catNetAct)}</td>
@@ -1104,7 +1121,8 @@ export function generateBudgetHtmlReport(
       </tbody>
       <tbody class="table-summary-tbody">
         <tr style="background: #f8fafc; border-top: 2px solid #cbd5e1; font-weight: 700;">
-          <td colspan="2">${totalRevLabel}</td>
+          <td></td>
+          <td>${totalRevLabel}</td>
           <td style="text-align: right;">${formatPln(totalBudRev)}</td>
           <td style="text-align: right;">${formatPln(totalActRev)}</td>
           <td style="text-align: right; color: ${revVar < 0 ? '#dc2626' : '#16a34a'};">${formatPlnWithSign(revVar)}</td>
@@ -1112,7 +1130,8 @@ export function generateBudgetHtmlReport(
           <td></td>
         </tr>
         <tr style="background: #f8fafc; font-weight: 700;">
-          <td colspan="2">${totalExpLabel}</td>
+          <td></td>
+          <td>${totalExpLabel}</td>
           <td style="text-align: right;">${formatPln(totalBudExp)}</td>
           <td style="text-align: right;">${formatPln(totalActExp)}</td>
           <td style="text-align: right; color: ${expVar > 0 ? '#dc2626' : '#16a34a'};">${formatPlnWithSign(expVar)}</td>
@@ -1120,7 +1139,8 @@ export function generateBudgetHtmlReport(
           <td></td>
         </tr>
         <tr style="background: #e2e8f0; font-weight: 700; border-top: 1px solid #cbd5e1; border-bottom: 2px solid #94a3b8;">
-          <td colspan="2">${netResultLabel}</td>
+          <td></td>
+          <td>${netResultLabel}</td>
           <td style="text-align: right;">${formatPlnWithSign(budNet)}</td>
           <td style="text-align: right;">${formatPlnWithSign(actNet)}</td>
           <td style="text-align: right; color: ${varNet < 0 ? '#dc2626' : '#16a34a'};">${formatPlnWithSign(varNet)}</td>
@@ -1163,7 +1183,7 @@ export function generateBudgetHtmlReport(
       return sum;
     };
 
-    const colCode = isEn ? 'Code' : isBoth ? 'Kod / Code' : 'Kod';
+    const colNum = isEn ? 'No.' : isBoth ? 'Nr / No.' : 'Nr';
     const colItem = isEn ? 'Category / Group / Line' : isBoth ? 'Kategoria / Grupa / Linia (Category / Group / Line)' : 'Kategoria / Grupa / Linia';
     const colBud = hasPrevComp
       ? (isEn ? `Draft ${yr}` : isBoth ? `Projekt ${yr} / Draft` : `Projekt ${yr}`)
@@ -1173,23 +1193,25 @@ export function generateBudgetHtmlReport(
     const colChange = isEn ? 'Change %' : isBoth ? 'Zmiana % / Change %' : 'Zmiana %';
     const colNotes = isEn ? 'Description' : isBoth ? 'Opis / Description' : 'Opis';
 
-    const renderPlanItems = (items: (DynamicBudgetGroup | BudgetLineItem)[], depth = 0, isRevSec = false): string => {
+    const renderPlanItems = (items: (DynamicBudgetGroup | BudgetLineItem)[], depth = 0, isRevSec = false, prefix = ''): string => {
       let html = '';
-      for (const item of items || []) {
+      for (let idx = 0; idx < (items || []).length; idx++) {
+        const item = items[idx];
+        const nodeNum = prefix ? `${prefix}.${idx + 1}` : `${idx + 1}`;
         if (isBudgetGroup(item)) {
-          const indent = 20 + depth * 14;
+          const indent = 8 + depth * 16;
           const colspan = hasPrevComp ? 6 : 3;
           html += `
             <tr class="grp-header-row">
-              <td></td>
+              <td class="num-cell" style="font-weight: 700;">${nodeNum}</td>
               <td colspan="${colspan}" style="padding-left: ${indent}px;">
-                <span style="font-weight: 600; color: #475569;">📁 ${getLangText(item.name, lang)}</span>
+                <span style="font-weight: 600; color: #475569;">${getLangText(item.name, lang)}</span>
               </td>
             </tr>
-            ${renderPlanItems(item.items || [], depth + 1, isRevSec)}
+            ${renderPlanItems(item.items || [], depth + 1, isRevSec, nodeNum)}
           `;
         } else if (isBudgetLine(item)) {
-          const indent = 20 + (depth > 0 ? (depth + 1) * 14 : 0);
+          const indent = 8 + depth * 16;
           const budgeted = item.budgetedAmount || 0;
           const lineDesc = getLangText(item.description, lang);
 
@@ -1209,7 +1231,7 @@ export function generateBudgetHtmlReport(
 
               html += `
                 <tr>
-                  <td><code>${item.code || '—'}</code></td>
+                  <td class="num-cell" style="font-weight: 600;">${nodeNum}</td>
                   <td style="padding-left: ${indent}px;">
                     <div>${getLangText(item.name, lang)}</div>
                   </td>
@@ -1228,7 +1250,7 @@ export function generateBudgetHtmlReport(
               // Line did not exist in previous year
               html += `
                 <tr>
-                  <td><code>${item.code || '—'}</code></td>
+                  <td class="num-cell" style="font-weight: 600;">${nodeNum}</td>
                   <td style="padding-left: ${indent}px;">
                     <div>${getLangText(item.name, lang)}</div>
                   </td>
@@ -1247,7 +1269,7 @@ export function generateBudgetHtmlReport(
           } else {
             html += `
               <tr>
-                <td><code>${item.code || '—'}</code></td>
+                <td class="num-cell" style="font-weight: 600;">${nodeNum}</td>
                 <td style="padding-left: ${indent}px;">
                   <div>${getLangText(item.name, lang)}</div>
                 </td>
@@ -1265,7 +1287,7 @@ export function generateBudgetHtmlReport(
       tableRows = `
         <thead>
           <tr>
-            <th style="width: 95px;">${colCode}</th>
+            <th style="width: 68px;">${colNum}</th>
             <th>${colItem}</th>
             <th style="text-align: right; width: 120px;">${colPrev}</th>
             <th style="text-align: right; width: 120px;">${colBud}</th>
@@ -1283,8 +1305,9 @@ export function generateBudgetHtmlReport(
 
             let catHtml = `
               <tr class="cat-header-row">
-                <td colspan="7">
-                  <strong>${catNum}. ${catName}</strong>
+                <td class="num-cell" style="font-weight: 700;">${catNum}</td>
+                <td colspan="6">
+                  <strong>${catName}</strong>
                 </td>
               </tr>
             `;
@@ -1300,7 +1323,8 @@ export function generateBudgetHtmlReport(
               const secPct = prevRevSum !== 0 ? (((secPlan - prevRevSum) / Math.abs(prevRevSum)) * 100).toFixed(1).replace('.', ',') + '%' : '—';
               catHtml += `
                 <tr class="sec-header-row rev">
-                  <td colspan="2" style="padding-left: 14px;">
+                  <td class="num-cell" style="font-weight: 700;">${catNum}.A</td>
+                  <td>
                     <span class="badge badge-rev">${typeRev}</span>
                   </td>
                   <td style="text-align: right; font-weight: 600; color: #475569;">${formatPln(prevRevSum)}</td>
@@ -1309,7 +1333,7 @@ export function generateBudgetHtmlReport(
                   <td style="text-align: center; font-size: 11px;">${secPct}</td>
                   <td></td>
                 </tr>
-                ${renderPlanItems(cat.revenues.items, 0, true)}
+                ${renderPlanItems(cat.revenues.items, 0, true, `${catNum}.A`)}
               `;
             }
 
@@ -1321,7 +1345,8 @@ export function generateBudgetHtmlReport(
               const secPct = prevExpSum !== 0 ? (((secPlan - prevExpSum) / Math.abs(prevExpSum)) * 100).toFixed(1).replace('.', ',') + '%' : '—';
               catHtml += `
                 <tr class="sec-header-row exp">
-                  <td colspan="2" style="padding-left: 14px;">
+                  <td class="num-cell" style="font-weight: 700;">${catNum}.B</td>
+                  <td>
                     <span class="badge badge-exp">${typeExp}</span>
                   </td>
                   <td style="text-align: right; font-weight: 600; color: #475569;">${formatPln(prevExpSum)}</td>
@@ -1330,7 +1355,7 @@ export function generateBudgetHtmlReport(
                   <td style="text-align: center; font-size: 11px;">${secPct}</td>
                   <td></td>
                 </tr>
-                ${renderPlanItems(cat.expenses.items, 0, false)}
+                ${renderPlanItems(cat.expenses.items, 0, false, `${catNum}.B`)}
               `;
             }
 
@@ -1340,8 +1365,9 @@ export function generateBudgetHtmlReport(
             const catExplanation = getLangText(cat.categoryResultExplanation, lang);
             catHtml += `
               <tr class="cat-result-row">
-                <td colspan="2" style="padding-left: 14px; font-weight: 700; color: #1e293b;">
-                  ${resultLabel}: ${catNum}. ${catName}
+                <td></td>
+                <td style="font-weight: 700; color: #1e293b;">
+                  ${resultLabel}:
                 </td>
                 <td style="text-align: right; font-weight: 600; color: #475569;">${formatPlnWithSign(catPrevNet)}</td>
                 <td style="text-align: right; font-weight: 700;">${formatPlnWithSign(catNetPlan)}</td>
@@ -1372,7 +1398,8 @@ export function generateBudgetHtmlReport(
 
             return `
               <tr style="background: #f8fafc; border-top: 2px solid #cbd5e1; font-weight: 700;">
-                <td colspan="2">${totalRevLabel}</td>
+                <td></td>
+                <td>${totalRevLabel}</td>
                 <td style="text-align: right; color: #475569;">${formatPln(prevRev)}</td>
                 <td style="text-align: right;">${formatPln(currRev)}</td>
                 <td style="text-align: right; color: ${diffRev >= 0 ? '#16a34a' : '#dc2626'};">${formatPlnWithSign(diffRev)}</td>
@@ -1380,7 +1407,8 @@ export function generateBudgetHtmlReport(
                 <td></td>
               </tr>
               <tr style="background: #f8fafc; font-weight: 700;">
-                <td colspan="2">${totalExpLabel}</td>
+                <td></td>
+                <td>${totalExpLabel}</td>
                 <td style="text-align: right; color: #475569;">${formatPln(prevExp)}</td>
                 <td style="text-align: right;">${formatPln(currExp)}</td>
                 <td style="text-align: right; color: ${diffExp > 0 ? '#dc2626' : '#16a34a'};">${formatPlnWithSign(diffExp)}</td>
@@ -1388,7 +1416,8 @@ export function generateBudgetHtmlReport(
                 <td></td>
               </tr>
               <tr style="background: #e2e8f0; font-weight: 700; border-top: 1px solid #cbd5e1; border-bottom: 2px solid #94a3b8;">
-                <td colspan="2">${netResultLabel}</td>
+                <td></td>
+                <td>${netResultLabel}</td>
                 <td style="text-align: right; color: #475569;">${formatPlnWithSign(prevNet)}</td>
                 <td style="text-align: right;">${formatPlnWithSign(currNet)}</td>
                 <td style="text-align: right; color: ${diffNet >= 0 ? '#16a34a' : '#dc2626'};">${formatPlnWithSign(diffNet)}</td>
@@ -1403,7 +1432,7 @@ export function generateBudgetHtmlReport(
       tableRows = `
         <thead>
           <tr>
-            <th style="width: 110px;">${colCode}</th>
+            <th style="width: 68px;">${colNum}</th>
             <th>${colItem}</th>
             <th style="text-align: right; width: 160px;">${colBud}</th>
             <th>${colNotes}</th>
@@ -1418,8 +1447,9 @@ export function generateBudgetHtmlReport(
 
             let catHtml = `
               <tr class="cat-header-row">
-                <td colspan="4">
-                  <strong>${catNum}. ${catName}</strong>
+                <td class="num-cell" style="font-weight: 700;">${catNum}</td>
+                <td colspan="3">
+                  <strong>${catName}</strong>
                 </td>
               </tr>
             `;
@@ -1429,13 +1459,14 @@ export function generateBudgetHtmlReport(
               const secPlan = cat.revenues.totalPlanned || 0;
               catHtml += `
                 <tr class="sec-header-row rev">
-                  <td colspan="2" style="padding-left: 14px;">
+                  <td class="num-cell" style="font-weight: 700;">${catNum}.A</td>
+                  <td>
                     <span class="badge badge-rev">${typeRev}</span>
                   </td>
                   <td style="text-align: right; font-weight: 700;">${formatPln(secPlan)}</td>
                   <td></td>
                 </tr>
-                ${renderPlanItems(cat.revenues.items, 0, true)}
+                ${renderPlanItems(cat.revenues.items, 0, true, `${catNum}.A`)}
               `;
             }
 
@@ -1444,13 +1475,14 @@ export function generateBudgetHtmlReport(
               const secPlan = cat.expenses.totalPlanned || 0;
               catHtml += `
                 <tr class="sec-header-row exp">
-                  <td colspan="2" style="padding-left: 14px;">
+                  <td class="num-cell" style="font-weight: 700;">${catNum}.B</td>
+                  <td>
                     <span class="badge badge-exp">${typeExp}</span>
                   </td>
                   <td style="text-align: right; font-weight: 700;">${formatPln(secPlan)}</td>
                   <td></td>
                 </tr>
-                ${renderPlanItems(cat.expenses.items, 0, false)}
+                ${renderPlanItems(cat.expenses.items, 0, false, `${catNum}.B`)}
               `;
             }
 
@@ -1459,8 +1491,9 @@ export function generateBudgetHtmlReport(
             const catExplanation = getLangText(cat.categoryResultExplanation, lang);
             catHtml += `
               <tr class="cat-result-row">
-                <td colspan="2" style="padding-left: 14px; font-weight: 700; color: #1e293b;">
-                  ${resultLabel}: ${catNum}. ${catName}
+                <td></td>
+                <td style="font-weight: 700; color: #1e293b;">
+                  ${resultLabel}:
                 </td>
                 <td style="text-align: right; font-weight: 700;">${formatPlnWithSign(catNetPlan)}</td>
                 <td style="font-size: 10px; color: #475569; font-style: italic;">${catExplanation || ''}</td>
@@ -1472,17 +1505,20 @@ export function generateBudgetHtmlReport(
         </tbody>
         <tbody class="table-summary-tbody">
           <tr style="background: #f8fafc; border-top: 2px solid #cbd5e1; font-weight: 700;">
-            <td colspan="2">${totalRevLabel}</td>
+            <td></td>
+            <td>${totalRevLabel}</td>
             <td style="text-align: right;">${formatPln(budget.totalBudgetedRevenue)}</td>
             <td></td>
           </tr>
           <tr style="background: #f8fafc; font-weight: 700;">
-            <td colspan="2">${totalExpLabel}</td>
+            <td></td>
+            <td>${totalExpLabel}</td>
             <td style="text-align: right;">${formatPln(budget.totalBudgetedExpense)}</td>
             <td></td>
           </tr>
           <tr style="background: #e2e8f0; font-weight: 700; border-top: 1px solid #cbd5e1; border-bottom: 2px solid #94a3b8;">
-            <td colspan="2">${netResultLabel}</td>
+            <td></td>
+            <td>${netResultLabel}</td>
             <td style="text-align: right;">${formatPlnWithSign(budget.budgetedNetResult)}</td>
             <td></td>
           </tr>
@@ -1777,7 +1813,12 @@ export function generateBudgetHtmlReport(
       color: #475569;
       font-weight: 600;
       font-size: 11px;
-      padding-left: 12px;
+    }
+    .num-cell {
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+      color: #334155;
+      font-size: 11px;
     }
     code {
       font-family: monospace;
@@ -1816,10 +1857,10 @@ export function generateBudgetHtmlReport(
       padding-bottom: 6px;
     }
     .sec-header-row.rev td:first-child {
-      border-left: 4px solid #16a34a;
+      box-shadow: inset 4px 0 0 #16a34a;
     }
     .sec-header-row.exp td:first-child {
-      border-left: 4px solid #dc2626;
+      box-shadow: inset 4px 0 0 #dc2626;
     }
     .cat-result-row td {
       background: #f1f5f9;
@@ -2047,6 +2088,7 @@ export function generateAmendmentDraftCsvContent(
   lines.push('');
 
   // Headers
+  const colNum = isEn ? 'No.' : isBoth ? 'Nr / No.' : 'Nr';
   const colCode = isEn ? 'Code' : isBoth ? 'Kod / Code' : 'Kod';
   const colPath = isEn ? 'Category / Group' : isBoth ? 'Kategoria / Grupa / Category' : 'Kategoria / Grupa';
   const colName = isEn ? 'Line Name' : isBoth ? 'Nazwa pozycji / Line Name' : 'Nazwa pozycji';
@@ -2058,6 +2100,7 @@ export function generateAmendmentDraftCsvContent(
   const colJust = isEn ? 'Justification' : isBoth ? 'Uzasadnienie / Justification' : 'Uzasadnienie';
 
   lines.push([
+    escapeCsv(colNum),
     escapeCsv(colCode),
     escapeCsv(colPath),
     escapeCsv(colName),
@@ -2076,6 +2119,7 @@ export function generateAmendmentDraftCsvContent(
 
   for (const it of itemsDiff || []) {
     const code = it.budgetCode || it.lineCode || '—';
+    const lineNum = it.lineNumber || '';
     const path = it.categoryPath || '';
     const name = (isEn ? it.lineName?.en : it.lineName?.pl) || it.lineName?.pl || it.lineName?.en || '';
     const changeType = getChangeTypeLabel(it.changeType);
@@ -2091,6 +2135,7 @@ export function generateAmendmentDraftCsvContent(
     totAct += act;
 
     lines.push([
+      escapeCsv(lineNum),
       escapeCsv(code),
       escapeCsv(path),
       escapeCsv(name),
@@ -2107,6 +2152,7 @@ export function generateAmendmentDraftCsvContent(
   lines.push('');
   lines.push([
     escapeCsv(isEn ? 'TOTAL DELTA' : isBoth ? 'PODSUMOWANIE ZMIAN / TOTAL DELTA' : 'PODSUMOWANIE ZMIAN'),
+    '',
     '',
     '',
     '',
@@ -2206,7 +2252,7 @@ export function generateAmendmentDraftHtmlReport(
     ? 'WYNIK NETTO / NET RESULT'
     : 'WYNIK NETTO';
 
-  const colCode = isEn ? 'Code' : isBoth ? 'Kod / Code' : 'Kod';
+  const colNum = isEn ? 'No.' : isBoth ? 'Nr / No.' : 'Nr';
   const colItem = isEn ? 'Category / Group / Line' : isBoth ? 'Kategoria / Grupa / Linia (Category / Group / Line)' : 'Kategoria / Grupa / Linia';
   const colCur = isEn ? 'Current Plan [PLN]' : isBoth ? 'Dotychczasowy plan / Current [PLN]' : 'Dotychczasowy plan [PLN]';
   const colProp = isEn ? 'Proposed Plan [PLN]' : isBoth ? 'Proponowany plan / Proposed [PLN]' : 'Proponowany plan [PLN]';
@@ -2236,6 +2282,7 @@ export function generateAmendmentDraftHtmlReport(
 
   // Group itemsDiff by Category and Section
   interface CatGroup {
+    catNum: string;
     catName: string;
     revenues: BudgetAmendmentItem[];
     expenses: BudgetAmendmentItem[];
@@ -2252,8 +2299,22 @@ export function generateAmendmentDraftHtmlReport(
       }
     }
 
+    let catNum = '';
+    if (it.lineNumber && /^\d+\./.test(it.lineNumber)) {
+      catNum = it.lineNumber.split('.')[0];
+    } else if (budget.categories) {
+      const matchedCat = budget.categories.find(
+        (c) => (c.name?.pl && c.name.pl.trim() === catName) || (c.name?.en && c.name.en.trim() === catName)
+      );
+      if (matchedCat?.number) {
+        catNum = String(matchedCat.number);
+      }
+    }
+
     if (!catMap.has(catName)) {
-      catMap.set(catName, { catName, revenues: [], expenses: [] });
+      catMap.set(catName, { catNum, catName, revenues: [], expenses: [] });
+    } else if (catNum && !catMap.get(catName)!.catNum) {
+      catMap.get(catName)!.catNum = catNum;
     }
 
     const grp = catMap.get(catName)!;
@@ -2264,7 +2325,7 @@ export function generateAmendmentDraftHtmlReport(
     }
   }
 
-  const renderSectionRows = (items: BudgetAmendmentItem[], secType: 'REVENUE' | 'EXPENSE'): string => {
+  const renderSectionRows = (items: BudgetAmendmentItem[], secType: 'REVENUE' | 'EXPENSE', catNum: string): string => {
     if (!items || items.length === 0) return '';
     const isRev = secType === 'REVENUE';
     const secCur = items.reduce((s, it) => s + (it.previousAmount || it.currentAmount || 0), 0);
@@ -2276,9 +2337,12 @@ export function generateAmendmentDraftHtmlReport(
       ? (secDelta < 0 ? '#dc2626' : '#16a34a')
       : (secDelta > 0 ? '#dc2626' : '#16a34a');
 
+    const secNum = catNum ? `${catNum}.${isRev ? 'A' : 'B'}` : '';
+
     let html = `
       <tr class="sec-header-row ${isRev ? 'rev' : 'exp'}">
-        <td colspan="2" style="padding-left: 14px;">
+        <td class="num-cell" style="font-weight: 700;">${escapeHtml(secNum)}</td>
+        <td>
           <span class="badge ${isRev ? 'badge-rev' : 'badge-exp'}">${isRev ? typeRev : typeExp}</span>
         </td>
         <td style="text-align: right; font-weight: 700;">${formatPln(secCur)}</td>
@@ -2290,7 +2354,7 @@ export function generateAmendmentDraftHtmlReport(
     `;
 
     for (const it of items) {
-      const code = it.budgetCode || it.lineCode || '—';
+      const lineNum = it.lineNumber || '—';
       const name = (isEn ? it.lineName?.en : it.lineName?.pl) || it.lineName?.pl || it.lineName?.en || '';
       const prev = it.previousAmount ?? it.currentAmount ?? 0;
       const prop = it.proposedAmount ?? (prev + (it.deltaAmount || 0));
@@ -2322,9 +2386,9 @@ export function generateAmendmentDraftHtmlReport(
 
       html += `
         <tr>
-          <td><code>${escapeHtml(code)}</code></td>
-          <td style="padding-left: 20px;">
-            ${groupSubpath ? `<div style="font-size: 10px; color: #64748b; margin-bottom: 1px;">📁 ${escapeHtml(groupSubpath)}</div>` : ''}
+          <td class="num-cell" style="font-weight: 600;">${escapeHtml(lineNum)}</td>
+          <td>
+            ${groupSubpath ? `<div style="font-size: 10px; color: #64748b; margin-bottom: 1px;">${escapeHtml(groupSubpath)}</div>` : ''}
             <div>
               ${escapeHtml(name)}
               ${changeBadge}
@@ -2349,12 +2413,13 @@ export function generateAmendmentDraftHtmlReport(
     for (const grp of catMap.values()) {
       bodyRows += `
         <tr class="cat-header-row">
-          <td colspan="7">
+          <td class="num-cell" style="font-weight: 700;">${escapeHtml(grp.catNum)}</td>
+          <td colspan="6">
             <strong>${escapeHtml(grp.catName)}</strong>
           </td>
         </tr>
-        ${renderSectionRows(grp.revenues, 'REVENUE')}
-        ${renderSectionRows(grp.expenses, 'EXPENSE')}
+        ${renderSectionRows(grp.revenues, 'REVENUE', grp.catNum)}
+        ${renderSectionRows(grp.expenses, 'EXPENSE', grp.catNum)}
       `;
     }
   }
@@ -2362,7 +2427,7 @@ export function generateAmendmentDraftHtmlReport(
   const tableHtml = `
     <thead>
       <tr>
-        <th style="width: 100px;">${colCode}</th>
+        <th style="width: 68px;">${colNum}</th>
         <th>${colItem}</th>
         <th style="text-align: right; width: 130px;">${colCur}</th>
         <th style="text-align: right; width: 130px;">${colProp}</th>
@@ -2376,7 +2441,8 @@ export function generateAmendmentDraftHtmlReport(
     </tbody>
     <tbody class="table-summary-tbody">
       <tr style="background: #f8fafc; border-top: 2px solid #cbd5e1; font-weight: 700;">
-        <td colspan="2">${totalRevLabel}</td>
+        <td></td>
+        <td>${totalRevLabel}</td>
         <td style="text-align: right;">${formatPln(baseBudRev)}</td>
         <td style="text-align: right;">${formatPln(propBudRev)}</td>
         <td style="text-align: right; color: ${revDelta < 0 ? '#dc2626' : '#16a34a'};">${formatPlnWithSign(revDelta)}</td>
@@ -2384,7 +2450,8 @@ export function generateAmendmentDraftHtmlReport(
         <td></td>
       </tr>
       <tr style="background: #f8fafc; font-weight: 700;">
-        <td colspan="2">${totalExpLabel}</td>
+        <td></td>
+        <td>${totalExpLabel}</td>
         <td style="text-align: right;">${formatPln(baseBudExp)}</td>
         <td style="text-align: right;">${formatPln(propBudExp)}</td>
         <td style="text-align: right; color: ${expDelta > 0 ? '#dc2626' : '#16a34a'};">${formatPlnWithSign(expDelta)}</td>
@@ -2392,7 +2459,8 @@ export function generateAmendmentDraftHtmlReport(
         <td></td>
       </tr>
       <tr style="background: #e2e8f0; font-weight: 700; border-top: 1px solid #cbd5e1; border-bottom: 2px solid #94a3b8;">
-        <td colspan="2">${netResultLabel}</td>
+        <td></td>
+        <td>${netResultLabel}</td>
         <td style="text-align: right;">${formatPlnWithSign(baseNet)}</td>
         <td style="text-align: right;">${formatPlnWithSign(propNet)}</td>
         <td style="text-align: right; color: ${netDelta < 0 ? '#dc2626' : '#16a34a'};">${formatPlnWithSign(netDelta)}</td>
@@ -2515,7 +2583,12 @@ export function generateAmendmentDraftHtmlReport(
       color: #475569;
       font-weight: 600;
       font-size: 11px;
-      padding-left: 12px;
+    }
+    .num-cell {
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+      color: #334155;
+      font-size: 11px;
     }
     code {
       font-family: monospace;
@@ -2554,10 +2627,10 @@ export function generateAmendmentDraftHtmlReport(
       padding-bottom: 6px;
     }
     .sec-header-row.rev td:first-child {
-      border-left: 4px solid #16a34a;
+      box-shadow: inset 4px 0 0 #16a34a;
     }
     .sec-header-row.exp td:first-child {
-      border-left: 4px solid #dc2626;
+      box-shadow: inset 4px 0 0 #dc2626;
     }
 
     @media print {

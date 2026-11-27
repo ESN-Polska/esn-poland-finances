@@ -333,6 +333,7 @@ class BudgetsRC extends ResourceController {
         escapeCsv('Kategoria'),
         escapeCsv('Typ'),
         escapeCsv('Grupa'),
+        escapeCsv('Nr'),
         escapeCsv('Kod'),
         escapeCsv('Nazwa pozycji (PL)'),
         escapeCsv('Zabudżetowano [PLN]'),
@@ -340,15 +341,18 @@ class BudgetsRC extends ResourceController {
         escapeCsv('Odchylenie [PLN]')
       ].join(delim));
 
-      const processItems = (items: any[], catNum: number, catName: string, secType: string, groupPath: string) => {
-        for (const it of items || []) {
+      const processItems = (items: any[], catNum: number, catName: string, secType: string, groupPath: string, prefix: string) => {
+        for (let idx = 0; idx < (items || []).length; idx++) {
+          const it = items[idx];
+          const nodeNum = `${prefix}.${idx + 1}`;
           if ('code' in it && !Array.isArray(it.items)) {
             const budgeted = it.budgetedAmount || it.plannedAmount || 0;
             const actual = it.actualAmount || 0;
             lines.push([
-              escapeCsv(`${catNum}. ${catName}`),
+              escapeCsv(`${catNum} ${catName}`),
               escapeCsv(secType),
               escapeCsv(groupPath),
+              escapeCsv(nodeNum),
               escapeCsv(it.code || ''),
               escapeCsv(it.name?.pl || it.name?.en || ''),
               formatNum(budgeted),
@@ -356,9 +360,9 @@ class BudgetsRC extends ResourceController {
               formatNum(actual - budgeted)
             ].join(delim));
           } else if (Array.isArray(it.items) || Array.isArray(it.lines)) {
-            const grpLabel = it.name?.pl || it.name?.en || '';
+            const grpLabel = `${nodeNum} ${it.name?.pl || it.name?.en || ''}`;
             const currentPath = groupPath ? `${groupPath} > ${grpLabel}` : grpLabel;
-            processItems(it.items || it.lines || [], catNum, catName, secType, currentPath);
+            processItems(it.items || it.lines || [], catNum, catName, secType, currentPath, nodeNum);
           }
         }
       };
@@ -369,10 +373,10 @@ class BudgetsRC extends ResourceController {
         const catName = cat.name?.pl || cat.name?.en || `Kategoria ${catNum}`;
 
         if (cat.revenues && cat.revenues.enabled !== false && Array.isArray(cat.revenues.items)) {
-          processItems(cat.revenues.items, catNum, catName, 'Przychody', '');
+          processItems(cat.revenues.items, catNum, catName, 'Przychody', '', `${catNum}.A`);
         }
         if (cat.expenses && cat.expenses.enabled !== false && Array.isArray(cat.expenses.items)) {
-          processItems(cat.expenses.items, catNum, catName, 'Koszty', '');
+          processItems(cat.expenses.items, catNum, catName, 'Koszty', '', `${catNum}.B`);
         }
 
         // Category Subtotal row
@@ -384,9 +388,9 @@ class BudgetsRC extends ResourceController {
         const catNetAct = cat.actualNetResult ?? (catActRev - catActExp);
 
         lines.push([
-          escapeCsv(`WYNIK: ${catNum}. ${catName}`),
+          escapeCsv(`WYNIK: ${catNum} ${catName}`),
           escapeCsv('Wynik'),
-          '', '', '',
+          '', '', '', '',
           formatNum(catNetPlan),
           formatNum(catNetAct),
           formatNum(catNetAct - catNetPlan)
@@ -409,30 +413,34 @@ class BudgetsRC extends ResourceController {
         escapeCsv('Kategoria'),
         escapeCsv('Typ'),
         escapeCsv('Grupa'),
+        escapeCsv('Nr'),
         escapeCsv('Kod'),
         escapeCsv('Nazwa pozycji (PL)'),
         escapeCsv('Kwota zabudżetowana [PLN]'),
         escapeCsv('Opis')
       ].join(delim));
 
-      const processPlanItems = (items: any[], catNum: number, catName: string, secType: string, groupPath: string) => {
-        for (const it of items || []) {
+      const processPlanItems = (items: any[], catNum: number, catName: string, secType: string, groupPath: string, prefix: string) => {
+        for (let idx = 0; idx < (items || []).length; idx++) {
+          const it = items[idx];
+          const nodeNum = `${prefix}.${idx + 1}`;
           if ('code' in it && !Array.isArray(it.items)) {
             const budgeted = it.budgetedAmount || it.plannedAmount || 0;
             const desc = it.description?.pl || it.description?.en || (typeof it.description === 'string' ? it.description : '');
             lines.push([
-              escapeCsv(`${catNum}. ${catName}`),
+              escapeCsv(`${catNum} ${catName}`),
               escapeCsv(secType),
               escapeCsv(groupPath),
+              escapeCsv(nodeNum),
               escapeCsv(it.code || ''),
               escapeCsv(it.name?.pl || it.name?.en || ''),
               formatNum(budgeted),
               escapeCsv(desc)
             ].join(delim));
           } else if (Array.isArray(it.items) || Array.isArray(it.lines)) {
-            const grpLabel = it.name?.pl || it.name?.en || '';
+            const grpLabel = `${nodeNum} ${it.name?.pl || it.name?.en || ''}`;
             const currentPath = groupPath ? `${groupPath} > ${grpLabel}` : grpLabel;
-            processPlanItems(it.items || it.lines || [], catNum, catName, secType, currentPath);
+            processPlanItems(it.items || it.lines || [], catNum, catName, secType, currentPath, nodeNum);
           }
         }
       };
@@ -443,10 +451,10 @@ class BudgetsRC extends ResourceController {
         const catName = cat.name?.pl || cat.name?.en || `Kategoria ${catNum}`;
 
         if (cat.revenues && cat.revenues.enabled !== false && Array.isArray(cat.revenues.items)) {
-          processPlanItems(cat.revenues.items, catNum, catName, 'Przychody', '');
+          processPlanItems(cat.revenues.items, catNum, catName, 'Przychody', '', `${catNum}.A`);
         }
         if (cat.expenses && cat.expenses.enabled !== false && Array.isArray(cat.expenses.items)) {
-          processPlanItems(cat.expenses.items, catNum, catName, 'Koszty', '');
+          processPlanItems(cat.expenses.items, catNum, catName, 'Koszty', '', `${catNum}.B`);
         }
 
         const catRev = cat.totalPlannedRevenue || 0;
@@ -454,9 +462,9 @@ class BudgetsRC extends ResourceController {
         const catNetPlan = cat.plannedNetResult ?? (catRev - catExp);
 
         lines.push([
-          escapeCsv(`WYNIK: ${catNum}. ${catName}`),
+          escapeCsv(`WYNIK: ${catNum} ${catName}`),
           escapeCsv('Wynik'),
-          '', '', '',
+          '', '', '', '',
           formatNum(catNetPlan),
           escapeCsv(cat.categoryResultExplanation?.pl || cat.categoryResultExplanation?.en || '')
         ].join(delim));
