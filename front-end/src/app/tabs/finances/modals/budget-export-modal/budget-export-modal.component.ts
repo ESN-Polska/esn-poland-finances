@@ -42,6 +42,7 @@ export class BudgetExportModalComponent implements OnInit {
   previousYearBudget: AnnualBudget | null = null;
   canComparePreviousYear: boolean = false;
   compareWithPreviousYear: boolean = false;
+  includeOpeningBalance: boolean = true;
   isLoadingPrevBudget: boolean = false;
 
   async ngOnInit(): Promise<void> {
@@ -51,6 +52,11 @@ export class BudgetExportModalComponent implements OnInit {
     if (curLang === 'en' || curLang === 'pl') {
       this.exportLanguage = curLang;
     }
+
+    const isFirstDraft =
+      this.budget?.status === 'DRAFT' &&
+      (!this.budget?.versionHistory || this.budget.versionHistory.length === 0);
+    this.includeOpeningBalance = !isFirstDraft;
 
     const prevYr = (this.year || this.budget?.year) - 1;
     if (prevYr >= 2000) {
@@ -172,7 +178,8 @@ export class BudgetExportModalComponent implements OnInit {
           exportBalances,
           dateFormat,
           budgetOrgName,
-          prevBudgetToCompare
+          prevBudgetToCompare,
+          this.includeOpeningBalance
         );
         downloadCsvFile(content, filename);
       } else {
@@ -188,7 +195,8 @@ export class BudgetExportModalComponent implements OnInit {
           exportBalances,
           dateFormat,
           budgetOrgName,
-          prevBudgetToCompare
+          prevBudgetToCompare,
+          this.includeOpeningBalance
         );
         const opened = openPrintablePdf(html);
         if (!opened) {

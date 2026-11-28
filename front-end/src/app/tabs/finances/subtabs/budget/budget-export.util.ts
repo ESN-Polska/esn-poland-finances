@@ -312,7 +312,8 @@ export function generateBudgetCsvContent(
   currentBalances?: CurrentBankBalances,
   dateFormat: DateFormatOption = DEFAULT_DATE_FORMAT,
   budgetOrgName?: { en?: string; pl?: string },
-  previousYearBudget?: AnnualBudget | null
+  previousYearBudget?: AnnualBudget | null,
+  includeOpeningBalance: boolean = true
 ): { content: string; filename: string } {
   const yr = budget.year || new Date().getFullYear();
   const rawDateStr = asOfDate || new Date().toISOString().split('T')[0];
@@ -511,11 +512,11 @@ export function generateBudgetCsvContent(
       ''
     ].join(delim));
 
-    // Opening balances
-    if (budget.openingBalances) {
+    // Opening balance & current balances
+    if (includeOpeningBalance && budget.openingBalances) {
       const actualCurrent = currentBalances || computeCurrentBankBalances(budget);
       lines.push('');
-      const obTitle = isEn ? 'OPENING BALANCES' : isBoth ? 'BILANS OTWARCIA / OPENING BALANCES' : 'BILANS OTWARCIA';
+      const obTitle = isEn ? 'OPENING BALANCE' : isBoth ? 'BILANS OTWARCIA / OPENING BALANCE' : 'BILANS OTWARCIA';
       const cbColHeader = isEn ? `As of ${dateStr}` : isBoth ? `Stan na ${dateStr} / As of ${dateStr}` : `Stan na ${dateStr}`;
       const obColHeader = isEn ? 'Opening balance' : isBoth ? 'Bilans otwarcia / Opening' : 'Bilans otwarcia';
       lines.push([escapeCsv(obTitle), '', '', '', '', '', escapeCsv(obColHeader), escapeCsv(cbColHeader), '', '', ''].join(delim));
@@ -543,6 +544,24 @@ export function generateBudgetCsvContent(
       lines.push([escapeCsv(isEn ? 'Term deposits' : 'Lokaty terminowe'), '', '', '', '', '', formatNumber(budget.openingBalances.termDepositsStartingBalance || 0), formatNumber(actualCurrent.termDepositsPln || 0), '', '', ''].join(delim));
       lines.push([escapeCsv(isEn ? 'Unspent operational surplus from prior years' : 'Nierozliczona nadwyżka operacyjna z lat ubiegłych'), '', '', '', '', '', formatNumber(budget.openingBalances.unspentOperatingSurplusCarryover || 0), '', '', '', ''].join(delim));
       lines.push([escapeCsv(isEn ? 'TOTAL CASH ASSETS / OPENING BALANCE' : 'ŁĄCZNY BILANS OTWARCIA / STAN ŚRODKÓW'), '', '', '', '', '', formatNumber(budget.openingBalances.totalOpeningBalance || 0), formatNumber(actualCurrent.totalFunds || 0), '', '', ''].join(delim));
+    } else if (!includeOpeningBalance && (currentBalances || budget.openingBalances)) {
+      const actualCurrent = currentBalances || computeCurrentBankBalances(budget);
+      lines.push('');
+      const cbColHeader = isEn ? `As of ${dateStr}` : isBoth ? `Stan na ${dateStr} / As of ${dateStr}` : `Stan na ${dateStr}`;
+      lines.push([escapeCsv(cbColHeader), '', '', '', '', '', escapeCsv(cbColHeader), '', '', '', ''].join(delim));
+      lines.push([escapeCsv(isEn ? 'Bank account PLN' : 'Stan konta bankowego PLN'), '', '', '', '', '', formatNumber(actualCurrent.bankPln || 0), '', '', '', ''].join(delim));
+      const cbEurDetails = (actualCurrent.bankEur !== undefined && actualCurrent.bankEur !== null)
+        ? `${actualCurrent.bankEur.toFixed(2)} EUR (${isEn ? 'rate' : 'kurs'} NBP: ${actualCurrent.eurExchangeRate}${actualCurrent.eurExchangeDate ? (isEn ? ' as of ' : ' z dn. ') + formatDateOption(actualCurrent.eurExchangeDate, dateFormat) : ''})`
+        : '';
+      lines.push([
+        escapeCsv(isEn ? 'Bank account EUR (in PLN)' : 'Stan konta bankowego EUR (w PLN)'),
+        '', '', '', '', '',
+        formatNumber(actualCurrent.bankEurInPln || 0),
+        '', '', '',
+        escapeCsv(cbEurDetails)
+      ].join(delim));
+      lines.push([escapeCsv(isEn ? 'Term deposits' : 'Lokaty terminowe'), '', '', '', '', '', formatNumber(actualCurrent.termDepositsPln || 0), '', '', '', ''].join(delim));
+      lines.push([escapeCsv(isEn ? 'Total Current Cash Assets' : 'Łączny obecny stan środków'), '', '', '', '', '', formatNumber(actualCurrent.totalFunds || 0), '', '', '', ''].join(delim));
     }
 
     const filename = isEn ? `budget_execution_${yr}_${rawDateStr}.csv` : `budzet_wykonanie_${yr}_${rawDateStr}.csv`;
@@ -587,8 +606,8 @@ export function generateBudgetCsvContent(
     lines.push('');
 
     if (hasPrevComp) {
-      const colPrevHeader = isEn ? `Plan ${prevYr} [PLN]` : isBoth ? `Plan ${prevYr} / Plan [PLN]` : `Plan ${prevYr} [PLN]`;
-      const colCurrHeader = isEn ? `Draft ${yr} [PLN]` : isBoth ? `Projekt ${yr} / Draft [PLN]` : `Projekt ${yr} [PLN]`;
+      const colPrevHeader = isEn ? `Budget ${prevYr} [PLN]` : isBoth ? `Budżet ${prevYr} / Budget ${prevYr} [PLN]` : `Budżet ${prevYr} [PLN]`;
+      const colCurrHeader = isEn ? `Budget ${yr} [PLN]` : isBoth ? `Budżet ${yr} / Budget ${yr} [PLN]` : `Budżet ${yr} [PLN]`;
       const colDiffHeader = isEn ? 'Difference (Delta) [PLN]' : isBoth ? 'Różnica / Diff [PLN]' : 'Różnica (Delta) [PLN]';
       const colPctHeader = isEn ? 'Change %' : isBoth ? 'Zmiana % / Change %' : 'Zmiana %';
 
@@ -806,9 +825,9 @@ export function generateBudgetCsvContent(
       ].join(delim));
     }
 
-    if (budget.openingBalances) {
+    if (includeOpeningBalance && budget.openingBalances) {
       lines.push('');
-      const obTitle = isEn ? 'OPENING BALANCES' : isBoth ? 'BILANS OTWARCIA / OPENING BALANCES' : 'BILANS OTWARCIA';
+      const obTitle = isEn ? 'OPENING BALANCE' : isBoth ? 'BILANS OTWARCIA / OPENING BALANCE' : 'BILANS OTWARCIA';
       const obColHeader = isEn ? 'Opening balance' : isBoth ? 'Bilans otwarcia / Opening' : 'Bilans otwarcia';
       lines.push([escapeCsv(obTitle), '', '', '', '', '', escapeCsv(obColHeader), ''].join(delim));
       lines.push([escapeCsv(isEn ? 'Bank account PLN' : 'Stan konta bankowego PLN'), '', '', '', '', '', formatNumber(budget.openingBalances.bankPln || 0), ''].join(delim));
@@ -864,7 +883,8 @@ export function generateBudgetHtmlReport(
   currentBalances?: CurrentBankBalances,
   dateFormat: DateFormatOption = DEFAULT_DATE_FORMAT,
   budgetOrgName?: { en?: string; pl?: string },
-  previousYearBudget?: AnnualBudget | null
+  previousYearBudget?: AnnualBudget | null,
+  includeOpeningBalance: boolean = true
 ): string {
   const yr = budget.year || new Date().getFullYear();
   const rawDateStr = asOfDate || new Date().toISOString().split('T')[0];
@@ -941,8 +961,8 @@ export function generateBudgetHtmlReport(
   };
 
   const categories = budget.categories || [];
-  const typeRev = isEn ? 'REVENUE' : isBoth ? 'PRZYCHODY / REVENUE' : 'PRZYCHODY';
-  const typeExp = isEn ? 'EXPENSE' : isBoth ? 'KOSZTY / EXPENSE' : 'KOSZTY';
+  const typeRev = isEn ? 'REVENUES' : isBoth ? 'PRZYCHODY / REVENUES' : 'PRZYCHODY';
+  const typeExp = isEn ? 'EXPENSES' : isBoth ? 'KOSZTY / EXPENSES' : 'KOSZTY';
 
   const actualCurrent = currentBalances || computeCurrentBankBalances(budget);
 
@@ -1044,7 +1064,7 @@ export function generateBudgetHtmlReport(
           const catNetAct = cat.actualNetResult ?? ((cat.totalActualRevenue || 0) - (cat.totalActualExpense || 0));
           const catNetVar = catNetAct - catNetPlan;
           const catNetPct = catNetPlan !== 0 ? ((catNetAct / catNetPlan) * 100).toFixed(1) + '%' : '—';
-          const resultLabel = isEn ? 'Result' : isBoth ? 'Wynik / Result' : 'Wynik';
+          const resultLabel = isEn ? 'RESULT' : isBoth ? 'WYNIK / RESULT' : 'WYNIK';
 
           let catHtml = `
             <tr class="cat-header-row">
@@ -1104,9 +1124,8 @@ export function generateBudgetHtmlReport(
           const catExplanation = getLangText(cat.categoryResultExplanation, lang);
           catHtml += `
             <tr class="cat-result-row">
-              <td></td>
-              <td style="font-weight: 700; color: #1e293b;">
-                ${resultLabel}:
+              <td colspan="2" style="font-weight: 700; color: #1e293b;">
+                ${resultLabel}
               </td>
               <td style="text-align: right; font-weight: 700;">${formatPlnWithSign(catNetPlan)}</td>
               <td style="text-align: right; font-weight: 700;">${formatPlnWithSign(catNetAct)}</td>
@@ -1121,8 +1140,7 @@ export function generateBudgetHtmlReport(
       </tbody>
       <tbody class="table-summary-tbody">
         <tr style="background: #f8fafc; border-top: 2px solid #cbd5e1; font-weight: 700;">
-          <td></td>
-          <td>${totalRevLabel}</td>
+          <td colspan="2">${totalRevLabel}</td>
           <td style="text-align: right;">${formatPln(totalBudRev)}</td>
           <td style="text-align: right;">${formatPln(totalActRev)}</td>
           <td style="text-align: right; color: ${revVar < 0 ? '#dc2626' : '#16a34a'};">${formatPlnWithSign(revVar)}</td>
@@ -1130,8 +1148,7 @@ export function generateBudgetHtmlReport(
           <td></td>
         </tr>
         <tr style="background: #f8fafc; font-weight: 700;">
-          <td></td>
-          <td>${totalExpLabel}</td>
+          <td colspan="2">${totalExpLabel}</td>
           <td style="text-align: right;">${formatPln(totalBudExp)}</td>
           <td style="text-align: right;">${formatPln(totalActExp)}</td>
           <td style="text-align: right; color: ${expVar > 0 ? '#dc2626' : '#16a34a'};">${formatPlnWithSign(expVar)}</td>
@@ -1139,8 +1156,7 @@ export function generateBudgetHtmlReport(
           <td></td>
         </tr>
         <tr style="background: #e2e8f0; font-weight: 700; border-top: 1px solid #cbd5e1; border-bottom: 2px solid #94a3b8;">
-          <td></td>
-          <td>${netResultLabel}</td>
+          <td colspan="2">${netResultLabel}</td>
           <td style="text-align: right;">${formatPlnWithSign(budNet)}</td>
           <td style="text-align: right;">${formatPlnWithSign(actNet)}</td>
           <td style="text-align: right; color: ${varNet < 0 ? '#dc2626' : '#16a34a'};">${formatPlnWithSign(varNet)}</td>
@@ -1186,9 +1202,9 @@ export function generateBudgetHtmlReport(
     const colNum = isEn ? 'No.' : isBoth ? 'Nr / No.' : 'Nr';
     const colItem = isEn ? 'Category / Group / Line' : isBoth ? 'Kategoria / Grupa / Linia (Category / Group / Line)' : 'Kategoria / Grupa / Linia';
     const colBud = hasPrevComp
-      ? (isEn ? `Draft ${yr}` : isBoth ? `Projekt ${yr} / Draft` : `Projekt ${yr}`)
+      ? (isEn ? `Budget ${yr}` : isBoth ? `Budżet ${yr} / Budget ${yr}` : `Budżet ${yr}`)
       : (isEn ? 'Budgeted amount [PLN]' : isBoth ? 'Kwota zabudżetowana / Budgeted [PLN]' : 'Kwota zabudżetowana [PLN]');
-    const colPrev = isEn ? `Plan ${prevYr}` : isBoth ? `Plan ${prevYr}` : `Plan ${prevYr}`;
+    const colPrev = isEn ? `Budget ${prevYr}` : isBoth ? `Budżet ${prevYr} / Budget ${prevYr}` : `Budżet ${prevYr}`;
     const colDiff = isEn ? 'Difference (Delta)' : isBoth ? 'Różnica / Diff' : 'Różnica (Delta)';
     const colChange = isEn ? 'Change %' : isBoth ? 'Zmiana % / Change %' : 'Zmiana %';
     const colNotes = isEn ? 'Description' : isBoth ? 'Opis / Description' : 'Opis';
@@ -1301,7 +1317,7 @@ export function generateBudgetHtmlReport(
             const catNum = cat.number || (cIdx + 1);
             const catName = getLangText(cat.name, lang);
             const catNetPlan = cat.plannedNetResult ?? ((cat.totalPlannedRevenue || 0) - (cat.totalPlannedExpense || 0));
-            const resultLabel = isEn ? 'Result' : isBoth ? 'Wynik / Result' : 'Wynik';
+            const resultLabel = isEn ? 'RESULT' : isBoth ? 'WYNIK / RESULT' : 'WYNIK';
 
             let catHtml = `
               <tr class="cat-header-row">
@@ -1365,9 +1381,8 @@ export function generateBudgetHtmlReport(
             const catExplanation = getLangText(cat.categoryResultExplanation, lang);
             catHtml += `
               <tr class="cat-result-row">
-                <td></td>
-                <td style="font-weight: 700; color: #1e293b;">
-                  ${resultLabel}:
+                <td colspan="2" style="font-weight: 700; color: #1e293b;">
+                  ${resultLabel}
                 </td>
                 <td style="text-align: right; font-weight: 600; color: #475569;">${formatPlnWithSign(catPrevNet)}</td>
                 <td style="text-align: right; font-weight: 700;">${formatPlnWithSign(catNetPlan)}</td>
@@ -1398,8 +1413,7 @@ export function generateBudgetHtmlReport(
 
             return `
               <tr style="background: #f8fafc; border-top: 2px solid #cbd5e1; font-weight: 700;">
-                <td></td>
-                <td>${totalRevLabel}</td>
+                <td colspan="2">${totalRevLabel}</td>
                 <td style="text-align: right; color: #475569;">${formatPln(prevRev)}</td>
                 <td style="text-align: right;">${formatPln(currRev)}</td>
                 <td style="text-align: right; color: ${diffRev >= 0 ? '#16a34a' : '#dc2626'};">${formatPlnWithSign(diffRev)}</td>
@@ -1407,8 +1421,7 @@ export function generateBudgetHtmlReport(
                 <td></td>
               </tr>
               <tr style="background: #f8fafc; font-weight: 700;">
-                <td></td>
-                <td>${totalExpLabel}</td>
+                <td colspan="2">${totalExpLabel}</td>
                 <td style="text-align: right; color: #475569;">${formatPln(prevExp)}</td>
                 <td style="text-align: right;">${formatPln(currExp)}</td>
                 <td style="text-align: right; color: ${diffExp > 0 ? '#dc2626' : '#16a34a'};">${formatPlnWithSign(diffExp)}</td>
@@ -1416,8 +1429,7 @@ export function generateBudgetHtmlReport(
                 <td></td>
               </tr>
               <tr style="background: #e2e8f0; font-weight: 700; border-top: 1px solid #cbd5e1; border-bottom: 2px solid #94a3b8;">
-                <td></td>
-                <td>${netResultLabel}</td>
+                <td colspan="2">${netResultLabel}</td>
                 <td style="text-align: right; color: #475569;">${formatPlnWithSign(prevNet)}</td>
                 <td style="text-align: right;">${formatPlnWithSign(currNet)}</td>
                 <td style="text-align: right; color: ${diffNet >= 0 ? '#16a34a' : '#dc2626'};">${formatPlnWithSign(diffNet)}</td>
@@ -1443,7 +1455,7 @@ export function generateBudgetHtmlReport(
             const catNum = cat.number || (cIdx + 1);
             const catName = getLangText(cat.name, lang);
             const catNetPlan = cat.plannedNetResult ?? ((cat.totalPlannedRevenue || 0) - (cat.totalPlannedExpense || 0));
-            const resultLabel = isEn ? 'Result' : isBoth ? 'Wynik / Result' : 'Wynik';
+            const resultLabel = isEn ? 'RESULT' : isBoth ? 'WYNIK / RESULT' : 'WYNIK';
 
             let catHtml = `
               <tr class="cat-header-row">
@@ -1491,9 +1503,8 @@ export function generateBudgetHtmlReport(
             const catExplanation = getLangText(cat.categoryResultExplanation, lang);
             catHtml += `
               <tr class="cat-result-row">
-                <td></td>
-                <td style="font-weight: 700; color: #1e293b;">
-                  ${resultLabel}:
+                <td colspan="2" style="font-weight: 700; color: #1e293b;">
+                  ${resultLabel}
                 </td>
                 <td style="text-align: right; font-weight: 700;">${formatPlnWithSign(catNetPlan)}</td>
                 <td style="font-size: 10px; color: #475569; font-style: italic;">${catExplanation || ''}</td>
@@ -1505,20 +1516,17 @@ export function generateBudgetHtmlReport(
         </tbody>
         <tbody class="table-summary-tbody">
           <tr style="background: #f8fafc; border-top: 2px solid #cbd5e1; font-weight: 700;">
-            <td></td>
-            <td>${totalRevLabel}</td>
+            <td colspan="2">${totalRevLabel}</td>
             <td style="text-align: right;">${formatPln(budget.totalBudgetedRevenue)}</td>
             <td></td>
           </tr>
           <tr style="background: #f8fafc; font-weight: 700;">
-            <td></td>
-            <td>${totalExpLabel}</td>
+            <td colspan="2">${totalExpLabel}</td>
             <td style="text-align: right;">${formatPln(budget.totalBudgetedExpense)}</td>
             <td></td>
           </tr>
           <tr style="background: #e2e8f0; font-weight: 700; border-top: 1px solid #cbd5e1; border-bottom: 2px solid #94a3b8;">
-            <td></td>
-            <td>${netResultLabel}</td>
+            <td colspan="2">${netResultLabel}</td>
             <td style="text-align: right;">${formatPlnWithSign(budget.budgetedNetResult)}</td>
             <td></td>
           </tr>
@@ -1527,16 +1535,17 @@ export function generateBudgetHtmlReport(
     }
   }
 
-  // Opening balances table section & Current balances table section (side-by-side)
+  // Opening balance table section & Current balances table section (side-by-side)
   let openingBalancesHtml = '';
-  if (budget.openingBalances) {
+  const hasOpeningBlock = includeOpeningBalance && !!budget.openingBalances;
+  if (hasOpeningBlock || isExecution) {
     const obTitle = isEn
-      ? 'Opening Balances'
+      ? 'Opening Balance'
       : isBoth
-      ? 'Bilans otwarcia / Opening Balances'
+      ? 'Bilans otwarcia / Opening Balance'
       : 'Bilans otwarcia';
 
-    const openingTableHtml = `
+    const openingTableHtml = hasOpeningBlock ? `
       <table style="margin-bottom: 16px;">
         <tbody>
           <tr><td>${isEn ? 'Bank account PLN' : 'Stan konta bankowego PLN'}</td><td style="text-align: right; font-weight: 500;">${formatPln(budget.openingBalances.bankPln)}</td></tr>
@@ -1558,7 +1567,7 @@ export function generateBudgetHtmlReport(
           <tr style="background: #f1f5f9; font-weight: 700;"><td>${isEn ? 'Total Opening Balance' : 'Łączny bilans otwarcia'}</td><td style="text-align: right;">${formatPln(budget.openingBalances.totalOpeningBalance)}</td></tr>
         </tbody>
       </table>
-    `;
+    ` : '';
 
     if (isExecution) {
       const cbTitle = isEn
@@ -1567,15 +1576,7 @@ export function generateBudgetHtmlReport(
         ? `Stan na ${dateStr} / As of ${dateStr}`
         : `Stan na ${dateStr}`;
 
-      openingBalancesHtml = `
-        <div style="margin-top: 24px; display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap;">
-          <!-- Left: Opening Balances -->
-          <div style="flex: 1; min-width: 320px; max-width: 520px;">
-            <h3 style="margin: 0 0 8px 0; font-size: 13px; color: #334155;">${obTitle}</h3>
-            ${openingTableHtml}
-          </div>
-
-          <!-- Right (OBOK): Current Bank Balances -->
+      const currentBalancesBlock = `
           <div style="flex: 1; min-width: 320px; max-width: 520px;">
             <h3 style="margin: 0 0 8px 0; font-size: 13px; color: #334155;">${cbTitle}</h3>
             <table style="margin-bottom: 16px;">
@@ -1598,9 +1599,25 @@ export function generateBudgetHtmlReport(
               </tbody>
             </table>
           </div>
+      `;
+
+      openingBalancesHtml = hasOpeningBlock ? `
+        <div style="margin-top: 24px; display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap;">
+          <!-- Left: Opening Balance -->
+          <div style="flex: 1; min-width: 320px; max-width: 520px;">
+            <h3 style="margin: 0 0 8px 0; font-size: 13px; color: #334155;">${obTitle}</h3>
+            ${openingTableHtml}
+          </div>
+
+          <!-- Right (OBOK): Current Bank Balances -->
+          ${currentBalancesBlock}
+        </div>
+      ` : `
+        <div style="margin-top: 24px; max-width: 520px;">
+          ${currentBalancesBlock}
         </div>
       `;
-    } else {
+    } else if (hasOpeningBlock) {
       // Plan budżetu (bez obecnego stanu)
       openingBalancesHtml = `
         <div style="margin-top: 24px; max-width: 520px;">
@@ -2241,8 +2258,8 @@ export function generateAmendmentDraftHtmlReport(
       .replace(/'/g, '&#039;');
   };
 
-  const typeRev = isEn ? 'REVENUE' : isBoth ? 'PRZYCHODY / REVENUE' : 'PRZYCHODY';
-  const typeExp = isEn ? 'EXPENSE' : isBoth ? 'KOSZTY / EXPENSE' : 'KOSZTY';
+  const typeRev = isEn ? 'REVENUES' : isBoth ? 'PRZYCHODY / REVENUES' : 'PRZYCHODY';
+  const typeExp = isEn ? 'EXPENSES' : isBoth ? 'KOSZTY / EXPENSES' : 'KOSZTY';
 
   const totalRevLabel = isEn ? 'TOTAL REVENUE' : isBoth ? 'PRZYCHODY RAZEM / TOTAL REVENUE' : 'PRZYCHODY RAZEM';
   const totalExpLabel = isEn ? 'TOTAL EXPENSE' : isBoth ? 'KOSZTY RAZEM / TOTAL EXPENSE' : 'KOSZTY RAZEM';
@@ -2441,8 +2458,7 @@ export function generateAmendmentDraftHtmlReport(
     </tbody>
     <tbody class="table-summary-tbody">
       <tr style="background: #f8fafc; border-top: 2px solid #cbd5e1; font-weight: 700;">
-        <td></td>
-        <td>${totalRevLabel}</td>
+        <td colspan="2">${totalRevLabel}</td>
         <td style="text-align: right;">${formatPln(baseBudRev)}</td>
         <td style="text-align: right;">${formatPln(propBudRev)}</td>
         <td style="text-align: right; color: ${revDelta < 0 ? '#dc2626' : '#16a34a'};">${formatPlnWithSign(revDelta)}</td>
@@ -2450,8 +2466,7 @@ export function generateAmendmentDraftHtmlReport(
         <td></td>
       </tr>
       <tr style="background: #f8fafc; font-weight: 700;">
-        <td></td>
-        <td>${totalExpLabel}</td>
+        <td colspan="2">${totalExpLabel}</td>
         <td style="text-align: right;">${formatPln(baseBudExp)}</td>
         <td style="text-align: right;">${formatPln(propBudExp)}</td>
         <td style="text-align: right; color: ${expDelta > 0 ? '#dc2626' : '#16a34a'};">${formatPlnWithSign(expDelta)}</td>
@@ -2459,8 +2474,7 @@ export function generateAmendmentDraftHtmlReport(
         <td></td>
       </tr>
       <tr style="background: #e2e8f0; font-weight: 700; border-top: 1px solid #cbd5e1; border-bottom: 2px solid #94a3b8;">
-        <td></td>
-        <td>${netResultLabel}</td>
+        <td colspan="2">${netResultLabel}</td>
         <td style="text-align: right;">${formatPlnWithSign(baseNet)}</td>
         <td style="text-align: right;">${formatPlnWithSign(propNet)}</td>
         <td style="text-align: right; color: ${netDelta < 0 ? '#dc2626' : '#16a34a'};">${formatPlnWithSign(netDelta)}</td>

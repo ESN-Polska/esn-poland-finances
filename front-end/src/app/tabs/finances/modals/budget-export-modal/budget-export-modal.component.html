@@ -90,6 +90,22 @@
       </div>
     </div>
 
+    <!-- Include Opening Balance -->
+    <div class="sectionGroup comparisonSection">
+      <div class="comparisonToggleRow">
+        <div class="toggleInfo">
+          <label class="toggleTitle">
+            <ion-icon name="wallet-outline" class="toggleIcon"></ion-icon>
+            {{ 'FINANCES.MODALS.BUDGET_EXPORT.INCLUDE_OPENING_BALANCE_TITLE' | translate }}
+          </label>
+          <p class="toggleSubtitle">
+            {{ 'FINANCES.MODALS.BUDGET_EXPORT.INCLUDE_OPENING_BALANCE_DESC' | translate }}
+          </p>
+        </div>
+        <ion-toggle [(ngModel)]="includeOpeningBalance" color="primary"></ion-toggle>
+      </div>
+    </div>
+
     <!-- Cut-off Date (Stan na dzień) only when exporting EXECUTION -->
     <div class="sectionGroup" *ngIf="exportType === 'EXECUTION'">
       <label class="groupLabel">{{ 'FINANCES.MODALS.BUDGET_EXPORT.CUTOFF_DATE' | translate }}</label>
